@@ -1,0 +1,3 @@
+// case-as: packages/sms/src/planted.ts
+// expect: fail 1
+export const read = Date.now;

@@ -1,0 +1,302 @@
+{
+  "_doc": "map-manifest (FR-MAP-4; SPECIFICATIONS section 6.10, SD-49; design rule D7): the committed size, SHA-256 and bounding box of the 3 per-branch PMTiles files, the baked track set (with its turn-by-turn steps, P6-ROUTE-BAKE) and the routing files of the same OSRM run (kind routing, ohio.osrm.*, read only by the routing service). The files are release downloads, never git. `pnpm run setup:maps` downloads each into .build/data/maps (or $MAPS_DIR) and checks it (--no-routing leaves the routing files out); setup stops with MAP_HASH_MISMATCH <file> on a difference (a routing file only when present); a file over sizeGateBytes (2 GiB per file, C6, owner ruling be2d3f8a) fails. Rewrite after an intended re-bake with: node packages/maps/src/cli.ts write-manifest --dir <dir> --tag <new release tag>. The map files are the Protomaps build 20260811 cut by infra/data/maps/run.sh (release maps-data-v1); the routing files are its OSRM 26.10.0 run of Nov 10, 2026 (first released as maps-data-v2); the tracks are the legs of the F-292 seeded schedule routed on those same routing files on Nov 14, 2026, released together with byte-identical copies of them as maps-data-v3 (OSRM partition output is not byte-reproducible, so the routing files were not re-cut); boxes: infra/data/s8/boxes.json.",
+  "protomapsBuild": "20260811",
+  "sizeGateBytes": 2147483648,
+  "trackBuildId": "ohio-261001+osrm-v26.10.0",
+  "assets": [
+    {
+      "id": "columbus.pmtiles",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "columbus.pmtiles",
+      "kind": "pmtiles",
+      "bytes": 45485685,
+      "sha256": "722bef6b5bb715bacb692613b63a8d96826eb672e5d674b83e4145da7ca8c6cc",
+      "bbox": [
+        -83.45,
+        39.65,
+        -82.55,
+        40.35
+      ],
+      "minZoom": 0,
+      "maxZoom": 15
+    },
+    {
+      "id": "dayton.pmtiles",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "dayton.pmtiles",
+      "kind": "pmtiles",
+      "bytes": 17506155,
+      "sha256": "5852f37ed513b4debf7df608c9d6ec6ee1f39601e5df6516c358aec8487cd602",
+      "bbox": [
+        -84.4,
+        39.55,
+        -83.95,
+        39.95
+      ],
+      "minZoom": 0,
+      "maxZoom": 15
+    },
+    {
+      "id": "springfield.pmtiles",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "springfield.pmtiles",
+      "kind": "pmtiles",
+      "bytes": 3834694,
+      "sha256": "b283a7d4318054b2464853e310e023192f529ea498906b2dce9b3acbffe05669",
+      "bbox": [
+        -83.95,
+        39.85,
+        -83.55,
+        40.1
+      ],
+      "minZoom": 0,
+      "maxZoom": 15
+    },
+    {
+      "id": "tracks.ndjson",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "tracks.ndjson",
+      "kind": "tracks",
+      "bytes": 21599694,
+      "sha256": "40fbaaee42f28edc6b122852df92130cfb53516b78638404973cbfd4c9c7f841"
+    },
+    {
+      "id": "ohio.osrm.cell_metrics",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.cell_metrics",
+      "kind": "routing",
+      "bytes": 672279552,
+      "sha256": "55029964db3c90c8baa30133aabc7b10406de8468e01c4f94e1b3564fa56b345"
+    },
+    {
+      "id": "ohio.osrm.cells",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.cells",
+      "kind": "routing",
+      "bytes": 5476864,
+      "sha256": "0f3f35ec01b2c03fc4ad82733d21fc4ad27a59ff48e0ae7a2f0799bcc3d93a8e"
+    },
+    {
+      "id": "ohio.osrm.cnbg",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.cnbg",
+      "kind": "routing",
+      "bytes": 53070336,
+      "sha256": "37dd48cab3af9f9904441363928c7bd58ad809caf7bccd3da88d2b2243d21cda"
+    },
+    {
+      "id": "ohio.osrm.cnbg_to_ebg",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.cnbg_to_ebg",
+      "kind": "routing",
+      "bytes": 53081600,
+      "sha256": "67bfd2526c002cf3df8f0fd818178e445e499eff2286bedcab35115f54429f2c"
+    },
+    {
+      "id": "ohio.osrm.datasource_names",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.datasource_names",
+      "kind": "routing",
+      "bytes": 69632,
+      "sha256": "4354f9b13293432b9bf42483bf8fb2f31a1b3e96e8968d9362c54a78cbdb65ec"
+    },
+    {
+      "id": "ohio.osrm.ebg",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.ebg",
+      "kind": "routing",
+      "bytes": 294647808,
+      "sha256": "8fe4053a5278d987bfce18486307be6e3e4c231c2356d0d99fd77278fdb25739"
+    },
+    {
+      "id": "ohio.osrm.ebg_nodes",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.ebg_nodes",
+      "kind": "routing",
+      "bytes": 78616576,
+      "sha256": "d915a29813988ae506fe44de62ff950cb17f88a9382b6b49cfbde9934700fb94"
+    },
+    {
+      "id": "ohio.osrm.edges",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.edges",
+      "kind": "routing",
+      "bytes": 85948928,
+      "sha256": "d82bf45bc7b98783dc3bae6fc8d5816139862195b50b8e5484ef586caa83cfbd"
+    },
+    {
+      "id": "ohio.osrm.enw",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.enw",
+      "kind": "routing",
+      "bytes": 77398016,
+      "sha256": "1331237ab22560c5b1b9920dcb3379f5028057663d868a537c65b08154fef6a0"
+    },
+    {
+      "id": "ohio.osrm.fileIndex",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.fileIndex",
+      "kind": "routing",
+      "bytes": 228100660,
+      "sha256": "ba86c0e961ad88ef4f890ad0b1ce0071473a7f7231a7044368bed3a10b4acedd"
+    },
+    {
+      "id": "ohio.osrm.geometry",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.geometry",
+      "kind": "routing",
+      "bytes": 401031168,
+      "sha256": "28e639d5addf197b8f019421fbdda15d591bb68dc69c3a1dc711d68e4c9b5c0f"
+    },
+    {
+      "id": "ohio.osrm.icd",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.icd",
+      "kind": "routing",
+      "bytes": 43312640,
+      "sha256": "12d4e94a139126cf395d723449dc5df0e866ca44f1561c3e02318c3d16c7a20d"
+    },
+    {
+      "id": "ohio.osrm.maneuver_overrides",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.maneuver_overrides",
+      "kind": "routing",
+      "bytes": 6144,
+      "sha256": "5a7f4f933690b9a28651254ca8cbfef0dbdcb332d3badec86bd3a3ac55a98e4c"
+    },
+    {
+      "id": "ohio.osrm.mldgr",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.mldgr",
+      "kind": "routing",
+      "bytes": 308195840,
+      "sha256": "0645ff537223e096aac954fd552959d8cb71af3fbb72d955f34db1b41c15c110"
+    },
+    {
+      "id": "ohio.osrm.names",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.names",
+      "kind": "routing",
+      "bytes": 2738176,
+      "sha256": "783b2a17a47191a4bab5f04a8bc6c443910f04170e87ffa89e542678a6b13ea6"
+    },
+    {
+      "id": "ohio.osrm.nbg_nodes",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.nbg_nodes",
+      "kind": "routing",
+      "bytes": 140370432,
+      "sha256": "967f6f147ef4283ef1dc34eff55e8488e5ebf626fe8d3c1ba805eff6c7a3cf44"
+    },
+    {
+      "id": "ohio.osrm.partition",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.partition",
+      "kind": "routing",
+      "bytes": 51612160,
+      "sha256": "31a7669085d0e1f20684bd092c7ff808e57430193823c5faf660a510ff0b1ce5"
+    },
+    {
+      "id": "ohio.osrm.properties",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.properties",
+      "kind": "routing",
+      "bytes": 6144,
+      "sha256": "3aac303a56d9e8cfe3d45d87e9ae7fcb14818498d8828afa3bab84d1a5b9191b"
+    },
+    {
+      "id": "ohio.osrm.ramIndex",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.ramIndex",
+      "kind": "routing",
+      "bytes": 914432,
+      "sha256": "c30d9f83de218987825b8f476135f575d405d88305a5fec7b1cc649f955b4c22"
+    },
+    {
+      "id": "ohio.osrm.restrictions",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.restrictions",
+      "kind": "routing",
+      "bytes": 4096,
+      "sha256": "bac0fc398c01455ca5eca64f2ac2ace9e45bcb9fe46b8da3e9032a12f939ed52"
+    },
+    {
+      "id": "ohio.osrm.timestamp",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.timestamp",
+      "kind": "routing",
+      "bytes": 3584,
+      "sha256": "15c8938d25eda4de4509056e59cc8541fcdc0950fd902713738344f743ce979f"
+    },
+    {
+      "id": "ohio.osrm.tld",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.tld",
+      "kind": "routing",
+      "bytes": 7168,
+      "sha256": "1f9de1bb1e1e039858bcf515d531ceed43123b810cb74bdcec8910c5a1d24548"
+    },
+    {
+      "id": "ohio.osrm.tls",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.tls",
+      "kind": "routing",
+      "bytes": 10752,
+      "sha256": "622575ca79a870ea76713be23ee1b2ce7f81fa7794b25e29facff0af87762e4e"
+    },
+    {
+      "id": "ohio.osrm.turn_duration_penalties",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.turn_duration_penalties",
+      "kind": "routing",
+      "bytes": 24557056,
+      "sha256": "97a2b16e54a6c38bd44a02874a938c77c70fdc738184b55a5d748cc6166e6379"
+    },
+    {
+      "id": "ohio.osrm.turn_penalties_index",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.turn_penalties_index",
+      "kind": "routing",
+      "bytes": 147323904,
+      "sha256": "588e1ff6ae2d64b8435fc7524e1d32ba903c7b2810787987283b4cd9dc8a6ffb"
+    },
+    {
+      "id": "ohio.osrm.turn_weight_penalties",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "ohio.osrm.turn_weight_penalties",
+      "kind": "routing",
+      "bytes": 24557056,
+      "sha256": "591216c0469be5edf3cc3ca6da0dde3af374ab06a047eb751e23d8eb6bc0b7f0"
+    }
+  ]
+}

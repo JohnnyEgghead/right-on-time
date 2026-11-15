@@ -1,0 +1,56 @@
+# The private paths list (SPECIFICATIONS section 6.13, FR-DIST-1; SD-38): what the publish export leaves out.
+# One path per line. A line that ends in / is a directory (everything under it); any other line is one file.
+# A line that starts with **/ names a path component at any depth (only .github is used that way).
+# Any other line with a * in it is a glob over files (the * matches within 1 path part, never across a /): scripts/launch-*.sh.
+# Read by scripts/publish.sh. The tests of ci/smoke/smoke.test.ts plant a file under each line from a pinned list in the test (not read from this file), so deleting a line here fails the test; a line added here needs a plant added there.
+
+docs/planning/
+docs/source/
+.claude/
+.build/
+mockups/
+
+# The planning documents (the 4 of section 6.13: requirements, specifications, build plan, UI specification)
+# and their revision logs and the UI design kit beside them (section 6.13 does not name the files; this is the
+# wide reading). The public docs live under docs/public/.
+docs/REQUIREMENTS.md
+docs/SPECIFICATIONS.md
+docs/BUILD_PLAN.md
+docs/UI-SPECIFICATION.md
+docs/REQUIREMENTS-REVISIONS.md
+docs/SPECIFICATIONS-REVISIONS.md
+docs/BUILD_PLAN-REVISIONS.md
+docs/UI-SPECIFICATION-REVISIONS.md
+docs/UI-DESIGN-KIT.md
+docs/UI-DESIGN-KIT-REVISIONS.md
+
+# The build records, the design source and the build harness launchers (F-1454; OA-39, FR-DIST-1: the public repo
+# holds only the app; planning and build records stay private; SPECIFICATIONS section 6.13).
+docs/build/
+docs/BUILD_REPORTS/
+docs/design/
+jl-anchor
+jl-build
+jl-plan
+scripts/launch-*.sh
+# F-1570: the other build-continuity files the jl-dev harness installs (they name the owner's other projects and
+# ~/.claude paths). They stay byte-identical to the harness copy, with no SPDX header, so a reinstall sees them as unchanged.
+ci/vendor/
+# F-1571: owner answer 44079436 (Nov 14, 2026), "Keep them private": copies of 2 jl-dev plugin scripts (ci-time-check.py,
+# test-reason-check.py; the plugin declares no license, so the release must not grant them AGPL). Files that call them
+# skip the call when ci/vendor is absent (ci/public-files.ts VENDOR_OPTIONAL names each one; every other exported file
+# that names ci/vendor/ fails the reference check).
+ci/test-reason-orphans.sh
+scripts/build-health.sh
+scripts/checkpoint.sh
+scripts/context-level.sh
+scripts/wisdom-compact.py
+# F-1605: the owner's own drill values (the UptimeRobot monitor id, the record and evidence paths). The drill scripts read it
+# through infra/drill/owner-env.sh and skip it when absent; a public copy gives its values in the environment.
+infra/owner.env
+# F-1609: the hosted server's address (BW_HOST), kept out of every committed file, so out of owner.env too: this file is ignored by git
+# (.gitignore), mode 600, and read by the same helper after owner.env.
+infra/owner.local.env
+
+# The private repo's workflows are never copied (SD-38): .github at any depth.
+**/.github

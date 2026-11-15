@@ -1,0 +1,25 @@
+{
+  "name": "@bw/api-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bw/api": "workspace:*",
+    "@bw/config": "workspace:*",
+    "@bw/db": "workspace:*",
+    "@bw/domain": "workspace:*",
+    "@bw/i18n": "workspace:*",
+    "@bw/import": "workspace:*",
+    "@bw/log": "workspace:*",
+    "@bw/outbox": "workspace:*",
+    "@bw/time": "workspace:*",
+    "bw-worker": "workspace:*",
+    "sharp": "0.35.5",
+    "zod": "4.6.7"
+  }
+}

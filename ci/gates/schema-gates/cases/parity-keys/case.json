@@ -1,0 +1,11 @@
+{
+  "why": "OI-57, invariant 1 and SD-12: parity compares primary keys and foreign keys both ways",
+  "only": "parity",
+  "expect": [
+    "schema-doc-parity: FAIL missing foreign key world.job.customer_id -> world.customer.id",
+    "schema-doc-parity: FAIL table world.tech_item primary key is () in the database but (key) in section 3",
+    "schema-doc-parity: FAIL missing foreign key world.note.item_key -> world.tech_item.key",
+    "schema-doc-parity: FAIL missing foreign key world.offline_conflict.item_key -> world.tech_item.key",
+    "schema-doc-parity: FAIL extra foreign key system.session.user_id -> world.user.id: section 3 states no such reference"
+  ]
+}

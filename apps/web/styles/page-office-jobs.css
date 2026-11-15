@@ -1,0 +1,67 @@
+/* SCR-OFC-30 page-local rules (DK-88): the last <style> of mockups/pages/office-jobs.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/jobs.css. */
+  .pgh { background: #fff; border-bottom: 1px solid var(--ink-200); padding: 14px 24px 0; }
+  .pgh .row { display: flex; align-items: center; gap: 12px; }
+  .pgh h1 { margin: 0; font-size: 25px; font-weight: 750; letter-spacing: -.02em; }
+  .pgh p { margin: 2px 0 0; font-size: 14px; color: var(--ink-600); }
+  .pgh .acts { margin-left: auto; display: flex; gap: 8px; }
+  .tabs { display: flex; gap: 4px; margin-top: 10px; }
+  .tabs a { display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 42px; font-size: 14.5px; font-weight: 600; color: var(--ink-600); position: relative; text-decoration: none; }
+  .tabs a .n { min-width: 22px; height: 21px; border-radius: 11px; padding: 0 7px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; background: var(--ink-100); color: var(--ink-700); font-variant-numeric: tabular-nums; }
+  .tabs a.on { color: var(--teal-800); }
+  .tabs a.on::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--orange-500); }
+  .tabs a.on .n { background: var(--teal-700); color: #fff; }
+  .tabs a .n.unas { background: #fff; border: 1px dashed var(--ink-400); }
+  .tabs a .n.risk { background: var(--st-risk-bg); color: var(--st-risk-ink); }
+  .tabs a .n.late { background: var(--st-late-bg); color: var(--st-late-ink); }
+  .tabs a .n.bill { background: var(--orange-100); color: var(--orange-700); }
+
+  .filters { display: flex; align-items: center; gap: 8px; padding: 12px 24px; }
+  .sbox { width: 310px; height: 36px; border: 1px solid var(--ink-400); border-radius: 8px; background: #fff; display: flex; align-items: center; gap: 9px; padding: 0 11px; color: var(--ink-500); font-size: 14px; }
+  .sbox .ic { width: 17px; height: 17px; }
+  .sel { white-space: nowrap; height: 36px; border: 1px solid var(--ink-400); border-radius: 8px; display: flex; align-items: center; gap: 7px; padding: 0 10px 0 12px; font-size: 14px; background: #fff; }
+  .sel .k { color: var(--ink-500); font-size: 13px; }
+  .sel b { font-weight: 620; }
+  .sel .ic { width: 15px; height: 15px; color: var(--ink-500); }
+  .filters .grow { flex: 1; }
+  .filters .cnt, .sortb .cnt { font-size: 13px; color: var(--ink-600); }
+  .tabsrow { display: flex; align-items: center; }
+  .sortb { margin-left: auto; display: flex; gap: 10px; align-items: center; padding-bottom: 4px; }
+
+  .tbl { margin: 0 24px; background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; box-shadow: var(--shadow-sm); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; font-size: 12px; font-weight: 650; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; padding: 0 12px; height: 36px; border-bottom: 1px solid var(--ink-200); background: var(--ink-50); white-space: nowrap; }
+  th .ic { width: 12px; height: 12px; vertical-align: -1px; }
+  td { padding: 0 12px; height: 41px; border-bottom: 1px solid var(--ink-150); white-space: nowrap; vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  td.jn { font-weight: 650; color: var(--teal-700); font-variant-numeric: tabular-nums; }
+  td .two { line-height: 1.25; }
+  td .two b { font-weight: 640; font-size: 13.5px; }
+  td .two small { display: block; color: var(--ink-500); font-size: 12px; }
+  td .who { display: flex; align-items: center; gap: 8px; }
+  td .who .av { width: 24px; height: 24px; font-size: 9.5px; }
+  td .who.none { color: var(--ink-600); font-style: normal; }
+  td .who.none .av { background: #fff; border: 1.5px dashed var(--ink-400); color: var(--ink-500); }
+  td .chip { height: 23px; font-size: 12px; }
+  td .st { display: flex; align-items: center; gap: 7px; }
+  td .st small { color: var(--ink-600); font-size: 12px; }
+  td .by { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-700); }
+  td .by .ic { width: 15px; height: 15px; color: var(--ink-500); }
+  td .bl { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-500); }
+  td .bl.ok { color: var(--st-site-ink); font-weight: 600; }
+  td .bl .ic { width: 15px; height: 15px; }
+  .chip.bill { background: var(--orange-100); color: var(--orange-700); border-color: var(--orange-300); }
+  .jn a.jl { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  tr.live td { background: var(--teal-50); box-shadow: inset 0 1px 0 var(--teal-300), inset 0 -1px 0 var(--teal-300); }
+  .r1-st .tabs { margin-top: 0; border-bottom: 1px solid var(--ink-200); flex-wrap: wrap; }
+  .r1-st .tabs a { padding: 0 7px; white-space: nowrap; }
+  .r1-st .tbl { margin: 10px 0 0; }
+  .r1-st .filters { padding: 0; flex-wrap: wrap; }
+  tr.day td { height: 24px; background: var(--ink-50); font-size: 12px; font-weight: 700; color: var(--ink-600); text-transform: uppercase; letter-spacing: .05em; }
+  .pager { display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; font-size: 13px; color: var(--ink-600); }
+  .pager .pp { display: flex; gap: 6px; align-items: center; }
+  .pager .pp span.b { width: 30px; height: 30px; border: 1px solid var(--ink-300); border-radius: 7px; display: flex; align-items: center; justify-content: center; background: #fff; color: var(--ink-700); font-weight: 600; }
+  .pager .pp span.b.on { background: var(--teal-700); border-color: var(--teal-700); color: #fff; }
+  .pager .pp span.b .ic { width: 15px; height: 15px; }
+  /* Review c1 K1: the live updates indicator (CMP-13) in place on the main frame */
+  .acts > .r1-live { align-self: center; }

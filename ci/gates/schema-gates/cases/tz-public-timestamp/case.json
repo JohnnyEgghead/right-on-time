@@ -1,0 +1,7 @@
+{
+  "why": "F-149: tz gate fails a timestamp column in a table in public, outside the 5 stores",
+  "only": "tz",
+  "expect": [
+    "schema-time-zone-check: FAIL column public.stray.at is timestamp without time zone; every stored instant is timestamptz (invariant 4)"
+  ]
+}

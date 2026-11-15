@@ -1,0 +1,38 @@
+{
+  "MIT": [
+    {
+      "name": "left-pad-ok",
+      "versions": [
+        "1.0.0"
+      ],
+      "paths": [
+        "/fixture/left-pad-ok"
+      ],
+      "license": "MIT"
+    }
+  ],
+  "(MIT OR GPL-2.0)": [
+    {
+      "name": "dual-ok",
+      "versions": [
+        "2.0.0"
+      ],
+      "paths": [
+        "/fixture/dual-ok"
+      ],
+      "license": "(MIT OR GPL-2.0)"
+    }
+  ],
+  "MPL-2.0": [
+    {
+      "name": "a-dev-tool",
+      "versions": [
+        "1.0.0"
+      ],
+      "paths": [
+        "/fixture/a-dev-tool"
+      ],
+      "license": "MPL-2.0"
+    }
+  ]
+}

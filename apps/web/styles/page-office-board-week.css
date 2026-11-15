@@ -1,0 +1,110 @@
+/* SCR-OFC-34 page-local rules (DK-86): the last <style> of mockups/pages/office-board-week.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/week.css. */
+  .sumbar { height: 70px; background: #fff; border-bottom: 1px solid var(--ink-200); display: flex; align-items: center; padding: 0 16px 0 18px; gap: 12px; }
+  .datenav { display: flex; align-items: center; gap: 4px; margin-right: 6px; }
+  .datenav .arrow { width: 32px; height: 32px; border: 1px solid var(--ink-300); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--ink-600); }
+  .datenav .arrow .ic { width: 16px; height: 16px; }
+  .datenav .d { padding: 0 10px; line-height: 1.15; }
+  .datenav .d b { display: block; font-size: 17px; letter-spacing: -.01em; }
+  .datenav .d span { font-size: 12.5px; color: var(--ink-500); font-weight: 500; }
+  .tiles { display: flex; gap: 10px; flex: 1; }
+  .tile { border: 1px solid var(--ink-200); border-radius: 10px; padding: 7px 14px 7px 12px; display: flex; align-items: center; gap: 12px; min-width: 0; background: #fff; }
+  .tile .num { font-size: 24px; font-weight: 750; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile .lb { font-size: 12.5px; font-weight: 650; color: var(--ink-800); line-height: 1.2; }
+  .tile .lb small { display: block; font-weight: 500; color: var(--ink-500); font-size: 11.5px; }
+  .tile.peak { background: var(--orange-50); border-color: var(--orange-300); }
+  .tile.peak .num { color: var(--orange-700); }
+  .tile.unas { border-style: dashed; border-color: var(--ink-400); }
+
+  .work { display: flex; gap: 12px; padding: 12px; height: calc(900px - 58px - 70px); }
+  .panel { background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); }
+  .boardp { flex: 1; min-width: 0; }
+  .ph { height: 46px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-bottom: 1px solid var(--ink-200); }
+  .ph h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .ph .grow { flex: 1; }
+  .seg { display: inline-flex; border: 1px solid var(--ink-300); border-radius: 8px; overflow: hidden; height: 30px; }
+  .seg span { padding: 0 11px; display: flex; align-items: center; font-size: 12.5px; font-weight: 600; color: var(--ink-600); border-left: 1px solid var(--ink-300); }
+  .seg span:first-child { border-left: 0; }
+  .seg span.on { background: var(--teal-700); color: #fff; }
+  .lgd { display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink-700); font-weight: 560; }
+  .lgd span { display: inline-flex; align-items: center; gap: 6px; }
+  .lgd i.b { width: 26px; height: 7px; border-radius: 4px; background: var(--ink-150); position: relative; overflow: hidden; display: inline-block; }
+  .lgd i.b::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 60%; background: var(--teal-300); }
+  .lgd i.b.full::after { width: 100%; background: var(--teal-600); }
+  .lgd i.b.doff { background: repeating-linear-gradient(135deg, var(--ink-100) 0 4px, var(--ink-200) 4px 6px); }
+  .lgd i.b.doff::after { display: none; }
+  .lgd i.b.pkd2 { background: var(--orange-100); border: 1px solid var(--orange-300); }
+  .lgd i.b.pkd2::after { display: none; }
+  .r1-st .wk { height: auto; }
+  .r1-st .wk.mini { grid-template-rows: 62px; grid-auto-rows: 48px; }
+  .c.chg { box-shadow: inset 0 0 0 2px var(--teal-500); background: var(--teal-50); }
+
+  /* week grid */
+  .wk { flex: 1; display: grid; grid-template-columns: 210px repeat(6, 1fr); grid-auto-rows: minmax(44px, 1fr); grid-template-rows: 62px; overflow: hidden; }
+  .wk > div { border-bottom: 1px solid var(--ink-150); border-left: 1px solid var(--ink-150); }
+  .wk .hd { background: #fff; border-bottom: 1px solid var(--ink-200); padding: 8px 10px 0 12px; }
+  .wk .hd b { font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .wk .hd b .td { font-size: 10.5px; font-weight: 700; color: #fff; background: var(--orange-600); border-radius: 4px; padding: 0 5px; line-height: 15px; }
+  .wk .hd .wsel { margin-top: 5px; display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 6px 0 8px; border: 1px solid var(--ink-300); border-radius: 6px; font-size: 11.5px; font-weight: 600; color: var(--ink-700); white-space: nowrap; }
+  .wk .hd .wsel .ic { width: 12px; height: 12px; color: var(--ink-500); }
+  .wk .hd.peak { background: var(--orange-50); }
+  .wk .hd.peak .wsel { border-color: var(--orange-600); background: #fff; color: var(--orange-700); }
+  .wk .hd.peak .pk { font-size: 10.5px; font-weight: 700; color: #fff; background: var(--orange-700); border-radius: 4px; padding: 0 5px; line-height: 15px; }
+  .wk .corner { border-left: 0; display: flex; align-items: flex-end; padding: 0 0 9px 16px; font-size: 12px; font-weight: 600; color: var(--ink-500); text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--ink-200); border-right: 1px solid var(--ink-200); }
+  .wk .who { border-left: 0; border-right: 1px solid var(--ink-200); display: flex; align-items: center; gap: 8px; padding: 0 6px 0 12px; }
+  .wk .who .av { width: 28px; height: 28px; font-size: 10.5px; }
+  .wk .who .nm { font-weight: 640; font-size: 13.5px; line-height: 1.2; white-space: nowrap; }
+  .wk .who .sub { font-size: 12px; color: var(--ink-500); white-space: nowrap; line-height: 1.3; }
+  .wk .c { padding: 0 12px; display: flex; flex-direction: column; justify-content: center; }
+  .wk .c .t { display: flex; align-items: baseline; gap: 4px; font-size: 13px; color: var(--ink-600); font-variant-numeric: tabular-nums; line-height: 17px; }
+  .wk .c .t b { font-size: 14.5px; color: var(--ink-900); font-weight: 700; }
+  .wk .c .t .w { margin-left: auto; font-size: 11.5px; font-weight: 650; color: var(--ink-600); }
+  .wk .c .t .w.full { color: var(--teal-800); }
+  .wk .c .bar { margin-top: 6px; height: 6px; border-radius: 3px; background: var(--ink-150); position: relative; overflow: hidden; }
+  .wk .c .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--teal-300); border-radius: 3px; }
+  .wk .c .bar i.full { background: var(--teal-600); }
+  .wk .c.peak { background: #fffaf4; }
+  .wk .c.today { background: #f3f9fb; }
+  .wk .c.past .t b, .wk .c.past .t { color: var(--ink-500); }
+  .wk .c.past .bar i { background: var(--ink-300); }
+  .wk .c.off { background: repeating-linear-gradient(135deg, #fbfbfc 0 6px, #f3f4f6 6px 12px); display: flex; align-items: center; font-size: 12.5px; font-weight: 600; color: var(--ink-500); }
+  .wk .c.inst .t .w { color: var(--ink-600); }
+  .wk .hd.today { background: var(--teal-50); box-shadow: inset 0 3px 0 var(--orange-600); }
+  .wk .unas, .wk .c.u { background: repeating-linear-gradient(135deg, #fbfbfc 0 8px, #f5f6f8 8px 16px); }
+  .wk .unas .av { background: #fff; border: 1.5px dashed var(--ink-400); color: var(--ink-600); }
+  .wk .c.u .t b { color: var(--ink-900); }
+  .wk .c.u .tag { display: inline-flex; margin-left: auto; font-size: 11.5px; font-weight: 650; color: var(--ink-700); border: 1px dashed var(--ink-400); border-radius: 5px; padding: 0 6px; line-height: 17px; background: #fff; }
+  .wk .tot { background: var(--ink-50); border-bottom: 0; }
+  .wk .tot.c .t b { font-size: 14px; }
+
+  /* side panel */
+  .side { width: 296px; flex: none; }
+  .sec { padding: 12px 16px 14px; border-bottom: 1px solid var(--ink-200); }
+  .sec h3 { margin: 0 0 8px; font-size: 14.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .sec h3 .chip { height: 22px; font-size: 12px; }
+  .pkd { border: 1px solid var(--orange-300); background: var(--orange-50); border-radius: 10px; padding: 9px 12px; margin-top: 8px; font-size: 13px; line-height: 1.45; color: var(--ink-800); }
+  .pkd b { font-size: 13.5px; color: var(--orange-700); }
+  .pkd small { display: block; color: var(--ink-600); font-size: 12px; margin-top: 2px; }
+  .wins { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .wins span { font-size: 12px; font-weight: 600; color: var(--ink-700); border: 1px solid var(--ink-300); border-radius: 6px; padding: 1px 7px; background: #fff; }
+  .sec p { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-600); line-height: 1.45; }
+  .ul .r { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--ink-150); font-size: 13px; }
+  .ul .r:first-of-type { border-top: 0; }
+  .ul a.r { color: inherit; text-decoration: none; }
+  .wk .hd .wsel .wmenu { display: inline-flex; align-items: center; margin-left: 2px; }
+  /* Kit 0.7: the Saturday day mode menu is disabled (CTL-OFC-34-15); its reason is in the Peak days note */
+  .wk .hd .wsel .wmenu.dis { cursor: not-allowed; }
+  .wk .hd .wsel .wmenu.dis .ic { color: var(--ink-300); }
+  .ul .r .d { width: 72px; white-space: nowrap; flex: none; font-weight: 650; color: var(--ink-700); font-size: 12.5px; line-height: 1.25; }
+  .ul .r .d small { display: block; font-weight: 500; color: var(--ink-500); }
+  .ul .r .x { flex: 1; min-width: 0; line-height: 1.3; }
+  .ul .r .x b { font-size: 13.5px; }
+  .ul .r .x small { display: block; color: var(--ink-500); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ul .more { border-top: 1px solid var(--ink-150); padding-top: 8px; font-size: 12.5px; color: var(--ink-600); line-height: 1.45; }
+  .ul .more a { color: var(--teal-700); font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+  .ob .r { display: flex; align-items: center; gap: 10px; padding: 4px 0; font-size: 13px; }
+  .ob .r .d { width: 72px; font-weight: 650; color: var(--ink-700); }
+  .ob .r .bar { flex: 1; height: 6px; border-radius: 3px; background: var(--ink-150); position: relative; overflow: hidden; }
+  .ob .r .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--teal-300); }
+  .ob .r .n { width: 64px; text-align: right; font-weight: 600; color: var(--ink-700); font-variant-numeric: tabular-nums; }
+  .ul .r .chip { height: 22px; font-size: 11.5px; padding: 0 7px; }

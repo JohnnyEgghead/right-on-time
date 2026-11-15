@@ -1,0 +1,5 @@
+{
+  "why": "P2-SCHEMA acceptance: schema-doc-parity fails a planted extra column",
+  "only": "parity",
+  "expect": ["schema-doc-parity: FAIL extra column world.customer.nickname: in the database, not in section 3"]
+}

@@ -1,0 +1,699 @@
+{
+  "source": "docs/UI-SPECIFICATION.md section 2.3",
+  "screens": [
+    {
+      "screen": "SCR-GATE-01",
+      "name": "Access code",
+      "type": "page",
+      "route": "any route, shown before the page when the code is on",
+      "phase": 2,
+      "task": "P2-AUTH"
+    },
+    {
+      "screen": "SCR-GATE-02",
+      "name": "Start page",
+      "type": "page",
+      "route": "`/`",
+      "phase": 2,
+      "task": "P2-AUTH"
+    },
+    {
+      "screen": "SCR-OFC-01",
+      "name": "Staff sign-in, with Sign in as",
+      "type": "page",
+      "route": "`/sign-in`",
+      "phase": 2,
+      "task": "P2-AUTH"
+    },
+    {
+      "screen": "SCR-OFC-02",
+      "name": "Dispatch board (day)",
+      "type": "page",
+      "route": "`/office/board?branch&date`",
+      "phase": 4,
+      "task": "P4-BOARD"
+    },
+    {
+      "screen": "SCR-OFC-03",
+      "name": "Job detail",
+      "type": "page",
+      "route": "`/office/jobs/{jobNumber}`",
+      "phase": 4,
+      "task": "P4-JOB"
+    },
+    {
+      "screen": "SCR-OFC-04",
+      "name": "New job",
+      "type": "page",
+      "route": "`/office/jobs/new?customer`",
+      "phase": 4,
+      "task": "P4-NEWJOB"
+    },
+    {
+      "screen": "SCR-OFC-05",
+      "name": "Customer search",
+      "type": "page",
+      "route": "`/office/customers`",
+      "phase": 4,
+      "task": "P4-CUSTOMERS"
+    },
+    {
+      "screen": "SCR-OFC-06",
+      "name": "Customer page",
+      "type": "page",
+      "route": "`/office/customers/{customerId}`",
+      "phase": 4,
+      "task": "P4-CUSTOMERS"
+    },
+    {
+      "screen": "SCR-OFC-07",
+      "name": "Technicians",
+      "type": "page",
+      "route": "`/office/technicians?branch`",
+      "phase": 4,
+      "task": "P4-TECHNICIANS"
+    },
+    {
+      "screen": "SCR-OFC-08",
+      "name": "Messages: text log",
+      "type": "page",
+      "route": "`/office/messages?date`",
+      "phase": 4,
+      "task": "P4-MESSAGES"
+    },
+    {
+      "screen": "SCR-OFC-09",
+      "name": "Messages: call list",
+      "type": "page",
+      "route": "`/office/messages/call-list?date`",
+      "phase": 4,
+      "task": "P4-MESSAGES"
+    },
+    {
+      "screen": "SCR-OFC-10",
+      "name": "Jobs not in billing",
+      "type": "page",
+      "route": "`/office/billing`",
+      "phase": 4,
+      "task": "P4-BILLING-UI"
+    },
+    {
+      "screen": "SCR-OFC-11",
+      "name": "Reports",
+      "type": "page",
+      "route": "`/office/reports?branch&technician&from&to`",
+      "phase": 4,
+      "task": "P4-REPORTS"
+    },
+    {
+      "screen": "SCR-OFC-12",
+      "name": "Admin: arrival windows",
+      "type": "page",
+      "route": "`/office/admin/windows?branch`",
+      "phase": 4,
+      "task": "P4-ADMIN-WINDOWS"
+    },
+    {
+      "screen": "SCR-OFC-13",
+      "name": "Admin: import, dry run",
+      "type": "page",
+      "route": "`/office/admin/import`",
+      "phase": 4,
+      "task": "P4-ADMIN-IMPORT"
+    },
+    {
+      "screen": "SCR-OFC-14",
+      "name": "Admin: import, duplicates",
+      "type": "page",
+      "route": "`/office/admin/import/duplicates`",
+      "phase": 4,
+      "task": "P4-ADMIN-IMPORT"
+    },
+    {
+      "screen": "SCR-OFC-15",
+      "name": "Admin: import, history",
+      "type": "page",
+      "route": "`/office/admin/import/history`",
+      "phase": 4,
+      "task": "P4-ADMIN-IMPORT"
+    },
+    {
+      "screen": "SCR-OFC-16",
+      "name": "Admin: system health",
+      "type": "page",
+      "route": "`/office/admin/health`",
+      "phase": 4,
+      "task": "P4-HEALTH"
+    },
+    {
+      "screen": "SCR-OFC-17",
+      "name": "Admin: demo clock",
+      "type": "page",
+      "route": "`/office/admin/clock`",
+      "phase": 4,
+      "task": "P4-CLOCK"
+    },
+    {
+      "screen": "SCR-OFC-18",
+      "name": "Reassign job",
+      "type": "dialog",
+      "route": "on OFC-02, OFC-03",
+      "phase": 4,
+      "task": "P4-BOARD"
+    },
+    {
+      "screen": "SCR-OFC-19",
+      "name": "Someone else changed this job or block",
+      "type": "dialog",
+      "route": "on OFC-02, OFC-03, OFC-22, OFC-31",
+      "phase": 4,
+      "task": "P4-BOARD"
+    },
+    {
+      "screen": "SCR-OFC-20",
+      "name": "Reschedule job",
+      "type": "dialog",
+      "route": "on OFC-03, OFC-09",
+      "phase": 4,
+      "task": "P4-JOB"
+    },
+    {
+      "screen": "SCR-OFC-21",
+      "name": "Cancel visit",
+      "type": "dialog",
+      "route": "on OFC-03",
+      "phase": 4,
+      "task": "P4-JOB"
+    },
+    {
+      "screen": "SCR-OFC-22",
+      "name": "Finish visit (office)",
+      "type": "dialog",
+      "route": "on OFC-03; correction mode on OFC-10",
+      "phase": 4,
+      "task": "P4-JOB"
+    },
+    {
+      "screen": "SCR-OFC-23",
+      "name": "Edit job details",
+      "type": "dialog",
+      "route": "on OFC-03",
+      "phase": 4,
+      "task": "P4-JOB"
+    },
+    {
+      "screen": "SCR-OFC-24",
+      "name": "Switch a day's windows",
+      "type": "dialog",
+      "route": "on OFC-12, OFC-34",
+      "phase": 4,
+      "task": "P4-ADMIN-WINDOWS"
+    },
+    {
+      "screen": "SCR-OFC-25",
+      "name": "Run the import",
+      "type": "dialog",
+      "route": "on OFC-13",
+      "phase": 4,
+      "task": "P4-ADMIN-IMPORT"
+    },
+    {
+      "screen": "SCR-OFC-26",
+      "name": "Undo a merge",
+      "type": "dialog",
+      "route": "on OFC-15",
+      "phase": 4,
+      "task": "P4-ADMIN-IMPORT"
+    },
+    {
+      "screen": "SCR-OFC-27",
+      "name": "Reset the demo world",
+      "type": "dialog",
+      "route": "on OFC-17",
+      "phase": 4,
+      "task": "P4-CLOCK"
+    },
+    {
+      "screen": "SCR-OFC-28",
+      "name": "Office alerts",
+      "type": "panel",
+      "route": "top-bar bell on every office page",
+      "phase": 4,
+      "task": "P4-HEALTH"
+    },
+    {
+      "screen": "SCR-OFC-29",
+      "name": "Board job popover",
+      "type": "popover",
+      "route": "on OFC-02",
+      "phase": 4,
+      "task": "P4-BOARD"
+    },
+    {
+      "screen": "SCR-OFC-30",
+      "name": "Jobs",
+      "type": "page",
+      "route": "`/office/jobs?tab`",
+      "phase": 4,
+      "task": "P4-JOBS"
+    },
+    {
+      "screen": "SCR-OFC-31",
+      "name": "Add or change a block",
+      "type": "dialog",
+      "route": "on OFC-02, OFC-32",
+      "phase": 4,
+      "task": "P4-BOARD"
+    },
+    {
+      "screen": "SCR-OFC-32",
+      "name": "Board block popover",
+      "type": "popover",
+      "route": "on OFC-02",
+      "phase": 4,
+      "task": "P4-BOARD"
+    },
+    {
+      "screen": "SCR-OFC-33",
+      "name": "Delete a block",
+      "type": "dialog",
+      "route": "on OFC-32",
+      "phase": 4,
+      "task": "P4-BOARD"
+    },
+    {
+      "screen": "SCR-OFC-34",
+      "name": "Week board",
+      "type": "page",
+      "route": "`/office/board/week?branch&week`",
+      "phase": 4,
+      "task": "P4-WEEK"
+    },
+    {
+      "screen": "SCR-OFC-35",
+      "name": "Text customer",
+      "type": "dialog",
+      "route": "on OFC-03, OFC-06",
+      "phase": 4,
+      "task": "P4-JOB"
+    },
+    {
+      "screen": "SCR-OFC-36",
+      "name": "Add note",
+      "type": "dialog",
+      "route": "on OFC-03, OFC-06",
+      "phase": 4,
+      "task": "P4-JOB"
+    },
+    {
+      "screen": "SCR-OFC-37",
+      "name": "Add or edit equipment",
+      "type": "dialog",
+      "route": "on OFC-03, OFC-06",
+      "phase": 4,
+      "task": "P4-JOB"
+    },
+    {
+      "screen": "SCR-OFC-38",
+      "name": "New customer",
+      "type": "dialog",
+      "route": "on OFC-04, OFC-05",
+      "phase": 4,
+      "task": "P4-CUSTOMERS"
+    },
+    {
+      "screen": "SCR-OFC-39",
+      "name": "Edit customer",
+      "type": "dialog",
+      "route": "on OFC-06",
+      "phase": 4,
+      "task": "P4-CUSTOMERS"
+    },
+    {
+      "screen": "SCR-OFC-40",
+      "name": "Address on the map",
+      "type": "dialog",
+      "route": "on OFC-06",
+      "phase": 4,
+      "task": "P4-CUSTOMERS"
+    },
+    {
+      "screen": "SCR-OFC-41",
+      "name": "Add technician",
+      "type": "dialog",
+      "route": "on OFC-07",
+      "phase": 4,
+      "task": "P4-TECHNICIANS"
+    },
+    {
+      "screen": "SCR-OFC-42",
+      "name": "Add time off",
+      "type": "dialog",
+      "route": "on OFC-07",
+      "phase": 4,
+      "task": "P4-TECHNICIANS"
+    },
+    {
+      "screen": "SCR-OFC-43",
+      "name": "Admin: users and roles",
+      "type": "page",
+      "route": "`/office/admin/users`",
+      "phase": 4,
+      "task": "P4-ACCOUNTS"
+    },
+    {
+      "screen": "SCR-OFC-44",
+      "name": "Invite user",
+      "type": "dialog",
+      "route": "on OFC-43",
+      "phase": 4,
+      "task": "P4-ACCOUNTS"
+    },
+    {
+      "screen": "SCR-OFC-45",
+      "name": "Change role",
+      "type": "dialog",
+      "route": "on OFC-43",
+      "phase": 4,
+      "task": "P4-ACCOUNTS"
+    },
+    {
+      "screen": "SCR-OFC-46",
+      "name": "Turn a user off",
+      "type": "dialog",
+      "route": "on OFC-43",
+      "phase": 4,
+      "task": "P4-ACCOUNTS"
+    },
+    {
+      "screen": "SCR-OFC-47",
+      "name": "Mark fixed",
+      "type": "dialog",
+      "route": "on OFC-10",
+      "phase": 4,
+      "task": "P4-BILLING-UI"
+    },
+    {
+      "screen": "SCR-PBS-01",
+      "name": "Pretend billing: invoices and mode",
+      "type": "page",
+      "route": "`/billing-system`",
+      "phase": 4,
+      "task": "P4-BILLING-UI"
+    },
+    {
+      "screen": "SCR-PBS-02",
+      "name": "Pretend billing: invoice",
+      "type": "page",
+      "route": "`/billing-system/invoices/{jobNumber}`",
+      "phase": 4,
+      "task": "P4-BILLING-UI"
+    },
+    {
+      "screen": "SCR-TEC-01",
+      "name": "Technician sign-in",
+      "type": "page / native screen",
+      "route": "`/tech/sign-in`",
+      "phase": 5,
+      "task": "P5-TWA-TODAY",
+      "nativeTask": "P6-NATIVE-TODAY"
+    },
+    {
+      "screen": "SCR-TEC-02",
+      "name": "Today",
+      "type": "page / native screen",
+      "route": "`/tech`",
+      "phase": 5,
+      "task": "P5-TWA-TODAY",
+      "nativeTask": "P6-NATIVE-TODAY"
+    },
+    {
+      "screen": "SCR-TEC-03",
+      "name": "On my way: confirm",
+      "type": "sheet",
+      "route": "on TEC-02, TEC-04",
+      "phase": 5,
+      "task": "P5-TWA-TODAY",
+      "nativeTask": "P6-NATIVE-TODAY"
+    },
+    {
+      "screen": "SCR-TEC-04",
+      "name": "Job",
+      "type": "page / native screen",
+      "route": "`/tech/jobs/{jobNumber}`",
+      "phase": 5,
+      "task": "P5-TWA-JOB",
+      "nativeTask": "P6-NATIVE-JOB"
+    },
+    {
+      "screen": "SCR-TEC-05",
+      "name": "Add note",
+      "type": "sheet",
+      "route": "`/tech/jobs/{jobNumber}/note`",
+      "phase": 5,
+      "task": "P5-TWA-JOB",
+      "nativeTask": "P6-NATIVE-JOB"
+    },
+    {
+      "screen": "SCR-TEC-06",
+      "name": "Add photo",
+      "type": "sheet",
+      "route": "`/tech/jobs/{jobNumber}/photo`",
+      "phase": 5,
+      "task": "P5-TWA-JOB",
+      "nativeTask": "P6-NATIVE-JOB"
+    },
+    {
+      "screen": "SCR-TEC-07",
+      "name": "Finish job",
+      "type": "page / native screen",
+      "route": "`/tech/jobs/{jobNumber}/finish`",
+      "phase": 5,
+      "task": "P5-TWA-JOB",
+      "nativeTask": "P6-NATIVE-JOB"
+    },
+    {
+      "screen": "SCR-TEC-08",
+      "name": "Directions",
+      "type": "page / native screen",
+      "route": "`/tech/jobs/{jobNumber}/directions`",
+      "phase": 5,
+      "task": "P5-TWA-MAP-ME",
+      "nativeTask": "P6-NATIVE-MAP-ME"
+    },
+    {
+      "screen": "SCR-TEC-09",
+      "name": "Waiting to send",
+      "type": "page / native screen",
+      "route": "`/tech/waiting`",
+      "phase": 5,
+      "task": "P5-TWA-JOB",
+      "nativeTask": "P6-NATIVE-JOB"
+    },
+    {
+      "screen": "SCR-TEC-10",
+      "name": "Me",
+      "type": "page / native screen",
+      "route": "`/tech/me`",
+      "phase": 5,
+      "task": "P5-TWA-MAP-ME",
+      "nativeTask": "P6-NATIVE-MAP-ME"
+    },
+    {
+      "screen": "SCR-TEC-11",
+      "name": "Install the app (web only)",
+      "type": "page",
+      "route": "`/tech/install`",
+      "phase": 5,
+      "task": "P5-TWA-MAP-ME"
+    },
+    {
+      "screen": "SCR-TEC-12",
+      "name": "Server address (native only)",
+      "type": "native screen",
+      "route": "—",
+      "phase": 6,
+      "task": "P6-NATIVE-SHELL"
+    },
+    {
+      "screen": "SCR-TEC-13",
+      "name": "Arrived: confirm",
+      "type": "sheet",
+      "route": "on TEC-02, TEC-04",
+      "phase": 5,
+      "task": "P5-TWA-TODAY",
+      "nativeTask": "P6-NATIVE-TODAY"
+    },
+    {
+      "screen": "SCR-TEC-14",
+      "name": "No one home: confirm",
+      "type": "sheet",
+      "route": "on TEC-02, TEC-04",
+      "phase": 5,
+      "task": "P5-TWA-TODAY",
+      "nativeTask": "P6-NATIVE-TODAY"
+    },
+    {
+      "screen": "SCR-TEC-15",
+      "name": "Map",
+      "type": "page / native screen",
+      "route": "`/tech/map`",
+      "phase": 5,
+      "task": "P5-TWA-MAP-ME",
+      "nativeTask": "P6-NATIVE-MAP-ME"
+    },
+    {
+      "screen": "SCR-TEC-16",
+      "name": "Parts",
+      "type": "page / native screen",
+      "route": "`/tech/parts`",
+      "phase": 5,
+      "task": "P5-TWA-MAP-ME",
+      "nativeTask": "P6-NATIVE-MAP-ME"
+    },
+    {
+      "screen": "SCR-CUS-01",
+      "name": "Book a visit",
+      "type": "page",
+      "route": "`/book`",
+      "phase": 5,
+      "task": "P5-BOOKING"
+    },
+    {
+      "screen": "SCR-CUS-02",
+      "name": "Window just taken",
+      "type": "page",
+      "route": "`/book` (state after a refused booking)",
+      "phase": 5,
+      "task": "P5-BOOKING"
+    },
+    {
+      "screen": "SCR-CUS-03",
+      "name": "You're booked",
+      "type": "page",
+      "route": "`/book/done/{bookingToken}`",
+      "phase": 5,
+      "task": "P5-BOOKING"
+    },
+    {
+      "screen": "SCR-CUS-04",
+      "name": "Live map: on the way",
+      "type": "page",
+      "route": "the live map link path (GAP-11)",
+      "phase": 5,
+      "task": "P5-LIVEMAP"
+    },
+    {
+      "screen": "SCR-CUS-05",
+      "name": "Live map: ended",
+      "type": "page",
+      "route": "the live map link path, answering 410",
+      "phase": 5,
+      "task": "P5-LIVEMAP"
+    },
+    {
+      "screen": "SCR-CUS-06",
+      "name": "Change your visit time",
+      "type": "page",
+      "route": "the reschedule link path (GAP-11)",
+      "phase": 5,
+      "task": "P5-INBOX"
+    },
+    {
+      "screen": "SCR-CUS-07",
+      "name": "Booking site page: Heating, Cooling, Plumbing, Comfort Club, About us",
+      "type": "page",
+      "route": "`/book/heating`, `/book/cooling`, `/book/plumbing`, `/book/comfort-club`, `/book/about-us`",
+      "phase": 5,
+      "task": "P5-BOOKING-PAGES"
+    },
+    {
+      "screen": "SCR-INB-01",
+      "name": "Text inbox",
+      "type": "page",
+      "route": "`/inbox/{inboxToken}`",
+      "phase": 5,
+      "task": "P5-INBOX"
+    },
+    {
+      "screen": "SCR-EML-01",
+      "name": "Email inbox: 1 email",
+      "type": "page",
+      "route": "`/email/{oneTimeToken}`",
+      "phase": 4,
+      "task": "P4-ACCOUNTS"
+    },
+    {
+      "screen": "SCR-EML-02",
+      "name": "Set a password",
+      "type": "page",
+      "route": "`/set-password/{passwordToken}`",
+      "phase": 4,
+      "task": "P4-ACCOUNTS"
+    },
+    {
+      "screen": "SCR-EML-03",
+      "name": "Forgot password",
+      "type": "page / native screen",
+      "route": "`/forgot-password?app`",
+      "phase": 4,
+      "task": "P4-ACCOUNTS"
+    },
+    {
+      "screen": "SCR-SHR-01",
+      "name": "No access",
+      "type": "page",
+      "route": "any route, answering the code forbidden",
+      "phase": 2,
+      "task": "P2-SHELL"
+    },
+    {
+      "screen": "SCR-SHR-02",
+      "name": "Page not found",
+      "type": "page",
+      "route": "any route, answering 404",
+      "phase": 2,
+      "task": "P2-SHELL"
+    },
+    {
+      "screen": "SCR-SHR-03",
+      "name": "Something went wrong",
+      "type": "page",
+      "route": "any route, answering 5xx",
+      "phase": 2,
+      "task": "P2-SHELL"
+    }
+  ],
+  "routes": [
+    {
+      "screen": "SCR-CUS-07",
+      "route": "/book/heating",
+      "phase": 5,
+      "task": "P5-BOOKING-PAGES"
+    },
+    {
+      "screen": "SCR-CUS-07",
+      "route": "/book/cooling",
+      "phase": 5,
+      "task": "P5-BOOKING-PAGES"
+    },
+    {
+      "screen": "SCR-CUS-07",
+      "route": "/book/plumbing",
+      "phase": 5,
+      "task": "P5-BOOKING-PAGES"
+    },
+    {
+      "screen": "SCR-CUS-07",
+      "route": "/book/comfort-club",
+      "phase": 5,
+      "task": "P5-BOOKING-PAGES"
+    },
+    {
+      "screen": "SCR-CUS-07",
+      "route": "/book/about-us",
+      "phase": 5,
+      "task": "P5-BOOKING-PAGES"
+    }
+  ]
+}

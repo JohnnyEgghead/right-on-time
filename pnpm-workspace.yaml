@@ -1,0 +1,16 @@
+packages:
+  - apps/*
+  - packages/*
+# 14-day rule (REQUIREMENTS section 6): refuse any release published less than 14 days ago.
+minimumReleaseAge: 20160
+# @bw/db's dev-only embedded PostgreSQL 18.4 (P2-SCHEMA): its postinstall only re-creates library symlinks,
+# which packages/db/src/testing/pg-server.ts does itself at run time, so no third-party install script runs.
+allowBuilds:
+  '@embedded-postgres/darwin-arm64': false
+  '@embedded-postgres/darwin-x64': false
+  '@embedded-postgres/linux-arm': false
+  '@embedded-postgres/linux-arm64': false
+  '@embedded-postgres/linux-ia32': false
+  '@embedded-postgres/linux-ppc64': false
+  '@embedded-postgres/linux-x64': false
+  '@embedded-postgres/windows-x64': false

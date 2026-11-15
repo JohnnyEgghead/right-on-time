@@ -1,0 +1,11 @@
+/* SCR-OFC-28 Office alerts: the 3 panel rules the frame page mockups/pages/office-board.html keeps in its last <style> (copied byte for byte), so the panel
+   looks the same on every office page, not only the board. Then the app's own: the panel states the frame draws with a sample (loading rows, a note). */
+  .r1-alerts.in { position: relative; top: auto; right: auto; width: auto; max-height: none; box-shadow: none; }
+  .r1-alerts li a { font-size: 12.5px; font-weight: 650; color: var(--teal-700); text-decoration: underline; margin-right: 10px; }
+  .r1-alerts li.new { background: var(--teal-50); }
+
+.bw-alerts-skel { padding: 12px 14px; }
+.bw-alerts-note { margin: 12px 14px; }
+.r1-alerts li .used { font-size: 12.5px; color: var(--ink-500); }
+.r1-alerts .ah2 button.btn { cursor: pointer; }
+.topbar .r1-alerts { top: 100%; margin-top: 6px; }

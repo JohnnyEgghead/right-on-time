@@ -1,0 +1,4 @@
+# Catalog files merge by key union (BUILD_PLAN D-16). The driver is registered in each clone's
+# git config by the root prepare script (packages/i18n/scripts/register-merge-driver.ts).
+packages/i18n/catalog/en.json merge=bw-catalog
+packages/i18n/catalog/es.json merge=bw-catalog

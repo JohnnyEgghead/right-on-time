@@ -1,0 +1,123 @@
+/* SCR-OFC-08 and SCR-OFC-09 adaptations of their frames (DK-93, DK-94; P4-MESSAGES). The frames are 1440 x 900 pictures; this sheet lifts their
+   fixed heights so the page scrolls, replaces the frames' inline styles (the page CSP refuses them), puts real controls (a select, a date field, a
+   text field, buttons) where the frames drew spans, keeps the app body's kit rules (body.r1 .side, .panel .ph) off the frame's classes, and lays the
+   two screens out below 1000 px (NFR-06). It sets no color or spacing value of its own beyond the frames' (OA-84). */
+
+/* The frame's fixed heights. */
+.bw-screen[data-screen="SCR-OFC-08"] .work { height: auto; min-height: 648px; }
+.bw-screen[data-screen="SCR-OFC-09"] .work { min-height: 724px; }
+.bw-screen[data-screen="SCR-OFC-09"] .r1-main { min-height: 0; }
+
+/* Table column widths and the frame's other inline values, as classes. */
+col.bw-c84 { width: 84px; }
+col.bw-c226 { width: 226px; }
+col.bw-c124 { width: 124px; }
+col.bw-c82 { width: 82px; }
+col.bw-c214 { width: 214px; }
+col.bw-c168 { width: 168px; }
+col.bw-c140 { width: 140px; }
+col.bw-c244 { width: 244px; }
+col.bw-c86 { width: 86px; }
+.bw-nowrap { white-space: nowrap; }
+.bw-pm-teal { color: var(--teal-700); }
+.bw-pm-chiprow { margin-top: 8px; }
+.bw-pm-next { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-700); font-weight: 560; }
+.bw-pm-next .ic { width: 15px; height: 15px; }
+.bw-pm-empty { margin: 12px 14px 0; }
+.bw-pm-pad { padding: 12px 14px; }
+.bw-pm-skel { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.bw-pm-simwrap { padding: 12px 24px 0; }
+.bw-pm-simwrap .simn { margin: 0; }
+.bw-pm-hint { padding: 16px; font-size: 13.5px; color: var(--ink-600); }
+.bw-pm-msg { margin: 10px 16px 0; }
+.bw-pm-added { margin-top: 10px; }
+.bw-pm-call { display: inline-flex; }
+.bw-w-30 { width: 30%; }
+.bw-w-40 { width: 40%; }
+.try .d.ok { background: var(--st-site-bg); color: var(--st-site-ink); border: 1px solid var(--st-site-bd); }
+.dacts .btn:disabled { opacity: .6; cursor: default; }
+
+/* Real controls where the frames drew spans: the control covers its label, so its box is the label's. */
+.bw-screen .fsel { position: relative; }
+.bw-screen .fsel > .bw-pm-sel { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); margin: 0; opacity: 0; cursor: pointer; font: inherit; }
+.bw-screen .fsel:focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.bw-screen .fsel.find > input.bw-pm-find { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); box-sizing: border-box; border: 0; padding: 0 9px 0 31px; background: transparent; font: inherit; color: var(--ink-900); outline: 0; border-radius: 8px; }
+.bw-screen .fsel.find > .ic { position: relative; z-index: 1; pointer-events: none; }
+.bw-screen .fsel.find > input.bw-pm-find::placeholder { color: var(--ink-500); opacity: 1; }
+.bw-screen table.log tr[role="button"] { cursor: pointer; }
+.bw-screen table.log tr[role="button"]:focus-visible { outline: 3px solid var(--teal-500); outline-offset: -3px; }
+.bw-screen .tabs a { text-decoration: none; }
+.bw-screen a.chg { cursor: pointer; text-decoration: none; }
+.bw-screen .seg span[role="radio"] { cursor: pointer; }
+.bw-screen .seg span:focus-visible, .bw-screen a.chg:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+
+/* The outcome buttons are real buttons and a link here: they take the frame's span look (font and line height come from the page). */
+.bw-screen button.ob, .bw-screen a.ob { font-family: inherit; line-height: inherit; text-decoration: none; cursor: pointer; box-sizing: border-box; }
+.bw-screen button.ob:disabled, .bw-screen a.ob[aria-disabled="true"] { opacity: .6; cursor: default; pointer-events: none; }
+.bw-screen a.ob { color: var(--ink-800); }
+.bw-screen table.cl tr[data-selected] td:first-child { box-shadow: inset 3px 0 0 var(--teal-500); }
+.bw-screen a.jlk { cursor: pointer; }
+
+/* The call list's side column and phone span: the app body is .r1, whose kit rules (:where(body.r1) .side, .panel .ph) the frame's body does not
+   take, so they are not named .side and .ph here. */
+.bw-cl-side { width: 360px; flex: none; display: flex; flex-direction: column; gap: 12px; }
+.bw-cl-side .panel { padding: 0 0 12px; flex: none; }
+.bw-cl-side h3 { margin: 0; padding: 13px 16px 8px; font-size: 15px; font-weight: 700; }
+table.cl .bw-ph { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ftx .fr .bw-ph { font-size: inherit; }
+.bw-cl-print { height: 36px; }
+.prog .bar i.bw-cl-site, .prog .k i.bw-cl-site { background: var(--st-site-bd); }
+.prog .bar i.bw-cl-orange, .prog .k i.bw-cl-orange { background: var(--orange-500); }
+.prog .bar i.bw-cl-ink, .prog .k i.bw-cl-ink { background: var(--ink-500); }
+.prog .k.bw-cl-sorted { margin-left: auto; color: var(--ink-500); }
+.bw-cl-rules { margin-top: 10px; }
+
+/* Print call list: the day's rows are a page of their own. */
+.bw-print { display: none; }
+@media print {
+  .bw-screen[data-screen="SCR-OFC-09"] > :not(.r1-main), .bw-screen[data-screen="SCR-OFC-09"] .r1-main > :not(.bw-print) { display: none; }
+  .bw-screen[data-screen="SCR-OFC-09"] .bw-print { display: block; padding: 12px; }
+  .bw-print table { width: 100%; border-collapse: collapse; font-size: 12pt; }
+  .bw-print th, .bw-print td { border: 1px solid var(--ink-500); padding: 6px 8px; text-align: left; }
+  .bw-print .bw-print-box { width: 120px; }
+}
+
+@media (max-width: 999px) {
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) :is(.topbar, .r1-demobar, .r1-foot) { flex-wrap: wrap; height: auto; min-height: 0; white-space: normal; }
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) .topbar nav { flex-wrap: wrap; }
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) .mh { padding-left: 16px; padding-right: 16px; }
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) .mh .row { flex-wrap: wrap; }
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) .work { flex-direction: column; padding-left: 16px; padding-right: 16px; }
+  .bw-screen[data-screen="SCR-OFC-08"] .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-left: 16px; padding-right: 16px; }
+  .bw-screen[data-screen="SCR-OFC-08"] .detp, .bw-cl-side { width: auto; }
+  .bw-screen[data-screen="SCR-OFC-08"] .logp, .bw-screen[data-screen="SCR-OFC-09"] .listp { min-width: 0; }
+  .bw-screen[data-screen="SCR-OFC-08"] .fbar { height: auto; flex-wrap: wrap; padding: 8px 12px; }
+  .bw-screen[data-screen="SCR-OFC-08"] .fbar .find { margin-left: 0; width: auto; flex: 1 1 190px; }
+  .bw-screen[data-screen="SCR-OFC-08"] .foot { height: auto; flex-wrap: wrap; padding: 8px 14px; }
+  .bw-pm-simwrap { padding-left: 16px; padding-right: 16px; }
+  .bw-screen[data-screen="SCR-OFC-09"] .lh { flex-wrap: wrap; }
+  .bw-screen[data-screen="SCR-OFC-09"] .lh .acts { margin-left: 0; flex-wrap: wrap; }
+  .bw-screen[data-screen="SCR-OFC-09"] .bw-cl-print { height: auto; min-height: 44px; white-space: normal; }
+  .bw-screen[data-screen="SCR-OFC-09"] .prog { flex-wrap: wrap; }
+  .bw-screen[data-screen="SCR-OFC-09"] .prog .k.bw-cl-sorted { margin-left: 0; }
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) :is(table, thead, tbody, tr, th, td) { display: block; width: auto; max-width: 100%; box-sizing: border-box; }
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) thead, :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) colgroup { display: none; }
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) :is(td, th) { white-space: normal; overflow-wrap: anywhere; height: auto; }
+  .bw-screen[data-screen="SCR-OFC-08"] table.log td.tx { white-space: normal; }
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) tr { border-top: 1px solid var(--ink-200); padding: 8px 12px; }
+}
+
+@media (max-width: 719px) {
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"])
+    :is(a[href], button, select, input:not([type="hidden"]), label.fsel, [role="button"], [role="radio"]) {
+    min-height: 44px; min-width: 44px; box-sizing: border-box;
+  }
+  :is(.bw-screen[data-screen="SCR-OFC-08"], .bw-screen[data-screen="SCR-OFC-09"]) :is(a[href], a[role="button"]) { display: inline-flex; align-items: center; }
+  .bw-screen[data-screen="SCR-OFC-09"] .outs { flex-wrap: wrap; }
+  .bw-screen[data-screen="SCR-OFC-09"] .seg { height: auto; min-height: 46px; max-width: calc(100% - 32px); }
+  .bw-screen[data-screen="SCR-OFC-09"] .seg span { min-height: 44px; min-width: 44px; }
+  .bw-screen[data-screen="SCR-OFC-08"] .fsel, .bw-screen[data-screen="SCR-OFC-09"] .fsel { min-height: 44px; }
+  .bw-screen[data-screen="SCR-OFC-08"] .tiles { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen[data-screen="SCR-OFC-08"] .tile { min-width: 0; }
+  .bw-screen[data-screen="SCR-OFC-08"] .stc small, .bw-screen[data-screen="SCR-OFC-09"] table.cl small { white-space: normal; }
+}

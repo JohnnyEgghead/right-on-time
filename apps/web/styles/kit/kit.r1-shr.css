@@ -1,0 +1,26 @@
+/* ---------- DK-48 Shared pages: no access, not found, error ---------- */
+/* source: mockups/src/design-options/r1-shr.css (product) */
+/* U-SHR single draft: SCR-SHR-01, -02, -03 share this layout. */
+body.r1 { width: 1440px; margin: 0; background: var(--ink-100); }
+.r1-screen { width: 1440px; height: 900px; overflow: hidden; display: flex; flex-direction: column; background: var(--ink-100); }
+.shr-head { height: 64px; background: var(--white); border-bottom: 1px solid var(--ink-200); display: flex; align-items: center; gap: 18px; padding: 0 40px; }
+.shr-head .brand svg.mark { width: 32px; height: 32px; }
+.shr-head .brand .word { font-size: 20px; }
+.shr-head .prod { font-size: 14px; font-weight: 600; color: var(--teal-700); padding-left: 16px; border-left: 1px solid var(--ink-300); }
+.shr-head .grow { flex: 1; }
+.shr-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; position: relative; overflow: hidden; }
+.shr-main::before { content: ""; position: absolute; width: 620px; height: 760px; left: 50%; top: 52%; transform: translate(-50%, -50%);
+  background: radial-gradient(closest-side, rgba(26,138,165,.10), rgba(26,138,165,0)); border-radius: 50%; }
+.shr-card { position: relative; width: 600px; background: var(--white); border: 1px solid var(--ink-200); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 40px 44px 34px; text-align: center; }
+.shr-ico { width: 76px; height: 76px; border-radius: 22px; margin: 0 auto 18px; display: flex; align-items: center; justify-content: center; }
+.shr-ico .ic { width: 38px; height: 38px; }
+.shr-ico.lock { background: var(--teal-100); color: var(--teal-700); }
+.shr-ico.lost { background: var(--orange-100); color: var(--orange-700); }
+.shr-ico.err { background: var(--st-late-bg); color: var(--st-late-ink); }
+.shr-card h1 { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 760; letter-spacing: -.02em; color: var(--ink-900); }
+.shr-card p { margin: 10px auto 0; max-width: 470px; font-size: 16px; line-height: 1.5; color: var(--ink-600); }
+.shr-acts { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.shr-acts .btn { height: 48px; padding: 0 22px; font-size: 16px; border-radius: 10px; }
+.shr-code { margin-top: 22px; font-size: 12.5px; color: var(--ink-500); }
+.shr-code b { font-weight: 650; color: var(--ink-600); }
+

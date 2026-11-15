@@ -1,0 +1,117 @@
+/* CMP-10 Sync strip and the SCR-TEC-05 and SCR-TEC-09 screens (DK-111) page-local rules: the last <style> of mockups/pages/tech-offline.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/tech.css. */
+  .screen { background: #f2f4f6; }
+  .apphead { background: var(--teal-900); color: #fff; padding: 0 16px 10px; flex: none; }
+  .apphead .sbar { margin: 0 -16px; color: #fff; }
+  .nosvc { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 650; }
+  .nosvc svg { display: block; }
+  .nav { display: flex; align-items: center; justify-content: space-between; margin: -2px -6px 0; }
+  .nav span { height: 44px; min-width: 44px; display: inline-flex; align-items: center; gap: 2px; font-size: 16px; font-weight: 600; color: var(--teal-200); }
+  .nav .ic { width: 24px; height: 24px; }
+  .nav .r { justify-content: center; }
+  .hrow { display: flex; align-items: center; gap: 4px; margin-left: -12px; }
+  .hrow .chip { margin-left: auto; }
+  .bk { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--teal-200); }
+  .bk .ic { width: 26px; height: 26px; }
+  .apphead h1 { margin: 0; font-size: 23px; font-weight: 760; letter-spacing: -.02em; }
+  .apphead .addr { font-size: 14.5px; color: #e6f3f6; margin-top: -4px; padding-left: 36px; }
+  .chip.site { height: 26px; font-size: 13px; }
+  .banner { flex: none; display: flex; gap: 12px; align-items: center; background: var(--st-risk-bg); border-bottom: 2px solid var(--st-risk-bd); color: var(--st-risk-ink); padding: 8px 16px; }
+  .banner .bi { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--st-risk-bd); display: flex; align-items: center; justify-content: center; flex: none; position: relative; }
+  .banner .bi .ic { width: 22px; height: 22px; }
+  .banner .bi::after { content: ""; position: absolute; width: 30px; height: 2.5px; background: var(--st-risk-ink); transform: rotate(-45deg); border-radius: 2px; }
+  .banner b { font-size: 18px; font-weight: 780; display: block; color: #5c3700; }
+  .banner small { display: block; font-size: 13.5px; line-height: 1.35; font-weight: 550; }
+  .body { flex: 1; padding: 8px 12px 0; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .card { background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; padding: 10px 12px; box-shadow: none; }
+  .saved h3 { margin: 0; font-size: 15.5px; font-weight: 720; line-height: 1.3; color: var(--ink-900); }
+  .saved h3 small { display: block; font-size: 13px; color: var(--ink-600); font-weight: 550; margin-top: 1px; }
+  .item { display: flex; gap: 10px; align-items: center; padding: 5px 0; border-top: 1px solid var(--ink-150); }
+  .saved .item:nth-of-type(1) { margin-top: 6px; }
+  .item .ico { width: 34px; height: 34px; border-radius: 8px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--ink-100); color: var(--ink-600); overflow: hidden; }
+  .item .ico .ic { width: 20px; height: 20px; }
+  .item .ico svg.pic { width: 100%; height: 100%; display: block; }
+  .item .tx { flex: 1; min-width: 0; font-size: 14px; line-height: 1.3; color: var(--ink-800); }
+  .item .tx b { display: block; font-weight: 650; color: var(--ink-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .tx small { font-size: 12.5px; color: var(--ink-500); }
+  .wait { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 999px; font-size: 12.5px; font-weight: 650; background: var(--st-risk-bg); color: var(--st-risk-ink); border: 1px solid #ecc77a; white-space: nowrap; }
+  .wait .ic { width: 14px; height: 14px; }
+  .compose .top { display: flex; align-items: center; justify-content: space-between; }
+  .compose h3 { margin: 0; font-size: 12px; font-weight: 750; color: var(--ink-500); text-transform: uppercase; letter-spacing: .07em; }
+  .compose .ta { margin-top: 7px; border: 1.5px solid var(--teal-600); box-shadow: 0 0 0 3px rgba(18,115,139,.16); border-radius: 10px; padding: 9px 11px; font-size: 15.5px; line-height: 1.4; color: var(--ink-900); }
+  .compose .caret { display: inline-block; width: 2px; height: 19px; background: var(--teal-600); vertical-align: -4px; margin-left: 1px; }
+  .compose .row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .compose .kept { flex: 1; display: flex; gap: 6px; align-items: flex-start; font-size: 13px; line-height: 1.35; color: var(--st-site-ink); font-weight: 600; }
+  .compose .kept .ic { width: 16px; height: 16px; margin-top: 1px; }
+  .compose .savebtn { height: 44px; padding: 0 18px; border-radius: 11px; background: var(--teal-700); color: #fff; display: inline-flex; align-items: center; font-size: 15.5px; font-weight: 700; flex: none; }
+  .kb { flex: none; background: #d1d4da; padding: 9px 3px 26px; }
+  .kb .sug { display: flex; height: 36px; align-items: center; font-size: 15.5px; color: #111; margin-bottom: 4px; }
+  .kb .sug span { flex: 1; text-align: center; }
+  .kb .sug span + span { border-left: 1px solid #b4b8bf; }
+  .kb .r { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
+  .kb .k { height: 40px; width: 33px; border-radius: 5px; background: #fff; box-shadow: 0 1px 0 #898a8d; display: flex; align-items: center; justify-content: center; font-size: 21px; color: #111; }
+  .kb .k.g { background: #abb0ba; font-size: 15px; width: 44px; }
+  .kb .k.sp { width: 186px; font-size: 15px; }
+  .kb .k.rt { width: 88px; font-size: 15px; background: #abb0ba; }
+  .kb .r2 { padding: 0 19px; }
+  /* Step 5c lane 2: page rules for the spec controls and the states board. */
+  .hrow .hsync { margin-left: 6px; }
+  .sync { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 4px 10px 4px 7px; font-size: 12.5px; font-weight: 600; color: var(--white); white-space: nowrap; }
+  .sync .ic { width: 16px; height: 16px; color: var(--orange-300); }
+  .apphead .clkrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 36px; margin-top: 4px; white-space: nowrap; }
+  .bsync { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; vertical-align: 2px; height: 26px; padding: 0 9px; border-radius: 999px; background: var(--white); border: 1px solid var(--st-risk-bd); color: var(--st-risk-ink); font-size: 12.5px; font-weight: 650; }
+  .bsync .ic { width: 14px; height: 14px; }
+  .apphead .clkrow .r1p-clk { margin-top: 0; }
+  .tabbar { height: 74px; flex: none; background: var(--white); border-top: 1px solid var(--ink-200); display: flex; justify-content: space-around; padding: 8px 10px 0; }
+  .tabbar span { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--ink-500); width: 70px; min-height: 44px; }
+  .tabbar span .ic { width: 24px; height: 24px; }
+  .tabbar span.on { color: var(--teal-700); }
+  .compose .disc { height: 44px; padding: 0 12px; border-radius: 11px; border: 1.5px solid var(--ink-300); color: var(--ink-800); background: var(--white); display: inline-flex; align-items: center; font-size: 15px; font-weight: 650; flex: none; }
+  .compose .ta.empty { color: var(--ink-500); }
+  .compose .savebtn.dis { background: var(--ink-100); color: var(--ink-500); }
+  .compose .why { font-size: 12.5px; color: var(--ink-600); margin-top: 4px; text-align: right; }
+  .r1p-mini .body { overflow: visible; padding-bottom: 12px; }
+  .r1p-mini .apphead { padding-top: 12px; }
+  .wh { background: var(--teal-900); color: var(--white); padding: 12px 16px 12px; }
+  .wh h1 { margin: 0; font-size: 23px; font-weight: 760; letter-spacing: -.02em; }
+  .wh .nav span { color: var(--teal-200); }
+  .how { font-size: 13px; line-height: 1.45; color: var(--ink-700); background: var(--teal-50); border: 1px solid var(--teal-200); border-radius: 12px; padding: 9px 12px; }
+  .how b { color: var(--teal-900); }
+  .wait.sent { background: var(--st-site-bg); color: var(--st-site-ink); }
+  .wait.sending { background: var(--teal-100); color: var(--teal-800); }
+  .wait.gone { background: var(--st-late-bg); color: var(--st-late-ink); }
+  .wait.old { background: var(--st-late-bg); color: var(--st-late-ink); }
+  .item .tx .why { display: block; font-size: 12px; color: var(--st-late-ink); }
+  .cnt { font-size: 13px; font-weight: 650; color: var(--ink-700); }
+  .cdlg { margin: 10px 0 0; background: var(--white); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 14px 16px; }
+  .cdlg h2 { margin: 0; font-size: 18px; font-weight: 740; }
+  .cdlg p { margin: 6px 0 0; font-size: 14.5px; color: var(--ink-700); }
+  .cdlg .row { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+  .cdlg .row span { min-height: 44px; padding: 0 16px; border-radius: 11px; display: inline-flex; align-items: center; font-size: 15px; font-weight: 700; }
+  .cdlg .row .k { border: 1.5px solid var(--ink-300); color: var(--ink-800); }
+  .cdlg .row .x { background: var(--st-late-bd); color: var(--white); }
+  /* Kit 0.8 (owner ruling 362101fd, F-1029): a phone window, under 720 px, draws every tap target at least 44 x 44 px and cuts no text
+     short, as the app's styles/app/tech.css does on the job screens (SCR-TEC-04 to -07, -09). body.r1p is the frame page's own body, so
+     these rules never reach the app. At the 1440 x 900 window the values above stand unchanged. */
+  @media (max-width: 720px) {
+    :where(body.r1p) a { display: inline-flex; align-items: center; }
+    body.r1p a, body.r1p label, body.r1p [role="button"], body.r1p [role="link"], body.r1p [role="spinbutton"], body.r1p [role="option"], body.r1p [role="textbox"] { min-height: 44px; min-width: 44px; }
+    body.r1p .nav span { height: auto; min-height: 44px; }
+    body.r1p .nav .mid { text-align: center; }
+    body.r1p .wl .in, body.r1p .lab2 .in { min-height: 44px; }
+    body.r1p .wl .x { width: 44px; height: 44px; }
+    body.r1p .step span { width: 44px; height: 44px; }
+    /* The part search: a 44 px box inside its 1 px border. */
+    body.r1p .find { min-height: 46px; }
+    /* No parts used: the label row is the 44 px target; its box stays drawn at 22 px. */
+    body.r1p .nop { min-height: 44px; }
+    body.r1p .ph.add { width: auto; min-width: 78px; height: auto; min-height: 48px; text-align: center; }
+    body.r1p .item .tx b { white-space: normal; overflow: visible; }
+    body.r1p .apphead, body.r1p .wh { overflow: visible; }
+    /* A link inside a sentence (CMP-10's 24-hour banner) stays inline, its words spaced as written; its padding gives it the 44 px. */
+    body.r1p .r1p-old a { display: inline; padding: 14px 0; }
+    /* Rows of buttons and words wrap rather than push the screen sideways. */
+    body.r1p .cdlg .row, body.r1p .compose .row, body.r1p .item, body.r1p .hrow, body.r1p .clkrow, body.r1p .r1p-clk { flex-wrap: wrap; }
+    body.r1p .clkrow, body.r1p .r1p-clk { row-gap: 4px; }
+  }
+

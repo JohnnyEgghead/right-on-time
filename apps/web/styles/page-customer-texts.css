@@ -1,0 +1,63 @@
+/* SCR-INB-01 page-local rules (DK-126 to DK-128): the last <style> of mockups/pages/customer-texts.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/inbox.css. */
+
+  .screen { background: #fff; }
+  .mhead { flex: none; background: #f6f7f8; border-bottom: 1px solid #e3e5e8; padding: 0 0 10px; }
+  .mhead .sbar { color: #111; }
+  .mhead .r { display: grid; grid-template-columns: 70px 1fr 70px; align-items: start; padding: 0 12px; }
+  .mhead .back { display: flex; align-items: center; color: #1a73e8; font-size: 17px; padding-top: 14px; }
+  .mhead .back .ic { width: 26px; height: 26px; }
+  .mhead .who { text-align: center; }
+  .mhead .avatar { width: 42px; height: 42px; border-radius: 50%; background: #fff; border: 1px solid #dfe3e7; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+  .mhead .avatar svg.mark { width: 27px; height: 27px; }
+  .mhead .nm { font-size: 13.5px; font-weight: 600; margin-top: 4px; color: #111; display: inline-flex; align-items: center; gap: 2px; }
+  .mhead .nm .ic { width: 12px; height: 12px; color: #9aa0a6; }
+  .mhead .sub { font-size: 12px; color: #6b7280; }
+  .thread { flex: 1; padding: 4px 14px 0; display: flex; flex-direction: column; overflow: hidden; }
+  .stamp { text-align: center; font-size: 12.5px; color: #6b7280; margin: 9px 0 6px; font-weight: 500; }
+  .stamp b { font-weight: 650; color: #4b5563; }
+  .bub { max-width: 300px; padding: 9px 14px 10px; border-radius: 20px; font-size: 16px; line-height: 1.38; letter-spacing: -.005em; }
+  .in { align-self: flex-start; background: #e9ebee; color: #111; border-bottom-left-radius: 6px; }
+  .out { align-self: flex-end; background: #1a73e8; color: #fff; border-bottom-right-radius: 6px; min-width: 44px; text-align: center; }
+  .in a { color: #1a5fd0; text-decoration: underline; text-underline-offset: 2px; }
+  .meta { align-self: flex-end; font-size: 11.5px; color: #6b7280; margin-top: 3px; font-weight: 500; }
+  .preview { align-self: flex-start; width: 300px; border-radius: 18px; overflow: hidden; background: #e9ebee; margin-top: 4px; border-top-left-radius: 6px; }
+  .preview svg { display: block; width: 100%; height: 70px; }
+  .preview .pt { padding: 6px 14px 7px; display: flex; justify-content: space-between; align-items: baseline; }
+  .preview .pt b { font-size: 14px; color: #111; }
+  .preview .pt span { font-size: 12.5px; color: #6b7280; }
+  .inputbar { flex: none; height: 86px; padding: 10px 12px 0; display: flex; gap: 10px; align-items: flex-start; }
+  .inputbar .plus { width: 36px; height: 36px; border-radius: 50%; background: #eef0f2; display: flex; align-items: center; justify-content: center; color: #4b5563; }
+  .inputbar .plus .ic { width: 20px; height: 20px; }
+  .inputbar .field { flex: 1; height: 38px; border-radius: 19px; border: 1px solid #d5d9de; display: flex; align-items: center; padding: 0 14px; color: #9aa0a6; font-size: 16px; }
+  /* Step 5c lane 2: page rules for the spec controls and the states board. */
+  .ibx { padding: 0 0 6px; }
+  .ibx .r1-demobar.ph { margin: 0; }
+  .ibrow { display: flex; align-items: center; gap: 8px; padding: 6px 14px 0; }
+  .ibrow .brand svg.mark { width: 22px; height: 22px; }
+  .ibrow .brand .word { font-size: 15px; }
+  .ibrow .tel14 { font-size: 12px; font-weight: 650; color: var(--ink-700); margin-left: auto; white-space: nowrap; }
+  .ibrow .lang { font-size: 12.5px; color: var(--ink-500); font-weight: 550; white-space: nowrap; }
+  .ibrow .lang b { color: var(--teal-700); }
+  .whose { margin: 6px 14px 0; font-size: 12.5px; color: var(--teal-900); background: var(--teal-50); border: 1px solid var(--teal-200); border-radius: 9px; padding: 5px 9px; line-height: 1.35; }
+  .mhead .r { margin-top: 2px; }
+  .mhead { padding-bottom: 6px; }
+  .mhead .avatar { width: 34px; height: 34px; }
+  .mhead .back { padding-top: 6px; }
+  .thread { justify-content: flex-end; padding-bottom: 6px; }
+  .thread > * { flex: none; }
+  .quiet { flex: none; font-size: 11.5px; color: var(--ink-500); text-align: center; padding: 4px 14px 0; }
+  .rbtns { flex: none; display: flex; gap: 8px; padding: 6px 12px 0; }
+  .rbtns span { flex: 1; min-height: 44px; border-radius: 22px; border: 1.5px solid var(--st-way-bd); color: var(--st-way-ink); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; background: var(--white); }
+  .rbtns span.busy { opacity: .85; }
+  .rbtns span.dis, .inputbar .dis { border-color: var(--ink-200); color: var(--ink-400); background: var(--ink-100); }
+  .inputbar { height: auto; padding: 8px 12px 0; align-items: center; }
+  .inputbar .send { flex: none; min-width: 64px; height: 44px; border-radius: 22px; background: var(--st-way-bd); color: var(--white); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; padding: 0 14px; }
+  .inputbar .send.dis { background: var(--ink-200); color: var(--ink-500); }
+  .screen > .r1p-foot { padding: 4px 12px 22px; font-size: 11px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .r1p-mini .thread { overflow: visible; }
+  .imsg { margin: 14px; display: flex; gap: 10px; align-items: flex-start; border-radius: 14px; padding: 12px 14px; font-size: 15px; line-height: 1.4; background: var(--ink-100); color: var(--ink-800); }
+  .imsg .ic { width: 20px; height: 20px; color: var(--teal-700); margin-top: 1px; }
+  .preview.ended { padding: 10px 14px; }
+

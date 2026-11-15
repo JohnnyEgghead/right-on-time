@@ -1,0 +1,85 @@
+/* SCR-OFC-08 page-local rules (DK-93): the last <style> of mockups/pages/office-messages.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's adaptations are in styles/app/messages.css. */
+  .mh { background: #fff; border-bottom: 1px solid var(--ink-200); padding: 12px 24px 0; }
+  .mh .row { display: flex; align-items: flex-end; gap: 16px; }
+  .mh h1 { margin: 0; font-size: 25px; font-weight: 750; letter-spacing: -.02em; }
+  .mh p { margin: 3px 0 0; font-size: 14px; color: var(--ink-600); }
+  .mh .acts { margin-left: auto; display: flex; gap: 8px; }
+  .tabs { display: flex; gap: 4px; margin-top: 8px; }
+  .tabs a { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; font-weight: 600; font-size: 14.5px; color: var(--ink-600); position: relative; }
+  .tabs a.on { color: var(--teal-800); }
+  .tabs a.on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--orange-500); }
+  .tabs .n { min-width: 22px; height: 20px; border-radius: 10px; background: var(--orange-100); color: var(--orange-700); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; padding: 12px 24px 0; }
+  .tile { background: #fff; border: 1px solid var(--ink-200); border-radius: 10px; padding: 9px 14px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-sm); }
+  .tile .num { font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile .lb { font-size: 13px; font-weight: 650; color: var(--ink-800); line-height: 1.25; }
+  .tile .lb small { display: block; font-weight: 500; color: var(--ink-500); font-size: 12px; }
+  .tile.held { background: var(--ink-50); border-style: dashed; border-color: var(--ink-400); }
+  .tile.fail { background: var(--st-late-bg); border-color: #f3b4b4; }
+  .tile.fail .num, .tile.fail .lb, .tile.fail .lb small { color: var(--st-late-ink); }
+
+  .work { display: flex; gap: 12px; padding: 12px 24px; height: 648px; }
+  .panel { background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); }
+  .logp { flex: 1; min-width: 0; }
+  .fbar { height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--ink-200); }
+  .fsel { white-space: nowrap; height: 34px; border: 1px solid var(--ink-300); border-radius: 8px; display: flex; align-items: center; gap: 7px; padding: 0 9px 0 11px; font-size: 13.5px; background: #fff; }
+  .fsel .k { color: var(--ink-500); font-size: 12.5px; }
+  .fsel b { font-weight: 620; }
+  .fsel .ic { width: 14px; height: 14px; color: var(--ink-500); }
+  .fbar .find { margin-left: auto; width: 190px; color: var(--ink-500); }
+  .fbar .find .ic { width: 15px; height: 15px; }
+
+  table.log { width: 100%; border-collapse: collapse; font-size: 13.5px; table-layout: fixed; }
+  table.log th { text-align: left; font-size: 11.5px; font-weight: 650; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; padding: 7px 10px; border-bottom: 1px solid var(--ink-200); background: var(--ink-50); }
+  table.log td { padding: 0 10px; height: 45px; border-bottom: 1px solid var(--ink-150); vertical-align: middle; }
+  table.log td.tm { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.log .cu b { display: block; font-weight: 640; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  table.log .cu small { display: block; color: var(--ink-500); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  table.log .tx { color: var(--ink-700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+  table.log tr.pick td { background: #eef4fe; }
+  table.log tr.pick td:first-child { box-shadow: inset 3px 0 0 #2f6fe0; }
+  .ty { display: inline-flex; align-items: center; gap: 6px; font-weight: 560; white-space: nowrap; }
+  .ty .ic { width: 15px; height: 15px; color: var(--ink-500); }
+  .lang { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 5px; border: 1px solid var(--ink-300); font-size: 12px; font-weight: 600; color: var(--ink-700); background: #fff; }
+  .lang.es { border-color: var(--teal-300); background: var(--teal-50); color: var(--teal-800); }
+  .stc { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+  .stc small { font-size: 11.5px; color: var(--ink-500); white-space: nowrap; }
+  .chip.held { background: var(--ink-100); color: var(--ink-700); border: 1px dashed var(--ink-400); }
+  .chip.held .ic { width: 13px; height: 13px; }
+  .chip.sent { background: var(--st-way-bg); color: var(--st-way-ink); }
+  .chip.replyc { background: var(--teal-100); color: var(--teal-800); }
+  .chip.replyr { background: var(--orange-100); color: var(--orange-700); }
+  .foot { margin-top: auto; height: 40px; flex: none; display: flex; align-items: center; padding: 0 14px; border-top: 1px solid var(--ink-200); font-size: 12.5px; color: var(--ink-500); gap: 10px; }
+  .foot .pg { margin-left: auto; display: flex; gap: 6px; }
+
+  .detp { width: 380px; flex: none; }
+  .dh { padding: 13px 16px 11px; border-bottom: 1px solid var(--ink-200); }
+  .dh .t1 { display: flex; align-items: center; gap: 8px; }
+  .dh h2 { margin: 0; font-size: 16px; font-weight: 700; }
+  .dh .sub { font-size: 12.5px; color: var(--ink-500); margin-top: 3px; }
+  .bubble { margin: 12px 16px 0; background: var(--ink-100); border-radius: 14px 14px 14px 4px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; color: var(--ink-900); }
+  .meta { margin: 6px 16px 0; font-size: 12px; color: var(--ink-500); }
+  .tries { padding: 10px 16px 0; }
+  .tries h4, .vis h4 { margin: 0 0 6px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-500); }
+  .try { display: grid; grid-template-columns: 22px 1fr; gap: 9px; position: relative; padding-bottom: 8px; }
+  .try::before { content: ""; position: absolute; left: 10px; top: 22px; bottom: 0; width: 2px; background: var(--ink-200); }
+  .try:last-child::before { display: none; }
+  .try .d { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+  .try .d.x { background: var(--st-late-bg); color: var(--st-late-ink); border: 1px solid #f3b4b4; }
+  .try .d.n { background: #fff; color: var(--ink-600); border: 1.5px dashed var(--ink-400); }
+  .try .w { font-size: 13px; line-height: 1.35; }
+  .try .w small { display: block; color: var(--ink-500); font-size: 12px; }
+  .never { margin: 4px 16px 0; border: 1px solid var(--teal-200); background: var(--teal-50); border-radius: 10px; padding: 9px 11px; font-size: 12.5px; line-height: 1.45; color: var(--teal-900); display: flex; gap: 9px; }
+  .never .ic { width: 17px; height: 17px; color: var(--teal-700); margin-top: 1px; }
+  .vis { padding: 12px 16px 0; font-size: 13px; line-height: 1.5; }
+  .dacts { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 14px; margin-top: auto; border-top: 1px solid var(--ink-200); }
+  .r1-st .panel { box-shadow: none; }
+  .r1-st table.log { table-layout: auto; }
+  .r1-st .tabs { margin-top: 0; }
+  tr.live td { background: var(--teal-50); }
+  .simn { display: flex; gap: 8px; align-items: center; margin: 0 0 10px; padding: 8px 12px; border-radius: 9px; background: var(--orange-50); border: 1px solid var(--orange-300); color: var(--orange-700); font-size: 13.5px; font-weight: 600; }
+  .simn .ic { width: 16px; height: 16px; }
+  /* Review c1 K1: the live updates indicator (CMP-13) in place on the main frame */
+  .acts > .r1-live { align-self: center; }

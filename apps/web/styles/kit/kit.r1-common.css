@@ -1,0 +1,279 @@
+/* ---------- DK-22 Caption strip ---------- */
+/* source: mockups/src/design-options/r1-common.css (frame presentation, never built) */
+/* Round 1 design options (step 5a): shared presentation and chrome for the r1-* pages.
+   The caption strip and the states board are presentation only; the demo strip (CMP-01,
+   CMP-02), public header (CMP-14), footer (CMP-04) and language switch (CMP-03) are the
+   product's own chrome, drawn once here so every r1 page shows them the same way. */
+
+/* ---------- Caption strip (presentation) ---------- */
+/* Step 5c: the base text font and page surface, as base.css sets them (body.r1 and the
+   approved office pages keep their own surface). */
+body { font-family: Inter, sans-serif; background: var(--ink-50); }
+.r1-cap {
+  display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 24px;
+  background: var(--ink-900); color: var(--white); font-size: 13.5px; line-height: 1.35;
+}
+.r1-cap .badge { flex: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 750; font-size: 15px; white-space: nowrap; }
+.r1-cap .badge b { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 8px; background: var(--orange-500); color: var(--ink-900); font-size: 15px; font-weight: 800; }
+.r1-cap .what { flex: 1; min-width: 0; color: var(--ink-300); }
+.r1-cap .what strong { color: var(--white); font-weight: 650; }
+.r1-cap .what .scr { display: block; font-size: 12.5px; color: var(--ink-400); margin-top: 1px; }
+.r1-langsw { flex: none; display: inline-flex; align-items: center; gap: 8px; color: var(--ink-400); font-size: 12.5px; font-weight: 600; }
+.r1-langsw .seg2 { display: inline-flex; border: 1px solid var(--ink-600); border-radius: 8px; overflow: hidden; }
+.r1-langsw button { appearance: none; border: 0; background: transparent; color: var(--ink-200); font: 650 13.5px Inter, sans-serif; height: 34px; padding: 0 14px; cursor: pointer; }
+.r1-langsw button + button { border-left: 1px solid var(--ink-600); }
+.r1-langsw button.on { background: var(--ink-50); color: var(--ink-900); }
+/* Step 5c: every frame carries its frozen kit caption (kit section 4) in p.frame-cap. */
+.frame-cap { margin: 0; padding: 7px 24px; background: var(--ink-900); color: var(--white); font-size: 13.5px; font-weight: 650; line-height: 1.35; }
+
+/* ---------- DK-23 States board ---------- */
+/* source: mockups/src/design-options/r1-common.css (frame presentation, never built) */
+/* ---------- States board (presentation) ---------- */
+.r1-states { background: var(--ink-150); padding: 22px 28px 30px; border-top: 1px solid var(--ink-300); }
+.r1-states > h2 { margin: 0; font-size: 18px; font-weight: 750; color: var(--ink-900); letter-spacing: -.01em; }
+.r1-states > p { margin: 3px 0 14px; font-size: 13.5px; color: var(--ink-600); }
+.r1-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.r1-grid.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.r1-grid.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.r1-st { background: var(--white); border: 1px solid var(--ink-300); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); }
+.r1-st > .h { padding: 8px 12px; background: var(--ink-100); border-bottom: 1px solid var(--ink-200); font-size: 13px; line-height: 1.35; color: var(--ink-700); }
+.r1-st > .h b { color: var(--ink-900); font-weight: 750; display: block; font-size: 13.5px; }
+.r1-st > .b { padding: 14px; }
+.r1-note { font-size: 13px; color: var(--ink-600); line-height: 1.45; }
+.r1-states > h3 { margin: 24px 0 10px; font-size: 15px; font-weight: 750; color: var(--ink-800); }
+.r1-st > .h .frame-cap { padding: 0; background: none; color: var(--ink-900); font-size: 13.5px; font-weight: 750; }
+.r1-st.span2 { grid-column: span 2; }
+.r1-st.full { grid-column: 1 / -1; }
+.r1-st > .b.flat { padding: 0; }
+.r1-st > .b.stage { position: relative; background: var(--ink-100); }
+.r1-st .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.r1-st .row + .row, .r1-st .row + .r1-note, .r1-st .r1-note + .row { margin-top: 10px; }
+
+/* Step 5c lane 2: phone frame pages. body.stage.r1p keeps the approved 520 x 980 stage for the
+   first frame (.r1p-stage) and lets the states board run below it, 1 tile per row (.g1).
+   .r1p-mini is a phone screen drawn inside a tile, at its own height. */
+body.stage.r1p { height: auto; min-height: 980px; overflow: visible; display: block; }
+.r1p-stage { height: 980px; display: flex; align-items: center; justify-content: center; }
+.r1-grid.g1 { grid-template-columns: minmax(0, 1fr); }
+body.r1p .r1-states { padding: 18px 16px 26px; }
+body.r1p .r1-st .ic { display: inline-flex; flex: none; }
+body.r1p .r1-st .ic svg { width: 100%; height: 100%; }
+.screen.r1p-mini { width: 390px; max-width: 100%; height: auto; margin: 0 auto; border-radius: 16px; border: 1px solid var(--ink-200); position: relative; }
+.screen.r1p-mini.tall { min-height: 560px; }
+.r1-st .r1p-mini + .r1p-mini, .r1-st .r1p-mini + .r1-note, .r1-st .r1-note + .r1p-mini { margin-top: 10px; }
+.r1p-dev { display: flex; justify-content: center; }
+
+/* ---------- DK-24 Demo strip: demo clock and clock banner (CMP-01, CMP-02) ---------- */
+/* source: mockups/src/design-options/r1-common.css (product) */
+/* ---------- Demo strip: CMP-01 demo clock and CMP-02 clock banner ---------- */
+.r1-demobar {
+  height: 34px; display: flex; align-items: center; gap: 14px; padding: 0 20px;
+  background: var(--teal-950); color: var(--teal-100); font-size: 13px; white-space: nowrap;
+}
+.r1-demobar .clk { display: inline-flex; align-items: center; gap: 7px; }
+.r1-demobar .clk .ic { width: 15px; height: 15px; color: var(--orange-300); }
+.r1-demobar .clk .lbl { color: var(--teal-200); font-weight: 550; }
+.r1-demobar .clk b { color: var(--white); font-weight: 700; font-variant-numeric: tabular-nums; }
+.r1-demobar .run { display: inline-flex; align-items: center; gap: 5px; font-weight: 650; color: var(--st-site-bg); }
+.r1-demobar .run::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--st-site-bd); }
+.r1-demobar .run.paused { color: var(--st-risk-bg); }
+.r1-demobar .run.paused::before { background: var(--st-risk-bd); border-radius: 1px; }
+.r1-demobar a { color: var(--white); font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+.r1-demobar .moved { margin-left: auto; color: var(--teal-200); overflow: hidden; text-overflow: ellipsis; }
+.r1-demobar .moved b { color: var(--white); font-weight: 650; }
+
+/* Step 5c lane 2: the demo clock as the web technician app and the customer phone pages draw it
+   (the r1-techweb-parts pick): a line in the app header, or a slim strip at the page top. */
+.r1p-clk { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--teal-100); }
+.r1p-clk .ic { width: 13px; height: 13px; color: var(--orange-300); }
+.r1p-clk b { color: var(--white); font-weight: 650; }
+.r1p-clk .ns { color: var(--orange-300); font-weight: 650; }
+.r1-demobar.ph { height: 30px; gap: 10px; padding: 0 14px; font-size: 12px; flex: none; }
+.r1-demobar.ph .clk .ic { width: 13px; height: 13px; }
+
+/* ---------- DK-25 Public page header (CMP-14) ---------- */
+/* source: mockups/src/design-options/r1-common.css (product) */
+/* ---------- Public page header: CMP-14 ---------- */
+.r1-pubhead { height: 68px; background: var(--white); border-bottom: 1px solid var(--ink-200); display: flex; align-items: center; gap: 24px; padding: 0 40px; }
+.r1-pubhead .brand svg.mark { width: 34px; height: 34px; }
+.r1-pubhead .brand .word { font-size: 21px; }
+.r1-pubhead .grow { flex: 1; }
+.r1-pubhead .tel { font-weight: 650; color: var(--ink-800); font-size: 15px; white-space: nowrap; }
+.r1-pubhead .tel small { display: block; font-size: 11.5px; font-weight: 550; color: var(--ink-500); }
+
+/* ---------- DK-26 Language switch (CMP-03, web) ---------- */
+/* source: mockups/src/design-options/r1-common.css (product) */
+/* ---------- Language switch: CMP-03 (booking-site style, Figure 8.1) ---------- */
+.r1-lang { display: inline-flex; align-items: center; gap: 2px; font-size: 14px; color: var(--ink-500); font-weight: 550; white-space: nowrap; }
+.r1-lang a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; color: var(--ink-600); text-decoration: none; cursor: pointer; }
+.r1-lang a.on { color: var(--teal-700); font-weight: 750; }
+.r1-lang .sep { color: var(--ink-300); }
+.on-dark .r1-lang a { color: var(--teal-200); }
+.on-dark .r1-lang a.on { color: var(--white); }
+
+/* ---------- DK-27 Footer (CMP-04) ---------- */
+/* source: mockups/src/design-options/r1-common.css (product) */
+/* ---------- Footer: CMP-04 ---------- */
+.r1-foot { display: flex; align-items: center; gap: 18px; padding: 0 40px; height: 44px; background: var(--white); border-top: 1px solid var(--ink-200); font-size: 12.5px; color: var(--ink-600); white-space: nowrap; }
+.r1-foot a { color: var(--teal-700); font-weight: 650; display: inline-flex; align-items: center; gap: 6px; text-decoration: underline; text-underline-offset: 2px; }
+.r1-foot a code { font: 650 12px Inter, sans-serif; background: var(--ink-100); color: var(--ink-800); border-radius: 4px; padding: 1px 5px; text-decoration: none; }
+.r1-foot .demo { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; background: var(--orange-100); color: var(--orange-700); border: 1px solid var(--orange-300); font-weight: 650; }
+.r1-foot .demo::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--orange-600); }
+
+/* Step 5c lane 2: the footer at phone width (the r1-techweb-parts pick): centered, at the end of the page. */
+.r1p-foot { font-size: 11.5px; color: var(--ink-600); line-height: 1.45; padding: 10px 6px 6px; text-align: center; flex: none; }
+.r1p-foot a { color: var(--teal-700); font-weight: 650; text-decoration: underline; }
+.r1p-foot .demo { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: var(--orange-100); color: var(--orange-700); border: 1px solid var(--orange-300); font-weight: 650; }
+
+/* ---------- DK-28 Loading skeleton and error panel (CMP-12) ---------- */
+/* source: mockups/src/design-options/r1-common.css (product) */
+/* ---------- Loading skeleton and error panel: CMP-12 ---------- */
+.r1-skel { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--ink-150), var(--ink-100)); }
+.r1-skel + .r1-skel { margin-top: 8px; }
+.r1-errpanel { border: 1px solid var(--st-late-bd); background: var(--st-late-bg); color: var(--st-late-ink); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.4; display: flex; gap: 10px; align-items: flex-start; }
+.r1-errpanel .ic { width: 18px; height: 18px; margin-top: 1px; }
+.r1-errpanel b { display: block; color: var(--st-late-ink); }
+.r1-errpanel .btn { margin-top: 8px; }
+
+/* ---------- DK-29 Form fields ---------- */
+/* source: mockups/src/design-options/r1-common.css (product) */
+/* ---------- Form fields ---------- */
+.r1-field { display: block; }
+.r1-field > label, .r1-field > .lab { display: block; font-size: 14px; font-weight: 650; color: var(--ink-800); margin-bottom: 6px; }
+.r1-input { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border: 1px solid var(--ink-400); border-radius: 10px; background: var(--white); font-size: 16px; color: var(--ink-900); }
+.r1-input.focus { border-color: var(--teal-600); box-shadow: 0 0 0 3px var(--teal-100); }
+.r1-input.bad { border-color: var(--st-late-bd); box-shadow: 0 0 0 3px var(--st-late-bg); }
+.r1-input .ph { color: var(--ink-500); }
+.r1-input .ic { width: 18px; height: 18px; color: var(--ink-500); }
+.r1-input .tail { margin-left: auto; font-size: 14px; font-weight: 650; color: var(--teal-700); }
+.r1-fmsg { display: flex; gap: 6px; align-items: flex-start; margin-top: 6px; font-size: 13.5px; font-weight: 550; color: var(--st-late-ink); }
+.r1-fmsg .ic { width: 16px; height: 16px; margin-top: 1px; }
+.r1-hint { margin-top: 6px; font-size: 13px; color: var(--ink-600); line-height: 1.4; }
+
+/* ---------- DK-30 Button states and links ---------- */
+/* source: mockups/src/design-options/r1-common.css (product) */
+/* ---------- Button states and links ---------- */
+.btn.busy { opacity: .85; }
+.r1-spin { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.4); border-top-color: var(--white); display: inline-block; }
+.r1-spin.dark { border-color: var(--ink-300); border-top-color: var(--teal-700); }
+.btn.lg { height: 48px; font-size: 16px; padding: 0 20px; border-radius: 10px; }
+.btn:disabled, .btn.dis { background: var(--ink-100); border-color: var(--ink-200); color: var(--ink-500); box-shadow: none; }
+.r1-link { color: var(--teal-700); font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- DK-31 Destructive button ---------- */
+/* source: mockups/src/design-options/r1-common.css (product; added at step 5b, starting values) */
+/* ---------- Added at step 5b: shared pieces the step 5c frames need. No r1 page uses them yet.
+   Values are starting points taken from the approved tokens; step 5c tunes them. ---------- */
+
+/* ---------- Destructive button ---------- */
+.btn.danger { background: var(--st-late-bd); border-color: var(--st-late-bd); color: var(--white); }
+
+/* ---------- DK-32 Focus ring ---------- */
+/* source: mockups/src/design-options/r1-common.css (product; added at step 5b, starting values) */
+/* ---------- Focus ring ---------- */
+body.r1 :focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+
+/* ---------- DK-33 Web switch ---------- */
+/* source: mockups/src/design-options/r1-common.css (product; added at step 5b, starting values) */
+/* ---------- Web switch: CTL-CMP-07-09, CTL-TEC-10-08 ---------- */
+.r1-switch { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--ink-800); }
+.r1-switch .trk { flex: none; width: 44px; height: 26px; border-radius: 13px; background: var(--ink-500); position: relative; }
+.r1-switch .trk::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--white); box-shadow: var(--shadow-sm); }
+.r1-switch.on .trk { background: var(--teal-600); }
+.r1-switch.on .trk::after { left: 21px; }
+.r1-switch .st { font-size: 13px; font-weight: 650; color: var(--ink-600); }
+
+/* ---------- DK-34 Dialog: office confirm and form dialogs, close button ---------- */
+/* source: mockups/src/design-options/r1-common.css (product; added at step 5b, starting values) */
+/* ---------- Dialog: office confirm and form dialogs ---------- */
+.r1-scrim { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(6, 42, 53, .45); }
+.r1-dlg { width: 520px; max-width: 100%; max-height: 100%; display: flex; flex-direction: column; background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
+.r1-dlg.wide { width: 720px; }
+.r1-dlg-h { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 6px; }
+.r1-dlg-h h2 { flex: 1; margin: 0; font-size: 19px; font-weight: 720; line-height: 1.3; letter-spacing: -.01em; color: var(--ink-900); }
+.r1-dlg-b { padding: 6px 20px 16px; overflow: auto; font-size: 14px; line-height: 1.5; color: var(--ink-700); }
+.r1-dlg-f { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--ink-150); background: var(--ink-50); }
+.r1-x { flex: none; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: var(--ink-600); cursor: pointer; }
+.r1-x .ic { width: 18px; height: 18px; }
+.r1-scrim.in { position: relative; inset: auto; z-index: auto; min-height: 300px; }
+.r1-dlg-b .r1-field + .r1-field { margin-top: 12px; }
+.r1-dlg-b .r1-input { height: 42px; font-size: 15px; }
+
+/* ---------- DK-35 Popover and menu ---------- */
+/* source: mockups/src/design-options/r1-common.css (product; added at step 5b, starting values) */
+/* ---------- Popover and menu: board popovers, top-bar menus ---------- */
+.r1-pop { position: absolute; z-index: 30; width: 320px; padding: 12px 14px; background: var(--white); border: 1px solid var(--ink-200); border-radius: var(--radius); box-shadow: var(--shadow-lg); font-size: 13.5px; line-height: 1.4; }
+.r1-pop h3 { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: var(--ink-900); }
+.r1-pop .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.r1-menu { position: absolute; z-index: 30; min-width: 220px; padding: 6px; background: var(--white); border: 1px solid var(--ink-200); border-radius: var(--radius); box-shadow: var(--shadow-lg); }
+.r1-menu a, .r1-menu .mi { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border-radius: 6px; color: var(--ink-800); font-size: 14px; font-weight: 560; text-decoration: none; }
+.r1-menu .sep { height: 1px; margin: 6px 4px; background: var(--ink-150); }
+.r1-pop.in, .r1-menu.in { position: relative; z-index: auto; }
+
+/* ---------- DK-36 Bottom sheet (web technician app) ---------- */
+/* source: mockups/src/design-options/r1-common.css (product; added at step 5b, starting values) */
+/* ---------- Bottom sheet: technician web app (as tech-on-my-way-confirm) ---------- */
+.r1-dim { position: absolute; inset: 0; z-index: 5; background: rgba(6, 20, 28, .55); }
+.r1-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; padding: 8px 20px 30px; background: var(--white); border-radius: 24px 24px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, .25); }
+.r1-sheet .grab { width: 40px; height: 5px; margin: 0 auto 12px; border-radius: 3px; background: var(--ink-300); }
+.r1-sheet h2 { margin: 0; font-size: 23px; font-weight: 770; line-height: 1.2; letter-spacing: -.02em; }
+
+/* Step 5c lane 2: the sheet drawn inside a tile (.in), and the web technician app's other shared
+   pieces: sheet buttons, the sync strip (CMP-10), item status words and the in-app notice. */
+.r1-sheet.in { position: relative; left: auto; right: auto; bottom: auto; z-index: 6; margin-top: 120px; padding-bottom: 22px; }
+.r1-dim.in { position: absolute; }
+.r1-sheet .msg { margin-top: 10px; font-size: 15px; line-height: 1.45; color: var(--ink-800); }
+.r1-sheet .msg small { display: block; margin-top: 6px; font-size: 13.5px; color: var(--st-risk-ink); background: var(--st-risk-bg); border: 1px solid var(--st-risk-bd); border-radius: 10px; padding: 7px 10px; }
+.r1-sheet .sbtns { display: flex; gap: 10px; margin-top: 16px; }
+.r1-sheet .sbtns > * { flex: 1; min-height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 720; }
+.r1-sheet .sbtns .sec { border: 1.5px solid var(--ink-300); color: var(--ink-800); background: var(--white); }
+.r1-sheet .sbtns .pri { background: var(--teal-700); color: var(--white); }
+.r1-sheet .sbtns .pri.warm { background: var(--orange-600); }
+.r1-sheet .sbtns .ic { width: 20px; height: 20px; }
+.r1p-nosig { display: flex; gap: 10px; align-items: center; background: var(--st-risk-bg); border: 1px solid var(--st-risk-bd); color: var(--st-risk-ink); border-radius: 11px; padding: 8px 12px; font-size: 13px; line-height: 1.35; }
+.r1p-nosig b { display: block; font-size: 14.5px; color: var(--st-risk-ink); }
+.r1p-nosig .ic { width: 22px; height: 22px; }
+.r1p-old { display: flex; gap: 9px; align-items: flex-start; background: var(--st-late-bg); border: 1px solid var(--st-late-bd); color: var(--st-late-ink); border-radius: 11px; padding: 9px 12px; font-size: 13.5px; line-height: 1.4; }
+.r1p-old .ic { width: 17px; height: 17px; margin-top: 1px; }
+.r1p-old a { color: var(--st-late-ink); font-weight: 700; text-decoration: underline; }
+.r1p-wait { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 650; color: var(--st-risk-ink); background: var(--st-risk-bg); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+.r1p-wait.sent { color: var(--st-site-ink); background: var(--st-site-bg); }
+.r1p-wait.flag { color: var(--st-way-ink); background: var(--st-way-bg); }
+.r1p-wait.gone { color: var(--st-late-ink); background: var(--st-late-bg); }
+.r1p-wait.sending { color: var(--teal-800); background: var(--teal-100); }
+.r1p-wait .ic { width: 12px; height: 12px; }
+.r1p-notice { display: flex; gap: 9px; align-items: center; background: var(--ink-800); color: var(--white); border-radius: 14px; padding: 11px 14px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); }
+.r1p-notice .ic { width: 18px; height: 18px; color: var(--orange-300); }
+.r1p-notice.ok .ic { color: var(--st-site-bg); }
+.r1p-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 18px 12px; background: var(--white); border: 1px solid var(--ink-200); border-radius: 12px; font-size: 15px; font-weight: 600; color: var(--ink-800); line-height: 1.4; }
+.r1p-empty .ic { width: 26px; height: 26px; color: var(--teal-700); }
+.r1p-row { display: flex; align-items: center; gap: 10px; background: var(--white); border: 1px solid var(--ink-200); border-radius: 12px; padding: 8px 12px; font-size: 14px; }
+.r1p-row + .r1p-row { margin-top: 6px; }
+.r1p-row .tx { flex: 1; min-width: 0; line-height: 1.3; }
+.r1p-row .tx b { display: block; font-size: 15px; font-weight: 660; }
+.r1p-row .tx small { display: block; font-size: 12.5px; color: var(--ink-600); }
+.r1p-pad { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.r1p-pad > * { flex: none; }
+.r1p-btn { min-height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; font-weight: 700; border: 1.5px solid var(--teal-700); color: var(--teal-800); background: var(--white); }
+.r1p-btn.pri { background: var(--teal-700); color: var(--white); }
+.r1p-btn.warm { background: var(--orange-600); border-color: var(--orange-600); color: var(--white); }
+.r1p-btn.dis { background: var(--ink-100); border-color: var(--ink-200); color: var(--ink-500); }
+.r1p-btn .ic { width: 20px; height: 20px; }
+.r1p-why { font-size: 12.5px; color: var(--ink-600); text-align: center; margin-top: -2px; }
+
+/* ---------- DK-37 Announcement toast (CMP-11) ---------- */
+/* source: mockups/src/design-options/r1-common.css (product; added at step 5b, starting values) */
+/* ---------- Announcement toast: CMP-11 ---------- */
+.r1-toast { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 16px; border-radius: 12px; background: var(--ink-800); color: var(--white); font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); }
+.r1-toast .ic { width: 18px; height: 18px; color: var(--st-site-bg); }
+
+/* ---------- DK-38 Live updates indicator (CMP-13) ---------- */
+/* source: mockups/src/design-options/r1-common.css (product; added at step 5b, starting values) */
+/* ---------- Live updates indicator: CMP-13 ---------- */
+.r1-live { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 650; white-space: nowrap; background: var(--st-site-bg); color: var(--st-site-ink); }
+.r1-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.r1-live.reconnecting { background: var(--st-risk-bg); color: var(--st-risk-ink); }
+.r1-live.reconnecting::before { background: currentColor; }
+.r1-live.paused { background: var(--st-late-bg); color: var(--st-late-ink); }
+.r1-live.paused::before { background: currentColor; }
+

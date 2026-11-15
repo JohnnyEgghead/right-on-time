@@ -1,0 +1,15 @@
+# P3-BACKUP (SPECIFICATIONS section 11.7; NFR-07): the nightly backup at 2:30 AM America/New_York, whatever the
+# server clock's zone (UTC on Lightsail), so it follows daylight saving time. Persistent=true runs a missed backup
+# after a reboot.
+# The 2nd OnCalendar covers the spring-forward Sunday (the 2nd Sunday of March), when 02:30 does not exist and systemd
+# skips the night: it runs at 3:30 AM that Sunday instead (F-389; systemd 257 gave a 47-hour gap over Mar 14, 2027).
+[Unit]
+Description=Nightly Brightwater backup, 2:30 AM America/New_York
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 America/New_York
+OnCalendar=Sun *-03-08..14 03:30:00 America/New_York
+Persistent=true
+
+[Install]
+WantedBy=timers.target

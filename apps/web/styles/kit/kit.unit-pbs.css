@@ -1,0 +1,51 @@
+/* ---------- DK-64 Pretend billing: shared parts ---------- */
+/* source: mockups/src/design-options/r1-pbs.css (product) */
+/* U-PBS options a, b, c. */
+.back { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-weight: 650; color: var(--teal-700); font-size: 14px; white-space: nowrap; }
+.ah .t1 { flex: 1; min-width: 0; }
+.pbtag { height: 28px; font-size: 13px; }
+.more { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid var(--ink-150); font-size: 13px; color: var(--ink-600); }
+.radio { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--ink-200); border-radius: 10px; margin-top: 8px; cursor: pointer; }
+.radio.sel { border-color: var(--teal-600); background: var(--teal-50); box-shadow: 0 0 0 1px var(--teal-600); }
+.dotr { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink-400); flex: none; margin-top: 1px; background: var(--white); }
+.sel .dotr { border: 5px solid var(--teal-700); }
+.radio .rt { flex: 1; min-width: 0; }
+.radio b, .mt b { display: block; font-size: 14.5px; font-weight: 680; }
+.radio small, .mt small { display: block; font-size: 12.5px; color: var(--ink-600); line-height: 1.4; margin-top: 1px; }
+.nfield { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; }
+.nfield label { font-weight: 700; font-size: 14px; }
+.r1-input.small { height: 38px; width: 80px; font-size: 15px; }
+.cur { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.cur .k { font-weight: 650; color: var(--ink-700); }
+.cur .s { color: var(--ink-600); }
+.applyn { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-600); line-height: 1.4; }
+.emptyb { display: flex; gap: 10px; align-items: center; color: var(--ink-700); font-size: 14px; }
+.emptyb .ic { width: 22px; height: 22px; color: var(--teal-700); }
+.r1-st .b .r1-skel { height: 14px; }
+.btn.dis { pointer-events: none; }
+table.lines td { padding: 6px 12px; }
+table.lines tr.grp td { background: var(--ink-50); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-500); padding: 5px 12px; }
+table.lines tr.disc td { color: var(--st-site-ink); font-weight: 600; }
+table.lines tr.tot td { font-size: 16px; font-weight: 780; border-top: 2px solid var(--ink-800); border-bottom: 0; }
+.meta { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; margin: 0; font-size: 14px; }
+.meta dt { color: var(--ink-500); font-weight: 600; }
+.meta dd { margin: 0; font-weight: 650; color: var(--ink-900); }
+.meta.one { grid-template-columns: 130px 1fr; }
+.work h4 { margin: 14px 0 4px; font-size: 13px; font-weight: 750; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-500); }
+.work ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.6; }
+.nosign { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-500); }
+.hand p { margin: 8px 0 0; font-size: 14px; line-height: 1.45; }
+.hand .by { color: var(--ink-600); font-size: 13px; }
+.panel.pad { padding: 16px 18px; }
+
+/* ---------- DK-65 Pretend billing: inside the office look (option A, picked) ---------- */
+/* source: mockups/src/design-options/r1-pbs.css (product) */
+/* ---------- Option A: inside the office look ---------- */
+.p-a .grid2 { flex: 1; min-height: 0; display: grid; grid-template-columns: 380px 1fr; gap: 16px; padding: 16px 24px; align-items: start; }
+.p-a .modep { padding-bottom: 14px; }
+.p-a .modep .cur { padding: 0 16px; }
+.p-a .radios { padding: 4px 16px 0; }
+.p-a .ap { padding: 12px 16px 0; }
+.p-a .ap .btn { width: 100%; }
+.p-a .invg { grid-template-columns: 360px 1fr; }
+

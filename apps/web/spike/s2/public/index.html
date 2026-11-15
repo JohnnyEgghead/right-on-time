@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S2 spike</title>
+<!-- Spike S2 (G-S2-TWA-OFFLINE): THROWAWAY web technician shell. Nothing here ships. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="S2 spike">
+<meta name="theme-color" content="#0b6e6e">
+<style>
+  :root { color-scheme: light dark; --bg: #fff; --fg: #111; --muted: #555; --line: #ccc; --accent: #0b6e6e; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111; --fg: #eee; --muted: #aaa; --line: #444; } }
+  body { margin: 0; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); background: var(--bg); color: var(--fg);
+         font: 17px/1.4 -apple-system, system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  section { border-top: 1px solid var(--line); padding: 12px 0; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 80px; font: inherit; padding: 8px; }
+  button, label.btn { display: inline-block; font: inherit; padding: 10px 16px; margin-top: 8px; border-radius: 8px;
+         border: 0; background: var(--accent); color: #fff; }
+  input[type=file] { display: none; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  li { padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .state { font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>S2 offline spike</h1>
+<div class="muted">Signal: <span id="net">?</span>. Opened as: <span id="mode">?</span>. Offline copy: <span id="sw">?</span>.</div>
+
+<section>
+  <label for="note">Note</label>
+  <textarea id="note" placeholder="Type a short note"></textarea>
+  <button id="save-note" type="button">Save note</button>
+</section>
+
+<section>
+  <label class="btn" for="photo">Add photo</label>
+  <input id="photo" type="file" accept="image/*">
+  <div class="muted" id="photo-msg"></div>
+</section>
+
+<section>
+  <div><strong>Items on this phone</strong> <span class="muted" id="counts"></span></div>
+  <ul id="items"></ul>
+  <button id="send" type="button">Send now</button>
+  <div class="muted" id="send-msg"></div>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "why": "section 3 Time rule: the lint fails a timestamptz column with no declared zone",
+  "only": "tz",
+  "expect": [
+    "schema-time-zone-check: FAIL column world.van.bought_at (timestamp with time zone) has no declared zone: no entry for world.van in packages/db/src/zone-registry.ts"
+  ]
+}

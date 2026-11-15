@@ -1,0 +1,7 @@
+{
+  "why": "F-864, section 3 Nullability and keys: an actor_user_id column references user.id, so time_block_change loses its key and parity names it",
+  "only": "parity",
+  "expect": [
+    "schema-doc-parity: FAIL missing foreign key world.time_block_change.actor_user_id -> world.user.id"
+  ]
+}

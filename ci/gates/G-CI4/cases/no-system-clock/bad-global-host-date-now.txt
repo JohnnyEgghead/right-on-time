@@ -1,0 +1,4 @@
+// case-as: apps/web/src/planted.tsx
+// expect: fail 2
+export const a = globalThis.Date.now();
+export const b = window['Date']['now']();

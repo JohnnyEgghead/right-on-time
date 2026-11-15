@@ -1,0 +1,16 @@
+# P3-BACKUP (SPECIFICATIONS section 11.7; NFR-07, FR-HLTH-1): the weekly restore test from the Lightsail bucket.
+# Installed to /etc/systemd/system by infra/deploy/server-deploy.sh; started by the .timer, or early by hand:
+#   sudo systemctl start brightwater-restore-test.service   (blocks until the test finishes; fails when it fails)
+# Its log is the journal: journalctl -u brightwater-restore-test.service
+[Unit]
+Description=Brightwater weekly restore test from the Lightsail bucket
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/brightwater
+EnvironmentFile=/opt/brightwater/.env
+ExecStart=/usr/bin/bash /opt/brightwater/backup/restore-test.sh
+TimeoutStartSec=2h

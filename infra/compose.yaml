@@ -1,0 +1,298 @@
+# P1-DEPLOY: the 1 Compose file for the hosted demo and every own copy (SPECIFICATIONS SD-3,
+# D5, D6). Services: proxy (nginx 1.30.6), web, worker and pbs (1 image, 3 entry points), db
+# (postgres 18), routing (OSRM osrm-routed, SD-49) and, on the hosted server only, the one-shot
+# certbot (profile "certbot").
+#
+# Settings (SPECIFICATIONS section 11.1) come from Compose interpolation, so with no .env every
+# setting is the own-copy default ("all off"). The hosted demo's values are the demo profile,
+# infra/profiles/demo.env; the deploy script writes the server's .env from it (P8-UNLOCK turns
+# it on, see infra/README.md). A Compose "profiles:" entry can only add or drop services, never
+# change a setting, so the demo profile is a settings file, not a services profile.
+#
+# Hosted-only switches (infra/hosted/hosted.env): PROXY_CONF picks the site file in nginx/
+# (local.conf default, hosted.conf with TLS, bootstrap.conf for the first certificate) and
+# ROUTES picks routes-open.conf (default) or routes-locked.conf (the lock, until P8-UNLOCK).
+# BW_IMAGE is the release image tag the deploy script writes; an own copy builds bw-app:local.
+#
+# The hosted server's postgres password is NOT in git: it lives in /etc/brightwater/db.env
+# (root-only, mode 600), written by infra/hosted/setup.sh. An own copy has no such file, so the
+# db, migrate and setup services first read infra/own-copy-db.env, a published non-secret
+# default (F-96; the database is never published on a port), and the hosted file, when it
+# exists, overrides it (a later env_file wins). Images are pinned by digest; dates and the
+# 14-day rule are in docs/build/P1-REPO-pins.md.
+name: brightwater
+
+x-settings: &settings
+  APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+  TEXT_LINK_HOST: ${TEXT_LINK_HOST:-bw.j7l.io}
+  DEMO_MODE: ${DEMO_MODE:-off}
+  ACCESS_CODE_ON: ${ACCESS_CODE_ON:-off}
+  RESET_PROTECTION: ${RESET_PROTECTION:-off}
+  NIGHTLY_RESET: ${NIGHTLY_RESET:-off}
+  IDLE_RESET_MINUTES: ${IDLE_RESET_MINUTES:-120}
+  RESET_COOLDOWN_SECONDS: ${RESET_COOLDOWN_SECONDS:-300}
+  SOURCE_REPO_URL: ${SOURCE_REPO_URL:-https://github.com/JohnnyEgghead/right-on-time}
+  BACKUP_TARGET: ${BACKUP_TARGET:-none}
+  PHOTOS_DIR: ${PHOTOS_DIR:-/data/photos}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+x-app: &app
+  image: ${BW_IMAGE:-bw-app:local}
+  build:
+    context: ..
+    dockerfile: infra/image/Dockerfile
+    target: release
+  restart: unless-stopped
+  user: node
+  read_only: true
+  environment: *settings
+  mem_limit: 128m
+
+services:
+  proxy:
+    # nginx 1.30.6 (Debian), multi-arch index digest
+    image: nginx:1.30.6@sha256:66b50d24288dba67f3d000b31223daefc4868c58d29aaacb6a4ff9771597b5eb
+    restart: unless-stopped
+    environment:
+      PROXY_CONF: ${PROXY_CONF:-local.conf}
+      ROUTES: ${ROUTES:-open}
+    # The site and routes files are picked by symlink at start, so every nginx file is mounted
+    # as 1 directory: a deploy that rewrites them needs only "nginx -s reload" (a single-file
+    # bind mount would keep serving the old file's inode).
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        ln -sf /etc/nginx/bw/$$PROXY_CONF /etc/nginx/conf.d/default.conf &&
+        ln -sf /etc/nginx/bw/routes-$$ROUTES.conf /etc/nginx/bw-routes.conf &&
+        exec nginx -g 'daemon off;'
+    ports:
+      - "${HTTP_BIND:-127.0.0.1:8080}:80"
+      - "${HTTPS_BIND:-127.0.0.1:8443}:443"
+    volumes:
+      - ./nginx:/etc/nginx/bw:ro
+      - ./placeholder:/usr/share/nginx/placeholder:ro
+      # P3-MAPS-BAKE (FR-MAP-1, API-106): the verified map files (`pnpm run setup:maps` fills .build/data/maps), read-only.
+      - ${BW_MAPS_DIR:-../.build/data/maps}:/data/maps:ro
+      - acme:/var/www/acme:ro
+      - letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - web
+    mem_limit: 64m
+
+  # F-150 (P2-KERNEL): the migrate step of every start and every deploy, a one-shot from the app
+  # image. As the schema owner it applies the pending migrations (forward-only, SD-40), then sets
+  # each process login's password from that process's file in its own volume (written once, when
+  # absent). web, worker and pbs start only after it completes successfully.
+  migrate:
+    <<: *app
+    command: ["node", "packages/db/src/cli/start.ts"]
+    restart: "no"
+    env_file:
+      - path: ./own-copy-db.env
+        required: false
+      - path: ${DB_ENV_FILE:-/etc/brightwater/db.env}
+        required: false
+    environment:
+      DATABASE_URL: postgres://brightwater@db:5432/brightwater
+      BW_DB_LOGINS_DIR: /var/lib/bw/db-login
+    volumes:
+      - dblogin-web:/var/lib/bw/db-login/web
+      - dblogin-worker:/var/lib/bw/db-login/worker
+      - dblogin-pbs:/var/lib/bw/db-login/pbs
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # P2-SETUP: the one-shot setup (BUILD_PLAN section 3 D-3), run once on a fresh database:
+  #   docker compose --profile setup run --rm setup
+  # As the schema owner (F-150) it migrates, then runs the 6 steps (packages/setup/src/cli.ts).
+  # SAMPLE_PASSWORD_SEED is required (SD-9); the verified street list is read from BW_DATA_DIR
+  # (default the tree's .build/data, filled by `node ci/data-assets.ts ensure`). It holds the
+  # whole export in memory, so its memory cap is its own, not the app's 128m.
+  # F-295: the cap is measured (docs/build/spikes/P2-SETUP.md, F-282): on a temporary small_3_0
+  # copy of the hosted plan, with proxy, web, worker, pbs and db up, setup's cgroup memory.peak
+  # was at most 624 MiB over 3 runs; 768m is that plus about 23 percent. With the running stack's
+  # 960m that is 1728m on the plan's 1936 MiB. Re-measure when the import or the world grows.
+  setup:
+    <<: *app
+    profiles:
+      - setup
+    command: ["node", "packages/setup/src/cli.ts"]
+    restart: "no"
+    env_file:
+      - path: ./own-copy-db.env
+        required: false
+      - path: ${DB_ENV_FILE:-/etc/brightwater/db.env}
+        required: false
+    environment:
+      DATABASE_URL: postgres://brightwater@db:5432/brightwater
+      SAMPLE_PASSWORD_SEED: ${SAMPLE_PASSWORD_SEED:-}
+      REVIEWER_PASSWORD: ${REVIEWER_PASSWORD:-}
+      # F-362 (FR-MAP-4): setup checks the maps against packages/maps/MANIFEST.json and loads van_track from tracks.ndjson.
+      MAPS_DIR: /data/maps
+    volumes:
+      - ${BW_DATA_DIR:-../.build/data}:/app/.build/data:ro
+      # The same folder `pnpm run setup:maps` fills, as the proxy mounts it. Missing or wrong files stop setup, named.
+      - ${BW_MAPS_DIR:-../.build/data/maps}:/data/maps:ro
+    mem_limit: 768m
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Each process signs in with its own login (migration 0008) and reads only its own password file.
+  web:
+    <<: *app
+    command: ["node", "apps/web/src/server.ts"]
+    expose:
+      - "3000"
+    # F-221: "up --wait" and the deploy wait on this, so a web process that crash-loops never reads as up. The image
+    # has no curl: Node's own fetch probes the health check (API-171: 200 while the database answers and the worker's
+    # heartbeat is under 60 s old, 503 otherwise; the worker starts beside web and beats at once).
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then((r) => process.exit(r.status === 200 ? 0 : 1), () => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 30s
+    environment:
+      <<: *settings
+      DATABASE_URL: postgres://bw_web@db:5432/brightwater
+      DATABASE_PASSWORD_FILE: /var/lib/bw/db-login/web/password
+      # F-218: the web process's own secrets (SPECIFICATIONS 11.1), blank unless the owner's .env sets them: the access code and
+      # the key its cookies are signed with (both required when ACCESS_CODE_ON=on), and the seed API-15 derives passwords from.
+      ACCESS_CODE: ${ACCESS_CODE:-}
+      ACCESS_COOKIE_KEY: ${ACCESS_COOKIE_KEY:-}
+      SAMPLE_PASSWORD_SEED: ${SAMPLE_PASSWORD_SEED:-}
+      IOS_INSTALL_KIND: ${IOS_INSTALL_KIND:-none}
+      IOS_INSTALL_LINK: ${IOS_INSTALL_LINK:-}
+      # F-882 (P4-LOAD): Node's default heap limit is not sized to the cap (262 MiB under 128m, most of it 3 young-generation
+      # semi-spaces of 64 MiB each), so the kernel's limit came before V8 collected. Under the load day web's live heap is over
+      # 64 MiB (a 64 MiB old space ran out 28 times in 1 run): 128 MiB old space and 8 MiB semi-spaces put the whole heap limit
+      # at 152 MiB (compose.test.ts asks Node itself).
+      NODE_OPTIONS: --max-old-space-size=128 --max-semi-space-size=8
+    # F-882 (P4-LOAD): the shared 128m fails the load day even with a heap limit: web held about 107 MiB anon and each health
+    # probe is a 2nd Node in the same cgroup (about 19 MiB anon), so web restarted 170 times in 1 run. 256m holds the heap
+    # limit, Node outside its heap and 1 probe. Measured in docs/build/spikes/P4-LOAD.md; P7-LOAD tunes the final caps
+    # against NFR-13 (SD-3).
+    mem_limit: 256m
+    volumes:
+      - dblogin-web:/var/lib/bw/db-login/web:ro
+      # P3-ITEMS (SD-32, section 2 storage table): photo and signature files, write-once, named by item key (PHOTOS_DIR).
+      - photos:/data/photos
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *app
+    command: ["node", "apps/worker/src/main.ts"]
+    environment:
+      <<: *settings
+      DATABASE_URL: postgres://bw_worker@db:5432/brightwater
+      DATABASE_PASSWORD_FILE: /var/lib/bw/db-login/worker/password
+    volumes:
+      - dblogin-worker:/var/lib/bw/db-login/worker:ro
+      # P3-REPLAY (F-474): Cleanup, in the worker, deletes the photo and signature files no row references (section 2).
+      - photos:/data/photos
+      # P3-IMPORT-WORKER (F-258, F-340): the verified street list, mounted as setup mounts it. The import job makes the
+      # generator's checked export from it in process (no export folder) for every office import run.
+      - ${BW_DATA_DIR:-../.build/data}:/app/.build/data:ro
+    # The import job does setup's steps 2 to 4 in this process (the export, then 1 run), so it gets setup's measured cap
+    # (F-282). It executes no run while setup holds its lock, so the 2 imports never run at once (compose.test.ts).
+    mem_limit: 768m
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  pbs:
+    <<: *app
+    command: ["node", "apps/pbs/src/main.ts"]
+    environment:
+      <<: *settings
+      DATABASE_URL: postgres://bw_pbs@db:5432/brightwater
+      DATABASE_PASSWORD_FILE: /var/lib/bw/db-login/pbs/password
+    volumes:
+      - dblogin-pbs:/var/lib/bw/db-login/pbs:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  db:
+    # postgres 18.4 (bookworm), same pin as the CI postgres-service job
+    image: postgres:18.4-bookworm@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382
+    restart: unless-stopped
+    env_file:
+      - path: ./own-copy-db.env
+        required: false
+      - path: ${DB_ENV_FILE:-/etc/brightwater/db.env}
+        required: false
+    environment:
+      POSTGRES_USER: brightwater
+      POSTGRES_DB: brightwater
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brightwater -d brightwater"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+
+  # P6-ROUTE-BAKE (SPECIFICATIONS v0.13 SD-3, SD-49, section 6.10; owner ruling a923acaa, Nov 9, 2026, "Add live routing"): the
+  # routing service, osrm-routed from the bake's pinned image (OSRM 26.10.0, BSD-2-Clause, multi-arch index digest; infra/data/maps/run.sh
+  # pins the same digest), --algorithm mld over the routing files of the same OSRM run as the baked tracks, read-only from the map
+  # volume. Self-hosted: it runs on our own server inside this stack, and no outside service is called (NFR-12). It listens on the
+  # Compose network only: no published port, and nginx has no route to it (infra/tests/nginx.test.ts), so no browser or phone reaches it.
+  # Nothing depends on it: web, worker and setup start and answer with it stopped or its files absent, and a leg no baked track covers
+  # is then approximate (SD-49 step 3; P6-LIVE-ROUTING adds the client).
+  #   --mmap: the files are mapped, not copied into the process, so its memory is the kernel's page cache of the mapped files (shared by
+  #     every container reading the same files, and reclaimable under the cap) and it answers within seconds of starting.
+  #   With no routing files in the folder (a copy that ran `pnpm run setup:maps --no-routing`, or a test stack that has none), it waits,
+  #     checking every 30 s, rather than exiting: an exiting service under "restart: unless-stopped" would loop, and "up --wait" would
+  #     read it as failed. Once the files are there it starts, so the next read gets the route (SD-49 step 3).
+  routing:
+    image: ghcr.io/project-osrm/osrm-backend@sha256:55dbfd47d984c2cacd64e32901b4321c86b5ec761438e69aa053dc78698a786f
+    restart: unless-stopped
+    read_only: true
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        until [ -e /data/maps/ohio.osrm.mldgr ]; do echo 'routing: no routing files in /data/maps yet (pnpm run setup:maps); legs no baked track covers are approximate'; sleep 30; done;
+        exec osrm-routed --algorithm mld --mmap --ip 0.0.0.0 --port 5000 /data/maps/ohio.osrm
+    expose:
+      - "5000"
+    volumes:
+      - ${BW_MAPS_DIR:-../.build/data/maps}:/data/maps:ro
+    # The cap is measured, never assumed (OQ-42; BUILD_PLAN section 3 D-21; docs/build/spikes/P6-ROUTING-MEMORY.md and its
+    # summary.json). On a temporary Lightsail small_3_0 with the full load day and a burst of the 515 legs the bake does not cover, routing
+    # used 611 to 678 MiB uncapped (its page cache: anon 15 to 17 MiB); at 320 MiB it routed 515 of 515 legs in each of 5 runs, route p95
+    # 1.4 to 1.6 s against SD-49's 3 s, 0 OOM kills, with host used memory at 57.3% (NFR-13's count, D-21). So every Lightsail copy sets
+    # ROUTING_MEM_LIMIT=320m: the hosted server (infra/hosted/hosted.env), the staging copy and the load-day copy (their .env; the load-day routing step starts routing at it unless given a cap).
+    # Local copies take the default: on this Mac's rig at 320 MiB routing reread its files for every answer (321 of 515 legs routed,
+    # p95 17.8 s; 192 MiB failed the same way), while uncapped it peaked at 1,106.8 MiB, so the local cap is that peak plus a
+    # 173.2 MiB margin, 1280m (515 of 515, p95 39.2 ms). Routing is never turned off by a setting: only its cap varies.
+    mem_limit: ${ROUTING_MEM_LIMIT:-1280m}
+
+  certbot:
+    # certbot 5.8.0, multi-arch index digest (spike S5). One-shot only: the "certbot" profile
+    # keeps it out of "docker compose up"; it runs via "docker compose run --rm certbot ..." from
+    # infra/hosted/setup.sh and the renewal timer (infra/hosted/certbot-renew.sh).
+    image: certbot/certbot:v5.8.0@sha256:f70ad0adbb7e117f0fe42a63c553f28ea451edabc0148757b6efcd9735acaa20
+    profiles:
+      - certbot
+    volumes:
+      - acme:/var/www/acme
+      - letsencrypt:/etc/letsencrypt
+    mem_limit: 256m
+
+volumes:
+  pgdata:
+  photos:
+  acme:
+  letsencrypt:
+  # F-150: 1 password file per process login, written by migrate, read only by its process.
+  dblogin-web:
+  dblogin-worker:
+  dblogin-pbs:

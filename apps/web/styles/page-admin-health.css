@@ -1,0 +1,97 @@
+/* SCR-OFC-16 page-local rules (DK-102): the last <style> of mockups/pages/admin-health.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited. */
+  /* Admin shell: left side menu */
+  .shell { display: flex; min-height: 842px; }
+  /* v0.5: the text service card holds the text lists (CTL-OFC-16-27), so this screen grows past 900 px to show them whole */
+  .r1k-in { height: auto; min-height: 900px; }
+  .side { width: 220px; flex: none; background: #fff; border-right: 1px solid var(--ink-200); padding: 18px 12px; }
+  .side h4 { margin: 0 0 8px; padding: 0 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-500); }
+  .side a { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 8px; color: var(--ink-700); font-weight: 560; font-size: 14px; margin-bottom: 2px; }
+  .side a .ic { width: 17px; height: 17px; color: var(--ink-500); }
+  .side a.on { background: var(--teal-50); color: var(--teal-800); font-weight: 680; box-shadow: inset 3px 0 0 var(--orange-500); }
+  .side a.on .ic { color: var(--teal-700); }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ah { background: #fff; border-bottom: 1px solid var(--ink-200); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+  .ah h1 { margin: 0; font-size: 24px; font-weight: 750; letter-spacing: -.02em; }
+  .ah p { margin: 3px 0 0; font-size: 14px; color: var(--ink-600); }
+  .ah .acts { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .seg { flex: none; display: inline-flex; border: 1px solid var(--ink-300); border-radius: 8px; overflow: hidden; height: 36px; }
+  .seg span { padding: 0 13px; display: flex; align-items: center; font-size: 13.5px; font-weight: 600; color: var(--ink-600); border-left: 1px solid var(--ink-300); background: #fff; }
+  .seg span:first-child { border-left: 0; }
+  .seg span.on { background: var(--teal-700); color: #fff; }
+  .panel { background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; box-shadow: var(--shadow-sm); }
+  .panel .ph { display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px; }
+  .panel h3 { margin: 0; font-size: 15px; font-weight: 700; }
+  .panel .ph .s { font-size: 12.5px; color: var(--ink-500); }
+  .ah .chip { height: 30px; font-size: 13.5px; padding: 0 12px; }
+  .ah .chk { font-size: 13px; color: var(--ink-500); white-space: nowrap; }
+  .body { display: grid; grid-template-columns: 1fr 380px; gap: 12px; padding: 14px 24px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 228px; grid-template-rows: 228px minmax(228px, auto) 228px; gap: 12px; }
+  .hc { display: flex; flex-direction: column; overflow: hidden; }
+  .hc .ph { padding: 12px 16px 6px; }
+  .hc .ph .ic { width: 18px; height: 18px; color: var(--teal-700); }
+  .hc .ph .chip { margin-left: auto; }
+  .hc .in { padding: 0 16px 12px; font-size: 13px; color: var(--ink-700); line-height: 1.45; display: flex; flex-direction: column; flex: 1; }
+  .hc .big { font-size: 20px; font-weight: 740; color: var(--ink-900); letter-spacing: -.01em; }
+  .hc .sub { font-size: 12.5px; color: var(--ink-500); }
+  .hc .foot { margin-top: auto; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-600); padding-top: 8px; border-top: 1px solid var(--ink-150); }
+  .hc .foot .btn { margin-left: auto; }
+  .nights { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; }
+  .nights div { border: 1px solid #b9e4c9; background: var(--st-site-bg); border-radius: 6px; text-align: center; padding: 3px 0 4px; font-size: 11px; color: var(--st-site-ink); line-height: 1.25; }
+  .nights div b { display: block; font-size: 11.5px; }
+  .hist { margin-top: 6px; }
+  .hist div { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--ink-150); font-size: 12.5px; }
+  .hist div:first-child { border-top: 0; }
+  .hist .chip { height: 20px; font-size: 11.5px; margin-left: auto; }
+  .warn { margin-top: 8px; border: 1px solid #f0d28a; background: var(--st-risk-bg); color: var(--st-risk-ink); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; line-height: 1.4; }
+  .warn b { color: #5c3800; }
+  table.q { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 6px; }
+  table.q th { text-align: left; font-size: 11px; font-weight: 650; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; padding: 3px 0; border-bottom: 1px solid var(--ink-200); }
+  table.q td { padding: 5px 0; border-bottom: 1px solid var(--ink-150); vertical-align: middle; }
+  table.q td .chip { height: 20px; font-size: 11.5px; }
+  .chip.held { background: var(--ink-100); color: var(--ink-700); border: 1px dashed var(--ink-400); }
+  .rq { margin-top: 4px; }
+  .rq h5 { margin: 4px 0 2px; font-size: 11px; font-weight: 700; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; }
+  .rq div { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .rq div .chip { margin-left: auto; height: 21px; font-size: 11.5px; }
+  .rq small { display: block; font-size: 12px; color: var(--ink-500); }
+  .loc { margin-top: 2px; }
+  .loc div { display: flex; gap: 8px; padding: 5px 0; border-top: 1px solid var(--ink-150); font-size: 12.5px; }
+  .loc div:first-child { border-top: 0; }
+  .loc div span { color: var(--ink-500); width: 124px; flex: none; }
+  .loc div b { font-weight: 600; color: var(--ink-900); }
+  .spark { display: block; width: 100%; height: 92px; margin-top: 4px; }
+  .chip.us { background: var(--teal-100); color: var(--teal-800); }
+
+  .alerts { display: flex; flex-direction: column; overflow: hidden; }
+  .al { padding: 10px 16px; border-top: 1px solid var(--ink-150); display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; }
+  .al b { font-size: 13.5px; font-weight: 640; line-height: 1.35; }
+  .al p { margin: 0; grid-column: 1 / -1; font-size: 12.5px; color: var(--ink-600); line-height: 1.4; }
+  .al time { grid-column: 1 / -1; font-size: 12px; color: var(--ink-500); font-weight: 550; }
+  .al .chip { height: 22px; font-size: 12px; align-self: start; }
+  .chip.open { background: var(--st-risk-bg); color: var(--st-risk-ink); }
+  .chip.res { background: var(--st-done-bg); color: var(--st-done-ink); }
+  .chip.inf { background: var(--teal-50); color: var(--teal-800); border-color: var(--teal-200); }
+  .alerts .more { margin-top: auto; border-top: 1px solid var(--ink-200); padding: 10px 16px; display: flex; gap: 8px; }
+  .simc { margin-top: 6px; font-size: 12.5px; }
+  .simc .cur b { color: var(--ink-900); }
+  .rads2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; margin-top: 5px; }
+  .rads2 span { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-800); font-weight: 560; }
+  .rads2 i { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--ink-400); flex: none; }
+  .rads2 .on i { border: 4px solid var(--teal-700); }
+  .tbt { margin-left: auto; font-size: 12.5px; font-weight: 650; color: var(--teal-700); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+  .shw { margin-left: auto; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px 0 10px; border: 1px solid var(--ink-300); border-radius: 8px; font-size: 12.5px; color: var(--ink-600); }
+  .shw b { color: var(--ink-900); font-weight: 650; }
+  .shw .ic { width: 14px; height: 14px; }
+  .al .r1-link { font-size: 12.5px; display: inline-block; margin-top: 3px; }
+  .al .used { font-size: 12.5px; color: var(--ink-500); display: block; margin-top: 3px; }
+  .ast { padding: 10px 16px 12px; border-top: 1px solid var(--ink-200); }
+  .ast h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; }
+  .ast table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .ast th { text-align: left; font-size: 11px; color: var(--ink-500); font-weight: 650; text-transform: uppercase; letter-spacing: .04em; padding: 3px 0; }
+  .ast td { padding: 3px 0; border-top: 1px solid var(--ink-150); }
+  .sw { display: inline-block; width: 30px; height: 18px; border-radius: 9px; background: var(--ink-400); position: relative; vertical-align: middle; }
+  .sw::after { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+  .sw.on { background: var(--teal-600); }
+  .sw.on::after { left: 14px; }
+  .r1-st .panel, .r1-st .alerts { box-shadow: none; }

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# P3-BACKUP local rehearsal of infra/backup/hosted-check-server.sh (backup.stack.test.ts): a stand-in for systemctl
+# in the runner container, which has no systemd. "start" runs the unit's ExecStart script with the unit's
+# EnvironmentFile, as systemd would, and keeps its output for the journalctl stand-in; the timer queries answer from
+# the unit files. Test-only: never shipped (deploy.sh drops infra/backup/tests from the stage).
+set -uo pipefail
+units=/opt/brightwater/systemd
+case "${1:-}" in
+  start)
+    u="$2"
+    script="$(sed -n 's#^ExecStart=/usr/bin/bash ##p' "$units/$u")"
+    envfile="$(sed -n 's#^EnvironmentFile=##p' "$units/$u")"
+    [ -n "$script" ] || { echo "systemctl stub: no ExecStart in $u" >&2; exit 5; }
+    # shellcheck disable=SC1090 # the unit's EnvironmentFile
+    ( set -a; . "$envfile"; set +a; exec bash "$script" ) >> "/tmp/journal-$u" 2>&1
+    ;;
+  is-enabled) if [ -f "$units/${2%.timer}.timer" ]; then echo enabled; else echo disabled; exit 1; fi ;;
+  is-active) if [ -f "$units/${2%.timer}.timer" ]; then echo active; else echo inactive; exit 3; fi ;;
+  show)
+    # systemctl show -P <property> <unit>
+    case "$3" in
+      TimersCalendar) echo "{ OnCalendar=$(sed -n 's/^OnCalendar=//p' "$units/$4") ; next_elapse=stub }" ;;
+      *) echo "n/a (stub)" ;;
+    esac
+    ;;
+  *) echo "systemctl stub: $* is not stubbed" >&2; exit 5 ;;
+esac

@@ -1,0 +1,19 @@
+{
+  "name": "bw-pbs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bw/config": "workspace:*",
+    "@bw/db": "workspace:*",
+    "@bw/domain": "workspace:*",
+    "@bw/log": "workspace:*",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}

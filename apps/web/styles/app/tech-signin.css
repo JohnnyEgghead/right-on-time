@@ -1,0 +1,22 @@
+/* SCR-TEC-01 in the web technician app (P5-TWA-TODAY): the layout the app changes from its frame (styles/page-tech-signin.css, DK-106,
+   copied byte for byte). A frame page draws the screen inside a 390 px device and its fields as plain text; the app fills the browser
+   window and the fields are inputs. Every color, font and size is the frame's own. */
+.r1-screen.bw-screen .screen.bw-tech-signin { width: auto; height: auto; min-height: 100vh; min-height: 100dvh; border-radius: 0; overflow: visible; display: flex; flex-direction: column; }
+.bw-tech-signin .form { overflow: visible; max-width: 520px; width: 100%; margin: 0 auto; }
+.bw-tech-signin .hero { padding-left: max(24px, calc((100% - 520px) / 2 + 24px)); padding-right: max(24px, calc((100% - 520px) / 2 + 24px)); }
+/* The fields: the frame's .inp is a box with a text span; the app puts the input where the span sits and keeps the box. */
+.bw-tech-signin .inp input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; font: inherit; color: inherit; padding: 0; outline: none; }
+.bw-tech-signin .inp input.dots { letter-spacing: .18em; font-size: 19px; }
+.bw-tech-signin .inp input.dots[type="text"] { letter-spacing: normal; font-size: 17px; }
+.bw-tech-signin .inp.locked input { cursor: not-allowed; }
+.bw-tech-signin .stay { cursor: pointer; }
+/* The field names are text the input is named by (aria-labelledby), not labels that are tap targets; the frame's .fld label rule, same values. */
+.bw-tech-signin .fld .lbl { display: block; font-size: 14px; font-weight: 650; color: var(--ink-800); margin-bottom: 6px; }
+.bw-tech .r1p-foot a { display: inline-flex; align-items: center; min-height: 44px; margin-block: -15px; }
+.bw-tech .r1p-clk .ic { width: 13px; height: 13px; }
+.bw-tech-signin .go { width: 100%; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
+.bw-tech-signin .sia .r { cursor: pointer; }
+.bw-tech-signin .forgot a { cursor: pointer; }
+.bw-tech-signin .show[role] { cursor: pointer; }
+/* The hero's language switch sits in the corner of the window's content column, as the frame's sits in the device's corner. */
+.bw-tech-signin .hero .hlang { right: max(12px, calc((100% - 520px) / 2 + 12px)); }

@@ -1,0 +1,65 @@
+/* P4-BILLING-UI: the narrow layouts of SCR-OFC-10, SCR-PBS-01, SCR-PBS-02 and the SCR-OFC-47 dialog (NFR-06). The frames are 1440 px pictures
+   with no phone layout of their own; below 720 px the screens stack, their tables become one card for each row, and every control reaches
+   44 px. Nothing here changes the screens at desktop width. The sheet is scoped to these screens' roots, so no other page takes a rule. */
+
+/* Real radio inputs where the frame drew spans: the input covers its label, so its box is the label's. */
+.bw-screen .radio { position: relative; }
+.bw-screen .radio > input.bw-vh { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; clip-path: none; cursor: pointer; }
+
+/* Below 1000 px (a 1440 px window at 200% zoom is 720) the not-in-billing tables are wider than their cards: the card scrolls them sideways
+   instead of cutting the words off (F-1614, 14.1 item 12, wide data tables). Below 720 px the rows stack and the card shows all of them. */
+@media (max-width: 999px) {
+  .bw-screen[data-screen="SCR-OFC-10"] .card { overflow-x: auto; }
+}
+
+@media (max-width: 719px) {
+  :is(.bw-screen[data-screen="SCR-OFC-10"], .bw-screen[data-screen="SCR-PBS-01"], .bw-screen[data-screen="SCR-PBS-02"], [data-screen="SCR-OFC-47"])
+    :is(a[href], button, select, input:not([type="hidden"]), label.l) {
+    min-height: 44px; min-width: 44px; box-sizing: border-box;
+  }
+  :is(.bw-screen[data-screen="SCR-OFC-10"], .bw-screen[data-screen="SCR-PBS-01"], .bw-screen[data-screen="SCR-PBS-02"]) a[href] {
+    display: inline-flex; align-items: center;
+  }
+  .bw-screen[data-screen="SCR-OFC-47"] .r1-field > label, [data-screen="SCR-OFC-47"] .r1-field > label { display: flex; align-items: center; min-height: 44px; }
+  :is(.bw-screen[data-screen="SCR-OFC-10"], .bw-screen[data-screen="SCR-PBS-01"], .bw-screen[data-screen="SCR-PBS-02"]) select { height: 44px; }
+  .bw-screen[data-screen="SCR-PBS-01"] .nfield label { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+  .bw-screen[data-screen="SCR-PBS-01"] .radio .rt { min-width: 0; overflow-wrap: anywhere; }
+  [data-screen="SCR-OFC-47"] { width: calc(100vw - 32px); max-width: 560px; }
+  [data-screen="SCR-OFC-47"] .r1-dlg-f { flex-wrap: wrap; }
+
+  /* The office bar, the demo strip and the footer wrap instead of overflowing. */
+  :is(.bw-screen[data-screen="SCR-OFC-10"], .bw-screen[data-screen="SCR-PBS-01"], .bw-screen[data-screen="SCR-PBS-02"]) :is(.topbar, .r1-demobar, .r1-foot) {
+    flex-wrap: wrap; height: auto; min-height: 0; white-space: normal;
+  }
+  :is(.bw-screen[data-screen="SCR-OFC-10"], .bw-screen[data-screen="SCR-PBS-01"], .bw-screen[data-screen="SCR-PBS-02"]) .topbar nav { flex-wrap: wrap; }
+
+  /* SCR-OFC-10 */
+  .bw-screen[data-screen="SCR-OFC-10"] .pgh .row { flex-wrap: wrap; }
+  .bw-screen[data-screen="SCR-OFC-10"] .acts { flex-wrap: wrap; }
+  .bw-screen[data-screen="SCR-OFC-10"] .banner { flex-direction: column; }
+  .bw-screen[data-screen="SCR-OFC-10"] :is(.banner > *, .card, .lower) { min-width: 0; max-width: 100%; }
+  .bw-screen[data-screen="SCR-OFC-10"] .card-h { flex-wrap: wrap; gap: 4px 12px; }
+  .bw-screen[data-screen="SCR-OFC-10"] :is(table, thead, tbody, tr, th, td) { display: block; width: auto; max-width: 100%; box-sizing: border-box; }
+  .bw-screen[data-screen="SCR-OFC-10"] thead, .bw-screen[data-screen="SCR-PBS-01"] table.inv thead { display: none; }
+  .bw-screen[data-screen="SCR-OFC-10"] .lower { display: block; width: auto; }
+  .bw-screen[data-screen="SCR-OFC-10"] .card { overflow: visible; }
+  .bw-screen[data-screen="SCR-OFC-10"] tr { border-top: 1px solid var(--ink-200); padding: 8px 0; }
+  .bw-screen[data-screen="SCR-OFC-10"] td { overflow-wrap: anywhere; border: 0; white-space: normal; }
+  .bw-screen[data-screen="SCR-OFC-10"] td .acts { flex-wrap: wrap; }
+  .bw-screen[data-screen="SCR-OFC-10"] .why { flex-wrap: wrap; }
+  .bw-screen[data-screen="SCR-OFC-10"] .r1-toast { max-width: calc(100vw - 32px); }
+
+  /* SCR-PBS-01 and SCR-PBS-02 */
+  :is(.bw-screen[data-screen="SCR-PBS-01"], .bw-screen[data-screen="SCR-PBS-02"]) .grid2 { grid-template-columns: minmax(0, 1fr); padding: 12px 16px; }
+  :is(.bw-screen[data-screen="SCR-PBS-01"], .bw-screen[data-screen="SCR-PBS-02"]) .ah { flex-wrap: wrap; height: auto; gap: 8px 12px; }
+  :is(.bw-screen[data-screen="SCR-PBS-01"], .bw-screen[data-screen="SCR-PBS-02"]) .panel { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  .bw-screen[data-screen="SCR-PBS-01"] table.inv :is(table, thead, tbody, tr, th, td) { display: block; width: auto; }
+  .bw-screen[data-screen="SCR-PBS-01"] table.inv :is(table, tbody, tr, td) { display: block; width: auto; max-width: 100%; box-sizing: border-box; }
+  .bw-screen[data-screen="SCR-PBS-01"] table.inv { display: block; }
+  .bw-screen[data-screen="SCR-PBS-01"] table.inv tr { border-top: 1px solid var(--ink-150); padding: 6px 0; }
+  .bw-screen[data-screen="SCR-PBS-01"] table.inv td { border: 0; padding: 2px 14px; }
+  .bw-screen[data-screen="SCR-PBS-01"] .more { flex-wrap: wrap; gap: 8px; }
+  :is(.bw-screen[data-screen="SCR-PBS-01"], .bw-screen[data-screen="SCR-PBS-02"]) .pbtag { white-space: normal; height: auto; min-height: 28px; }
+  .bw-screen[data-screen="SCR-PBS-02"] .panel.pad { overflow-x: auto; }
+  .bw-screen[data-screen="SCR-PBS-02"] .meta { grid-template-columns: 110px minmax(0, 1fr); }
+}

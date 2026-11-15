@@ -1,0 +1,4 @@
+// case-as: packages/api/src/planted.ts
+// expect: fail computed access
+import type { Clock } from '@bw/time';
+export const t = (clock: Clock) => clock['realNow']('log_stamp');

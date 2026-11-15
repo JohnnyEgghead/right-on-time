@@ -1,0 +1,14 @@
+# Spike S5 (G-S5-HOST): one renewal attempt for the bw.j7l.io certificate.
+# Installed to /etc/systemd/system by setup.sh; started by the .timer.
+[Unit]
+Description=Brightwater certbot renewal (bw.j7l.io) and nginx reload
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /opt/brightwater/certbot-renew.sh
+# F-45: after every attempt, success or failure, write the status file the 2nd monitor reads. The - keeps a failed write from
+# marking the renewal itself failed.
+ExecStopPost=-/usr/bin/bash /opt/brightwater/renewal-status.sh

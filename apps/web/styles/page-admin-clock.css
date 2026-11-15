@@ -1,0 +1,27 @@
+/* SCR-OFC-17 and SCR-OFC-27 page-local rules (DK-103): the last <style> of mockups/pages/r1-admin-clock.html, copied byte for byte (UI-DESIGN-KIT 1.1).
+   Never edited; the app's adaptations of it are in page-admin-clock-app.css. */
+
+.body { padding: 14px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-content: start; align-items: start; flex: 1; min-height: 0; overflow: hidden; }
+.note17 { grid-column: 1 / -1; }
+.now { grid-column: 1 / -1; display: flex; align-items: center; gap: 22px; padding: 16px 20px; }
+.now .big { font-size: 30px; font-weight: 780; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.now .lm { font-size: 14px; color: var(--ink-600); margin-top: 4px; }
+.now .lm b { color: var(--ink-800); }
+.now .acts { margin-left: auto; display: flex; gap: 10px; }
+.pp { padding-bottom: 16px; }
+.pp .in { padding: 4px 16px 0; }
+.row3 { display: flex; gap: 10px; align-items: flex-end; }
+.row3 .r1-field { flex: 1; }
+.row3 .r1-input { height: 42px; font-size: 15px; }
+.presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px 16px 0; }
+.pre { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 9px 12px; border: 1px solid var(--ink-300); border-radius: 10px; background: #fff; font: inherit; cursor: pointer; }
+.pre b { font-size: 14.5px; color: var(--teal-800); }
+.pre span { font-size: 12.5px; color: var(--ink-600); line-height: 1.35; }
+.reset { grid-column: 1 / -1; display: flex; align-items: center; gap: 18px; padding: 14px 18px; border-color: #f3c7a5; background: var(--orange-50); }
+.reset .tx { flex: 1; font-size: 14px; color: var(--ink-800); line-height: 1.45; }
+.reset .tx b { display: block; font-size: 15px; }
+.btn.warnb { background: #fff; border-color: var(--orange-600); color: var(--orange-700); }
+.bar { height: 10px; border-radius: 5px; background: var(--ink-150); overflow: hidden; margin-top: 6px; }
+.bar i { display: block; height: 100%; width: 35%; background: var(--teal-600); }
+.btn.dis { pointer-events: none; }
+

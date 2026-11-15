@@ -1,0 +1,4 @@
+// case-as: packages/time/src/planted.ts
+// expect: fail is not a real-time use
+declare function realNow(use: string): unknown;
+export const t = () => realNow('wall_clock');

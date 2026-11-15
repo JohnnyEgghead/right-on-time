@@ -1,0 +1,7 @@
+{
+  "why": "F-149: tz gate fails timestamptz(3) in a table with no declared zone; format_type says timestamp(3) with time zone",
+  "only": "tz",
+  "expect": [
+    "schema-time-zone-check: FAIL column world.equipment.serviced_at (timestamp(3) with time zone) has no declared zone: no entry for world.equipment in packages/db/src/zone-registry.ts"
+  ]
+}

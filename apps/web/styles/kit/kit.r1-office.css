@@ -1,0 +1,121 @@
+/* ---------- DK-39 Office screen frame, step 5a pages ---------- */
+/* source: mockups/src/design-options/r1-office.css (product) */
+/* Office chrome for r1 pages (with ../assets/office.css). */
+/* ---------- Office r1 screen frame ---------- */
+body.r1 { width: 1440px; margin: 0; background: var(--ink-100); }
+.r1-screen { width: 1440px; height: 900px; overflow: hidden; display: flex; flex-direction: column; background: var(--ink-100); position: relative; }
+.r1-screen .ic, .r1-states .ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
+.r1-screen .ic svg, .r1-states .ic svg { width: 100%; height: 100%; }
+/* Step 5c: the approved office pages (body.office.r1k) keep their 1440 x 900 screen inside
+   .r1k-in, with the demo strip above and the footer below, then their states board. */
+body.office.r1k { height: auto; overflow: visible; }
+.r1-screen.r1k { height: auto; overflow: visible; }
+.r1k-in { flex: none; width: 1440px; height: 900px; overflow: hidden; position: relative; background: var(--ink-100); }
+.r1k .r1-foot, .r1k .r1-demobar { flex: none; }
+
+/* ---------- DK-40 Office top bar, spec order (CMP-07) ---------- */
+/* source: mockups/src/design-options/r1-office.css (product) */
+/* ---------- Office top bar, spec order: CMP-07 ---------- */
+.r1top { gap: 14px; flex: none; }
+.r1top .brand .word { font-size: 19px; }
+.r1top .brand .word small { color: var(--teal-200); font-size: 9.5px; letter-spacing: .12em; margin-top: 2px; }
+.r1top .appname { padding-left: 12px; }
+.r1top nav { margin-left: 2px; }
+.r1top nav a { padding: 0 9px; font-size: 14px; }
+.r1top nav a.on::after { left: 9px; right: 9px; }
+.r1top .search { width: 150px; }
+.r1top .search kbd { display: inline-block; }
+.r1top .branch { padding: 0 8px 0 10px; }
+
+/* ---------- DK-41 Office page shell ---------- */
+/* source: mockups/src/design-options/r1-office.css (product) */
+/* ---------- Office page shell ---------- */
+:where(body.r1) .r1-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+:where(body.r1) .shell { flex: 1; min-height: 0; display: flex; }
+
+/* ---------- DK-42 Admin side menu (CMP-08) ---------- */
+/* source: mockups/src/design-options/r1-office.css (product) */
+/* ---------- Admin side menu: CMP-08 ---------- */
+:where(body.r1) .side { width: 220px; flex: none; background: var(--white); border-right: 1px solid var(--ink-200); padding: 18px 12px; }
+:where(body.r1) .side h4 { margin: 0 0 8px; padding: 0 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-500); }
+:where(body.r1) .side a { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border-radius: 8px; color: var(--ink-700); font-weight: 560; font-size: 14px; margin-bottom: 2px; }
+:where(body.r1) .side a .ic { width: 17px; height: 17px; color: var(--ink-500); }
+:where(body.r1) .side a.on { background: var(--teal-50); color: var(--teal-800); font-weight: 680; box-shadow: inset 3px 0 0 var(--orange-500); }
+:where(body.r1) .side a.on .ic { color: var(--teal-700); }
+
+/* ---------- DK-43 Admin page header ---------- */
+/* source: mockups/src/design-options/r1-office.css (product) */
+/* ---------- Admin page header ---------- */
+:where(body.r1) .mainc { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+:where(body.r1) .ah { background: var(--white); border-bottom: 1px solid var(--ink-200); padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+:where(body.r1) .ah h1 { margin: 0; font-size: 24px; font-weight: 750; letter-spacing: -.02em; }
+:where(body.r1) .ah p { margin: 3px 0 0; font-size: 14px; color: var(--ink-600); }
+:where(body.r1) .ah .acts { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+/* ---------- DK-44 Panels and tables ---------- */
+/* source: mockups/src/design-options/r1-office.css (product) */
+/* ---------- Panels and tables ---------- */
+:where(body.r1) .panel { background: var(--white); border: 1px solid var(--ink-200); border-radius: 12px; box-shadow: var(--shadow-sm); }
+:where(body.r1) .panel .ph { display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px; flex-wrap: wrap; }
+:where(body.r1) .panel h3 { margin: 0; font-size: 15px; font-weight: 700; }
+:where(body.r1) .panel .ph .s { font-size: 12.5px; color: var(--ink-500); }
+:where(body.r1) table.t { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+:where(body.r1) table.t th { text-align: left; font-size: 11.5px; font-weight: 650; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; padding: 7px 14px; border-bottom: 1px solid var(--ink-200); background: var(--ink-50); }
+:where(body.r1) table.t td { padding: 7px 14px; border-bottom: 1px solid var(--ink-150); vertical-align: middle; }
+:where(body.r1) table.t tr:last-child td { border-bottom: 0; }
+:where(body.r1) table.t .r { text-align: right; font-variant-numeric: tabular-nums; }
+:where(body.r1) table.t .n { font-variant-numeric: tabular-nums; }
+
+/* Step 5c: the CMP-05 map box for dialogs and frames (map, zoom, credit, text alternative). */
+.r1-map { position: relative; height: 300px; border-radius: 10px; overflow: hidden; background: var(--ink-150); border: 1px solid var(--ink-200); }
+.r1-map svg { width: 100%; height: 100%; display: block; }
+.r1-map .zm { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; border: 1px solid var(--ink-300); border-radius: 8px; overflow: hidden; background: var(--white); }
+.r1-map .zm button { width: 34px; height: 34px; border: 0; background: var(--white); font: 700 17px Inter, sans-serif; color: var(--ink-700); }
+.r1-map .zm button + button { border-top: 1px solid var(--ink-200); }
+.r1-map .osm { position: absolute; right: 0; bottom: 0; padding: 2px 7px; background: rgba(255,255,255,.85); font-size: 11.5px; color: var(--ink-700); text-decoration: underline; }
+.r1-map .pin { position: absolute; width: 30px; height: 30px; margin: -30px 0 0 -15px; color: var(--orange-600); }
+.r1-map .pin .ic { width: 30px; height: 30px; }
+.r1-map .fail { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--ink-100); color: var(--ink-700); font-size: 14px; font-weight: 600; }
+.r1-mapalt { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--ink-700); }
+
+/* Step 5c: SCR-OFC-22 Finish visit (office) body, shared by the job and billing pages. */
+.r1-fin-why { margin-bottom: 12px; padding: 9px 12px; border-radius: 9px; background: var(--orange-50); border: 1px solid var(--orange-300); color: var(--orange-700); font-size: 13.5px; font-weight: 600; line-height: 1.45; }
+.r1-fin-parts { border: 1px solid var(--ink-200); border-radius: 9px; }
+.r1-fin-parts .pr { display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; border-bottom: 1px solid var(--ink-150); }
+.r1-fin-parts .pr:last-child { border-bottom: 0; }
+.r1-fin-parts .pn { flex: 1; min-width: 0; font-size: 13.5px; }
+.r1-fin-parts .pn b { display: block; font-weight: 650; color: var(--ink-900); }
+.r1-fin-parts code { font: 600 12px Inter, sans-serif; color: var(--ink-600); }
+.r1-fin-parts .r1-input, .r1-fin-lab .r1-input { width: 52px; height: 34px; padding: 0 10px; font-size: 14px; justify-content: center; }
+.r1-fin-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.r1-fin-ck { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ink-800); }
+.r1-fin-ck .bx { width: 20px; height: 20px; border-radius: 5px; border: 2px solid var(--ink-400); display: inline-flex; align-items: center; justify-content: center; color: var(--white); }
+.r1-fin-ck .bx.on { background: var(--teal-700); border-color: var(--teal-700); }
+.r1-fin-ck .bx .ic { width: 14px; height: 14px; }
+.r1-fin-lab { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-700); }
+.r1-fin-lab .k { font-weight: 650; color: var(--ink-800); margin-right: 4px; }
+
+/* ---------- DK-45 Extra status chips and job links ---------- */
+/* source: mockups/src/design-options/r1-office.css (product) */
+/* ---------- Extra status chips and job links ---------- */
+.chip.ok { background: var(--st-site-bg); color: var(--st-site-ink); }
+.chip.warn { background: var(--st-risk-bg); color: var(--st-risk-ink); }
+.chip.bad { background: var(--st-late-bg); color: var(--st-late-ink); }
+.chip.info { background: var(--st-way-bg); color: var(--st-way-ink); }
+.chip.neutral { background: var(--ink-100); color: var(--ink-700); }
+:where(body.r1) .jl { color: var(--teal-700); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; font-variant-numeric: tabular-nums; }
+:where(body.r1) .btn .ic { width: 16px; height: 16px; }
+
+/* ---------- DK-46 Office alerts panel (SCR-OFC-28) ---------- */
+/* source: mockups/src/design-options/r1-office.css (product; added at step 5b, starting values) */
+/* ---------- Office alerts panel: SCR-OFC-28 (added at step 5b; starting values) ---------- */
+.r1-alerts { position: absolute; top: 100px; right: 16px; z-index: 30; width: 420px; max-height: 640px; display: flex; flex-direction: column; background: var(--white); border: 1px solid var(--ink-200); border-radius: 12px; box-shadow: var(--shadow-lg); overflow: hidden; }
+.r1-alerts .ah2 { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--ink-150); }
+.r1-alerts .ah2 h2 { flex: 1; margin: 0; font-size: 16px; font-weight: 720; }
+.r1-alerts ul { list-style: none; margin: 0; padding: 0; overflow: auto; }
+.r1-alerts li { padding: 10px 14px; border-bottom: 1px solid var(--ink-150); font-size: 13.5px; line-height: 1.4; color: var(--ink-800); }
+.r1-alerts li time { display: block; font-size: 12px; font-weight: 650; color: var(--ink-500); }
+/* Kit 0.9: the dismissed alert's state word and the Dismiss button (SCR-OFC-28 Dismissed, CTL-OFC-28-05; F-1144). */
+.r1-alerts li .chip { height: 20px; font-size: 11.5px; margin-left: 4px; vertical-align: 1px; }
+.r1-alerts li .btn { margin-left: 12px; }
+

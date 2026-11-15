@@ -1,0 +1,6 @@
+// case-as: apps/web/src/planted.ts
+// expect: pass log_stamp,session_idle,rate_limit
+import { realNow, type Clock } from '@bw/time';
+export const a = realNow('log_stamp');
+export const b = (clock: Clock) => clock.realNow('session_idle');
+export const c = realNow(`rate_limit`);

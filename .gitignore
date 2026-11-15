@@ -1,0 +1,61 @@
+node_modules/
+.DS_Store
+.env
+.env.*
+# P8-PUBLIC-FILES (F-321): the published sample seed file is committed; every other .env stays ignored
+!.env.example
+.askq/
+# build-continuity runtime state (volatile)
+.build/ctx.json
+.build/ctx_notified
+.build/ctx_nudge_count
+.build/.bs-mtime
+.build/.subagent-live-state
+.build/.health_tick
+.build/WISDOM-COMPACT.md
+.claude/settings.json.bak
+.qtree-session*/
+.build/bc-overwritten/
+.build/PLAN_COMPACT_PENDING
+
+# Spike S8 data files live in release downloads, never in git (D7)
+*.pmtiles
+*.osm.pbf
+*.osrm*
+# F-10: the baked track set, its legs input and the street source are the same storage rule (D7, OQ-14)
+tracks.ndjson
+streets.json
+legs.json
+
+# CI verdict and time history (written by ci/ci.sh)
+.build/ci/
+# F-974: per-gate junit XML (written by the vitest configs under BW_JUNIT_DIR, recorded by ci/test-times.sh)
+.build/junit/
+# F-998: the per-test history ci/run-gates.ts and ci/wave-run.sh write on every recorded run (a local record, never committed)
+.build/test-history.jsonl
+# Flat dashboard verdicts (full run, partial run), written per run by ci/ci.sh
+.build/ci-verdict.json
+.build/ci-only-verdict.json
+
+# F-1605: the drills' default output folder when no owner file names one (infra/drill/owner-env.sh)
+drill-out/
+# F-1609: the owner's private server address (infra/drill/owner-env.sh reads it after infra/owner.env)
+infra/owner.local.env
+# P8-PUBLISH: the publish clone and its work folders (scripts/publish.sh)
+.build/publish/
+
+# Deploy logs (written by infra/deploy/deploy.sh)
+.build/deploy/
+
+# P2-STREETS street list: a release asset (never git); download it here, see docs/build/spikes/P2-STREETS.md
+.build/data/
+# P7-SCANS: the pinned gitleaks binary (ci/gitleaks/install.ts) and its scan reports; fetched or made, never committed
+.build/tools/
+
+# Next.js build output (apps/web; the harness build goes to .next-preview)
+apps/web/.next/
+apps/web/.next-preview/
+apps/web/next-env.d.ts
+apps/web/tsconfig.tsbuildinfo
+apps/web/.next-preview.lock/
+*.xcresult

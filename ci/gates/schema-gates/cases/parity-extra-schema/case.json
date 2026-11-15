@@ -1,0 +1,8 @@
+{
+  "why": "F-149: parity gate fails a 6th schema with a table in it",
+  "only": "parity",
+  "expect": [
+    "schema-doc-parity: FAIL extra schema scratch: in the database, not among section 3's stores",
+    "schema-doc-parity: FAIL extra table scratch.t: in the database, outside the stores, not in section 3"
+  ]
+}

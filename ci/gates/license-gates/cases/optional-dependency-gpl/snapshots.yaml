@@ -1,0 +1,9 @@
+lockfileVersion: '9.0'
+snapshots:
+  host-pkg@1.0.0:
+    optionalDependencies:
+      opt-bin: 1.0.0
+  opt-bin@1.0.0:
+    dependencies:
+      opt-bin-dep: 2.0.0
+  opt-bin-dep@2.0.0: {}

@@ -1,0 +1,116 @@
+/* SCR-TEC-04 Job and SCR-TEC-06 Add photo (DK-110) page-local rules: the last <style> of mockups/pages/tech-job.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/tech.css. */
+  .screen { background: #f2f4f6; }
+  .apphead { background: var(--teal-900); color: #fff; padding: 0 16px 12px; flex: none; }
+  .apphead .sbar { margin: 0 -16px; color: #fff; }
+  .nav { display: flex; align-items: center; justify-content: space-between; margin: -2px -6px 0; }
+  .nav span { height: 44px; min-width: 44px; display: inline-flex; align-items: center; gap: 2px; font-size: 16px; font-weight: 600; color: var(--teal-200); }
+  .nav .ic { width: 24px; height: 24px; }
+  .nav .mid { font-size: 13px; font-weight: 650; color: var(--teal-200); letter-spacing: .04em; text-transform: uppercase; }
+  .nav .r { justify-content: center; }
+  .apphead h1 { margin: 2px 0 0; font-size: 25px; font-weight: 760; letter-spacing: -.02em; }
+  .apphead .addr { font-size: 15.5px; color: #e6f3f6; margin-top: 1px; }
+  .apphead .when { display: flex; gap: 8px; margin-top: 7px; align-items: center; font-size: 15px; color: #e6f3f6; }
+  .apphead .when b { color: #fff; font-weight: 700; }
+  .tag { white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 650; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); }
+  .tag .ic { width: 15px; height: 15px; }
+  .tag.st { background: #fff; color: var(--st-sched-ink); border-color: #fff; }
+  .tag.st .dot { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--st-sched-bd); }
+  .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .abtn { flex: 1; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; font-weight: 700; background: #fff; color: var(--teal-800); }
+  .abtn .ic { width: 20px; height: 20px; }
+  .abtn small { font-weight: 550; color: var(--ink-500); font-size: 13px; }
+  .abtn.call { flex: none; width: 128px; background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.55); }
+  .body { flex: 1; padding: 7px 12px 0; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
+  .notebox { background: #fffaf2; border: 1px solid #f3dfbf; border-radius: 12px; padding: 6px 12px; font-size: 14.5px; color: var(--ink-800); line-height: 1.35; display: flex; gap: 9px; }
+  .notebox .ic { width: 18px; height: 18px; color: var(--orange-700); margin-top: 1px; }
+  .notebox b { color: var(--orange-700); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; display: block; }
+  .card { background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; padding: 7px 12px 8px; box-shadow: none; }
+  .ch { display: flex; align-items: center; justify-content: space-between; min-height: 22px; }
+  .ch .more { font-size: 13px; color: var(--ink-500); font-weight: 600; }
+  .ch h3 { margin: 0; font-size: 12px; font-weight: 750; color: var(--ink-500); text-transform: uppercase; letter-spacing: .07em; }
+  .ch .addbtn { height: 44px; margin: -11px -6px -11px 0; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; font-size: 14.5px; font-weight: 700; color: var(--teal-700); }
+  .ch .addbtn .ic { width: 18px; height: 18px; }
+  .eq { display: flex; gap: 10px; align-items: center; margin-top: 4px; font-size: 14px; line-height: 1.32; }
+  .eq .ico { width: 26px; height: 26px; border-radius: 8px; flex: none; display: inline-flex; align-items: center; justify-content: center; }
+  .eq .ico .ic { width: 18px; height: 18px; }
+  .eq b { font-weight: 680; }
+  .eq small { display: block; font-size: 13px; color: var(--ink-600); }
+  .hist { margin-top: 3px; }
+  .hrow { display: flex; gap: 8px; padding: 3px 0; border-top: 1px solid var(--ink-150); font-size: 13.5px; line-height: 1.3; }
+  .hrow:first-child { border-top: 0; }
+  .hrow .dt { width: 92px; flex: none; white-space: nowrap; font-weight: 650; color: var(--ink-800); }
+  .hrow .tx { flex: 1; min-width: 0; color: var(--ink-700); }
+  .hrow .tx b { color: var(--ink-900); font-weight: 650; }
+  .note { font-size: 14px; line-height: 1.32; color: var(--ink-800); padding: 4px 0; border-top: 1px solid var(--ink-150); }
+  .note:first-of-type { border-top: 0; }
+  .note .by { font-size: 12.5px; color: var(--ink-500); margin-top: 1px; }
+  .photos { display: flex; gap: 8px; margin-top: 5px; }
+  .ph { width: 78px; height: 48px; border-radius: 9px; overflow: hidden; flex: none; position: relative; }
+  .ph svg { width: 100%; height: 100%; display: block; }
+  .ph span { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10.5px; font-weight: 650; color: #fff; padding: 2px 5px; background: linear-gradient(transparent, rgba(0,0,0,.6)); }
+  .ph.add { border: 1.5px dashed var(--teal-600); background: var(--teal-50); color: var(--teal-700); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 13px; font-weight: 700; }
+  .ph.add .ic { width: 22px; height: 22px; }
+  .bottom { flex: none; padding: 8px 12px 22px; background: #fff; border-top: 1px solid var(--ink-200); }
+  .omw { height: 52px; border-radius: 14px; background: var(--orange-600); color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 20px; font-weight: 750; box-shadow: 0 4px 10px rgba(217,96,15,.35); }
+  .omw .ic { width: 24px; height: 24px; }
+  .omwnote { text-align: center; font-size: 12.5px; color: var(--ink-500); margin-top: 3px; }
+  /* Step 5c lane 2: page rules for the spec controls and the states board. */
+  /* Kit 0.9: the app's no-signal page for a job screen the phone does not hold (SCR-TEC-04 Offline, screen not saved; F-1144). */
+  .nsp { padding: 28px 16px; min-height: 300px; }
+  .nsp h1 { margin: 0 0 10px; color: var(--teal-900); font-size: 24px; font-weight: 750; letter-spacing: -.01em; }
+  .nsp p { margin: 0 0 22px; font-size: 17px; line-height: 1.45; color: var(--ink-900); }
+  .r1p-clk { margin-top: 5px; }
+  .bottom .acts3 { display: flex; gap: 6px; margin-top: 6px; }
+  .acts3 span { flex: 1; min-height: 44px; border-radius: 11px; border: 1px solid var(--ink-300); background: var(--white); color: var(--ink-800); display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 13.5px; font-weight: 650; }
+  .acts3 span .ic { width: 16px; height: 16px; color: var(--teal-700); }
+  .acts3 span.dis { background: var(--ink-100); border-color: var(--ink-200); color: var(--ink-500); }
+  .acts3 span.pri { background: var(--teal-700); border-color: var(--teal-700); color: var(--white); }
+  .acts3 span.pri .ic { color: var(--white); }
+  .why3 { font-size: 12px; color: var(--ink-600); text-align: center; margin-top: 3px; }
+  .bottom { padding-bottom: 8px; }
+  .tabbar { height: 74px; flex: none; background: var(--white); border-top: 1px solid var(--ink-200); display: flex; justify-content: space-around; padding: 8px 10px 0; }
+  .tabbar span { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--ink-500); width: 70px; min-height: 44px; }
+  .tabbar span .ic { width: 24px; height: 24px; }
+  .tabbar span.on { color: var(--teal-700); }
+  .body .r1p-foot { padding-top: 4px; }
+  .r1p-mini .body { overflow: visible; padding-bottom: 10px; }
+  .r1p-mini .apphead { padding-top: 12px; }
+  .r1p-mini .ph.big { width: 100%; height: 190px; border-radius: 12px; }
+  .stmsg { display: flex; gap: 9px; align-items: flex-start; border-radius: 12px; padding: 10px 12px; font-size: 14.5px; line-height: 1.4; background: var(--white); border: 1px solid var(--ink-200); color: var(--ink-800); }
+  .stmsg .ic { width: 19px; height: 19px; color: var(--teal-700); margin-top: 1px; }
+  .stmsg.bad { background: var(--st-late-bg); border-color: var(--st-late-bd); color: var(--st-late-ink); }
+  .stmsg.bad .ic { color: var(--st-late-ink); }
+  .tag.st.done { color: var(--st-site-ink); }
+  .tag.st.done .dot { border-color: var(--st-site-bd); background: var(--st-site-bd); }
+  .tag.st.noh, .tag.st.can { color: var(--st-done-ink); }
+  .tag.st.noh .dot, .tag.st.can .dot { border-color: var(--st-done-bd); }
+  .r1-sheet .pv { margin-top: 12px; height: 180px; border-radius: 12px; overflow: hidden; }
+  .r1-sheet .pv svg { width: 100%; height: 100%; display: block; }
+  .r1-sheet .sbtns.col { flex-direction: column; }
+  .r1-sheet .alt { margin-top: 6px; font-size: 13px; color: var(--ink-600); }
+  /* Kit 0.8 (owner ruling 362101fd, F-1029): a phone window, under 720 px, draws every tap target at least 44 x 44 px and cuts no text
+     short, as the app's styles/app/tech.css does on the job screens (SCR-TEC-04 to -07, -09). body.r1p is the frame page's own body, so
+     these rules never reach the app. At the 1440 x 900 window the values above stand unchanged. */
+  @media (max-width: 720px) {
+    :where(body.r1p) a { display: inline-flex; align-items: center; }
+    body.r1p a, body.r1p label, body.r1p [role="button"], body.r1p [role="link"], body.r1p [role="spinbutton"], body.r1p [role="option"], body.r1p [role="textbox"] { min-height: 44px; min-width: 44px; }
+    body.r1p .nav span { height: auto; min-height: 44px; }
+    body.r1p .nav .mid { text-align: center; }
+    body.r1p .wl .in, body.r1p .lab2 .in { min-height: 44px; }
+    body.r1p .wl .x { width: 44px; height: 44px; }
+    body.r1p .step span { width: 44px; height: 44px; }
+    /* The part search: a 44 px box inside its 1 px border. */
+    body.r1p .find { min-height: 46px; }
+    /* No parts used: the label row is the 44 px target; its box stays drawn at 22 px. */
+    body.r1p .nop { min-height: 44px; }
+    body.r1p .ph.add { width: auto; min-width: 78px; height: auto; min-height: 48px; text-align: center; }
+    body.r1p .item .tx b { white-space: normal; overflow: visible; }
+    body.r1p .apphead, body.r1p .wh { overflow: visible; }
+    /* A link inside a sentence (CMP-10's 24-hour banner) stays inline, its words spaced as written; its padding gives it the 44 px. */
+    body.r1p .r1p-old a { display: inline; padding: 14px 0; }
+    /* Rows of buttons and words wrap rather than push the screen sideways. */
+    body.r1p .cdlg .row, body.r1p .compose .row, body.r1p .item, body.r1p .hrow, body.r1p .clkrow, body.r1p .r1p-clk { flex-wrap: wrap; }
+    body.r1p .clkrow, body.r1p .r1p-clk { row-gap: 4px; }
+  }
+

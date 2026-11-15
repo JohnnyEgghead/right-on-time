@@ -1,0 +1,201 @@
+/* The web technician app's sheet adaptations (P5-TWA-OUTBOX): what a phone frame page draws inside a 390 px device and the
+   app draws across the whole browser window. Layout only: every color, font and size stays the frame's own sheet's
+   (styles/page-tech-today.css, styles/page-tech-offline.css) and the kit's. */
+.r1-screen.bw-screen .screen.bw-tech { width: auto; height: auto; min-height: 100vh; min-height: 100dvh; border-radius: 0; overflow: visible; }
+.bw-tech > .bw-tech-body { flex: 1; display: flex; flex-direction: column; }
+.bw-tech > .tabbar { position: sticky; bottom: 0; z-index: 10; }
+.bw-tech > .tabbar [role="link"] { cursor: pointer; }
+/* CTL-CMP-10-04 floats above the tab bar while it shows (the frame draws it as a detail tile, not in the screen). */
+.bw-tech .bw-tech-sent { position: fixed; left: 12px; right: 12px; bottom: 90px; z-index: 30; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.bw-tech .bw-tech-sent:empty { display: none; }
+/* The preview tiles draw a CMP-10 piece as its frame tile does (DK-64 .r1-st .b); the live region sits in place there. */
+.r1-st .bw-tech-sent { position: static; }
+/* The kit sizes an icon inside a states-board tile through body.r1p .r1-st .ic (a frame page's body); the app's body is the app's. */
+.bw-tech-tile .r1-st .ic { display: inline-flex; flex: none; }
+.bw-tech-tile .r1-st .ic svg { width: 100%; height: 100%; }
+/* The kit cascade inside the app's phone screen. A frame page loads the phone slice (DK-19, ".screen .ic { 18px }") before
+   r1-common, so r1-common's icon sizes win there; the app's root layout loads r1-common first (the shared pages), so the phone
+   slice would win. These restate r1-common's own icon sizes (kit.r1-common.css, unchanged values) at the specificity that keeps
+   the frame's order. */
+.bw-tech .r1p-clk .ic { width: 13px; height: 13px; }
+.bw-tech .r1p-nosig .ic { width: 22px; height: 22px; }
+.bw-tech .r1p-old .ic { width: 17px; height: 17px; }
+.bw-tech .r1p-wait .ic { width: 12px; height: 12px; }
+.bw-tech .r1p-notice .ic { width: 18px; height: 18px; }
+.bw-tech .r1p-empty .ic { width: 26px; height: 26px; }
+.bw-tech .r1p-btn .ic { width: 20px; height: 20px; }
+
+/* P5-TWA-JOB: the job screens (SCR-TEC-04 to -07, -09; DK-110 to DK-112). Layout and real-control resets only: the frame's own
+   sheet (styles/page-tech-job.css, page-tech-finish.css, page-tech-offline.css) holds every color, font and size. */
+.bw-tech .body { overflow: visible; }
+.bw-tech .bottom { position: sticky; bottom: 74px; z-index: 9; }
+.bw-m0 { margin: 0; }
+.bw-mt8 { margin-top: 8px; }
+.bw-w44 { width: 44px; }
+.bw-tech .r1-skel.bw-skel-title { width: 60%; height: 22px; opacity: .5; }
+.bw-tech .r1-skel.bw-skel-line { width: 80%; opacity: .5; }
+.bw-tech .r1-skel.bw-skel-40 { width: 40%; }
+.bw-tech .r1-skel.bw-skel-70 { width: 70%; }
+/* DK-110's equipment tile tints, which the frame writes inline (the CSP allows no inline style). */
+.bw-tech .eq .ico.bw-eq-warm { background: var(--orange-100); color: var(--orange-600); }
+.bw-tech .eq .ico.bw-eq-cool { background: var(--teal-50); color: var(--teal-700); }
+.bw-tech .eq .ico.bw-eq-ink { background: var(--ink-100); color: var(--ink-600); }
+/* A photo thumbnail is the stored image, cut to the frame's box (the frame draws an SVG there). */
+.bw-tech .ph, .bw-tech-overlay .pv { padding: 0; }
+.bw-ph-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bw-ph-none { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--ink-100); color: var(--ink-500); }
+.bw-ph-fixed { display: block; width: 100%; height: 100%; background: #2a2d31; }
+.bw-tech .ph .bw-ph-none .ic { width: 22px; height: 22px; }
+.bw-tech a.ph.add, .bw-tech a.addbtn, .bw-tech a.omw, .bw-tech .acts3 a, .bw-tech a.edit { text-decoration: none; }
+.bw-tech .acts3 a { flex: 1; min-height: 44px; border-radius: 11px; border: 1px solid var(--ink-300); background: var(--white); color: var(--ink-800); display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 13.5px; font-weight: 650; }
+.bw-tech .acts3 a .ic { width: 16px; height: 16px; color: var(--teal-700); }
+.bw-tech .acts3 a.pri { background: var(--teal-700); border-color: var(--teal-700); color: var(--white); }
+.bw-tech .acts3 a.pri .ic { color: var(--white); }
+.bw-tech .acts .bw-call { flex: none; }
+.bw-tech .bw-tech-menu { position: absolute; right: 12px; z-index: 40; }
+.bw-tech .apphead { position: relative; }
+/* The file input behind Take or choose a photo: the button opens it. */
+.bw-sr-file { display: none; }
+/* A sheet over the screen (DK-36): the dim and the sheet fixed to the window, as the frame draws them over the device. */
+.bw-tech-overlay { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; justify-content: flex-end; }
+.bw-tech-overlay .r1-dim { position: absolute; inset: 0; }
+.bw-tech-overlay .r1-sheet { position: relative; max-height: 92vh; overflow: auto; }
+/* SCR-TEC-05: the note is a real text area where the frame draws a box. */
+.bw-tech textarea.ta { display: block; width: 100%; box-sizing: border-box; font-family: inherit; background: var(--white); resize: vertical; }
+.bw-tech textarea.ta::placeholder { color: var(--ink-500); opacity: 1; }
+/* SCR-TEC-07: real inputs where the frame draws boxes; the No parts used box over a real checkbox. */
+.bw-tech input.in.bw-in { font-family: inherit; box-sizing: border-box; }
+.bw-tech .wl input.in.bw-in { min-height: 36px; padding: 0 10px; }
+.bw-tech .lab2 input.in.bw-in { padding: 0; text-align: center; }
+.bw-tech .nop { position: relative; cursor: pointer; }
+.bw-tech .nop input.bw-cb { position: absolute; left: 0; top: 50%; width: 22px; height: 22px; margin: -11px 0 0; opacity: 0; cursor: pointer; }
+.bw-tech .nop input.bw-cb:focus-visible + .bx { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.bw-tech .find:focus-within { border-color: var(--teal-600); box-shadow: 0 0 0 3px var(--teal-100); color: var(--ink-900); }
+.bw-tech .res [role="option"] { cursor: pointer; }
+.bw-tech .step button { width: 32px; height: 36px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--teal-800); }
+.bw-tech .r1-note.bw-np { margin: 4px 0 0; }
+.bw-tech .phs .bw-th { width: 36px; height: 36px; border-radius: 6px; display: block; object-fit: cover; }
+/* Photo rows wrap when the window runs out of width (320 px, F-1613): the extra thumbnail drops to a 2nd row instead of past the edge. */
+.bw-tech .photos, .bw-tech .phs { flex-wrap: wrap; }
+.bw-tech .notes .r1p-wait { margin-left: 4px; }
+.bw-tech .body.bw-dimmed { opacity: .45; }
+.bw-tech .cstep { position: sticky; bottom: 74px; z-index: 12; }
+/* The signature pad: the frame's box, the canvas filling it; the PNG is 1200 x 400 (SD-32). */
+.bw-tech .sig.bw-sig { touch-action: none; }
+.bw-tech .bw-sig-pad { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+.bw-tech .sig.empty .bw-sig-hint { pointer-events: none; }
+.bw-tech .bw-spin12 { width: 12px; height: 12px; border-width: 2px; }
+/* A real button where the frame draws a block (Finish job, Send now): as wide as its row. */
+.bw-tech button.fin, .bw-tech button.r1p-btn { width: 100%; }
+/* SCR-TEC-05's Discard confirm: real buttons where the frame draws spans (the rule of page-tech-offline.css .cdlg .row span, restated for a button). */
+.bw-tech .cdlg .row button { min-height: 44px; padding: 0 16px; border-radius: 11px; display: inline-flex; align-items: center; font-size: 15px; font-weight: 700; }
+.bw-tech .cstep button.back2 { width: 100%; }
+/* A phone window (the walkers' 390 and 520 px; a technician's phone): every tap target at least 44 x 44 px (OA, UI-SPECIFICATION 13
+   rule 1) and no text cut short, where the frame's 390 px device picture draws smaller boxes or a single line. Never at the look
+   comparator's 1440 px window, so the frames' own values stay compared there. */
+@media (max-width: 720px) {
+  /* Scoped to the job screens (the 5 data-screen keys): Today, the Map and Me keep their own phone rules (after the P5-TWA-TODAY merge). */
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) :where(.bw-tech) a { display: inline-flex; align-items: center; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech a, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech button, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech [role="button"], :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech [role="link"], :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech [role="spinbutton"], :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech [role="option"],
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech label, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech input:not([type="checkbox"]), :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech textarea { min-height: 44px; min-width: 44px; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .nav span { height: auto; min-height: 44px; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .nav .mid { text-align: center; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .wl input.in.bw-in, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .lab2 input.in.bw-in { min-height: 44px; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .wl .x { width: 44px; height: 44px; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .step button { width: 44px; height: 44px; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .find .bw-search-input { min-height: 44px; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .nop input.bw-cb { width: 44px; height: 44px; margin: -22px 0 0 -11px; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .ph.add { width: auto; min-width: 78px; height: auto; min-height: 48px; text-align: center; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .item .tx b { white-space: normal; overflow: visible; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .apphead, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .wh { overflow: visible; }
+  /* A link inside a sentence (CMP-10's 24-hour banner) stays inline, its words spaced as written; its padding gives it the 44 px. */
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .r1p-old a { display: inline; padding: 14px 0; }
+  /* Rows of buttons and words wrap rather than push the page sideways (the Discard confirm, a waiting item, the note header). */
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .cdlg .row, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .compose .row, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .item, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .hrow { flex-wrap: wrap; }
+  /* The sheets over the screen (Add photo, the photo viewer) sit outside the screen's box: the same 44 px rule. */
+  .bw-tech-overlay button, .bw-tech-overlay a { min-height: 44px; min-width: 44px; }
+  /* The note header's clock row (the clock, "(sin señal)", the waiting count) wraps in Spanish rather than push the page sideways. */
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .clkrow, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .r1p-clk { flex-wrap: wrap; row-gap: 4px; }
+  /* F-1137: the redrawn frames' phone rule (DK-110 to DK-112, kit 0.8) sets the clock row's gap to 4 px and draws the Back to review button and the
+     sheet buttons at 44 px; the frame pages' own rules (page-tech-*.css) outrank the tap-target rule above, so these restate it at their weight. */
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .apphead .clkrow, :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .apphead .r1p-clk { row-gap: 4px; }
+  :where(.r1-screen:is([data-screen="SCR-TEC-04"], [data-screen="SCR-TEC-05"], [data-screen="SCR-TEC-06"], [data-screen="SCR-TEC-07"], [data-screen="SCR-TEC-09"])) .bw-tech .cstep button.back2 { min-height: 44px; }
+  .bw-tech-overlay .r1-sheet .sbtns > * { min-height: 44px; }
+  /* The Add photo sheet's inline Cancel link gets its 44 px as a flex box (min-height does nothing on an inline box). */
+  .bw-tech-overlay .r1p-why a.r1-link { display: inline-flex; align-items: center; }
+}
+/* P5-TWA-MAP-ME: the map, directions, parts, Me and install screens (DK-113 to DK-116). Layout and the things a frame page draws with a
+   style attribute (the page's policy refuses one); every value is the frame's own. */
+.bw-tech-pad { padding: 8px 12px 0; }
+.bw-tech-gap { height: 10px; }
+/* P6-WEB-STEPS: the frames' inline spacing on SCR-TEC-08 (the page's CSP allows no style attribute): the error panel's wrapper, the Route updated line, the 3 skeleton step rows. */
+.bw-tech-pad10 { padding: 10px 12px 0; }
+.bw-tech-upd:not(:empty) { padding: 4px 12px 8px; }
+.steps .r1-skel.w62 { max-width: 62%; }
+.steps .r1-skel.w74 { max-width: 74%; }
+.steps .r1-skel.w48 { max-width: 48%; }
+/* The frame's map column clips (a 844 px device); the app's page scrolls. */
+.bw-tech .scrollv { min-height: auto; overflow: visible; }
+.bw-tech .mapw .bw-map, .bw-tech .tmap .bw-map { position: absolute; inset: 0; height: auto; border: 0; border-radius: 0; }
+.bw-tech .mapw .zm, .bw-tech .tmap .zm { right: 12px; border-radius: 14px; border-color: var(--ink-200); box-shadow: var(--shadow); }
+.bw-tech .mapw .zm { top: 166px; }
+.bw-tech .tmap .zm { top: 12px; }
+/* overflow visible: the buttons are white like the box, so its rounded clip showed nothing, and at 200% text it cut the + and - (F-1614). */
+.bw-tech .mapw .zm, .bw-tech .tmap .zm { overflow: visible; }
+.bw-tech .mapw .zm button:first-child, .bw-tech .tmap .zm button:first-child { border-radius: 13px 13px 0 0; }
+.bw-tech .mapw .zm button:last-child, .bw-tech .tmap .zm button:last-child { border-radius: 0 0 13px 13px; }
+.bw-tech .mapw .zm button, .bw-tech .tmap .zm button { width: 48px; height: auto; min-height: 44px; font-size: 22px; font-weight: 600; color: var(--ink-800); line-height: .8; padding: 0; } /* min-height in place of height, line-height 1, no padding: at 200% text the + and - grow their buttons and the control's frame no longer cuts them (F-1614) */
+.bw-tech .mapw .osm { left: 12px; right: auto; top: 52px; bottom: auto; padding: 2px 6px; border-radius: 6px; font-size: 11px; background: rgba(255, 255, 255, .92); }
+.bw-tech .legend i.d.done { background: #1f9d55; }
+.bw-tech .legend i.d.next { background: #f07a26; }
+.bw-tech .legend i.d.later { background: #fff; border: 2px solid #4b5563; }
+.bw-tech .dir small { font-weight: 550; font-size: 13px; opacity: .85; }
+/* The numbered stops in the technician frame's colors (map.js, tech-map.html): done green, next orange, later white. */
+.bw-tech .bw-marker.numbered.next circle { fill: #f07a26; }
+.bw-tech .bw-marker.numbered.next text { fill: #111827; }
+.bw-tech .bw-marker.numbered.later circle { fill: #fff; stroke: #4b5563; }
+.bw-tech .bw-marker.numbered.later text { fill: #1f2937; }
+.bw-tech .bw-marker.numbered.done text { fill: #111827; }
+.bw-tech .stop:focus-visible, .bw-tech .fab:focus-visible, .bw-tech .dir:focus-visible, .bw-tech .open:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+/* Parts: the frame's typed text is a span; the app's is a field that looks the same. */
+.bw-tech .srch input.v { flex: 1; min-width: 0; border: 0; background: none; padding: 0; margin: 0; font: inherit; color: inherit; outline: 0; }
+.bw-tech .srch input.v::placeholder { color: var(--ink-500); opacity: 1; }
+.bw-tech .srch.idle input.v { color: var(--ink-500); }
+.bw-tech .srch .clr { cursor: pointer; }
+.bw-tech .list16 > .emp { margin: 12px 12px 0; }
+.bw-tech .list16 > .srch + .emp { margin: 8px 12px 0; }
+/* Me: the waiting count in the Sync row, the reason under Send now, the Call button's wrapper and the open Text size list. */
+.bw-tech .syncrow b.wait { color: var(--st-risk-ink); }
+.bw-tech .r1p-why[data-align="end"] { text-align: right; margin-top: 4px; }
+.bw-tech .rows .rw .bw-call { margin-left: auto; }
+.bw-tech .rows .r1-menu.in { position: static; margin: 4px 0 6px auto; min-width: 0; width: 220px; }
+.bw-tech .rows .rw .sel, .bw-tech .rows .rw .sbtn, .bw-tech .out { cursor: pointer; }
+/* Text size (CTL-TEC-10-09): the app's px-sized text follows the size by zoom; the tab bar keeps its size. */
+.bw-tech[data-text-size="large"] > :not(.tabbar) { zoom: 1.125; }
+.bw-tech[data-text-size="larger"] > :not(.tabbar) { zoom: 1.25; }
+/* The day-changed notice sits above the sent announcement. */
+.bw-tech .bw-tech-notices { bottom: 160px; }
+/* Install: the second button and the home step's glyph, which the frame draws with a style attribute. */
+.bw-tech-install .btn + .btn { margin-top: 8px; }
+.bw-tech-install .steps11 .gl.home { color: var(--teal-700); }
+.bw-tech-install .btn { cursor: pointer; }
+
+/* Phone widths: the walkers' 44 px tap targets (SPECIFICATIONS section 14). The look comparator reads a 1440 px window, so these leave the frame's
+   values on the comparison and only lift the targets where a phone is held. */
+@media (max-width: 719px) {
+  .bw-tech .sync { min-height: 44px; }
+  .bw-tech .dh .nav [role="link"] { display: inline-flex; align-items: center; min-height: 44px; }
+  .bw-tech .osm { display: inline-flex; align-items: center; min-height: 44px; }
+  .bw-tech .lbl16 { display: flex; align-items: center; min-height: 44px; margin-top: 0; }
+  .bw-tech .srch input.v { min-height: 44px; }
+  .bw-tech .syncrow .tx { min-height: 44px; }
+  .bw-tech .rows .rw .call { min-height: 44px; }
+  .bw-tech .rows .rw .sel { min-height: 44px; }
+  .bw-tech .rows .r1-menu .mi { min-height: 44px; }
+  .bw-tech .r1-switch .trk { box-sizing: border-box; height: 44px; border-top: 9px solid transparent; border-bottom: 9px solid transparent; background-clip: padding-box; }
+  .bw-tech-install .pfoot a { padding: 16px 0; }
+  /* The Spanish words of the Sync row (Todo enviado 10:26 AM, Enviar ahora) are wider than the 390 px row the frame's nowrap leaves. */
+  .bw-tech .syncrow b { white-space: normal; }
+}
+/* The frame clips the Me body to its 844 px device; the app's page grows. */
+.bw-tech .body { overflow: visible; }

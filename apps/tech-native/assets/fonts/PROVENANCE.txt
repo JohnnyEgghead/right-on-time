@@ -1,0 +1,5 @@
+Inter-W400.ttf to Inter-W780.ttf: static instances of mockups/src/fonts/Inter-latin-wght.woff2 (the kit's variable Inter, the file the
+design frames and the web app render with), made by apps/tech-native/scripts/make-fonts.py with fontTools varLib.instancer at the wght
+value in each name. Inter is by The Inter Project Authors (https://github.com/rsms/inter), under the SIL Open Font License 1.1
+(OFL-1.1.txt beside these files). The instances are renamed (family "Inter W<weight>", typographic family "Inter", PostScript name
+Inter-W<weight>), as the OFL allows for a modified version that uses no Reserved Font Name; Inter declares none.

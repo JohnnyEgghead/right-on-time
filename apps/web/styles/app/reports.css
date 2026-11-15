@@ -1,0 +1,158 @@
+/* SCR-OFC-11 adaptations of its frame (DK-96; P4-REPORTS). The frame draws selects, the Export button and the charts' Show as table links as spans
+   and gives a few values by style attribute (the page CSP refuses those): here the box is the frame's and a real control sits in it (an invisible
+   native select over a `.sel`), and each inline style is a class. It sets no color or spacing value of its own beyond the frame's (OA-84). */
+.viz-root .sel { position: relative; }
+.viz-root .sel select { position: absolute; top: -1px; left: -1px; width: calc(100% + 2px); height: calc(100% + 2px); opacity: 0; cursor: pointer; font: inherit; appearance: none; }
+.viz-root .sel:focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.viz-root .sel.dis select { cursor: default; }
+/* The frame's inline styles. */
+.rh .btn.bw-rp-export { height: 36px; }
+.kpi .v.bw-rp-teal { color: var(--teal-700); }
+.panel.bw-rp-flush { padding-bottom: 6px; }
+.bw-rp-tilesim { margin: 0 0 12px; }
+.panel .lg i.bw-rp-s1 { background: var(--s1); }
+.panel .lg i.bw-rp-s2 { background: var(--s2); }
+.panel .lg i.bw-rp-s3 { background: var(--s3); }
+.panel .lg i.bw-rp-goal { background: none; border-top: 2px dashed #111827; height: 0; }
+.bw-rp-skel { width: 40%; }
+.r1-note.bw-rp-note { margin: 0; }
+.row.bw-rp-row { margin-bottom: 10px; }
+/* The panel holds the chart tip (CTL-OFC-11-13) beside its heading, over the chart. The kit's .r1-pop.in draws a popover in the flow and would push the
+   chart down, so the selector outranks it (F-737). */
+.viz-root .panel { position: relative; }
+.viz-root .r1-pop.bw-rp-tip { position: absolute; top: 44px; right: 16px; width: auto; display: inline-block; z-index: 5; pointer-events: none; /* F-786: a mark under the tip stays hoverable */ }
+/* The app's body is .r1, whose kit rules (:where(body.r1) .panel .ph, table.t th) the frame's body does not take: the frame's own values stand. */
+.viz-root .panel .ph { padding: 0; flex-wrap: nowrap; }
+.viz-root table.t th { background: none; }
+.viz-root .tbt { cursor: pointer; }
+.viz-root .tbt:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.viz-root svg.chart [tabindex]:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.bw-rp-fmsg { flex-basis: 100%; }
+.viz-root table.t caption { text-align: left; font-size: 12px; font-weight: 650; color: var(--ink-500); padding: 0 8px 4px; }
+.bw-rp-state { padding: 14px 24px; }
+/* A chart's data table is in the page always: shown on request, and on a phone in place of the chart (its marks are far under 44 px there). */
+.viz-root .bw-rp-dt:not(.on) { display: none; }
+/* The meter's bar: its width is a whole percent, a class each (no style attribute). */
+.meter i.bw-mw-0 { width: 0%; }
+.meter i.bw-mw-1 { width: 1%; }
+.meter i.bw-mw-2 { width: 2%; }
+.meter i.bw-mw-3 { width: 3%; }
+.meter i.bw-mw-4 { width: 4%; }
+.meter i.bw-mw-5 { width: 5%; }
+.meter i.bw-mw-6 { width: 6%; }
+.meter i.bw-mw-7 { width: 7%; }
+.meter i.bw-mw-8 { width: 8%; }
+.meter i.bw-mw-9 { width: 9%; }
+.meter i.bw-mw-10 { width: 10%; }
+.meter i.bw-mw-11 { width: 11%; }
+.meter i.bw-mw-12 { width: 12%; }
+.meter i.bw-mw-13 { width: 13%; }
+.meter i.bw-mw-14 { width: 14%; }
+.meter i.bw-mw-15 { width: 15%; }
+.meter i.bw-mw-16 { width: 16%; }
+.meter i.bw-mw-17 { width: 17%; }
+.meter i.bw-mw-18 { width: 18%; }
+.meter i.bw-mw-19 { width: 19%; }
+.meter i.bw-mw-20 { width: 20%; }
+.meter i.bw-mw-21 { width: 21%; }
+.meter i.bw-mw-22 { width: 22%; }
+.meter i.bw-mw-23 { width: 23%; }
+.meter i.bw-mw-24 { width: 24%; }
+.meter i.bw-mw-25 { width: 25%; }
+.meter i.bw-mw-26 { width: 26%; }
+.meter i.bw-mw-27 { width: 27%; }
+.meter i.bw-mw-28 { width: 28%; }
+.meter i.bw-mw-29 { width: 29%; }
+.meter i.bw-mw-30 { width: 30%; }
+.meter i.bw-mw-31 { width: 31%; }
+.meter i.bw-mw-32 { width: 32%; }
+.meter i.bw-mw-33 { width: 33%; }
+.meter i.bw-mw-34 { width: 34%; }
+.meter i.bw-mw-35 { width: 35%; }
+.meter i.bw-mw-36 { width: 36%; }
+.meter i.bw-mw-37 { width: 37%; }
+.meter i.bw-mw-38 { width: 38%; }
+.meter i.bw-mw-39 { width: 39%; }
+.meter i.bw-mw-40 { width: 40%; }
+.meter i.bw-mw-41 { width: 41%; }
+.meter i.bw-mw-42 { width: 42%; }
+.meter i.bw-mw-43 { width: 43%; }
+.meter i.bw-mw-44 { width: 44%; }
+.meter i.bw-mw-45 { width: 45%; }
+.meter i.bw-mw-46 { width: 46%; }
+.meter i.bw-mw-47 { width: 47%; }
+.meter i.bw-mw-48 { width: 48%; }
+.meter i.bw-mw-49 { width: 49%; }
+.meter i.bw-mw-50 { width: 50%; }
+.meter i.bw-mw-51 { width: 51%; }
+.meter i.bw-mw-52 { width: 52%; }
+.meter i.bw-mw-53 { width: 53%; }
+.meter i.bw-mw-54 { width: 54%; }
+.meter i.bw-mw-55 { width: 55%; }
+.meter i.bw-mw-56 { width: 56%; }
+.meter i.bw-mw-57 { width: 57%; }
+.meter i.bw-mw-58 { width: 58%; }
+.meter i.bw-mw-59 { width: 59%; }
+.meter i.bw-mw-60 { width: 60%; }
+.meter i.bw-mw-61 { width: 61%; }
+.meter i.bw-mw-62 { width: 62%; }
+.meter i.bw-mw-63 { width: 63%; }
+.meter i.bw-mw-64 { width: 64%; }
+.meter i.bw-mw-65 { width: 65%; }
+.meter i.bw-mw-66 { width: 66%; }
+.meter i.bw-mw-67 { width: 67%; }
+.meter i.bw-mw-68 { width: 68%; }
+.meter i.bw-mw-69 { width: 69%; }
+.meter i.bw-mw-70 { width: 70%; }
+.meter i.bw-mw-71 { width: 71%; }
+.meter i.bw-mw-72 { width: 72%; }
+.meter i.bw-mw-73 { width: 73%; }
+.meter i.bw-mw-74 { width: 74%; }
+.meter i.bw-mw-75 { width: 75%; }
+.meter i.bw-mw-76 { width: 76%; }
+.meter i.bw-mw-77 { width: 77%; }
+.meter i.bw-mw-78 { width: 78%; }
+.meter i.bw-mw-79 { width: 79%; }
+.meter i.bw-mw-80 { width: 80%; }
+.meter i.bw-mw-81 { width: 81%; }
+.meter i.bw-mw-82 { width: 82%; }
+.meter i.bw-mw-83 { width: 83%; }
+.meter i.bw-mw-84 { width: 84%; }
+.meter i.bw-mw-85 { width: 85%; }
+.meter i.bw-mw-86 { width: 86%; }
+.meter i.bw-mw-87 { width: 87%; }
+.meter i.bw-mw-88 { width: 88%; }
+.meter i.bw-mw-89 { width: 89%; }
+.meter i.bw-mw-90 { width: 90%; }
+.meter i.bw-mw-91 { width: 91%; }
+.meter i.bw-mw-92 { width: 92%; }
+.meter i.bw-mw-93 { width: 93%; }
+.meter i.bw-mw-94 { width: 94%; }
+.meter i.bw-mw-95 { width: 95%; }
+.meter i.bw-mw-96 { width: 96%; }
+.meter i.bw-mw-97 { width: 97%; }
+.meter i.bw-mw-98 { width: 98%; }
+.meter i.bw-mw-99 { width: 99%; }
+.meter i.bw-mw-100 { width: 100%; }
+/* Below 1000 px the 2 columns stack, and below 720 px the cards, the filters and the table fit the phone. */
+@media (max-width: 999px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .rh { flex-wrap: wrap; align-items: flex-start; }
+  .rh .filters { margin-left: 0; flex-wrap: wrap; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 719px) {
+  .rh, .wrap { padding-left: 16px; padding-right: 16px; }
+  .kpis { grid-template-columns: minmax(0, 1fr); }
+  .rh .filters .btn, .sel { min-height: 44px; height: 44px; }
+  .rh .filters .btn.bw-rp-export { height: 44px; }
+  .wks { flex-wrap: wrap; }
+  .panel .ph { flex-wrap: wrap; }
+  .panel .lg { margin-left: 0; flex-wrap: wrap; }
+  .tbt { min-height: 44px; display: inline-flex; align-items: center; }
+  .bw-rp-scroll { overflow-x: auto; }
+  .viz-root .bw-rp-dt:not(.on) { display: block; }
+  .viz-root svg.chart { display: none; }
+  .viz-root .panel .ph .tbt { display: none; }
+  .sim { max-width: 100%; }
+}

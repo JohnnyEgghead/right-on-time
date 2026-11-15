@@ -1,0 +1,84 @@
+/* P4-ACCOUNTS sheet adaptations (SCR-OFC-43 to -46, SCR-EML-01 to -03): what a live page needs that a frame picture does
+   not draw. The frames' own rules are the page-*.css copies, never edited; nothing here sets a color, a size or a spacing
+   the frames show, except at phone width, where the 44 px tap rule and the 1-column layout apply (NFR-06). */
+
+/* Read by screen readers only. No overflow clip, so the overflow walker sees no clipped text; clip-path hides it. */
+.bw-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* A filter of the frame (.fsel) holding a real control: the select lies over it, invisible, so the frame's word shows. */
+.bw-screen .fsel { position: relative; }
+.bw-screen .bw-fsel-native { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); opacity: 0; cursor: pointer; font: inherit; }
+.bw-screen .fsel.find .bw-fsel-text { flex: 1; min-width: 0; height: 100%; border: 0; padding: 0; background: transparent; font: inherit; color: var(--ink-900); outline: none; }
+.bw-screen .fsel.find .bw-fsel-text::placeholder { color: var(--ink-500); opacity: 1; }
+.bw-screen .fsel.find:focus-within { border-color: var(--teal-600); }
+.bw-screen .r1-input.bw-select { position: relative; }
+.bw-screen .bw-skel-pad { padding: 14px; }
+.bw-screen .bw-skel-pad .r1-skel + .r1-skel, .bw-eml-skel .r1-skel + .r1-skel { margin-top: 10px; }
+.bw-screen .bw-rowerr { margin: 8px 14px 0; }
+.bw-screen .bw-tablewrap { overflow-x: auto; position: relative; }
+.bw-screen .r1-input .tail { cursor: pointer; }
+.bw-screen .rad { cursor: pointer; }
+
+/* The frames' inline values as classes: the page CSP refuses style attributes (SPECIFICATIONS 11.5). */
+.bw-screen table.u col.bw-c178 { width: 178px; }
+.bw-screen table.u col.bw-c112 { width: 112px; }
+.bw-screen table.u col.bw-c84 { width: 84px; }
+.bw-screen table.u col.bw-c100 { width: 100px; }
+.bw-screen table.u col.bw-c170 { width: 170px; }
+.bw-screen .who .av.bw-av-you { background: var(--orange-600); }
+.bw-screen .who .av.bw-av-mgr { background: #0f5e73; }
+.bw-screen .who .av.bw-av-office { background: #12738b; }
+.bw-screen .who .av.bw-av-tech { background: var(--teal-600); }
+.bw-screen .who .av.bw-av-off { background: var(--ink-500); }
+.bw-screen .bw-min0 { min-width: 0; }
+.bw-screen .panel .ph.bw-ph-gap { padding-top: 14px; }
+.bw-screen .bw-mt12 { margin-top: 12px; }
+:where(.bw-w-30) { width: 30%; }
+:where(.bw-w-50) { width: 50%; }
+:where(.bw-w-70) { width: 70%; }
+
+/* A live dialog covers the window; the frames draw it inside a tile (.r1-scrim.in). */
+.r1-scrim.bw-scrim { position: fixed; z-index: 60; }
+
+/* A long address (keisha.t@brightwaterair.com) is 1 unbreakable word: at 200% text it was wider than the window and the card's edge cut it off
+   (F-1614, 14.1 item 12). These lines may break inside it, and shrink below their own word, only when the line runs out of room. */
+.bw-screen :is(.okbox, .infobox2, .warnbox, .whose) > span, .bw-screen .mh dd { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 719px) {
+  .bw-screen .mb .btn.lg { height: auto; min-height: 48px; padding-top: 6px; padding-bottom: 6px; white-space: normal; text-align: center; }
+}
+
+/* The users page stacks its 2 panels below 1000 px, not only at phone width: at 200% browser zoom on a 1440 px window (720 CSS px) the
+   side menu and the 410 px roles panel left the list 26 px, and its text was cut off (F-1614, 14.1 item 12). The list's table scrolls in its own wrapper. */
+@media (max-width: 999px) {
+  .bw-screen .bw-users-body { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .bw-users-body > * { min-width: 0; }
+  .bw-screen .bw-users-body .fbar { flex-wrap: wrap; }
+}
+
+@media (max-width: 719px) {
+  .bw-screen .body { grid-template-columns: 1fr; padding: 12px; }
+  .bw-screen .ah { flex-wrap: wrap; padding: 12px; }
+  .bw-screen .fbar { flex-wrap: wrap; }
+  .bw-screen .fsel, .bw-screen .btn.sm, .bw-screen td.ra .btn, .bw-screen .rad, .bw-screen .r1-x, .bw-screen .r1-input .tail,
+  .bw-screen .res .okbox a, .bw-screen .backl, .bw-screen .r1-link { min-height: 44px; }
+  .bw-screen .r1-x, .bw-screen .r1-input .tail { min-width: 44px; }
+  .bw-screen .fsel.find { width: 100%; }
+  .bw-screen .listp, .bw-screen .rolep { overflow: visible; }
+  /* The roles table is wider than a 320 px window (F-1613): it scrolls inside its own panel, the page does not. */
+  .bw-screen .rolep { overflow-x: auto; }
+  .bw-screen .who b, .bw-screen .who small { white-space: normal; overflow: visible; }
+  .bw-screen .mail, .bw-screen .pcard.pw, .bw-screen .pcard.fp { width: 100%; }
+  .bw-screen .pcard { padding: 22px 18px; }
+  .bw-screen .mh dl { grid-template-columns: 56px 1fr; }
+  .bw-screen .mh .when { grid-row: auto; grid-column: 1 / -1; text-align: left; }
+  /* The users page at phone width: the side menu above the page, 1 column, every control 44 px (the tap rule). */
+  .bw-screen .shell { flex-direction: column; height: auto; }
+  .bw-screen .shell > .side { width: auto; border-right: 0; border-bottom: 1px solid var(--ink-200); }
+  .bw-screen .shell > .side a { min-height: 44px; }
+  .bw-screen .body > * { min-width: 0; }
+  .bw-screen .fsel { min-height: 46px; }
+  .bw-screen .r1-input { height: auto; min-height: 46px; }
+  .bw-screen .r1-input > input, .bw-screen .r1-input > select { min-height: 44px; }
+  .bw-screen .r1-dlg .btn, .bw-screen .ah .btn { min-height: 44px; }
+  .bw-screen .r1-dlg-b a[href], .bw-screen .chg a[href] { display: inline-flex; align-items: center; min-height: 44px; }
+}

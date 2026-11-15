@@ -1,0 +1,8 @@
+// Planted case (must fail type checking): an address carried in a variable, where TypeScript's excess-property check
+// for literals would not look. The Exact type of @bw/log still refuses it.
+import { createLogger } from '../src/index.ts';
+import { FixedClock } from '@bw/time';
+
+const log = createLogger({ process: 'web', clock: new FixedClock({ demo: '2026-09-15T14:00:00Z' }) });
+const fields = { contract: 'API-23' as const, route: '/jobs/{jobNumber}', address: '1 Main St' };
+log.warn(fields);

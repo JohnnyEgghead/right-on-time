@@ -1,0 +1,26 @@
+{
+  "_doc": "The technician roster the generator writes visits and fixture jobs for (P2-GENERATOR). The fixture names a technician by employee number; visits.csv names one by name. The reference seed (P2-SEED) seeds these people with these employee numbers (SD-29: from 40701; Maria Santos 40712). The 12 Columbus names are the mockups' (mockups/src/office/jobs.html, MOCKUP-ADDITIONS.md: Chris Yoder is the installer); the Dayton and Springfield names are made up here.",
+  "technicians": [
+    { "employeeNumber": "40701", "name": "Marcus Bell", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40702", "name": "Jamal Carter", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40703", "name": "Kevin Doyle", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40704", "name": "Greg Hoffman", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40705", "name": "Dave Kowalski", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40706", "name": "Ryan Mitchell", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40707", "name": "Ashley Nguyen", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40708", "name": "Luis Ortega", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40709", "name": "Tom Reinhart", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40710", "name": "Brian Schaefer", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40711", "name": "Chris Yoder", "branch": "columbus", "installer": true },
+    { "employeeNumber": "40712", "name": "Maria Santos", "branch": "columbus", "installer": false },
+    { "employeeNumber": "40713", "name": "Derrick Owens", "branch": "dayton", "installer": false },
+    { "employeeNumber": "40714", "name": "Megan Fischer", "branch": "dayton", "installer": false },
+    { "employeeNumber": "40715", "name": "Tyrone Banks", "branch": "dayton", "installer": false },
+    { "employeeNumber": "40716", "name": "Kyle Brandt", "branch": "dayton", "installer": false },
+    { "employeeNumber": "40717", "name": "Erin Walsh", "branch": "dayton", "installer": false },
+    { "employeeNumber": "40718", "name": "Nate Hollis", "branch": "dayton", "installer": false },
+    { "employeeNumber": "40719", "name": "Cody Stamper", "branch": "springfield", "installer": false },
+    { "employeeNumber": "40720", "name": "Jill Kessinger", "branch": "springfield", "installer": false },
+    { "employeeNumber": "40721", "name": "Andre Willis", "branch": "springfield", "installer": false }
+  ]
+}

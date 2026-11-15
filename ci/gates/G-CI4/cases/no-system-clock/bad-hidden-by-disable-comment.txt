@@ -1,0 +1,4 @@
+// case-as: apps/web/src/planted.ts
+// expect: fail 1
+// eslint-disable-next-line bw/no-system-clock
+export const t = Date.now();

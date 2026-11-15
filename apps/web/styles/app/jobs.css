@@ -1,0 +1,52 @@
+/* SCR-OFC-30 adaptations of its frame (DK-88; P4-JOBS). The frame draws selects, the search box and the page buttons as spans; here the box is the
+   frame's and a real control sits in it (an invisible native select over a `.sel`, an input in the `.sbox`). The frame's inline styles are classes
+   (the page CSP refuses style attributes). It sets no color or spacing value of its own beyond the frame's (OA-84), and lays the page out for
+   a phone (the frame is a 1440 px picture). */
+.sel { position: relative; }
+.sel select { position: absolute; top: -1px; left: -1px; width: calc(100% + 2px); height: calc(100% + 2px); opacity: 0; cursor: pointer; font: inherit; appearance: none; }
+.sel:focus-within, .sbox:focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.sbox input { flex: 1; min-width: 0; height: calc(100% + 2px); margin: -1px 0; border: 0; padding: 0; background: transparent; font: inherit; color: var(--ink-900); outline: none; }
+.sbox input::placeholder { color: var(--ink-500); opacity: 1; }
+a.btn { text-decoration: none; }
+.tabs a:focus-visible, .jn a.jl:focus-visible, .pager .pp span.b:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.tabs a { cursor: pointer; }
+.pager .pp span.b { cursor: pointer; }
+.pager .pp span.b[aria-disabled="true"] { opacity: .5; cursor: default; }
+.pager .pp span.b.on { cursor: default; }
+td .chip .ic.bw-jb-ic13 { width: 13px; height: 13px; }
+:where(.bw-jb-w30) { width: 30%; }
+.bw-jb-skel { padding: 12px 0; }
+/* The frame draws these states as tiles of the states board: a 1 px border and a 14 px pad (so a width read off the tile is the app's), set in from the page gutter. */
+.bw-jb-state { border: 1px solid transparent; padding: 14px; margin: 0 9px; }
+.bw-jb-note { margin: 14px 0 0; }
+.bw-jb-note.nr { margin-top: 12px; }
+.bw-jb-linkp { margin: 10px 24px 0; }
+.bw-jb-msg { margin: 0 24px 10px; }
+.filters .btn.sm { flex: none; }
+@media (max-width: 999px) {
+  .pgh .row { flex-wrap: wrap; }
+  .pgh .acts { flex-wrap: wrap; }
+  .tabsrow { flex-wrap: wrap; }
+  .tabs { flex-wrap: wrap; }
+  .sortb { margin-left: 0; flex-wrap: wrap; padding-bottom: 8px; }
+  .filters { flex-wrap: wrap; }
+  .sbox { width: 100%; }
+  .tbl { overflow-x: auto; }
+  .tbl table { min-width: 980px; }
+}
+@media (max-width: 719px) {
+  .pgh, .filters, .pager { padding-left: 16px; padding-right: 16px; }
+  .tbl { margin: 0 16px; }
+  .bw-jb-linkp, .bw-jb-msg { margin-left: 16px; margin-right: 16px; }
+  .pgh .btn, .filters .btn { min-height: 44px; }
+  .tabs a { min-height: 44px; height: 44px; min-width: 44px; justify-content: center; }
+  .sel, .sbox { min-height: 44px; height: 44px; }
+  .pager { flex-wrap: wrap; gap: 8px; }
+  .pager .pp { flex-wrap: wrap; }
+  .pager .pp span.b { width: 44px; height: 44px; }
+  .jn a.jl { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+  .bw-jb-linkp a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+/* F-1652: a job's own problem words in the service cell: 1 line, cut with an ellipsis (the full words are the title and accessible name). */
+.bw-jb-svc { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }

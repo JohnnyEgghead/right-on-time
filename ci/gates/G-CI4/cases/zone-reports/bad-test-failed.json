@@ -1,0 +1,18 @@
+{
+  "numPassedTests": 1,
+  "numFailedTests": 1,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "title": "the host zone is the one this run was started under",
+          "status": "passed"
+        },
+        {
+          "title": "a Mon, Nov 2, 2026 visit booked in EDT is at 9:00 AM EST",
+          "status": "failed"
+        }
+      ]
+    }
+  ]
+}

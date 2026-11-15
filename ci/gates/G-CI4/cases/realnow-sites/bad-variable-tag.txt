@@ -1,0 +1,4 @@
+// case-as: apps/worker/src/planted.ts
+// expect: fail not a string literal
+import { realNow, type RealTimeUse } from '@bw/time';
+export const t = (use: RealTimeUse) => realNow(use);

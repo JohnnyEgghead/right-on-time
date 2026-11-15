@@ -1,0 +1,116 @@
+/* SCR-TEC-07 Finish job (DK-112) page-local rules: the last <style> of mockups/pages/tech-finish.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/tech.css. */
+  .screen { background: #f2f4f6; }
+  .apphead { background: var(--teal-900); color: #fff; padding: 0 16px 11px; flex: none; }
+  .apphead .sbar { margin: 0 -16px; color: #fff; }
+  .nav { display: flex; align-items: center; justify-content: space-between; margin: -2px -6px 0; }
+  .nav span { height: 44px; min-width: 44px; display: inline-flex; align-items: center; gap: 2px; font-size: 16px; font-weight: 600; color: var(--teal-200); }
+  .nav .ic { width: 24px; height: 24px; }
+  .nav .mid { font-size: 13px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+  .apphead h1 { margin: 0; font-size: 24px; font-weight: 760; letter-spacing: -.02em; }
+  .apphead .d { font-size: 14.5px; color: #e6f3f6; margin-top: 1px; }
+  .body { flex: 1; padding: 7px 12px 0; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
+  .card { background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; padding: 7px 12px 8px; box-shadow: none; }
+  .ch { display: flex; align-items: center; justify-content: space-between; min-height: 22px; }
+  .ch h3 { margin: 0; font-size: 12px; font-weight: 750; color: var(--ink-500); text-transform: uppercase; letter-spacing: .07em; }
+  .ch .edit { height: 44px; margin: -11px -6px -11px 0; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; font-size: 14.5px; font-weight: 700; color: var(--teal-700); }
+  .ch .edit .ic { width: 17px; height: 17px; }
+  .done { font-size: 14px; line-height: 1.38; color: var(--ink-800); margin-top: 2px; }
+  .done li { margin: 0; }
+  .done ul { margin: 0; padding-left: 18px; }
+  .pt { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-top: 1px solid var(--ink-150); font-size: 14px; }
+  .pt:first-of-type { border-top: 0; }
+  .pt .n { flex: 1; min-width: 0; }
+  .pt .n small { color: var(--ink-500); font-size: 12.5px; margin-left: 4px; }
+  .pt .q { flex: none; min-width: 52px; text-align: center; font-weight: 700; background: var(--ink-100); border-radius: 6px; padding: 1px 8px; font-size: 13.5px; }
+  .two { display: flex; gap: 6px; }
+  .two .card { flex: 1; min-width: 0; }
+  .labor b { display: block; font-size: 21px; font-weight: 760; letter-spacing: -.01em; margin-top: 1px; }
+  .labor small { display: block; font-size: 12.5px; color: var(--ink-600); }
+  .phs { display: flex; gap: 5px; margin-top: 4px; }
+  .phs svg { width: 36px; height: 36px; border-radius: 6px; display: block; }
+  .notes { font-size: 13.5px; line-height: 1.35; color: var(--ink-800); margin-top: 2px; }
+  .notes div + div { margin-top: 3px; }
+  .notes span { color: var(--ink-500); font-size: 12.5px; }
+  .sig { margin-top: 4px; height: 72px; border: 1.5px solid var(--ink-300); border-radius: 10px; position: relative; background: #fcfcfd; }
+  .sig svg { position: absolute; left: 16px; top: 2px; width: 200px; height: 52px; }
+  .sig .line { position: absolute; left: 14px; right: 14px; bottom: 22px; border-top: 1px dashed var(--ink-400); }
+  .sig .who { position: absolute; left: 14px; bottom: 4px; font-size: 12.5px; color: var(--ink-600); }
+  .sig .clr { position: absolute; right: 4px; top: 0; height: 44px; padding: 0 10px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 700; color: var(--teal-700); }
+  .bottom { flex: none; padding: 8px 12px 22px; background: #fff; border-top: 1px solid var(--ink-200); }
+  .fin { height: 54px; border-radius: 14px; background: var(--teal-700); color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 19px; font-weight: 750; box-shadow: 0 4px 10px rgba(15,94,115,.3); }
+  .fin .ic { width: 23px; height: 23px; }
+  .finnote { text-align: center; font-size: 13px; color: var(--ink-600); margin-top: 5px; line-height: 1.35; }
+  /* Step 5c lane 2: page rules for the spec controls and the states board. */
+  .r1p-clk { margin-top: 5px; }
+  .body.end { justify-content: flex-end; }
+  .wl { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .wl .in { flex: 1; min-width: 0; min-height: 36px; display: flex; align-items: center; padding: 0 10px; border: 1px solid var(--ink-400); border-radius: 9px; font-size: 14px; color: var(--ink-900); background: var(--white); }
+  .wl .in.focus { border-color: var(--teal-600); box-shadow: 0 0 0 3px var(--teal-100); }
+  .x { flex: none; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; color: var(--ink-600); }
+  .x .ic { width: 16px; height: 16px; }
+  .addl { min-height: 40px; display: inline-flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 700; color: var(--teal-700); }
+  .addl .ic { width: 16px; height: 16px; }
+  .pt .n code { display: block; font: 600 12px Inter, sans-serif; color: var(--ink-500); }
+  .step { flex: none; display: inline-flex; align-items: center; border: 1px solid var(--ink-300); border-radius: 9px; overflow: hidden; }
+  .step span { width: 32px; height: 36px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--teal-800); }
+  .step b { min-width: 30px; text-align: center; font-size: 14.5px; border-left: 1px solid var(--ink-200); border-right: 1px solid var(--ink-200); line-height: 36px; }
+  .find { display: flex; align-items: center; gap: 8px; min-height: 42px; margin-top: 6px; padding: 0 10px; border: 1px solid var(--ink-400); border-radius: 10px; font-size: 14.5px; color: var(--ink-500); background: var(--white); }
+  .find .ic { width: 17px; height: 17px; }
+  .find.focus { border-color: var(--teal-600); box-shadow: 0 0 0 3px var(--teal-100); color: var(--ink-900); }
+  .find.dis { background: var(--ink-100); }
+  .res { margin-top: 4px; border: 1px solid var(--ink-200); border-radius: 10px; overflow: hidden; }
+  .res div { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; font-size: 14px; min-height: 44px; align-items: center; }
+  .res div + div { border-top: 1px solid var(--ink-150); }
+  .res code { font: 600 12.5px Inter, sans-serif; color: var(--ink-500); }
+  .nop { display: flex; align-items: center; gap: 9px; min-height: 44px; margin-top: 2px; font-size: 14.5px; font-weight: 600; color: var(--ink-800); }
+  .nop .bx { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--ink-400); background: var(--white); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+  .nop .bx.on { background: var(--teal-700); border-color: var(--teal-700); color: var(--white); }
+  .nop .bx .ic { width: 15px; height: 15px; }
+  .nop.dis { color: var(--ink-500); }
+  .nop small { font-weight: 500; color: var(--ink-500); font-size: 12px; }
+  .lab2 { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 14px; color: var(--ink-700); }
+  .lab2 .in { width: 46px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ink-400); border-radius: 9px; font-size: 16px; font-weight: 700; color: var(--ink-900); background: var(--white); }
+  .labor small { margin-top: 3px; }
+  .sig.empty { display: flex; align-items: center; justify-content: center; color: var(--ink-500); font-size: 13.5px; }
+  .fmsg { display: flex; gap: 6px; align-items: flex-start; margin-top: 6px; font-size: 13.5px; font-weight: 600; color: var(--st-late-ink); background: var(--st-late-bg); border-radius: 8px; padding: 6px 9px; }
+  .fmsg .ic { width: 16px; height: 16px; margin-top: 1px; }
+  .cancel { display: block; text-align: center; margin-top: 4px; min-height: 30px; font-size: 14px; font-weight: 650; color: var(--teal-700); text-decoration: underline; }
+  .bottom { padding-bottom: 8px; }
+  .tabbar { height: 74px; flex: none; background: var(--white); border-top: 1px solid var(--ink-200); display: flex; justify-content: space-around; padding: 8px 10px 0; }
+  .tabbar span { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--ink-500); width: 70px; min-height: 44px; }
+  .tabbar span .ic { width: 24px; height: 24px; }
+  .tabbar span.on { color: var(--teal-700); }
+  .r1p-mini .body { overflow: visible; padding-bottom: 10px; }
+  .r1p-mini .apphead { padding-top: 12px; }
+  .cstep { background: var(--white); border-radius: 18px 18px 0 0; padding: 14px 16px 18px; box-shadow: 0 -10px 30px rgba(0, 0, 0, .18); }
+  .cstep h2 { margin: 0; font-size: 21px; font-weight: 760; letter-spacing: -.02em; }
+  .cstep ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.45; color: var(--ink-800); }
+  .cstep .warn { margin-top: 10px; font-size: 14px; font-weight: 650; color: var(--st-late-ink); }
+  .cstep .fin { margin-top: 12px; }
+  .cstep .back2 { margin-top: 8px; min-height: 48px; border-radius: 12px; border: 1.5px solid var(--ink-300); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: var(--ink-800); }
+  /* Kit 0.8 (owner ruling 362101fd, F-1029): a phone window, under 720 px, draws every tap target at least 44 x 44 px and cuts no text
+     short, as the app's styles/app/tech.css does on the job screens (SCR-TEC-04 to -07, -09). body.r1p is the frame page's own body, so
+     these rules never reach the app. At the 1440 x 900 window the values above stand unchanged. */
+  @media (max-width: 720px) {
+    :where(body.r1p) a { display: inline-flex; align-items: center; }
+    body.r1p a, body.r1p label, body.r1p [role="button"], body.r1p [role="link"], body.r1p [role="spinbutton"], body.r1p [role="option"], body.r1p [role="textbox"] { min-height: 44px; min-width: 44px; }
+    body.r1p .nav span { height: auto; min-height: 44px; }
+    body.r1p .nav .mid { text-align: center; }
+    body.r1p .wl .in, body.r1p .lab2 .in { min-height: 44px; }
+    body.r1p .wl .x { width: 44px; height: 44px; }
+    body.r1p .step span { width: 44px; height: 44px; }
+    /* The part search: a 44 px box inside its 1 px border. */
+    body.r1p .find { min-height: 46px; }
+    /* No parts used: the label row is the 44 px target; its box stays drawn at 22 px. */
+    body.r1p .nop { min-height: 44px; }
+    body.r1p .ph.add { width: auto; min-width: 78px; height: auto; min-height: 48px; text-align: center; }
+    body.r1p .item .tx b { white-space: normal; overflow: visible; }
+    body.r1p .apphead, body.r1p .wh { overflow: visible; }
+    /* A link inside a sentence (CMP-10's 24-hour banner) stays inline, its words spaced as written; its padding gives it the 44 px. */
+    body.r1p .r1p-old a { display: inline; padding: 14px 0; }
+    /* Rows of buttons and words wrap rather than push the screen sideways. */
+    body.r1p .cdlg .row, body.r1p .compose .row, body.r1p .item, body.r1p .hrow, body.r1p .clkrow, body.r1p .r1p-clk { flex-wrap: wrap; }
+    body.r1p .clkrow, body.r1p .r1p-clk { row-gap: 4px; }
+  }
+

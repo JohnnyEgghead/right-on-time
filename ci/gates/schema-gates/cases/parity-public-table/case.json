@@ -1,0 +1,7 @@
+{
+  "why": "F-149: parity gate fails a table created in public",
+  "only": "parity",
+  "expect": [
+    "schema-doc-parity: FAIL extra table public.stray: in the database, outside the stores, not in section 3"
+  ]
+}

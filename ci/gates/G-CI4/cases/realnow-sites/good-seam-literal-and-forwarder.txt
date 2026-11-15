@@ -1,0 +1,8 @@
+// case-as: packages/time/src/planted.ts
+// expect: pass clock_anchor
+import type { RealTimeUse } from './uses.ts';
+declare function realNow(use: RealTimeUse): unknown;
+export const anchor = () => realNow('clock_anchor');
+export function forward(use: RealTimeUse) {
+  return realNow(use);
+}

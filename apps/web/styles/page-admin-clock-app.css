@@ -1,0 +1,64 @@
+/* The demo clock page's adaptation of its frame (SCR-OFC-17, SCR-OFC-27), as page-admin-import.css is for the import pages: the frame is a 1440 x 900
+   picture; a page scrolls and fits any width. It sets no color, contrast or spacing value of the frame's own (OA-84): at 1440 x 900 every
+   compared value is the frame's. Loaded after the frame's page-local sheet, so each override is more specific than the rule it lifts. */
+
+/* The admin shell grows with its content (the frame fixes 842 px). */
+.bw-screen .shell { height: auto; min-height: 842px; }
+.bw-screen .body { overflow: visible; }
+.bw-screen .ah { flex-wrap: wrap; }
+
+/* Real controls where the frame drew a span: buttons keep the kit's look; a date and a time field sit inside the frame's .r1-input box. */
+.bw-screen button.btn[aria-disabled="true"], .bw-screen button.pre[aria-disabled="true"] { cursor: default; }
+.bw-screen input.bw-field-input { flex: 1; min-width: 0; height: 100%; border: 0; padding: 0; background: transparent; font: inherit; color: inherit; outline: none; }
+.bw-screen .r1-input:focus-within { border-color: var(--teal-600); box-shadow: 0 0 0 3px var(--teal-100); }
+.bw-screen .pre.dis { opacity: .6; }
+
+/* The frames' inline styles, as classes: the page's content security policy allows no style attribute. */
+.bw-vam { vertical-align: middle; }
+.bw-fs14 { font-size: 14px; }
+.bw-n-t6 { margin: 6px 0 0; }
+.bw-padb { padding: 0 16px 14px; }
+.bw-w-40 { width: 40%; }
+.bw-skel-60 { width: 60%; height: 22px; }
+.bw-prog { margin-top: 10px; }
+.bw-reset-act { display: flex; flex-direction: column; align-items: flex-end; }
+.bw-reset-act .r1-note { margin-bottom: 0; }
+.bw-presets-msg { padding: 8px 16px 0; }
+.bw-screen .in .r1-fmsg { margin-top: 8px; }
+.bw-screen .reset .r1-fmsg { margin-top: 8px; }
+
+/* The dialog is a modal over the page, not a tile. */
+.bw-screen .r1-scrim.bw-modal { position: fixed; inset: 0; z-index: 60; }
+
+/* Narrow screens: the columns stack, the side menu sits above the page, and every control is at least 44 px. */
+@media (max-width: 720px) {
+  .bw-screen .shell { flex-direction: column; min-height: 0; }
+  .bw-screen .shell > .side { width: auto; border-right: 0; border-bottom: 1px solid var(--ink-200); }
+  .bw-screen .mainc { min-width: 0; }
+  .bw-screen .body { grid-template-columns: minmax(0, 1fr); padding-left: 12px; padding-right: 12px; }
+  .bw-screen .body > * { min-width: 0; }
+  .bw-screen .row3 .r1-field { min-width: 0; }
+  .bw-screen .now .big { overflow-wrap: anywhere; }
+  .bw-screen .now { flex-wrap: wrap; gap: 12px; }
+  .bw-screen .now .big { font-size: 22px; }
+  .bw-screen .now .acts { margin-left: 0; }
+  .bw-screen .row3 { flex-wrap: wrap; }
+  .bw-screen .row3 .r1-field { flex: 1 1 140px; }
+  .bw-screen .presets { grid-template-columns: 1fr; }
+  .bw-screen .reset { flex-wrap: wrap; }
+  .bw-screen .bw-reset-act { align-items: flex-start; max-width: 100%; }
+  .bw-screen .reset .btn { white-space: normal; max-width: 100%; height: auto; min-height: 44px; }
+  .bw-screen .ph { flex-wrap: wrap; }
+  .bw-screen .btn, .bw-screen .btn.sm, .bw-screen .pre, .bw-screen .r1-x, .bw-screen .side a, .bw-screen input.bw-field-input { min-height: 44px; min-width: 44px; }
+  .bw-screen .r1-input { height: 44px; }
+  /* The office bar and the demo strip at phone width (the shell's own sheet leaves them as the frame draws them): wrap, and 44 px targets. */
+  .bw-screen .topbar { flex-wrap: wrap; height: auto; row-gap: 4px; }
+  .bw-screen .topbar .search { flex: 1 1 140px; min-width: 0; }
+  .bw-screen .topbar .search input.bw-search-input, .bw-screen .topbar .branch select, .bw-screen .topbar .iconbtn, .bw-screen .topbar .user, .bw-screen .topbar .brand,
+  .bw-screen .r1-demobar a { min-height: 44px; min-width: 44px; }
+  .bw-screen .topbar nav { flex-wrap: wrap; min-width: 0; }
+  .bw-screen .topbar .branch { min-height: 44px; }
+  .bw-screen .topbar nav a { min-height: 44px; display: inline-flex; align-items: center; }
+  .bw-screen .topbar .branch select { inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); }
+  .bw-screen .topbar .brand, .bw-screen .r1-demobar a { display: inline-flex; align-items: center; }
+}

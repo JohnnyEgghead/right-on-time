@@ -1,0 +1,15 @@
+# P3-BACKUP local proofs only (infra/backup/tests/stack.sh): an S3-compatible server beside the stack, so the
+# lightsail target's AWS CLI calls (put, get, list, remove) run against a real S3 API. versitygw v1.8.0 (published
+# Sep 4, 2026; the 14-day rule), posix backend in the container. Its keys are random per stack (stack.sh), never
+# printed; no port is published.
+services:
+  s3:
+    image: versity/versitygw:v1.8.0@sha256:30292fc2eeacc67a36993b01f7a7a5e3361a19cced0e80c1d71cfa2a4b0a2499
+    environment:
+      ROOT_ACCESS_KEY: ${BW_PROOF_S3_ACCESS:?}
+      ROOT_SECRET_KEY: ${BW_PROOF_S3_SECRET:?}
+      VGW_BACKEND: posix
+      VGW_BACKEND_ARG: /tmp/vgw
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /tmp/vgw && exec /usr/local/bin/docker-entrypoint.sh"]
+    expose:
+      - "7070"

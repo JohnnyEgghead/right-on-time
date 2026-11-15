@@ -1,0 +1,3 @@
+// case-as: packages/api/src/planted.ts
+// expect: fail re-exported
+export { realNow as now } from '@bw/time';

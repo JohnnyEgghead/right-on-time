@@ -1,0 +1,4 @@
+// case-as: packages/domain/src/planted.ts
+// expect: fail 1
+import { Temporal } from 'temporal-polyfill';
+export const now = Temporal.Now.instant();

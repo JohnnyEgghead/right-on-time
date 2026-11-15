@@ -1,0 +1,21 @@
+/* ---------- DK-47 Single-draft page frame and message boxes ---------- */
+/* source: mockups/src/design-options/r1-single.css (product) */
+/* Single-draft pages: shared frame. */
+body.r1 { width: 1440px; margin: 0; background: var(--ink-100); }
+.r1-screen { width: 1440px; height: 900px; overflow: hidden; display: flex; flex-direction: column; background: var(--ink-100); position: relative; }
+.r1-screen .ic, .r1-states .ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
+.r1-screen .ic svg, .r1-states .ic svg { width: 100%; height: 100%; }
+.prod { font-size: 14px; font-weight: 600; color: var(--teal-700); padding-left: 16px; border-left: 1px solid var(--ink-300); white-space: nowrap; }
+.mid { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: flex-start; padding: 36px 24px 0; overflow: hidden; }
+.pcard { background: var(--white); border: 1px solid var(--ink-200); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 30px 36px; }
+.pcard h1 { margin: 0; font-size: 26px; font-weight: 760; letter-spacing: -.02em; }
+.pcard .lead { margin: 8px 0 0; font-size: 15.5px; line-height: 1.5; color: var(--ink-600); }
+.r1-st .b .r1-skel { height: 14px; }
+.okbox, .infobox2, .warnbox { display: flex; gap: 10px; align-items: flex-start; border-radius: 12px; padding: 12px 14px; font-size: 14.5px; line-height: 1.45; }
+.okbox { background: var(--st-site-bg); color: var(--st-site-ink); border: 1px solid var(--st-site-bd); }
+.infobox2 { background: var(--teal-50); color: var(--teal-900); border: 1px solid var(--teal-200); }
+.warnbox { background: var(--st-risk-bg); color: var(--st-risk-ink); border: 1px solid var(--st-risk-bd); }
+.okbox .ic, .infobox2 .ic, .warnbox .ic { width: 20px; height: 20px; margin-top: 1px; }
+.okbox b, .infobox2 b, .warnbox b { display: block; }
+.who b span { font-size: inherit !important; color: inherit !important; }
+

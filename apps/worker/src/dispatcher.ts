@@ -1,0 +1,514 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// The event dispatcher (SPECIFICATIONS section 5.2 step 7; section 3 `scheduled_event`). It claims due side-effect
+// events in (due_at, id) order with FOR UPDATE SKIP LOCKED and runs each in its own transaction:
+//
+//   claim 1 row  ->  run its kind's handler in the same transaction  ->  mark it done or skipped  ->  commit
+//
+// Re-run semantics, at every durable write:
+//   - The claim, every write the handler makes (a text's attempt, its inbox row, the next event) and the done mark
+//     commit together. A crash or a handler error before commit leaves nothing, and the event is still `due`: the
+//     next pass runs it again from the start, so an event's effects happen exactly once.
+//   - Concurrent dispatchers (2 workers, or the replay of P3-REPLAY beside the normal loop) never run 1 event twice:
+//     SKIP LOCKED hands a locked row to no one else, and a row marked done is never claimed again.
+//   - A handler that throws is left due and excluded for the rest of that pass, so 1 bad row never blocks the rows
+//     behind it; the next pass (1 s later) tries it again, logged with no data (section 11.4).
+//   - Only kinds with a handler here are claimed. A kind no handler serves yet (a lane that has not joined) stays due,
+//     untouched, never marked done or skipped by a dispatcher that cannot run it.
+//
+// "Now" for an event is max(its due_at, demo now): in normal running demo now (the clock has passed due_at), and during
+// a replay, whose clock is paused at the old time, the event's own due_at (step 6: a 6:00 PM reminder is stamped 6:00
+// PM). Its effects are written at that time, never before the event's own due time.
+//
+// A drain is bound to the world epoch its bound was read in (F-635). A reset (SD-12) refills scheduled_event with the
+// fresh world's events, which an older drain's bound (the old demo now, or a replay's old jump batch) would otherwise
+// run at the old world's time. Each claim therefore reads the clock row's world_epoch after it holds its event row, and
+// a drain whose epoch is gone stops. No lock on the clock row is needed: the claim holds a lock on world.scheduled_event,
+// and the reset's restore_world takes every world table ACCESS EXCLUSIVE before it writes the new epoch, so a reset
+// either commits before the claim's epoch read (the read sees the new epoch) or waits for the claim to commit (the claim
+// ran an event of its own world).
+import { inTransaction, type createPool, type Queryable } from '@bw/db';
+import type { Logger } from '@bw/log';
+import { Temporal, toWire, type Clock, type Instant } from '@bw/time';
+
+type Pool = ReturnType<typeof createPool>;
+
+export interface DueEvent {
+  id: string;
+  dueAt: Instant;
+  kind: string;
+  subject: string;
+  payload: Record<string, unknown>;
+}
+
+export interface EventContext {
+  /** The event's transaction: every write of the handler joins it. */
+  tx: Queryable;
+  /** The demo time the event runs at: max(due_at, demo now). */
+  now: Instant;
+  /**
+   * During a replay (section 5.2 step 6), the jump's target T; absent in normal running. A self-rescheduling chain uses
+   * it to collapse the skipped intervals (alert.check, F-435).
+   */
+  replayTarget?: Instant;
+}
+
+/** `skipped`: the handler's precondition failed (a text no longer sendable, a canceled job); `done`: it ran. */
+export interface EventOutcome {
+  state: 'done' | 'skipped';
+  /** The outcome word stored in scheduled_event.result. */
+  result: string;
+}
+
+export type EventHandler = (event: DueEvent, ctx: EventContext) => Promise<EventOutcome>;
+export type EventHandlers = Readonly<Record<string, EventHandler>>;
+
+/**
+ * What a kind does when its handler has failed MAX_HANDLER_FAILURES runs in a row (F-368): it writes the event's end
+ * record in its own transaction (a text gives up, which opens its alert) and answers the outcome to mark, normally
+ * `skipped` with the result `handler_failed`. A kind with no give-up keeps retrying, as before.
+ */
+export type GiveUp = EventHandler;
+export type GiveUps = Readonly<Record<string, GiveUp>>;
+
+/** A serial-lane event whose handler threw this many runs is given up (F-368). */
+export const MAX_HANDLER_FAILURES = 5;
+
+/**
+ * Count a failed run on the event's payload (`failures`, committed on its own: the failed run's transaction rolled back),
+ * and at MAX_HANDLER_FAILURES run the kind's give-up and mark the event. A give-up that itself throws changes nothing, and
+ * the event is tried again next pass. Returns true when the event was given up.
+ */
+export async function noteHandlerFailure(pool: Pool, event: DueEvent, now: Instant, giveUps: GiveUps): Promise<boolean> {
+  const giveUp = giveUps[event.kind];
+  if (!giveUp) return false;
+  const counted = await pool.query<{ failures: number }>(
+    `UPDATE world.scheduled_event SET payload = jsonb_set(payload, '{failures}', to_jsonb(coalesce((payload->>'failures')::int, 0) + 1))
+      WHERE id = $1 AND state = 'due' RETURNING (payload->>'failures')::int AS failures`,
+    [event.id],
+  );
+  if ((counted.rows[0]?.failures ?? 0) < MAX_HANDLER_FAILURES) return false;
+  return inTransaction(pool, async (tx) => {
+    const lock = await tx.query(`SELECT 1 FROM world.scheduled_event WHERE id = $1 AND state = 'due' FOR UPDATE SKIP LOCKED`, [event.id]);
+    if (lock.rows.length === 0) return false;
+    const outcome = await giveUp(event, { tx, now });
+    await markEvent(tx, event.id, now, outcome);
+    return true;
+  });
+}
+
+export interface DrainReport {
+  ran: number;
+  skipped: number;
+  /** Ids of events whose handler threw this pass; they stay due. */
+  failed: string[];
+}
+
+interface EventRow {
+  id: string;
+  due_at: Date;
+  kind: string;
+  subject: string;
+  payload: Record<string, unknown>;
+}
+
+const later = (a: Instant, b: Instant): Instant => (Temporal.Instant.compare(a, b) >= 0 ? a : b);
+
+/**
+ * F-635: true when the world is still at `epoch` (always, when no epoch is given). Read inside a claim transaction that
+ * already holds its world.scheduled_event row, so no reset can commit between this read and the claim's commit.
+ */
+async function sameWorld(tx: Queryable, epoch: number | undefined): Promise<boolean> {
+  if (epoch === undefined) return true;
+  const { rows } = await tx.query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1');
+  return rows[0]?.world_epoch === epoch;
+}
+
+/**
+ * Claim and run the first due event (due_at <= through, a handled kind, not excluded). Returns null when none is due,
+ * or when `epoch` is given and the world is no longer at it (F-635: a reset since the bound was read; nothing runs),
+ * else the outcome, or `failed` when the handler threw (its transaction rolled back; the event stays due).
+ */
+export async function runNextDue(
+  pool: Pool,
+  handlers: EventHandlers,
+  opts: { through: Instant; demoNow: Instant; exclude?: readonly string[]; giveUps?: GiveUps; replayTarget?: Instant; epoch?: number },
+): Promise<null | { id: string; outcome: EventOutcome } | { id: string; failed: unknown }> {
+  const kinds = Object.keys(handlers);
+  if (kinds.length === 0) return null;
+  let claimed: DueEvent | undefined;
+  try {
+    return await inTransaction(pool, async (tx) => {
+      const { rows } = await tx.query<EventRow>(
+        `SELECT id, due_at, kind, subject, payload FROM world.scheduled_event
+          WHERE state = 'due' AND due_at <= $1 AND kind = ANY($2::text[]) AND NOT (id = ANY($3::uuid[]))
+          ORDER BY due_at, id
+          LIMIT 1
+          FOR UPDATE SKIP LOCKED`,
+        [opts.through.toString(), kinds, opts.exclude ?? []],
+      );
+      const row = rows[0];
+      if (!row) return null;
+      if (!(await sameWorld(tx, opts.epoch))) return null;
+      const event: DueEvent = {
+        id: row.id,
+        dueAt: Temporal.Instant.fromEpochMilliseconds(row.due_at.getTime()),
+        kind: row.kind,
+        subject: row.subject,
+        payload: row.payload,
+      };
+      claimed = event;
+      const now = later(event.dueAt, opts.demoNow);
+      const outcome = await handlers[event.kind]!(event, opts.replayTarget ? { tx, now, replayTarget: opts.replayTarget } : { tx, now });
+      await tx.query(`UPDATE world.scheduled_event SET state = $2, run_at = $3, result = $4 WHERE id = $1`, [
+        event.id, outcome.state, now.toString(), outcome.result,
+      ]);
+      return { id: event.id, outcome };
+    });
+  } catch (e) {
+    if (claimed) {
+      // F-368: count the failure; the 5th gives the event up (the kind's end record), and a pass does not report it failed.
+      const gaveUp = await noteHandlerFailure(pool, claimed, later(claimed.dueAt, opts.demoNow), opts.giveUps ?? {}).catch(() => false);
+      return gaveUp ? { id: claimed.id, outcome: { state: 'skipped', result: 'handler_failed' } } : { id: claimed.id, failed: e };
+    }
+    throw e;
+  }
+}
+
+/**
+ * Run every due event up to `through`, in (due_at, id) order, including events the runs themselves make due. The caller
+ * names the `epoch` it read with or before its bound, and the drain stops at the first claim after a reset (F-635, F-642:
+ * required, so no caller can pair an old bound with a new epoch or claim unguarded).
+ */
+export async function drainDue(
+  pool: Pool,
+  handlers: EventHandlers,
+  opts: { through: Instant; demoNow: Instant; giveUps?: GiveUps; replayTarget?: Instant; epoch: number },
+): Promise<DrainReport> {
+  const report: DrainReport = { ran: 0, skipped: 0, failed: [] };
+  for (;;) {
+    const r = await runNextDue(pool, handlers, { ...opts, exclude: report.failed });
+    if (r === null) return report;
+    if ('failed' in r) report.failed.push(r.id);
+    else if (r.outcome.state === 'skipped') report.skipped += 1;
+    else report.ran += 1;
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The parallel claim lane (F-357, F-382). 1 dispatcher claims in 2 lanes from the same scheduled_event table:
+//
+//   serial lane    every kind in `handlers`, 1 event at a time, handler inside the claim transaction (above, unchanged);
+//   parallel lane  the kinds of 1 ParallelLane (billing.send, billing.retry), whose handler makes a slow outside call
+//                  (up to 30 s real time). Its events run concurrently across keys (jobs) and 1 at a time per key, at
+//                  most `concurrency` in flight, and never inside an open transaction:
+//
+//     tx 1 (short)  claim the row FOR UPDATE SKIP LOCKED, `prepare` reads what the call needs, or settles the event
+//                   without a call (marked here, in tx 1). Commit: the event is still `due`, no lock is kept.
+//     call          `call` with no transaction and no pooled connection held.
+//     tx 2 (short)  re-lock the event row, `record` writes the outcome and the dispatcher marks the event (when still
+//                   due) in the same transaction: 1 transaction per event outcome.
+//
+// Re-run semantics: a crash or an error before tx 2 commits leaves the event due and its effects unwritten, so it runs
+// again from tx 1 (the billing link converges through pbs already_have). The key's in-flight guard keeps a second run of
+// the same key off while a call is out; `record` must refuse an outcome it can no longer apply (the billing link checks
+// the item's try count and the world epoch), so 2 dispatchers can at worst make 2 calls, never 2 outcomes.
+// No spec rule orders a serial-lane event against a parallel-lane one (they share no rows), so every order the spec
+// names is kept: the serial lane in (due_at, id) order, and each key of the parallel lane in (due_at, id) order.
+// A drain (a pass, or a replay through T) ends only when both lanes have nothing due through T and nothing in flight.
+
+/** The 3 steps of a handler whose side effect is a slow outside call (P: what the call needs, R: its answer). */
+export interface SplitHandler<P, R> {
+  /** In tx 1, holding the event's row: what the call needs, or the event's outcome with no call. */
+  prepare(event: DueEvent, ctx: EventContext): Promise<{ settle: EventOutcome } | { call: P }>;
+  /** Outside every transaction. `replay` holds the jump's target while a replay runs (FR-BILL-6 jump wait, F-386). */
+  call(prepared: P, event: DueEvent, now: Instant, replay?: { target: Instant }): Promise<R>;
+  /**
+   * In tx 2, before the dispatcher re-locks the event row: the handler's own row locks, so tx 2 takes its locks in the
+   * order the handler's other writers do (billing: the job's lock and its item row, then the event rows).
+   */
+  lock?(prepared: P, event: DueEvent, tx: Queryable): Promise<void>;
+  /**
+   * In tx 2, holding the event's row again; `due` is false when the event left `due` meanwhile (another writer
+   * retired it). Answers the outcome to mark, or null when the answer no longer applies (nothing is marked).
+   */
+  record(prepared: P, answer: R, event: DueEvent, ctx: EventContext & { due: boolean }): Promise<EventOutcome | null>;
+}
+
+export interface ParallelLane<P = unknown, R = unknown> {
+  readonly name: string;
+  readonly kinds: readonly string[];
+  /** Events with the same key run 1 at a time (billing: the job number). */
+  keyOf(event: DueEvent): string;
+  /** At most this many events of the lane in flight in this dispatcher (kept below the pool, F-382). */
+  readonly concurrency: number;
+  readonly handler: SplitHandler<P, R>;
+}
+
+/**
+ * What 1 run of a parallel-lane event did. `busy`: its key is in flight here; `gone`: it was no longer due; `stale`: the
+ * world left the run's epoch before tx 1 (F-635), so nothing ran.
+ */
+export type LaneRun =
+  | { id: string; outcome: EventOutcome } | { id: string; failed: unknown } | { id: string; busy: true } | { id: string; gone: true }
+  | { id: string; stale: true };
+
+/** The in-flight state of 1 lane in 1 dispatcher: the per-key guard and the running events. */
+export class LaneRunner<P = unknown, R = unknown> {
+  readonly lane: ParallelLane<P, R>;
+  readonly #pool: Pool;
+  readonly #inFlight = new Map<string, Promise<LaneRun>>();
+
+  constructor(pool: Pool, lane: ParallelLane<P, R>) {
+    this.#pool = pool;
+    this.lane = lane;
+  }
+
+  get inFlight(): number {
+    return this.#inFlight.size;
+  }
+
+  /** Wait for every event in flight. */
+  async settled(): Promise<void> {
+    await Promise.allSettled([...this.#inFlight.values()]);
+  }
+
+  /** Run 1 event of the lane now (tx 1, the call, tx 2). `demoNow` gives the run time max(due_at, demo now). */
+  run(event: DueEvent, demoNow: Instant, replayTarget?: Instant, epoch?: number): Promise<LaneRun> {
+    const key = this.lane.keyOf(event);
+    if (this.#inFlight.has(key)) return Promise.resolve({ id: event.id, busy: true });
+    const p = this.#runOnce(event, later(event.dueAt, demoNow), replayTarget, epoch).finally(() => this.#inFlight.delete(key));
+    this.#inFlight.set(key, p);
+    return p;
+  }
+
+  async #runOnce(event: DueEvent, now: Instant, replayTarget?: Instant, epoch?: number): Promise<LaneRun> {
+    const { handler } = this.lane;
+    try {
+      const first = await inTransaction(this.#pool, async (tx) => {
+        const { rows } = await tx.query<{ state: string }>(
+          `SELECT state FROM world.scheduled_event WHERE id = $1 AND state = 'due' FOR UPDATE SKIP LOCKED`, [event.id]);
+        if (!rows[0]) return { gone: true as const };
+        if (!(await sameWorld(tx, epoch))) return { stale: true as const };
+        const step = await handler.prepare(event, { tx, now });
+        if ('settle' in step) await markEvent(tx, event.id, now, step.settle);
+        return step;
+      });
+      if ('gone' in first) return { id: event.id, gone: true };
+      if ('stale' in first) return { id: event.id, stale: true };
+      if ('settle' in first) return { id: event.id, outcome: first.settle };
+      const answer = replayTarget ? await handler.call(first.call, event, now, { target: replayTarget }) : await handler.call(first.call, event, now);
+      const outcome = await inTransaction(this.#pool, async (tx) => {
+        await handler.lock?.(first.call, event, tx);
+        const { rows } = await tx.query<{ state: string }>('SELECT state FROM world.scheduled_event WHERE id = $1 FOR UPDATE', [event.id]);
+        const due = rows[0]?.state === 'due';
+        const out = await handler.record(first.call, answer, event, { tx, now, due });
+        if (out && due) await markEvent(tx, event.id, now, out);
+        return out;
+      });
+      return outcome ? { id: event.id, outcome } : { id: event.id, gone: true };
+    } catch (e) {
+      return { id: event.id, failed: e };
+    }
+  }
+
+  /**
+   * Start due events of the lane (due_at <= through, in (due_at, id) order) until `concurrency` are in flight, skipping
+   * a key already in flight and every excluded id. Answers the runs it started.
+   */
+  async fill(opts: { through: Instant; demoNow: Instant; exclude?: readonly string[]; replayTarget?: Instant; epoch?: number }): Promise<Promise<LaneRun>[]> {
+    const room = this.lane.concurrency - this.#inFlight.size;
+    if (room <= 0) return [];
+    const { rows } = await this.#pool.query<EventRow>(
+      `SELECT id, due_at, kind, subject, payload FROM world.scheduled_event
+        WHERE state = 'due' AND due_at <= $1 AND kind = ANY($2::text[]) AND NOT (id = ANY($3::uuid[]))
+        ORDER BY due_at, id
+        LIMIT $4`,
+      [opts.through.toString(), this.lane.kinds, opts.exclude ?? [], 200],
+    );
+    const started: Promise<LaneRun>[] = [];
+    const seen = new Set<string>();
+    for (const row of rows) {
+      if (this.#inFlight.size >= this.lane.concurrency) break;
+      const event = toDueEvent(row);
+      const key = this.lane.keyOf(event);
+      // Per key in (due_at, id) order: a key's later event never starts before its earlier one.
+      if (seen.has(key) || this.#inFlight.has(key)) {
+        seen.add(key);
+        continue;
+      }
+      seen.add(key);
+      started.push(this.run(event, opts.demoNow, opts.replayTarget, opts.epoch));
+    }
+    return started;
+  }
+
+  /**
+   * Run every due event of the lane through `through`, including events the runs make due, until none is in flight.
+   * A `stale` run (a reset since `epoch`, F-635) ends it: no more runs start, and the ones in flight finish.
+   */
+  async drain(opts: { through: Instant; demoNow: Instant; replayTarget?: Instant; epoch?: number }): Promise<DrainReport> {
+    const report: DrainReport = { ran: 0, skipped: 0, failed: [] };
+    let stale = false;
+    // Excluded for the rest of this drain: a failed run (as in the serial lane) and an event another runner holds.
+    const exclude: string[] = [];
+    const tally = (r: LaneRun) => {
+      if ('failed' in r) {
+        report.failed.push(r.id);
+        exclude.push(r.id);
+      } else if ('gone' in r) exclude.push(r.id);
+      else if ('stale' in r) stale = true;
+      else if ('outcome' in r) {
+        if (r.outcome.state === 'skipped') report.skipped += 1;
+        else report.ran += 1;
+      }
+    };
+    for (;;) {
+      if (stale) {
+        await this.settled();
+        await Promise.resolve();
+        return report;
+      }
+      const started = await this.fill({ ...opts, exclude });
+      for (const p of started) void p.then(tally);
+      if (this.#inFlight.size === 0) {
+        if (started.length === 0) return report;
+        continue;
+      }
+      await Promise.race(this.#inFlight.values());
+      // Let the finished run's tally land before the next fill reads `failed`.
+      await Promise.resolve();
+    }
+  }
+}
+
+async function markEvent(tx: Queryable, id: string, now: Instant, outcome: EventOutcome): Promise<void> {
+  await tx.query(`UPDATE world.scheduled_event SET state = $2, run_at = $3, result = $4 WHERE id = $1`, [id, outcome.state, now.toString(), outcome.result]);
+}
+
+const toDueEvent = (row: EventRow): DueEvent => ({
+  id: row.id,
+  dueAt: Temporal.Instant.fromEpochMilliseconds(row.due_at.getTime()),
+  kind: row.kind,
+  subject: row.subject,
+  payload: row.payload,
+});
+
+const merge = (a: DrainReport, b: DrainReport): DrainReport => ({ ran: a.ran + b.ran, skipped: a.skipped + b.skipped, failed: [...a.failed, ...b.failed] });
+
+export interface Dispatcher {
+  readonly name: string;
+  /** Every event kind this dispatcher claims: the serial lane's, then each parallel lane's. */
+  readonly kinds: readonly string[];
+  /** Run 1 pass now through demo now, in both lanes, until neither has anything due or in flight, and report it. */
+  drain(): Promise<DrainReport>;
+  /**
+   * Run every event due through `through` in both lanes, each at max(due_at, demoNow) (P3-REPLAY's replay: the clock
+   * paused at the old time; `replayTarget` is the jump's target, handed to each handler). Ends only when both lanes
+   * are empty through `through`, or at the first claim after the world leaves `epoch` (F-635). The caller passes the
+   * epoch it read with or before its bound (the replay does), and F-642 makes it required.
+   */
+  drainThrough(opts: { through: Instant; demoNow: Instant; replayTarget?: Instant; epoch: number }): Promise<DrainReport>;
+  stop(): Promise<void>;
+}
+
+/** Normal running (step 7): every `intervalMs` real milliseconds, run every event due at demo now. */
+export function startDispatcher(opts: {
+  pool: Pool;
+  /** worldEpoch is read before demoNow, so a pass's bound is never from a newer world than its epoch (F-635). */
+  clock: Pick<Clock, 'demoNow' | 'worldEpoch'>;
+  handlers: EventHandlers;
+  /** Per kind, what to do after MAX_HANDLER_FAILURES failed runs (F-368). */
+  giveUps?: GiveUps;
+  /** The parallel lanes (the billing link); their kinds must not also be in `handlers`. */
+  lanes?: readonly ParallelLane[];
+  log: Logger;
+  intervalMs?: number;
+}): Dispatcher {
+  const { pool, clock, handlers, log } = opts;
+  const giveUps = opts.giveUps ?? {};
+  const intervalMs = opts.intervalMs ?? 1000;
+  const runners = (opts.lanes ?? []).map((lane) => {
+    const overlap = lane.kinds.filter((k) => k in handlers);
+    if (overlap.length > 0) throw new Error(`event kinds ${overlap.join(', ')} are in both the serial and the ${lane.name} lane`);
+    return new LaneRunner(pool, lane);
+  });
+  let chain: Promise<unknown> = Promise.resolve();
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let failing = false;
+
+  const logFailed = (report: DrainReport, now: Instant) => {
+    if (report.failed.length > 0) log.error({ status: 'unhandled error', errorCode: 'event_handler_failed', demoTime: toWire(now, 'UTC') });
+  };
+  // A timer tick: the serial lane runs its pass (serialized with the other passes) while each parallel lane only tops up
+  // its free slots, so a call held 30 s never holds up the serial lane's next pass.
+  const pass = async (): Promise<DrainReport> => {
+    const epoch = await clock.worldEpoch();
+    const now = await clock.demoNow();
+    for (const r of runners) {
+      const started = await r.fill({ through: now, demoNow: now, epoch });
+      for (const p of started) {
+        void p.then((run) => {
+          if ('failed' in run) log.error({ status: 'unhandled error', errorCode: 'event_handler_failed', demoTime: toWire(now, 'UTC') });
+        });
+      }
+    }
+    const report = await drainDue(pool, handlers, { through: now, demoNow: now, giveUps, epoch });
+    logFailed(report, now);
+    return report;
+  };
+  const serialize = <T>(f: () => Promise<T>): Promise<T> => {
+    const p = chain.then(f);
+    chain = p.catch(() => undefined);
+    return p;
+  };
+  // Both lanes until a round runs nothing: the serial lane's drains stay serialized with the timer's passes, the parallel
+  // lanes drain beside them, and a round repeats while either lane ran something (a serial event can make a billing
+  // event due, the finish item for one). A round with only failures ends it: a failing event waits for the next pass.
+  const drainBoth = async (o: { through: Instant; demoNow: Instant; replayTarget?: Instant; epoch: number }): Promise<DrainReport> => {
+    let total: DrainReport = { ran: 0, skipped: 0, failed: [] };
+    for (;;) {
+      const [serial, ...parallel] = await Promise.all([serialize(() => drainDue(pool, handlers, { ...o, giveUps })), ...runners.map((r) => r.drain(o))]);
+      const round = parallel.reduce(merge, serial);
+      total = merge(total, round);
+      if (round.ran + round.skipped === 0) return total;
+    }
+  };
+  const drainThrough = async (o: { through: Instant; demoNow: Instant; replayTarget?: Instant; epoch: number }): Promise<DrainReport> => {
+    const report = await drainBoth(o);
+    logFailed(report, o.demoNow);
+    return report;
+  };
+  const loop = (): void => {
+    if (stopped) return;
+    serialize(pass)
+      .then(() => {
+        failing = false;
+      })
+      .catch(() => {
+        // A pass that cannot start (no database yet, no clock row before setup): logged once until a pass succeeds.
+        if (!failing) log.error({ status: 'unhandled error', errorCode: 'dispatcher_pass_failed' });
+        failing = true;
+      })
+      .finally(() => {
+        if (!stopped) timer = setTimeout(loop, intervalMs);
+      });
+  };
+  timer = setTimeout(loop, 0);
+  return {
+    name: 'event-dispatcher',
+    kinds: Object.freeze([...Object.keys(handlers), ...runners.flatMap((r) => r.lane.kinds)]),
+    async drain() {
+      const epoch = await clock.worldEpoch();
+      const now = await clock.demoNow();
+      return drainThrough({ through: now, demoNow: now, epoch });
+    },
+    drainThrough,
+    async stop() {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      await chain;
+      await Promise.all(runners.map((r) => r.settled()));
+    },
+  };
+}

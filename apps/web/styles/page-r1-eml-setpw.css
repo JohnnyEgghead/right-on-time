@@ -1,0 +1,15 @@
+/* SCR-EML-02 page-local rules (DK-130): the last <style> of mockups/pages/r1-eml-setpw.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/accounts.css. */
+
+.pcard.pw { width: 520px; }
+.who { display: flex; gap: 12px; align-items: center; margin: 14px 0 20px; padding: 12px 14px; background: var(--teal-50); border: 1px solid var(--teal-200); border-radius: 12px; }
+.who .av { width: 40px; height: 40px; font-size: 14px; }
+.who b { display: block; font-size: 15.5px; }
+.who span span { font-size: 13.5px; color: var(--ink-600); }
+.rules { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--ink-700); }
+.rules li { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.rules li .ic { width: 16px; height: 16px; color: var(--st-site-bd); }
+.rules li.no .ic { color: var(--ink-400); }
+.save { width: 100%; margin-top: 22px; }
+.sampleN { margin-top: 12px; font-size: 12.5px; color: var(--ink-500); }
+

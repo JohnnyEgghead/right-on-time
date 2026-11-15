@@ -1,0 +1,11 @@
+// The clean case (must type check): every allowlisted field, as a literal and as a variable.
+import { createLogger } from '../src/index.ts';
+import { FixedClock } from '@bw/time';
+
+const log = createLogger({ process: 'web', clock: new FixedClock({ demo: '2026-09-15T14:00:00Z' }) });
+log.info({ status: 'listening' });
+const fields = {
+  demoTime: '2026-09-15T10:00:00-04:00[America/New_York]', contract: 'API-23' as const, route: '/jobs/{jobNumber}',
+  status: 200, durationMs: 4, errorCode: 'not_found', userId: '0192', jobNumber: 2481,
+};
+log.info(fields);

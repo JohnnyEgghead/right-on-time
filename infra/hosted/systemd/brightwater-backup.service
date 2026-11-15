@@ -1,0 +1,17 @@
+# P3-BACKUP (SPECIFICATIONS section 11.7; NFR-07): 1 nightly backup to the Lightsail bucket.
+# Installed to /etc/systemd/system by infra/deploy/server-deploy.sh; started by the .timer, or early by hand:
+#   sudo systemctl start brightwater-backup.service      (blocks until the backup finishes; fails when it fails)
+# Settings come from the server's .env (BACKUP_TARGET, BACKUP_BUCKET, BACKUP_REGION; infra/hosted/hosted.env).
+# Its log is the journal: journalctl -u brightwater-backup.service
+[Unit]
+Description=Brightwater nightly backup to the Lightsail bucket
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/brightwater
+EnvironmentFile=/opt/brightwater/.env
+ExecStart=/usr/bin/bash /opt/brightwater/backup/backup.sh
+TimeoutStartSec=1h

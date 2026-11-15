@@ -1,0 +1,40 @@
+# Allowlist for infra/image/Dockerfile (BuildKit reads <Dockerfile>.dockerignore): send only
+# what the image copies, never node_modules, .git, .build or a local .env.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!apps/web
+!apps/worker/package.json
+!apps/worker/src
+!apps/pbs/package.json
+!apps/pbs/src
+!packages/*/package.json
+!packages/*/src
+!packages/db/migrations
+!packages/generator/technicians.json
+!packages/generator/named-people.json
+!packages/generator/MANIFEST.json
+!packages/maps/MANIFEST.json
+!packages/i18n/catalog
+!infra/deploy/plant/healthz-plant.mjs
+# F-248: the license, the data license and the third-party credits ship in the image (/app).
+!LICENSE
+!LICENSE-DATA.md
+!THIRD-PARTY-NOTICES.md
+**/node_modules
+apps/web/.next
+apps/web/.next-preview
+apps/web/.next-preview.lock
+apps/web/next-env.d.ts
+apps/web/tsconfig.tsbuildinfo
+apps/web/spike
+**/*.test.ts
+**/*.test.tsx
+**/src/testing
+**/src/testing.ts
+# @bw/testkit is the load-day script (P4-LOAD, P7-LOAD): infra/load/*.sh run it from the Mac's checkout, and no service's install
+# closure holds it. Its package.json stays for the workspace lockfile. ci/auth-stack.sh leaves it out of its product-source scan on
+# this ground and checks the web image holds no copy (F-1550).
+packages/testkit/src

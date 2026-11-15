@@ -1,0 +1,80 @@
+/* CMP-05 Map. The box, zoom, credit, failure message and text alternative are the kit's .r1-map set (kit.r1-common.css);
+   this file adds the board panel's variant (the .mapbox rules of mockups/pages/office-board.html, DK-85), the legend,
+   the markers and the "Approximate route" label, with the frame's values. The colors are the frame's own map colors. */
+.bw-map, .bw-mkey { --bw-site: #1f9d55; --bw-way: #2f6fe0; --bw-free: #12738b; --bw-late: #d42f2f; --bw-sched: #8a96a3; --bw-risk: #d48806; --bw-unas: #616774; }
+.bw-map-canvas { position: absolute; inset: 0; }
+.bw-map-canvas.maplibregl-map { font: inherit; }
+/* The library clips its markers with overflow: hidden. Measured on WebKit (P4-JOB walkers, 390 px after a 520 px load): the
+   box keeps a stale scroll width from a marker's old place, so a marker's initials read as clipped text. Paint containment
+   clips the same pixels without making the box a scroll container. */
+.bw-map-canvas.maplibregl-map { overflow: visible; contain: paint; }
+/* The canvas fills a box that clips, so its focus ring is drawn inside the box (F-453; the kit's ring, 2 px in). */
+.bw-map-canvas .maplibregl-canvas:focus { outline: none; }
+.bw-map-canvas .maplibregl-canvas:focus-visible { outline: 3px solid var(--teal-500); outline-offset: -5px; }
+
+/* The harness test page's boxes (a style attribute would be refused by the page's policy): the board's panel is 372 px wide. */
+.bw-prev-panel { width: 372px; }
+.bw-prev-card { width: 520px; }
+
+/* The board panel: the frame's .mapbox, .zoom and .osm. */
+.r1-map.bw-map-panel { height: 262px; border: 0; border-bottom: 1px solid var(--ink-200); border-radius: 0; background: none; }
+.bw-map-panel .zm { top: 10px; right: 10px; display: block; border-color: var(--ink-200); box-shadow: var(--shadow); }
+.bw-map-panel .zm button { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; background: none; font: inherit; font-size: 17px; color: var(--ink-700); }
+.bw-map-panel .zm button + button { border-top: 1px solid var(--ink-200); }
+.bw-map-panel .osm { padding: 1px 6px; font-size: 10.5px; }
+
+/* The legend: the frame's .mkey. */
+.bw-mkey { min-height: 32px; flex: none; flex-wrap: wrap; border-bottom: 1px solid var(--ink-200); padding: 0 14px; display: flex; align-items: center; gap: 10px; font-size: 11.5px; font-weight: 600; color: var(--ink-700); }
+.bw-mkey span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.bw-mkey i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.bw-mkey i.jm { width: 10px; height: 10px; border-radius: 3px; background: #fff; border: 2px solid; }
+.bw-mkey i.site { background: var(--bw-site); }
+.bw-mkey i.way { background: var(--bw-way); }
+.bw-mkey i.free { background: var(--bw-free); }
+.bw-mkey i.next { background: #fff; border: 2px solid var(--bw-way); width: 10px; height: 10px; }
+.bw-mkey i.late { background: var(--bw-late); }
+.bw-mkey i.jm.jobSched { border-color: var(--bw-sched); }
+.bw-mkey i.jm.jobWay { border-color: var(--bw-way); }
+.bw-mkey i.jm.jobSite { border-color: var(--bw-site); }
+.bw-mkey i.jm.jobClosed { border-color: var(--bw-sched); background: var(--bw-sched); }
+.bw-mkey i.jm.jobLate { border-color: var(--bw-late); }
+.bw-mkey i.jm.jobRisk { border-color: var(--bw-risk); }
+.bw-mkey i.jm.jobUnas { border-color: var(--bw-unas); border-style: dashed; }
+
+/* Markers: the frame's pins (mockups/src/assets/map.js): a disc with initials, a job square, a numbered stop, a house. */
+.r1-map svg.bw-marker { width: 23.56480px; height: 23.56480px; }
+.bw-marker { display: block; cursor: pointer; filter: drop-shadow(0 1.5px 1.6px rgba(11, 26, 36, .35)); }
+.bw-marker circle { stroke: #fff; }
+.bw-marker text { font-family: Inter, sans-serif; font-weight: 700; font-size: 14.62px; text-anchor: middle; fill: #fff; }
+.bw-marker.site circle { fill: var(--bw-site); }
+.bw-marker.site text { fill: #111827; }
+.bw-marker.way circle { fill: var(--bw-way); }
+.bw-marker.free circle { fill: var(--bw-free); }
+.bw-marker.late circle { fill: var(--bw-late); }
+.bw-marker.done circle { fill: var(--bw-site); }
+.bw-marker.next circle { fill: var(--bw-way); }
+.bw-marker.later circle { fill: var(--bw-free); }
+/* The selected van (map.js highlight): a ring of the way color at .18 behind a larger pin; the ring runs past the svg's box. */
+.bw-marker.selected { overflow: visible; }
+.bw-marker circle.ring { fill: var(--bw-way); stroke: none; opacity: .18; }
+.bw-van-tag { position: absolute; left: 50%; top: calc(100% + 4px); transform: translateX(-50%); padding: 0 5px; border-radius: 4px; background: #fff; font-size: 11px; font-weight: 700; color: var(--ink-700); white-space: nowrap; box-shadow: var(--shadow); }
+.bw-marker.job rect { fill: #fff; stroke-width: 2.2; }
+.bw-marker.job.sched rect { stroke: var(--bw-sched); }
+.bw-marker.job.way rect { stroke: var(--bw-way); }
+.bw-marker.job.site rect { stroke: var(--bw-site); }
+.bw-marker.job.closed rect { stroke: var(--bw-sched); fill: var(--bw-sched); }
+.bw-marker.job.late rect { stroke: var(--bw-late); }
+.bw-marker.job.risk rect { stroke: var(--bw-risk); }
+.bw-marker.job.unas rect { stroke: var(--bw-unas); stroke-dasharray: 5 3; }
+.bw-marker.house circle { fill: #fff; stroke: var(--bw-way); stroke-width: 2.4; }
+.bw-marker.house path { fill: none; stroke: var(--bw-way); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The label on a line with no baked track (CTL-CMP-05-05): the frame's .aprx. */
+.bw-aprx { font-size: 11px; font-weight: 650; background: rgba(255, 255, 255, .9); border-radius: 4px; padding: 1px 5px; color: var(--ink-700); white-space: nowrap; pointer-events: none; }
+
+/* The text alternative on a board panel is read aloud, not shown (the frame's .sr). */
+/* Hidden without overflow: hidden, so the page walkers' overflow pass reads no clipped text (as accounts.css's .bw-sr). */
+.bw-sr { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); contain: paint; white-space: nowrap; border: 0; margin: 0; padding: 0; list-style: none; }
+/* P6-WEB-STEPS: the next-turn marker (CTL-TEC-08-01), a white disc ringed in teal with the turn's arrow (DK-113). */
+.bw-marker.turn circle { fill: var(--white); stroke: var(--teal-700); }
+.bw-marker.turn .turn-icon { stroke: var(--teal-800); }

@@ -1,0 +1,8 @@
+{
+  "_doc": "The one box table for the 3 branches (F-15): lon_min, lat_min, lon_max, lat_max. Read by infra/data/s8/run.sh (the 3 map cuts), infra/data/s8/streets.py (the street source) and infra/data/p2-streets/build.py (the branch areas of the street list). Columbus is the R5 line 38 map box (docs/planning/round-1/research/R5-maps-hosting.md). The key order is the tie-break order.",
+  "boxes": {
+    "columbus": [-83.45, 39.65, -82.55, 40.35],
+    "dayton": [-84.40, 39.55, -83.95, 39.95],
+    "springfield": [-83.95, 39.85, -83.55, 40.10]
+  }
+}

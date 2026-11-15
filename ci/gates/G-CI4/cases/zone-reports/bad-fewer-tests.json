@@ -1,0 +1,14 @@
+{
+  "numPassedTests": 1,
+  "numFailedTests": 0,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "title": "the host zone is the one this run was started under",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}

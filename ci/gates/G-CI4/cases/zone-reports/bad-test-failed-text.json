@@ -1,0 +1,21 @@
+{
+  "numPassedTests": 1,
+  "numFailedTests": 1,
+  "testResults": [
+    {
+      "name": "/app/packages/time/src/dst.test.ts",
+      "assertionResults": [
+        {
+          "title": "the host zone is the one this run was started under",
+          "status": "passed"
+        },
+        {
+          "title": "a visit booked in EDT is at 9:00 AM EST",
+          "fullName": "dst a visit booked in EDT is at 9:00 AM EST",
+          "status": "failed",
+          "failureMessages": ["Error: Test timed out in 5000ms.\n    at stack line"]
+        }
+      ]
+    }
+  ]
+}

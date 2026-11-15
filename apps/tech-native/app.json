@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Right On Time",
+    "slug": "right-on-time",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.johnloring.rightontime",
+      "buildNumber": "5",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocalNetworkUsageDescription": "Right On Time connects to a copy of the app on your local network when you set its server address to one.",
+        "NSLocationWhenInUseUsageDescription": "Right On Time does not ask for your location. The map it uses can ask for it, to show where you are on the map.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "plugins": [
+      "./plugins/with-map-assets.js",
+      [
+        "@maplibre/maplibre-react-native",
+        {
+          "ios": {
+            "nativeVersion": "6.31.0"
+          }
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Inter-W400.ttf",
+            "./assets/fonts/Inter-W500.ttf",
+            "./assets/fonts/Inter-W550.ttf",
+            "./assets/fonts/Inter-W600.ttf",
+            "./assets/fonts/Inter-W650.ttf",
+            "./assets/fonts/Inter-W680.ttf",
+            "./assets/fonts/Inter-W700.ttf",
+            "./assets/fonts/Inter-W720.ttf",
+            "./assets/fonts/Inter-W740.ttf",
+            "./assets/fonts/Inter-W750.ttf",
+            "./assets/fonts/Inter-W760.ttf",
+            "./assets/fonts/Inter-W770.ttf",
+            "./assets/fonts/Inter-W780.ttf"
+          ]
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Right On Time lets you choose a photo of the job to attach to it.",
+          "cameraPermission": "Right On Time uses the camera to take a photo of the job.",
+          "microphonePermission": false
+        }
+      ]
+    ]
+  }
+}

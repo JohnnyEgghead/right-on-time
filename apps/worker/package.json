@@ -1,0 +1,29 @@
+{
+  "name": "bw-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./alerts": "./src/alerts/index.ts",
+    "./billing": "./src/billing/index.ts",
+    "./import": "./src/import/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bw/config": "workspace:*",
+    "@bw/db": "workspace:*",
+    "@bw/domain": "workspace:*",
+    "@bw/i18n": "workspace:*",
+    "@bw/import": "workspace:*",
+    "@bw/log": "workspace:*",
+    "@bw/outbox": "workspace:*",
+    "@bw/setup": "workspace:*",
+    "@bw/time": "workspace:*",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
+  }
+}

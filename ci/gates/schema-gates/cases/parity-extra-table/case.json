@@ -1,0 +1,5 @@
+{
+  "why": "section 3: parity fails a table the document does not define",
+  "only": "parity",
+  "expect": ["schema-doc-parity: FAIL extra table world.scratch: in the database, not in section 3"]
+}

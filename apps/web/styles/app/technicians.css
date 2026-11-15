@@ -1,0 +1,107 @@
+/* SCR-OFC-07, -41 and -42 adaptations of their frame (DK-92; P4-TECHNICIANS). The frame draws selects, the search box, the panel's fields and the
+   page buttons as spans and divs; here the box is the frame's and a real control sits in it (an invisible native select over a `.sel` or `.inp`, an
+   input in the `.sbox` or `.inp`). The frame's inline styles are classes (the page CSP refuses style attributes). It sets no color or spacing value
+   of its own beyond the frame's (OA-84), and lays the page out for a phone (the frame is a 1440 px picture). */
+.sel { position: relative; }
+.sel select { position: absolute; top: -1px; left: -1px; width: calc(100% + 2px); height: calc(100% + 2px); opacity: 0; cursor: pointer; font: inherit; appearance: none; }
+.sel:focus-within, .sbox:focus-within, .det .inp:focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.sbox input { flex: 1; min-width: 0; height: calc(100% + 2px); margin: -1px 0; border: 0; padding: 0; background: transparent; font: inherit; color: var(--ink-900); outline: none; }
+.sbox input::placeholder { color: var(--ink-500); opacity: 1; }
+a.btn { text-decoration: none; }
+button.btn.sm, .pgh button.btn { font-family: inherit; }
+/* The frame's inline `margin-top: 12px` of a dialog field. */
+.bw-screen .bw-mt-12 { margin-top: 12px; }
+tr[role="button"] { cursor: pointer; }
+tr[role="button"]:focus-visible { outline: 3px solid var(--teal-500); outline-offset: -3px; }
+.us.off { color: var(--ink-500); }
+.load .bar i.bw-tc-w0 { width: 0%; }
+.load .bar i.bw-tc-w17 { width: 17%; }
+.load .bar i.bw-tc-w20 { width: 20%; }
+.load .bar i.bw-tc-w33 { width: 33%; }
+.load .bar i.bw-tc-w40 { width: 40%; }
+.load .bar i.bw-tc-w50 { width: 50%; }
+.load .bar i.bw-tc-w60 { width: 60%; }
+.load .bar i.bw-tc-w67 { width: 67%; }
+.load .bar i.bw-tc-w80 { width: 80%; }
+.load .bar i.bw-tc-w83 { width: 83%; }
+.load .bar i.bw-tc-w100 { width: 100%; }
+:where(.bw-tc-w30) { width: 30%; }
+.bw-tc-state { padding: 14px; margin: 0 10px; }
+.bw-tc-state .r1-note { margin: 14px 0 0; }
+.bw-tc-addempty { margin-top: 14px; }
+.bw-tc-nopanel { grid-template-columns: 1fr; }
+.det .dsc { overflow-y: auto; }
+.det .top button.x { border: 0; background: transparent; padding: 0; font-family: inherit; cursor: pointer; }
+.det .inp input { flex: 1; min-width: 0; height: 100%; margin: 0; border: 0; padding: 0; background: transparent; font: inherit; color: inherit; outline: none; }
+.det .inp.bw-tc-pick { position: relative; }
+.det .inp.bw-tc-pick select { position: absolute; top: -1px; left: -1px; width: calc(100% + 2px); height: calc(100% + 2px); opacity: 0; cursor: pointer; font: inherit; appearance: none; }
+.det .kv .bw-tc-chip22, .bw-tc-chip22 { height: 22px; font-size: 11.5px; }
+.chk .bw-tc-spin12 { width: 12px; height: 12px; }
+.chk.bw-tc-muted { color: var(--ink-600); }
+.toff .bw-tc-none { margin: 6px 12px; }
+.det .bw-tc-notice { margin: 8px 16px 0; }
+.det .bw-tc-appline { display: block; }
+.det .kv dd.mob .bw-call { display: flex; align-items: center; }
+.det .g2 > div { min-width: 0; }
+.det .kv dd .app small { font-size: 11.5px; color: var(--ink-600); margin-bottom: 0; }
+.det .kv dd .r1-note { font-weight: 400; }
+.det h4 a { cursor: pointer; }
+.det .cks span { cursor: pointer; }
+.det .cks span:focus-visible, .det h4 a:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.bw-tc-cks0 { padding: 0; }
+.bw-tc-hrs3 { margin: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; }
+.hrs[role="button"] { cursor: pointer; }
+.hrs[role="button"]:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+/* The hours editor (CTL-OFC-07-10, CTL-OFC-41-06): the frame's hours box, 1 row a day, the kit's check chip and field in each. */
+.hrs.bw-tc-hrsedit, .det .hrs.bw-tc-hrsedit { display: block; }
+.hrs.bw-tc-hrsedit > div { display: grid; grid-template-columns: 34px 54px minmax(0, 1fr) minmax(0, 1fr); column-gap: 4px; align-items: center; }
+.hrs.bw-tc-hrsedit > div > select { grid-column: 2 / span 2; }
+.hrs.bw-tc-hrsedit .cks { display: block; border: 0; padding: 0; }
+.hrs.bw-tc-hrsedit .cks span:first-child { width: auto; cursor: pointer; }
+.hrs.bw-tc-hrsedit .cks span:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.hrs.bw-tc-hrsedit .r1-input { min-width: 0; height: 30px; padding: 0 3px; font-size: 12.5px; }
+.det .bw-tc-hoursmsg, .det .bw-tc-hoursnote { margin: 0 16px 8px; }
+.r1-dlg .hrs.bw-tc-hrsedit { margin: 0; }
+.r1-dlg .bw-tc-hoursmsg { margin-bottom: 6px; }
+.r1-dlg .bw-tc-hoursnote { margin: 6px 0 0; }
+.g2f.bw-tc-first { margin-top: 0; }
+/* Form controls take the frame's field box (its .r1-input is a div): full width, the inherited line height. */
+.bw-screen select.r1-input, .bw-screen input.r1-input { width: 100%; line-height: inherit; }
+.bw-screen select.r1-input { appearance: none; }
+@media (max-width: 999px) {
+  .pgh { flex-wrap: wrap; }
+  .pgh .acts { flex-wrap: wrap; margin-left: 0; }
+  .filters { flex-wrap: wrap; }
+  .sbox { width: 100%; }
+  .body { grid-template-columns: minmax(0, 1fr); }
+  .lcol { width: 100%; min-width: 0; }
+  .tbl { overflow-x: auto; align-self: stretch; max-width: 100%; }
+  .tbl table { min-width: 980px; }
+  .det { height: auto; }
+  .det .dsc { overflow: visible; }
+}
+@media (max-width: 719px) {
+  .pgh, .filters { padding-left: 16px; padding-right: 16px; }
+  .body { padding-left: 16px; padding-right: 16px; }
+  .pgh .btn, .filters .btn { min-height: 44px; }
+  .sel, .sbox { min-height: 44px; height: 44px; }
+  tr[role="button"] td { height: 56px; }
+  .det .top button.x { min-width: 44px; min-height: 44px; }
+  .det .btn.sm, .det h4 a, .det .cks span { min-height: 44px; display: inline-flex; align-items: center; }
+  .det .inp, .det .inp input { min-height: 44px; }
+  .det .kv { grid-template-columns: 92px minmax(0, 1fr); }
+  .det dd.mob { flex-wrap: wrap; white-space: normal; gap: 4px 0; }
+  .det label { display: flex; align-items: center; min-height: 44px; }
+  .det .top { flex-wrap: wrap; }
+  .det .top > div { min-width: 0; }
+  .det .top b, .det .top .s { overflow-wrap: anywhere; }
+  .r1-dlg .cks span { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; }
+  .det .acts { flex-wrap: wrap; }
+  .det .g2 { grid-template-columns: 1fr; }
+  .g2f { grid-template-columns: 1fr; }
+  .r1-dlg .r1-input { min-height: 44px; }
+  .r1-dlg .btn, .r1-dlg .r1-x { min-height: 44px; min-width: 44px; }
+  .bw-tc-hrs3 { grid-template-columns: 1fr 1fr; }
+  .hrs.bw-tc-hrsedit .r1-input { height: 44px; }
+  .hrs.bw-tc-hrsedit .cks span { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; }
+}

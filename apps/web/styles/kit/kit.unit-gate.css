@@ -1,0 +1,93 @@
+/* ---------- DK-60 Gate and start page: shared parts ---------- */
+/* source: mockups/src/design-options/r1-gate.css (product) */
+/* U-GATE options a, b, c for SCR-GATE-01 and SCR-GATE-02. */
+body.r1 { width: 1440px; margin: 0; background: var(--ink-100); }
+.r1-screen { width: 1440px; height: 900px; overflow: hidden; display: flex; flex-direction: column; background: var(--ink-100); position: relative; }
+.r1-screen .ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
+.r1-screen .ic svg, .r1-states .ic svg { width: 100%; height: 100%; }
+.r1-states .ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
+.prod { font-size: 14px; font-weight: 600; color: var(--teal-700); padding-left: 16px; border-left: 1px solid var(--ink-300); white-space: nowrap; }
+.codeform { display: flex; flex-direction: column; gap: 14px; }
+.codeform .r1-input { height: 52px; font-size: 17px; }
+.codeform .enter { width: 100%; height: 52px; font-size: 17px; }
+.codeform.row { flex-direction: row; align-items: flex-end; }
+.codeform.row .r1-field { flex: 1; }
+.codeform.row .enter { width: auto; min-width: 140px; }
+.staff { margin: 18px 0 0; font-size: 15px; color: var(--ink-700); }
+.staff .r1-link { display: inline-flex; align-items: center; min-height: 44px; }
+.lead { font-size: 16px; line-height: 1.5; color: var(--ink-600); }
+.btn.wide { width: 100%; }
+.btn .ic { width: 18px; height: 18px; }
+
+/* ---------- DK-61 Gate and start page: brand split (option A, picked) ---------- */
+/* source: mockups/src/design-options/r1-gate.css (product) */
+/* ---------- Option A: brand split (as the office sign-in mockup) ---------- */
+.g-a.code { flex-direction: row; }
+.g-a .side { width: 600px; flex: none; background: var(--teal-900); color: var(--white); padding: 52px 56px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+.g-a .side .brand svg.mark { width: 40px; height: 40px; }
+.g-a .side .brand .word { font-size: 26px; color: var(--white); }
+.g-a .side .brand .word small { color: var(--orange-300); }
+.g-a .sideprod { margin-top: 12px; color: var(--teal-200); font-weight: 600; font-size: 16px; }
+.g-a .tag { margin: 120px 0 0; font-size: 40px; line-height: 1.15; font-weight: 780; letter-spacing: -.02em; position: relative; z-index: 1; }
+.g-a .tag em { font-style: normal; color: var(--orange-300); }
+.g-a .sidep { margin: 18px 0 0; font-size: 17px; line-height: 1.55; color: var(--teal-100); max-width: 470px; position: relative; z-index: 1; }
+.g-a .drop { position: absolute; right: -120px; top: 200px; width: 560px; height: 560px; }
+.g-a .mainp { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.g-a .topr { height: 76px; display: flex; align-items: center; justify-content: flex-end; padding: 0 40px; }
+.g-a .box { width: 460px; margin: 110px auto 0; flex: 1; }
+.g-a .box h2 { margin: 0; font-size: 30px; font-weight: 760; letter-spacing: -.02em; }
+.g-a .box .lead { margin: 10px 0 28px; }
+.g-a .r1-foot { padding: 0 40px; }
+.g-a.start .band { background: linear-gradient(90deg, var(--teal-900), var(--teal-700)); color: var(--white); padding: 26px 40px 74px; }
+.g-a.start .band h1 { margin: 0; font-size: 32px; font-weight: 770; letter-spacing: -.02em; }
+.g-a.start .band p { margin: 6px 0 0; font-size: 16.5px; color: var(--teal-100); }
+.g-a .doors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 0 40px; margin-top: -52px; }
+.g-a .door { background: var(--white); border: 1px solid var(--ink-200); border-radius: 16px; box-shadow: var(--shadow-lg); padding: 20px 22px; display: flex; flex-direction: column; color: inherit; text-decoration: none; }
+.g-a .door b { font-size: 19px; font-weight: 740; margin-top: 12px; }
+.g-a .door p { margin: 6px 0 16px; font-size: 14.5px; line-height: 1.45; color: var(--ink-600); flex: 1; }
+.g-a .door .btn { align-self: flex-start; }
+.dico { width: 46px; height: 46px; border-radius: 12px; background: var(--teal-100); color: var(--teal-700); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.dico .ic { width: 24px; height: 24px; }
+.g-a .iph { margin: 22px 40px 0; display: grid; grid-template-columns: 1fr 340px; gap: 20px; flex: 1; min-height: 0; }
+.g-a .iphl { background: var(--white); border: 1px solid var(--ink-200); border-radius: 16px; padding: 16px 20px 6px; }
+h2 { margin: 0; font-size: 18px; font-weight: 740; }
+.signintro { margin: 3px 0 8px; font-size: 14px; color: var(--ink-600); }
+table.signs { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.signs th { text-align: left; font-size: 11.5px; font-weight: 700; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; padding: 6px 10px; border-bottom: 1px solid var(--ink-200); }
+table.signs td { padding: 6px 10px; border-bottom: 1px solid var(--ink-150); white-space: nowrap; }
+table.signs tr:last-child td { border-bottom: 0; }
+table.signs td.mono, .signcards code { font: 600 13px Inter, sans-serif; color: var(--teal-900); }
+.appline { display: flex; flex-direction: column; gap: 12px; background: var(--orange-50); border: 1px solid var(--orange-300); border-radius: 16px; padding: 18px 20px; }
+.appline .aico { width: 46px; height: 46px; border-radius: 12px; background: var(--white); color: var(--orange-700); display: inline-flex; align-items: center; justify-content: center; }
+.appline .aico .ic { width: 24px; height: 24px; }
+.appline b { display: block; font-size: 18px; font-weight: 740; }
+.appline span { font-size: 14px; line-height: 1.45; color: var(--ink-700); }
+.appline .btn { align-self: flex-start; }
+.appline.coming { flex-direction: row; align-items: flex-start; background: var(--ink-50); border-color: var(--ink-300); padding: 12px 14px; }
+.appline.coming > .ic { width: 22px; height: 22px; color: var(--ink-600); margin-top: 2px; }
+.appline.coming b { font-size: 15px; }
+
+/* ---------- DK-62 Gate and start page: state tiles ---------- */
+/* source: mockups/src/design-options/r1-gate.css (frame presentation, never built) */
+/* ---------- Tiles ---------- */
+.mini3 { display: flex; gap: 8px; flex-wrap: wrap; }
+.mini3 span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; background: var(--teal-50); color: var(--teal-800); font-weight: 650; font-size: 13.5px; }
+.r1-demobar.mini { border-radius: 8px 8px 0 0; padding: 0 12px; }
+.r1-demobar.mini.sub { border-radius: 0 0 8px 8px; background: var(--teal-900); }
+.r1-demobar.mini.sub:only-child, .r1-st .b > .r1-demobar.mini.sub:first-child { border-radius: 8px; }
+.r1-demobar .moved { margin-left: 0; }
+.r1-st .b .r1-skel { height: 14px; }
+
+/* ---------- DK-63 Gate and start page: fixes after review (the .g-c rules are record only) ---------- */
+/* source: mockups/src/design-options/r1-gate.css (product) */
+/* fixes after review */
+.g-c .herocard .staff { color: var(--ink-700); font-size: 15px; margin: 8px 0 0; max-width: none; }
+.g-a .iph { align-items: start; }
+.g-c .rcol { padding: 20px 28px 0; }
+.g-c .signcards { grid-template-columns: 1fr; gap: 6px; }
+.g-c .sc { display: grid; grid-template-columns: 150px 1fr; column-gap: 12px; row-gap: 2px; padding: 7px 12px; align-items: center; }
+.g-c .sc .n { grid-row: span 2; }
+.g-c .sc .kv { flex-direction: row; align-items: baseline; gap: 8px; margin: 0; }
+.g-c .sc .kv span { min-width: 74px; }
+.g-c .sc code { overflow-wrap: normal; white-space: nowrap; }
+

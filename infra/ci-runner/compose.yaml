@@ -1,0 +1,57 @@
+# The `linux` CI runner (SPECIFICATIONS SD-38): a GitHub Actions runner container on Spectre's
+# Docker Desktop, paired with its OWN Docker-in-Docker engine (never Docker Desktop's socket).
+# Registered to the private repo JohnnyEgghead/Brightwater only. Operate it from the Mac through
+# the `spectre` context (management only); see README.md in this directory.
+#
+# The runner and its engine share the work directory at the same path (/home/runner/_work), so
+# `container:` and `services:` jobs and bind mounts resolve on the engine. The runner's externals
+# (its bundled node, mounted into job containers) are copied to a volume the engine sees at the
+# same path too.
+name: bw-ci-runner
+
+services:
+  dind:
+    image: docker:29.9.1-dind@sha256:3e5756e2b6dad6a5f1f5deacf0a19f9eaa2581b76ae092b2d4a118162e1d4d4e
+    privileged: true
+    restart: unless-stopped
+    # Unix socket only (no TCP listener); gid 123 is the runner image's docker group.
+    command: ["dockerd", "--host=unix:///var/run/dind/docker.sock", "--group=123"]
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    volumes:
+      - dind-sock:/var/run/dind
+      - runner-work:/home/runner/_work
+      - runner-externals:/home/runner/externals
+      - dind-storage:/var/lib/docker
+
+  runner:
+    build: .
+    image: bw-ci-runner:2.338.0
+    restart: unless-stopped
+    # Root inside this unprivileged container, like the job containers: a `container:` job runs as
+    # root and leaves root-owned files in the shared work directory, which a non-root runner then
+    # cannot clean (the next job's checkout fails with EACCES). Root adds no power here: the
+    # container already holds the engine's socket.
+    user: root
+    depends_on:
+      - dind
+    environment:
+      RUNNER_ALLOW_RUNASROOT: "1"
+      DOCKER_HOST: unix:///var/run/dind/docker.sock
+      RUNNER_URL: https://github.com/JohnnyEgghead/Brightwater
+      RUNNER_NAME: linux
+      # Read from infra/ci-runner/.env on the Mac (gitignored). Needed only for the first
+      # registration; blank it afterwards. Never commit it.
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+    volumes:
+      - dind-sock:/var/run/dind
+      - runner-work:/home/runner/_work
+      - runner-externals:/externals-shared
+      - runner-state:/runner-state
+
+volumes:
+  dind-sock:
+  runner-work:
+  runner-externals:
+  dind-storage:
+  runner-state:

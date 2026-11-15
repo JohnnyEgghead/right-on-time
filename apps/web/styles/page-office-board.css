@@ -1,0 +1,131 @@
+/* SCR-OFC-02 page-local rules (DK-85): the last <style> of mockups/pages/office-board.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/shell.css. */
+  .sumbar { height: 70px; background: #fff; border-bottom: 1px solid var(--ink-200); display: flex; align-items: center; padding: 0 16px 0 18px; gap: 12px; }
+  .datenav { display: flex; align-items: center; gap: 4px; margin-right: 6px; }
+  .datenav .arrow { width: 32px; height: 32px; border: 1px solid var(--ink-300); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--ink-600); }
+  .datenav .arrow .ic { width: 16px; height: 16px; }
+  .datenav .d { padding: 0 10px; line-height: 1.15; }
+  .datenav .d b { display: block; font-size: 17px; letter-spacing: -.01em; }
+  .datenav .d span { font-size: 12.5px; color: var(--ink-500); font-weight: 500; }
+  .tiles { display: flex; gap: 10px; flex: 1; }
+  .tile { border: 1px solid var(--ink-200); border-radius: 10px; padding: 7px 14px 7px 12px; display: flex; align-items: center; gap: 12px; min-width: 0; background: #fff; }
+  .tile .num { font-size: 24px; font-weight: 750; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile .lb { font-size: 12.5px; font-weight: 650; color: var(--ink-800); line-height: 1.2; }
+  .tile .lb small { display: block; font-weight: 500; color: var(--ink-500); font-size: 11.5px; }
+  .tile.late { background: var(--st-late-bg); border-color: #f3b4b4; }
+  .tile.late .num, .tile.late .lb { color: var(--st-late-ink); }
+  .tile.risk { background: var(--st-risk-bg); border-color: #f0d28a; }
+  .tile.risk .num, .tile.risk .lb { color: var(--st-risk-ink); }
+  .tile.unas { border-style: dashed; border-color: var(--ink-400); }
+  .tile .ic { width: 20px; height: 20px; }
+
+  .work { display: flex; gap: 12px; padding: 12px; height: calc(900px - 58px - 70px); }
+  .panel { background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); }
+  .boardp { flex: 1; min-width: 0; }
+  .ph { height: 46px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-bottom: 1px solid var(--ink-200); }
+  .ph h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .ph .grow { flex: 1; }
+  .ph .live { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-600); font-weight: 550; }
+  .ph .live i.dotp { width: 8px; height: 8px; border-radius: 50%; background: #1f9d55; box-shadow: 0 0 0 3px rgba(31,157,85,.18); }
+  #tl { flex: 1; overflow: hidden; }
+  .seg { display: inline-flex; border: 1px solid var(--ink-300); border-radius: 8px; overflow: hidden; height: 30px; }
+  .seg span { padding: 0 11px; display: flex; align-items: center; font-size: 12.5px; font-weight: 600; color: var(--ink-600); border-left: 1px solid var(--ink-300); }
+  .seg span:first-child { border-left: 0; }
+  .seg span.on { background: var(--teal-700); color: #fff; }
+
+  /* drag in progress */
+  .drop-target { position: absolute; inset: 3px 0; border-radius: 8px; background: rgba(47,111,224,.07); outline: 2px dashed rgba(47,111,224,.55); outline-offset: -2px; pointer-events: none; }
+  .job.dragging { box-shadow: 0 14px 30px rgba(16,24,40,.28), 0 0 0 2px #fff, 0 0 0 4px #2f6fe0; transform: rotate(-1.5deg) translateY(-3px); z-index: 30; }
+  .dragtip { position: absolute; z-index: 31; background: #111827; color: #fff; border-radius: 10px; padding: 7px 12px 8px; font-size: 12.5px; line-height: 1.4; white-space: nowrap; box-shadow: var(--shadow-lg); }
+  .dragtip b { font-size: 13.5px; }
+  .dragtip .ok { color: #86efac; font-weight: 650; }
+  .dragtip .hint { color: #9ca3af; font-size: 11.5px; margin-top: 3px; }
+  .cursor { position: absolute; z-index: 32; width: 22px; height: 26px; pointer-events: none; }
+  .left-behind { position: absolute; top: 5px; bottom: 5px; border: 2px dashed #d42f2f; border-radius: 7px; background: rgba(253,225,225,.45); display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 650; color: #9b1c1c; }
+
+  /* map panel */
+  .mapp { width: 372px; flex: none; }
+  .mapbox { position: relative; height: 262px; flex: none; border-bottom: 1px solid var(--ink-200); overflow: hidden; }
+  .mapbox svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .mapbox .zoom { position: absolute; right: 10px; top: 10px; background: #fff; border: 1px solid var(--ink-200); border-radius: 8px; box-shadow: var(--shadow); }
+  .mapbox .zoom span { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 17px; color: var(--ink-700); }
+  .mapbox .zoom span + span { border-top: 1px solid var(--ink-200); }
+  .mkey { height: 32px; flex: none; border-bottom: 1px solid var(--ink-200); padding: 0 14px; display: flex; align-items: center; gap: 14px; font-size: 11.5px; font-weight: 600; color: var(--ink-700); }
+  .mkey span { display: inline-flex; align-items: center; gap: 5px; }
+  .mkey i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .vancard { padding: 10px 14px 12px; border-bottom: 1px solid var(--ink-200); }
+  .vancard .top { display: flex; align-items: center; gap: 10px; }
+  .vancard .top .av { background: #2f6fe0; width: 34px; height: 34px; }
+  .vancard .top b { font-size: 14.5px; display: block; }
+  .vancard .top span.s { font-size: 12.5px; color: var(--ink-500); }
+  .vancard .eta { margin-top: 9px; background: var(--st-way-bg); border-radius: 8px; padding: 8px 10px; color: var(--st-way-ink); font-size: 13px; line-height: 1.4; }
+  .vancard .eta b { font-size: 14px; }
+  .vancard .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .att h4 { margin: 0; padding: 9px 14px 3px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-500); }
+  .att .row { display: flex; align-items: center; gap: 10px; padding: 5px 14px; border-top: 1px solid var(--ink-150); font-size: 13px; }
+  .att .row:first-of-type { border-top: 0; }
+  .att .row .tx { flex: 1; min-width: 0; line-height: 1.3; }
+  .att .row .tx b { font-size: 13.5px; }
+  .att .row .tx small { display: block; color: var(--ink-500); font-size: 12px; }
+  /* Kit 0.9: what a flagged item held, under its row (CTL-OFC-02-15; owner ruling c4aa4366; F-1155). */
+  .att .row .tx small.ent { color: var(--ink-700); }
+  .datenav .mode { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--teal-800); background: var(--teal-50); border: 1px solid var(--teal-200); border-radius: 5px; padding: 0 5px; vertical-align: 2px; letter-spacing: 0; }
+  .datenav .btn.dis { margin-left: 4px; }
+  .tile .lb small.sim { color: var(--orange-700); font-weight: 650; font-size: 10.5px; }
+  .tile.flag { border-color: var(--orange-300); background: var(--orange-50); }
+  .tiles { gap: 7px; }
+  .tile { padding: 6px 10px 6px 9px; gap: 8px; }
+  .tile .num { font-size: 22px; }
+  .tile .lb { white-space: nowrap; }
+  .datenav .d span .mode { vertical-align: 0; margin-left: 4px; }
+  .mtools { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-bottom: 1px solid var(--ink-200); flex: none; }
+  .msel { display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 8px; border: 1px solid var(--ink-400); border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-700); white-space: nowrap; }
+  .msel .ic { width: 13px; height: 13px; }
+  .mapbox .osm { position: absolute; right: 0; bottom: 0; padding: 1px 6px; background: rgba(255,255,255,.85); font-size: 10.5px; color: var(--ink-700); text-decoration: underline; }
+  .mkey { gap: 10px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; padding: 0; }
+  .jtabs { display: flex; gap: 2px; padding: 0 8px; border-bottom: 1px solid var(--ink-200); flex: none; }
+  .jtabs a { height: 34px; display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; font-size: 12.5px; font-weight: 600; color: var(--ink-600); white-space: nowrap; position: relative; }
+  .jtabs a b { font-size: 11px; background: var(--ink-100); border-radius: 8px; padding: 0 5px; }
+  .jtabs a.on { color: var(--teal-800); }
+  .jtabs a.on::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--orange-500); }
+  .chip.flagc { background: var(--orange-100); color: var(--orange-700); border-color: var(--orange-300); }
+  .att .row .btn { height: 26px; font-size: 12px; padding: 0 8px; }
+  .vancard { padding: 8px 14px 10px; }
+  .vancard .eta { margin-top: 6px; padding: 6px 10px; }
+  .vancard .acts { margin-top: 7px; }
+  .r1-st .panel { box-shadow: none; }
+  .r1-st .tl { position: relative; }
+  .mini { border: 1px solid var(--ink-200); border-radius: 10px; overflow: hidden; position: relative; background: #fff; }
+  .mini .tl-row { position: relative; }
+  .offbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 9px; background: var(--st-late-bg); border: 1px solid var(--st-late-bd); color: var(--st-late-ink); font-size: 13.5px; font-weight: 600; }
+  .offbar .ic { width: 17px; height: 17px; }
+  .offbar .btn { margin-left: auto; }
+  .rlist { display: flex; flex-direction: column; gap: 6px; }
+  .rl2 { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1.5px solid var(--ink-200); border-radius: 9px; font-size: 13.5px; }
+  .rl2 i.rd { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--ink-400); flex: none; }
+  .rl2.on { border-color: var(--teal-600); background: var(--teal-50); }
+  .rl2.on i.rd { border: 5px solid var(--teal-700); }
+  .rl2 small { color: var(--ink-500); margin-left: auto; font-size: 12px; }
+  .rl2 .now { font-size: 11px; font-weight: 700; color: var(--ink-500); text-transform: uppercase; }
+  .pvw { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: var(--st-site-bg); color: var(--st-site-ink); font-size: 13.5px; font-weight: 600; }
+  .g2f { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .zm92 { zoom: .94; }
+  .r1-st nav.side h4 { margin: 0 0 8px; padding: 0 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-500); }
+  .r1-st nav.side a { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border-radius: 8px; color: var(--ink-700); font-weight: 560; font-size: 14px; }
+  .r1-st nav.side a .ic { width: 17px; height: 17px; color: var(--ink-500); }
+  .r1-st nav.side a.on { background: var(--teal-50); color: var(--teal-800); font-weight: 680; box-shadow: inset 3px 0 0 var(--orange-500); }
+  .mkey i.jm { width: 10px; height: 10px; border-radius: 3px; background: #fff; border: 2px solid; }
+  .aprx { position: absolute; left: 40%; top: 46%; font-size: 11px; font-weight: 650; background: rgba(255,255,255,.9); border-radius: 4px; padding: 1px 5px; color: var(--ink-700); }
+  .att a.jrow { text-decoration: none; color: inherit; }
+  .att .jrow .w { font-size: 12px; font-weight: 700; color: var(--ink-700); width: 40px; }
+  .nojobs { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 12.5px; color: var(--ink-500); font-weight: 600; }
+  .r1-alerts.in { position: relative; top: auto; right: auto; width: auto; max-height: none; box-shadow: none; }
+  .r1-alerts li a { font-size: 12.5px; font-weight: 650; color: var(--teal-700); text-decoration: underline; margin-right: 10px; }
+  .r1-alerts li.new { background: var(--teal-50); }
+  .sres { margin-top: 6px; width: 420px; }
+  .sres h5 { margin: 6px 10px 2px; font-size: 11px; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; }
+  /* v0.5: the off-hours shading in the legend (CTL-OFC-02-34), drawn as the timeline draws it */
+  /* Kit 0.7: a note under the Success caption (CTL-OFC-02-34 on a Saturday) */
+  .capnote { margin: 0; padding: 6px 24px; background: var(--ink-100); color: var(--ink-800); font-size: 13px; line-height: 1.35; }
+  .legend .sw.off { background: repeating-linear-gradient(135deg, #fff 0 3px, var(--ink-200) 3px 6px); border-color: var(--ink-300); border-left-width: 1px; }

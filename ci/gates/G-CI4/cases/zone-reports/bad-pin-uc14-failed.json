@@ -1,0 +1,30 @@
+{
+  "numPassedTests": 2,
+  "numFailedTests": 1,
+  "testResults": [
+    {
+      "name": "/repo/packages/outbox/src/quiet-hours.test.ts",
+      "assertionResults": [
+        {
+          "title": "the host zone is the one this run was started under",
+          "status": "passed"
+        },
+        {
+          "title": "holds Deborah Lin's 10:29 AM EDT booking text (7:29 AM Pacific) to 8:00 AM Pacific, 11:00 AM EDT",
+          "fullName": "holds Deborah Lin's 10:29 AM EDT booking text (7:29 AM Pacific) to 8:00 AM Pacific, 11:00 AM EDT",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "/repo/ci/gates/G-CI9/deborah-lin-quiet-hours.db.test.ts",
+      "assertionResults": [
+        {
+          "title": "holds Deborah Lin's 10:29 AM EDT booking text to 8:00 AM Pacific (11:00 AM EDT) and sends it then",
+          "fullName": "holds Deborah Lin's 10:29 AM EDT booking text to 8:00 AM Pacific (11:00 AM EDT) and sends it then",
+          "status": "failed"
+        }
+      ]
+    }
+  ]
+}

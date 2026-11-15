@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# P3-BACKUP local rehearsal (see stubs/systemctl): journalctl -u <unit> ... prints the output the systemctl stand-in
+# kept for that unit. Test-only.
+set -uo pipefail
+while [ $# -gt 0 ]; do
+  case "$1" in -u) u="$2"; shift 2 ;; *) shift ;; esac
+done
+cat "/tmp/journal-${u:?-u unit}" 2>/dev/null || true

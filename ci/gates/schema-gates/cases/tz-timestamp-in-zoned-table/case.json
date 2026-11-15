@@ -1,0 +1,7 @@
+{
+  "why": "invariant 4: every time column is timestamptz, even in a table with a zone column",
+  "only": "tz",
+  "expect": [
+    "schema-time-zone-check: FAIL column world.job.legacy_at is timestamp without time zone; every stored instant is timestamptz (invariant 4)"
+  ]
+}

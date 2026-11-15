@@ -1,0 +1,5 @@
+{
+  "why": "P2-SCHEMA acceptance: schema-doc-parity fails a planted missing column",
+  "only": "parity",
+  "expect": ["schema-doc-parity: FAIL missing column world.job.problem: in section 3, not in the database"]
+}

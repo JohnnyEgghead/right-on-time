@@ -1,0 +1,70 @@
+/* SCR-OFC-04 New job (P4-NEWJOB): the frame's inline style values as classes (the page CSP refuses style attributes), the few app-only
+   rules where the frame draws a span and the app a form control, the customer results list (DK-89 draws none), and the phone layout.
+   Loaded after the page copy (page-office-new-job.css), which is never edited. */
+.bw-screen .bw-ml-auto { margin-left: auto; }
+.bw-screen .bw-opa-6 { opacity: .6; }
+.bw-screen label.lbl { display: block; }
+.bw-screen .bw-m-0 { margin: 0; }
+.bw-screen .bw-nj-note { margin: 10px 0 0; }
+.bw-screen .bw-nj-tnote { margin: 0 18px 8px; }
+.bw-screen .bw-nj-tskel { padding: 0 18px 8px; }
+/* The room bar's fill, in steps of 20 (the frame's inline widths 80, 60, 40 and 100). */
+.bw-screen .bw-fill-0 { width: 0; }
+.bw-screen .bw-fill-20 { width: 20%; }
+.bw-screen .bw-fill-40 { width: 40%; }
+.bw-screen .bw-fill-60 { width: 60%; }
+.bw-screen .bw-fill-80 { width: 80%; }
+.bw-screen .bw-fill-100 { width: 100%; }
+/* The frame's service, day and window boxes are buttons here: drawn as the frame's boxes. */
+:where(.bw-screen) button.svc, :where(.bw-screen) button.dy, :where(.bw-screen) button.win, :where(.bw-screen) button.cust.hit {
+  width: 100%; text-align: left; font-family: inherit; line-height: inherit; letter-spacing: inherit; color: inherit; cursor: pointer; background-color: transparent;
+}
+.bw-screen button.svc { line-height: 1.2; }
+.bw-screen button.svc:disabled { opacity: .6; cursor: default; }
+.bw-screen .dy[aria-disabled='true'], .bw-screen .win[aria-disabled='true'] { cursor: default; }
+/* The customer search field is an input inside the frame's .find box. */
+.bw-screen .bw-nj-find { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; color: inherit; outline: none; padding: 0; }
+.bw-screen .find:focus-within { border-color: var(--teal-600); box-shadow: 0 0 0 3px rgba(18, 115, 139, .14); }
+/* The equipment select is the frame's .fld with the native select laid invisibly over it; the problem is a textarea in the same box. */
+.bw-screen .bw-nj-fld { position: relative; }
+.bw-screen .bw-nj-over { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); opacity: 0; cursor: pointer; }
+.bw-screen .bw-nj-over:disabled { cursor: default; }
+.bw-screen .bw-nj-text { width: 100%; border: 0; background: transparent; font: inherit; color: inherit; padding: 0; resize: none; outline: none; field-sizing: content; min-height: 0; }
+.bw-screen .bw-nj-fld:focus-within { border-color: var(--teal-600); }
+.bw-screen .tc .av.bw-nj-q { background: var(--ink-500); }
+/* The kit's side-menu rules (CMP-08, :where(body.r1) .side) reach the frame's .side span (the booked-visit line); the frame's body is not .r1, so it has none. */
+.bw-screen .cust .side { width: auto; height: auto; padding: 0; border: 0; background: transparent; }
+/* The results of the customer search (CTL-OFC-04-01, -13): a picked customer's box, white until the pointer is over it. */
+.bw-screen .bw-nj-hits { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bw-screen .cust.hit { margin-top: 0; border-color: var(--ink-200); background: #fff; }
+.bw-screen .cust.hit:hover, .bw-screen .cust.hit:focus-visible { border-color: var(--teal-600); background: var(--teal-50); }
+.bw-screen .cust.hit .bw-nj-hitbody { display: block; min-width: 0; }
+.bw-screen .cust.hit .d { display: block; }
+.bw-screen .go .msgb { margin: 0 0 10px; }
+/* F-802: DK-89 draws 6 days and the live horizon lists about 53. A longer list scrolls inside its own box, about 6 and a half rows tall so
+   the cut row shows there is more, and the windows beside it stay beside the pick. The padding keeps the picked row's ring inside the box. */
+.bw-screen .days.bw-nj-long { max-height: 302px; overflow-y: auto; padding: 3px; margin: -3px; }
+.bw-screen .days.bw-nj-long > .dy { flex: none; }
+@media (max-width: 899px) {
+  .bw-screen .jh { flex-wrap: wrap; padding-left: 16px; padding-right: 16px; }
+  .bw-screen .body { grid-template-columns: minmax(0, 1fr); padding-left: 16px; padding-right: 16px; }
+  .bw-screen .left, .bw-screen .right { min-width: 0; }
+  .bw-screen .svcs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bw-screen .dw { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .twof { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .cust { flex-wrap: wrap; }
+  .bw-screen .cust .side { margin-left: 0; text-align: left; }
+  .bw-screen .card .card-h { flex-wrap: wrap; }
+  .bw-screen .card .card-h .muted { margin-left: 0; flex-basis: 100%; }
+  .bw-screen .btn, .bw-screen .svc, .bw-screen .dy, .bw-screen .win, .bw-screen .tc .pick, .bw-screen .crumbs a { min-height: 44px; }
+  .bw-screen .crumbs a { display: inline-flex; align-items: center; }
+  .bw-screen .tc .h { flex-wrap: wrap; }
+  .bw-screen .tc .nm { min-width: 0; }
+  .bw-screen .win .cap { flex-wrap: wrap; justify-content: flex-end; }
+  .bw-screen .find { min-height: 44px; }
+  .bw-screen .bw-nj-find { min-height: 44px; }
+  .bw-screen .bw-nj-fld { min-height: 44px; }
+  .bw-screen .bw-nj-selfld { height: 44px; }
+  .bw-screen .bw-nj-text { min-height: 44px; padding: 12px 0; box-sizing: border-box; }
+  .bw-screen .crumbs a { min-width: 44px; justify-content: center; }
+}

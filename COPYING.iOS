@@ -1,0 +1,31 @@
+Additional permission under GNU AGPL version 3 section 7
+for the Right On Time native iPhone app
+
+Copyright (C) 2026 John Loring
+
+Right On Time is free software under the GNU Affero General Public License,
+version 3 or any later version (see LICENSE). This file adds a permission
+under section 7 of that license.
+
+I am the sole copyright holder of the Right On Time source code in this
+repository. I grant you this additional permission:
+
+  You may convey the native iPhone app (the code under apps/tech-native, and
+  the code from this repository that the app is built with) as a compiled
+  application through Apple's App Store, including its Unlisted distribution
+  and its TestFlight beta distribution, under the terms Apple sets for that
+  distribution (the Apple Developer Program License Agreement and the Apple
+  Media Services Terms), even where those terms put limits on the app's users
+  that the AGPL alone would not allow.
+
+This permission is mine to give because I hold the copyright. It covers only
+my own code. Code that other people wrote is not covered. The iPhone app
+bundle holds no third-party GPL, LGPL or AGPL code (the check
+ios-bundle-copyleft fails the build if it does).
+
+As section 7 allows, if you copy or change the app, you may remove this
+additional permission from your copy or from any part of it. If you do, delete
+this notice from that part. The rest of the license still applies to it.
+
+The source code of the app stays available to every user under the AGPL, as
+section 13 and section 6 of that license require.

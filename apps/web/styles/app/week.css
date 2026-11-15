@@ -1,0 +1,58 @@
+/* SCR-OFC-34 adaptations of its frame (DK-86; P4-WEEK). The frame is a 1440 x 900 picture; this sheet lifts the fixed height so the
+   page scrolls, replaces the frame's inline styles (the page CSP refuses them), and lays the board out below 1000 px. It sets no
+   color or spacing value of its own beyond the frame's (OA-84). */
+.bw-screen .work { height: auto; min-height: calc(900px - 58px - 70px); }
+.bw-screen .wk { overflow: visible; }
+.bw-screen .boardp { align-self: flex-start; min-height: calc(900px - 58px - 70px - 24px); }
+.bw-wk-scroll { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow-x: auto; }
+.bw-wk-scroll > .wk { flex: 1; }
+.bw-wk-body { border: 1px solid transparent; padding: 14px; }
+/* The app's body is .r1, whose kit rules (:where(body.r1) .side, .panel .ph) the frame's body does not take: the aside is not a .side here. */
+.bw-wk-side { width: 296px; flex: none; }
+.bw-screen .panel .ph { padding: 0 14px; gap: 12px; flex-wrap: nowrap; }
+:where(.bw-w-50) { width: 50%; }
+.bw-wk-pct { color: var(--teal-700); }
+.bw-wk-actions { display: flex; gap: 8px; margin-top: 10px; }
+.sec.ob { border-bottom: 0; }
+/* The frame's spans are real links and buttons here. */
+.datenav a.arrow, .wk a.bw-wk-day, .wk .c a.tag, .wk .hd :is(a, button).wmenu, .ul a.r { text-decoration: none; }
+.datenav a.arrow { background: transparent; }
+.wk a.bw-wk-day, .wk .hd :is(a, button).wmenu { color: inherit; }
+.seg span[role="radio"] { cursor: pointer; }
+.wk .hd a.bw-wk-day { display: block; }
+.wk .hd a.bw-wk-day:focus-visible, .datenav a.arrow:focus-visible, .seg span:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.wk .c { position: relative; }
+.wk .c a.bw-wk-hit { position: absolute; inset: 0; }
+.wk .c .t, .wk .c .bar { position: relative; }
+.wk .c.u .tag { position: relative; }
+.wk .hd .wsel :is(a, button).wmenu { margin-left: 2px; }
+/* F-1539, F-1553: a technician's name or van and skill line stays inside its 210 px column and wraps to a second line (the row grows: its height is minmax(44px, 1fr)) the way the day board's phone rows do. Nothing is cut, so the line keeps its whole text and no overflow-hidden box clips it. */
+.wk .who:not(.unas, .tot) > div { min-width: 0; }
+.wk .who:not(.unas, .tot) :is(.nm, .sub) { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 999px) {
+  .bw-screen .sumbar { height: auto; min-height: 70px; flex-wrap: wrap; padding: 8px 16px; }
+  .bw-screen .tiles { flex-wrap: wrap; flex-basis: 100%; }
+  .bw-screen .work { flex-direction: column; min-height: 0; }
+  .bw-screen .boardp { align-self: stretch; min-height: 0; }
+  .bw-screen .bw-wk-side { width: auto; }
+  .bw-screen .panel .ph { height: auto; min-height: 46px; flex-wrap: wrap; padding: 6px 14px; }
+  .bw-screen .lgd { flex-wrap: wrap; }
+  .bw-wk-scroll > .wk { min-width: 900px; }
+}
+@media (max-width: 719px) {
+  .datenav a.arrow { width: 44px; height: 44px; }
+  .bw-screen .sumbar .btn, .bw-screen .bw-wk-side .btn { min-height: 44px; }
+  .seg span[role="radio"] { min-height: 44px; min-width: 44px; justify-content: center; }
+  .wk .hd a.bw-wk-day { min-height: 44px; }
+  .wk .hd .wsel :is(a, button).wmenu { min-width: 44px; min-height: 44px; justify-content: center; }
+  .wk .c.u a.tag { min-height: 44px; align-items: center; }
+  .ul a.r { min-height: 44px; }
+}
+/* The shared chrome above the screen (CMP-01 strip, CMP-07 top bar) is laid out for phones in styles/app/shell.css (F-590). */
+@media (max-width: 719px) {
+  .datenav a.arrow { flex: none; min-width: 44px; }
+  .seg { height: auto; min-height: 44px; }
+}
+@media (max-width: 999px) {
+  .ul .r .x small { white-space: normal; }
+}

@@ -1,0 +1,26 @@
+{
+  "MIT": [
+    {
+      "name": "ios-app",
+      "versions": [
+        "1.0.0"
+      ],
+      "paths": [
+        "/fixture/ios-app"
+      ],
+      "license": "MIT"
+    }
+  ],
+  "LGPL-3.0": [
+    {
+      "name": "opt-lgpl-bin",
+      "versions": [
+        "3.0.0"
+      ],
+      "paths": [
+        "/fixture/opt-lgpl-bin"
+      ],
+      "license": "LGPL-3.0"
+    }
+  ]
+}

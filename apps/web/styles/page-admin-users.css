@@ -1,0 +1,88 @@
+/* SCR-OFC-43 to SCR-OFC-46 page-local rules (DK-101): the last <style> of mockups/pages/admin-users.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/accounts.css. */
+  /* Admin shell: left side menu */
+  .shell { display: flex; height: 842px; }
+  .side { width: 220px; flex: none; background: #fff; border-right: 1px solid var(--ink-200); padding: 18px 12px; }
+  .side h4 { margin: 0 0 8px; padding: 0 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-500); }
+  .side a { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 8px; color: var(--ink-700); font-weight: 560; font-size: 14px; margin-bottom: 2px; }
+  .side a .ic { width: 17px; height: 17px; color: var(--ink-500); }
+  .side a.on { background: var(--teal-50); color: var(--teal-800); font-weight: 680; box-shadow: inset 3px 0 0 var(--orange-500); }
+  .side a.on .ic { color: var(--teal-700); }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ah { background: #fff; border-bottom: 1px solid var(--ink-200); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+  .ah h1 { margin: 0; font-size: 24px; font-weight: 750; letter-spacing: -.02em; }
+  .ah p { margin: 3px 0 0; font-size: 14px; color: var(--ink-600); }
+  .ah .acts { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .seg { flex: none; display: inline-flex; border: 1px solid var(--ink-300); border-radius: 8px; overflow: hidden; height: 36px; }
+  .seg span { padding: 0 13px; display: flex; align-items: center; font-size: 13.5px; font-weight: 600; color: var(--ink-600); border-left: 1px solid var(--ink-300); background: #fff; }
+  .seg span:first-child { border-left: 0; }
+  .seg span.on { background: var(--teal-700); color: #fff; }
+  .panel { background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; box-shadow: var(--shadow-sm); }
+  .panel .ph { display: flex; align-items: center; gap: 10px; padding: 12px 16px 8px; }
+  .panel h3 { margin: 0; font-size: 15px; font-weight: 700; }
+  .panel .ph .s { font-size: 12.5px; color: var(--ink-500); }
+  .body { display: grid; grid-template-columns: 1fr 410px; gap: 14px; padding: 14px 24px; }
+  .listp { display: flex; flex-direction: column; overflow: hidden; }
+  .fbar { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--ink-200); }
+  .fsel { white-space: nowrap; height: 34px; border: 1px solid var(--ink-300); border-radius: 8px; display: flex; align-items: center; gap: 7px; padding: 0 9px 0 11px; font-size: 13.5px; background: #fff; }
+  .fsel .k { color: var(--ink-500); font-size: 12.5px; }
+  .fsel b { font-weight: 620; }
+  .fsel .ic { width: 14px; height: 14px; color: var(--ink-500); }
+  .fsel.find { width: 170px; color: var(--ink-500); }
+  .fbar .cnt { margin-left: auto; font-size: 13px; color: var(--ink-600); white-space: nowrap; }
+  table.u { width: 100%; border-collapse: collapse; font-size: 13.5px; table-layout: fixed; }
+  table.u th { text-align: left; font-size: 11.5px; font-weight: 650; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; padding: 7px 12px; border-bottom: 1px solid var(--ink-200); background: var(--ink-50); }
+  table.u td { padding: 0 12px; height: 50px; border-bottom: 1px solid var(--ink-150); vertical-align: middle; }
+  table.u tr:last-child td { border-bottom: 0; }
+  .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .who .av { width: 32px; height: 32px; font-size: 11.5px; }
+  .who b { display: block; font-weight: 640; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  .who small { display: block; color: var(--ink-500); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who small.jt { white-space: normal; color: var(--ink-600); line-height: 1.3; }
+  .rl { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 6px; font-size: 12.5px; font-weight: 650; white-space: nowrap; }
+  .rl .ic { width: 14px; height: 14px; }
+  .rl.office { background: var(--teal-100); color: var(--teal-800); }
+  .rl.tech { background: var(--orange-100); color: var(--orange-700); }
+  .rl.mgr { background: #e8e5fb; color: #4c3a9e; }
+  .when { white-space: nowrap; }
+  .when small { display: block; color: var(--ink-500); font-size: 12px; }
+  .chip.inv { background: var(--st-way-bg); color: var(--st-way-ink); }
+  .chip.off { background: var(--ink-100); color: var(--ink-600); border-color: var(--ink-300); }
+  .more { color: var(--ink-500); text-align: right; }
+  .more .ic { width: 18px; height: 18px; vertical-align: middle; }
+  .foot { margin-top: auto; height: 44px; flex: none; display: flex; align-items: center; padding: 0 14px; border-top: 1px solid var(--ink-200); font-size: 12.5px; color: var(--ink-500); gap: 10px; }
+  .foot .pg { margin-left: auto; display: flex; gap: 6px; }
+
+  .rolep { display: flex; flex-direction: column; overflow: hidden; }
+  table.m { width: calc(100% - 32px); margin: 2px 16px 0; border-collapse: collapse; font-size: 13px; }
+  table.m th { font-size: 12px; font-weight: 700; padding: 6px 4px 8px; text-align: center; border-bottom: 1px solid var(--ink-200); }
+  table.m th:first-child { text-align: left; font-weight: 650; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; font-size: 11.5px; }
+  table.m td { padding: 0 4px; height: 37px; border-bottom: 1px solid var(--ink-150); text-align: center; }
+  table.m td:first-child { text-align: left; font-weight: 600; color: var(--ink-800); }
+  table.m tr:last-child td { border-bottom: 0; }
+  .y, .n, .p { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 650; white-space: nowrap; }
+  .y { color: var(--st-site-ink); }
+  .n { color: var(--ink-500); }
+  .p { color: var(--orange-700); }
+  .y .ic, .n .ic, .p .ic { width: 14px; height: 14px; }
+  .callout { margin: 10px 16px 0; border: 1px solid var(--st-late-bd); background: var(--st-late-bg); border-radius: 10px; padding: 10px 12px; font-size: 13px; line-height: 1.45; color: var(--st-late-ink); display: flex; gap: 9px; }
+  .callout .ic { width: 17px; height: 17px; margin-top: 1px; }
+  .chg { padding: 0 16px; font-size: 13px; }
+  .chg div { padding: 7px 0; border-top: 1px solid var(--ink-150); line-height: 1.35; }
+  .chg div:first-child { border-top: 0; }
+  .chg small { display: block; color: var(--ink-500); font-size: 12px; }
+  .callout.info { border-color: var(--teal-200); background: var(--teal-50); color: var(--teal-900); }
+  .callout.info .ic { color: var(--teal-700); }
+  td.ra { white-space: nowrap; text-align: right; }
+  td.ra .btn + .btn { margin-left: 4px; }
+  td.ra .btn { height: 26px; padding: 0 7px; font-size: 12px; }
+  td.ra .btn + .btn { margin-left: 3px; }
+  .you { font-size: 12.5px; color: var(--ink-500); }
+  .r1-st .panel { box-shadow: none; }
+  .r1-st table.u { width: 100%; }
+  .rads { display: flex; gap: 8px; flex-wrap: wrap; }
+  .rad { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1.5px solid var(--ink-300); border-radius: 9px; font-size: 14px; font-weight: 600; }
+  .rad i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--ink-400); }
+  .rad.on { border-color: var(--teal-600); background: var(--teal-50); }
+  .rad.on i { border: 5px solid var(--teal-700); }
+  .rad small { font-size: 11.5px; font-weight: 700; color: var(--ink-500); text-transform: uppercase; }

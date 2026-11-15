@@ -1,0 +1,137 @@
+{
+  "_doc": "The named sample people the generator places on purpose before the PRNG fills the rest (SPECIFICATIONS section 6.7 FR-IMP-9; REQUIREMENTS FR-IMP-9; facts from docs/source/MOCKUP-ADDITIONS.md and the approved customer page mockups/src/office/customer.html). Each street is a real row of the bundled street list (name, city, ZIP); the mockups' own street names (Maple Hollow Ct, Cobblestone Dr, Kenwick Rd) are not in the list, so the nearest real street in the same town is used and the house numbers are the mockups'. Kathy OBrien and Kathleen O'Brien-Miller are 1 planted likely pair (same address, same mobile). Times are America/New_York wall clock.",
+  "people": [
+    {
+      "key": "harold-jenkins",
+      "name": "Harold Jenkins",
+      "street": { "name": "Spring Hollow Court", "city": "Westerville", "zip": "43081" },
+      "houseNumber": 418,
+      "mobile": "(614) 555-0148",
+      "homePhone": "(614) 555-0122",
+      "email": "",
+      "textLanguage": "en",
+      "timeZone": "America/New_York",
+      "textsOn": true,
+      "customerSince": "2014-10-06",
+      "homeType": "Single family, basement",
+      "gettingIn": "Side door. Knock firmly.",
+      "membership": { "since": "2019-03-01", "renews": "2027-03-01", "benefitsKey": "comfort_club" },
+      "pastVisits": [
+        { "date": "2020-10-12", "windowStart": "08:00", "windowEnd": "12:00", "arrivedAt": "10:20", "technician": "Not recorded", "service": "Furnace tune-up", "workDone": "Replaced the filter." },
+        { "date": "2021-08-02", "windowStart": "12:00", "windowEnd": "16:00", "arrivedAt": "15:05", "technician": "Luis Ortega", "service": "AC not cooling", "workDone": "Replaced the contactor." },
+        { "date": "2022-11-07", "windowStart": "08:00", "windowEnd": "12:00", "arrivedAt": "12:35", "technician": "Kevin Doyle", "service": "Water heater flush", "workDone": "Flushed sediment; anode rod fine." },
+        { "date": "2023-05-18", "windowStart": "12:00", "windowEnd": "16:00", "arrivedAt": "13:40", "technician": "Ashley Nguyen", "service": "AC tune-up", "workDone": "Replaced the condensate line." },
+        { "date": "2023-10-03", "windowStart": "08:00", "windowEnd": "12:00", "arrivedAt": "09:15", "technician": "Tom Reinhart", "service": "Furnace tune-up", "workDone": "All readings normal." },
+        { "date": "2024-01-22", "windowStart": "08:00", "windowEnd": "12:00", "arrivedAt": "11:10", "technician": "Tom Reinhart", "service": "No heat (repair)", "workDone": "Replaced the igniter." },
+        { "date": "2025-06-09", "windowStart": "12:00", "windowEnd": "16:00", "arrivedAt": "14:25", "technician": "Brian Schaefer", "service": "AC tune-up", "workDone": "Cleaned the outdoor coil. Capacitor a little low." },
+        { "date": "2025-10-14", "windowStart": "08:00", "windowEnd": "12:00", "arrivedAt": "10:50", "technician": "Maria Santos", "service": "Furnace tune-up", "workDone": "Cleaned the flame sensor, replaced the filter." }
+      ],
+      "equipment": [
+        { "type": "furnace", "year": 2014, "location": "basement", "details": "Gas furnace, 80,000 BTU, 96% efficient. Filter 16x25x4" },
+        { "type": "air_conditioner", "year": 2014, "location": "outdoor unit on the east side", "details": "Central air conditioner, 2.5 ton" },
+        { "type": "water_heater", "year": 2016, "location": "basement", "details": "Gas water heater, 50 gallon" },
+        { "type": "thermostat", "year": 2019, "location": "hallway, first floor", "details": "Programmable thermostat" }
+      ]
+    },
+    {
+      "key": "sean-obrien",
+      "name": "Sean O'Brien",
+      "street": { "name": "Arcadia Avenue", "city": "Columbus", "zip": "43202" },
+      "houseNumber": 287,
+      "mobile": "(614) 555-0163",
+      "homePhone": "",
+      "email": "sobrien@example.com",
+      "textLanguage": "en",
+      "timeZone": "America/New_York",
+      "textsOn": true,
+      "customerSince": "2017-04-18",
+      "homeType": "Single family, basement",
+      "gettingIn": "",
+      "membership": { "since": "2021-04-01", "renews": "2027-04-01", "benefitsKey": "comfort_club" },
+      "equipment": [
+        { "type": "furnace", "year": 2011, "location": "basement", "details": "Gas furnace" },
+        { "type": "air_conditioner", "year": 2011, "location": "outdoor unit at the back", "details": "Central air conditioner" }
+      ]
+    },
+    {
+      "key": "kathleen-obrien-miller",
+      "name": "Kathleen O'Brien-Miller",
+      "street": { "name": "Kent Road", "city": "Upper Arlington", "zip": "43221" },
+      "houseNumber": 57,
+      "mobile": "(614) 555-0177",
+      "homePhone": "",
+      "email": "kobrienmiller@example.com",
+      "textLanguage": "en",
+      "timeZone": "America/New_York",
+      "textsOn": true,
+      "customerSince": "2016-09-12",
+      "homeType": "Single family, crawl space",
+      "gettingIn": "",
+      "likelyPairWith": "kathy-obrien"
+    },
+    {
+      "key": "kathy-obrien",
+      "name": "Kathy OBrien",
+      "street": { "name": "Kent Road", "city": "Upper Arlington", "zip": "43221" },
+      "houseNumber": 57,
+      "mobile": "(614) 555-0177",
+      "homePhone": "",
+      "email": "",
+      "textLanguage": "en",
+      "timeZone": "America/New_York",
+      "textsOn": true,
+      "customerSince": "2022-03-07",
+      "homeType": "",
+      "gettingIn": "",
+      "likelyPairWith": "kathleen-obrien-miller"
+    },
+    {
+      "key": "rosa-delgado",
+      "name": "Rosa Delgado",
+      "street": { "name": "Andrews Avenue", "city": "Whitehall", "zip": "43213" },
+      "houseNumber": 512,
+      "mobile": "(614) 555-0139",
+      "homePhone": "",
+      "email": "",
+      "textLanguage": "es",
+      "timeZone": "America/New_York",
+      "textsOn": true,
+      "customerSince": "2019-07-22",
+      "homeType": "Single family, basement",
+      "gettingIn": ""
+    },
+    {
+      "key": "deborah-lin",
+      "name": "Deborah Lin",
+      "street": { "name": "Bluff Avenue", "city": "Grandview Heights", "zip": "43212" },
+      "houseNumber": 1340,
+      "mobile": "(614) 555-0186",
+      "homePhone": "",
+      "email": "dlin@example.com",
+      "textLanguage": "en",
+      "timeZone": "America/Los_Angeles",
+      "textsOn": true,
+      "customerSince": "2020-02-10",
+      "homeType": "Duplex",
+      "gettingIn": "Tenant lets you in; landlord lives in San Diego."
+    },
+    {
+      "key": "linda-miller",
+      "name": "Linda Miller",
+      "street": { "name": "Cobblestone Avenue", "city": "Westerville", "zip": "43081" },
+      "houseNumber": 2271,
+      "mobile": "(614) 555-0154",
+      "homePhone": "",
+      "email": "",
+      "textLanguage": "en",
+      "timeZone": "America/New_York",
+      "textsOn": true,
+      "customerSince": "2017-05-15",
+      "homeType": "Single family, slab",
+      "gettingIn": "",
+      "equipment": [
+        { "type": "air_conditioner", "year": 2017, "location": "outdoor unit at the back", "details": "Central air conditioner" }
+      ]
+    }
+  ]
+}

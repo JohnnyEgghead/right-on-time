@@ -1,0 +1,24 @@
+/* ---------- DK-19 Phone device frame and status bar ---------- */
+/* source: mockups/src/assets/phone.css (frame presentation, never built) */
+/* Phone presentation: a 390 x 844 screen inside a simple device frame on a plain background */
+body.stage {
+  width: 520px; height: 980px; overflow: hidden; margin: 0;
+  background: radial-gradient(120% 90% at 50% 30%, #f4f7f9 0%, #e6ecf0 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.device {
+  width: 414px; height: 868px; border-radius: 60px; padding: 12px; position: relative;
+  background: linear-gradient(145deg, #2b2f36, #121418 55%, #23262c);
+  box-shadow: 0 30px 60px rgba(15, 23, 42, .28), 0 8px 18px rgba(15, 23, 42, .18), inset 0 0 0 1.5px #4a4f58, inset 0 0 0 4px #15171b;
+}
+.device::before { content: ""; position: absolute; left: -3px; top: 168px; width: 3px; height: 34px; border-radius: 2px 0 0 2px; background: #2a2d33; box-shadow: 0 56px 0 #2a2d33, 0 112px 0 #2a2d33; }
+.device::after { content: ""; position: absolute; right: -3px; top: 228px; width: 3px; height: 84px; border-radius: 0 2px 2px 0; background: #2a2d33; }
+.screen { width: 390px; height: 844px; border-radius: 48px; overflow: hidden; position: relative; background: #fff; display: flex; flex-direction: column; }
+.island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 120px; height: 34px; border-radius: 20px; background: #0b0c0e; z-index: 20; }
+.sbar { height: 54px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 40px; font-weight: 650; font-size: 16.5px; letter-spacing: -.01em; position: relative; z-index: 10; }
+.sbar .icons { display: flex; align-items: center; gap: 6px; }
+.sbar svg { display: block; }
+.homebar { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: #111; z-index: 20; }
+.screen .ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
+.screen .ic svg { width: 100%; height: 100%; }
+

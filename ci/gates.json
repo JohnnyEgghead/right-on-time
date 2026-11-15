@@ -1,0 +1,705 @@
+{
+  "_doc": "Gate map written by P1-GATES (BUILD_PLAN section 7, D-15); later lanes edit this file only as BUILD_PLAN section 3 D-15 lists, and a lane activates a gate by adding its marker file ci/active/<id>. A gate with cmd null runs the script ci/gates/<id>.sh (second-lane case files go under ci/gates/<id>/); defaultTimeoutS is the per-gate time limit in seconds and a gate's own timeoutS overrides it (ci/README.md). defaultTimeoutS is 300 s: the slowest gate measured green was unit-tests at 4.1 s (full --all run 7.7 s, 2026-10-31), so 300 s is about 70 times the slowest gate, leaves each of the two planned Playwright gates (expected well under 120 s) at least 2.5 times its time, and sits strictly below the 900 s checks job limit that also pays for install. 'when' is merge | wave | signoff | nightly | checkpoint (P3-CI-CADENCE, D-15; checkpoint is owner answer 24ad46b5, F-1410: a `when: checkpoint` gate runs only in `ci.sh --checkpoint`, the nightly set plus these gates, or by name with `ci.sh --gates <id>`, never in `ci.sh --nightly`; look-values-comparator-nightly is the one): a `when: nightly` gate runs only in `ci.sh --nightly` (or by name with `ci.sh --gates <id>`), never in the push set (`ci.sh --all`, the wave run); a gate with no 'when' stops ci.sh at start-up. 'activates' is the 1 task whose merge makes the marker owed (ci/README.md). Gates with their own timeoutS: by manager ruling (F-297, F-290), page-walkers 720 s (measured green 330 s in the wave run at 4b97bcb, .build/ci/wave-run-W13b.log) and import-target-counts with P2-SETUP among its builders, 600 s (D-15 as plan v0.11 amends it, F-314: measured green on the Spectre CI rig, the gate alone 3 times in the wave run's engine layout at ad4d078, 282.3 s, 260.6 s and 209.2 s; 600 s is about 2.1 times the slowest); and restore-test (D-15 as plan v0.11 amends it, F-387, F-400, F-485): 700 s, about 2.5 times its slowest measured green on the Spectre CI rig, 278.3 s in the wave run at dcb5ca7 (276.2 s alone at cd7aa37; .build/evidence/F485/). It replaces the 360 s that P3-BACKUP set from 117.5 s on a Mac rig before Spectre was measured. unit-tests and G-CI4 (D-15 measured-value rule, F-536, F-525: G-CI4 step 3 runs the root config 3 times): unit-tests 600 s, about 2.2 times its green 275.4 s on the Spectre CI rig in the push checks job's layout (the runner's pinned dind engine, cold, the job container on its own network), run sha 3761fc8; G-CI4 was 1260 s for the whole merge set until the P3-CI-CADENCE split (now 90 s, the last sentence and its note), about 2.1 times its green 602 s alone on Spectre in the same engine layout with the wave container's systemd pin and BW_WAVE_CONTAINER=1, run sha 3761fc8 (.build/evidence/P3-REPLAY-FIX/). F-410 (owner ruling ffd9f9ff): a gate with a parallel field runs beside other such gates, up to the run's cap (ci.sh --jobs=<n> or CI_MAX_PARALLEL; default 2 on the 8-CPU wave rig), never beside a gate that shares one of its parallel.exclusive groups (exclusiveGroups names each group and the resource it guards). A gate with no parallel field runs alone. F-485: a second group, heavy, keeps the long gates apart, and page-walkers has no parallel field, so it runs alone (exclusiveGroups). A lane that activates a gate adds the field only after checking that its script shares no fixed port, database, docker name, fixed path, browser profile, lock or log with another gate (an empty exclusive list), or names the group it shares (ci/README.md). P3-CI-CADENCE (D-15, Nov 2, 2026, F-575): the measured values, each from a Spectre run (.build/evidence/P3-CI-CADENCE/spectre/): G-CI4 90 s (28.1 s alone at baed10b, narrow-green; 23.5 s alone at 7dc3156, narrow-green2; 17.5 s in the push run at a7a17d1, push-wave) and page-walkers-nightly, set to 900 s then (547.6 s green alone at 7dc3156, narrow-green2); its timeoutS is now 1300 s because P4-ADMIN-IMPORT added step 5, from 885 s read on a local probe-only run at 809767e whose verdict was not kept, so 885 s is not a measured green of record (F-626); page-walkers is now 4350 s (F-1286: 2 x 2171.4 s, the page-walkers time measured green in 1 narrow Spectre run at run sha 08681a2b, verdict .build/evidence/NARROW-RUNS/ci-verdict-08681a2b3fa7-20261110-044116.json) and page-walkers-nightly 5300 s (F-917: measured alone on the Spectre rig in 1 narrow serial run at 994ff95e, page-walkers-nightly 3545.56 s with 2 cases red; page-walkers was 1449.39 s green there, a figure since replaced by the 4350 s sizing; see their notes). G-CI4-nightly 1000 s (461.9 s green alone at 1a39d60, narrow-nightly, F-576) is measured too. The one provisional value, with its trigger named in its gate note: look-values-comparator-nightly 900 s (84.5 s green at baed10b and 87.6 s at 7dc3156 in narrow runs; 900 s stays until the first nightly run on Spectre sets the value). F-1201 (manager ruling under the owner's CI cadence ruling of Nov 4, 2026, items 1 and 3; SPECIFICATIONS SD-38): a gate may name its runner, linux or mac; absent means linux. A runner mac gate needs this Mac (Xcode, the iOS simulator): ci.sh's merge, push, nightly and records sets never select it (only --gates by name), the whole-run cap of ci/wave-run.sh leaves it out, and the mac half of ci/wave-run.sh runs it on this Mac (ci/mac-half.ts, by the same when rule). native-no-demo and native-suite are the 2: native-suite (apps/tech-native/xcuitest/suite.sh) is when nightly, so it runs in the nightly and never in the merge set or the push run; its timeoutS 5400 s is about 2.05 times its measured green on the mac runner from a cold checkout (no ios/ and no build/, as in the main tree; F-1207): 2634 s in the nightly mac half at run sha 69df3377 (Nov 9, 2026: prebuild 29 s, cold build 189 s, then 6 classes, each on its own stack; .build/evidence/P6-XCUITEST-FX1/), the D-15 measured-value rule; a warm run, with ios/ current, was 2440 s (row 490).",
+  "defaultTimeoutS": 300,
+  "exclusiveGroups": {
+    "engine-net": "F-410: the run engine's network namespace, where the wave container and every browser live (ci/wave-run.sh, --network container:<engine>). A Compose bring-up or teardown adds and removes interfaces there, and a Chromium page load in flight then fails with net::ERR_NETWORK_CHANGED (F-290, measured: .build/evidence/F-290/wave-run-7ead420.log). So no gate that starts or removes a container runs beside a gate that drives a browser; these are also the memory-heavy gates (2 browsers, a 5-service stack, an image build), so they run 1 at a time. Membership is read from every file a gate runs, not only its script (F-464). Members: look-values-comparator (browsers), contract-gates, import-target-counts (ci/setup-stack.sh) and restore-test (their stacks), and map-manifest (infra/tests/maps-nginx.maps.test.ts starts and removes an nginx container), and unit-tests, kept in both groups by ruling F-525 (OA-88) and pinned by ci/run-gates.test.ts ('keeps unit-tests in engine-net and heavy'); no unit test starts a container today (the push-set tests use a fake docker, ci/engine-self-check.test.ts), so its membership is by that ruling, not by a mechanism, and the audit rule above (a gate that runs a file which matches the engine pattern) does not list it. page-walkers (browsers and 8 stacks, ci/gates/page-walkers.sh) needs the same, and more: it has no parallel field, so it runs alone (F-485).",
+    "heavy": "F-485: the wave rig itself (Spectre: Docker Desktop on WSL2, 8 vCPUs, 15.5 GiB, 1 virtual disk under the CI container, the run engine and its stacks). Two long gates side by side slow each other far past a fair share of 8 CPUs. In the wave run at d822332, page-walkers' shell-stack image build (pnpm install and next build on the run engine) took 335 s beside G-CI7's PostgreSQL step, against 32 to 88 s in the 24 other kept wave runs; G-CI7 took 287.9 s against 110.8 s (its CPU-only step 2: 30.2 s against 3.1 s). page-walkers and G-CI7 both hit their limits (.build/evidence/F485/). Members run 1 at a time: every engine-net gate (each builds an image, brings up a stack or drives a browser) and the 2 embedded-PostgreSQL gates measured over 100 s alone on the rig at cd7aa37, G-CI4 (216.4 s) and G-CI7 (118.7 s). F-915: and typecheck, CPU-bound (4 tsc processes at once, then the root tsc): 70.17 s alone at 1c6ea9cc, over its 300 s limit beside look-values-comparator-nightly at 806f63a8. F-1164: and G-CI2, 144.35 s alone at b405206c, killed at its 300 s limit beside look-values-comparator-nightly at 40f8433c. page-walkers, the longest (515.7 s alone, 72 percent of its limit), goes further: it has no parallel field and runs alone. Any other declared gate still runs beside a heavy one."
+  },
+  "gates": [
+    {
+      "id": "typecheck",
+      "title": "Typecheck: every workspace package and every root-level TypeScript file",
+      "when": "merge",
+      "critical": false,
+      "builders": [
+        "P1-REPO",
+        "P1-GATES"
+      ],
+      "activates": "P1-GATES",
+      "activeFromPhase": 1,
+      "cmd": "pnpm run typecheck",
+      "parallel": {
+        "exclusive": [
+          "heavy"
+        ]
+      },
+      "note": "F-915: in the heavy group. 70.17 s alone on the Spectre rig (narrow serial run at 1c6ea9cc, the code of 0411fbf6 plus 1 probe test file), against 198.49 s, 234.02 s, 286.85 s and over 300 s (killed at the 300 s default limit, 806f63a8) beside look-values-comparator-nightly in the 4 nightlies of Nov 3 to 7, and 49.8 to 129.3 s beside restore-test in wave runs. Its 4 parallel tsc processes and the root tsc are CPU-bound, so it no longer pairs with a heavy gate; the 300 s limit stands (4.3 times the measured green)."
+    },
+    {
+      "id": "lint",
+      "title": "ESLint over the repo",
+      "when": "merge",
+      "critical": false,
+      "builders": [
+        "P1-REPO"
+      ],
+      "activates": "P1-GATES",
+      "activeFromPhase": 1,
+      "cmd": "pnpm run lint",
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "no-system-clock-tree",
+      "title": "no-system-clock over the whole tree with inline eslint-disable comments off (G-CI4 step 2)",
+      "when": "merge",
+      "critical": false,
+      "builders": [
+        "P2-TIME",
+        "P6-CLOSE"
+      ],
+      "activates": "P6-CLOSE",
+      "activeFromPhase": 2,
+      "cmd": "node ci/gates/G-CI4/cli.ts tree",
+      "parallel": {
+        "exclusive": []
+      },
+      "note": "F-1299 (W-43): G-CI4 is when wave, so the push run never ran its tree lint, and the merge-set lint (gate lint) honors eslint-disable comments: asc.mjs Date.now (F-1285) passed every push run. This gate runs the same command as G-CI4 step 2 (no clock read outside packages/time/src/real.ts, inline config off, and the listing of every realNow call site with its tag) in the merge set, which the push run includes. 5.3 s on the Mac (row 538 report). G-CI4 keeps the step, so the wave run is unchanged. F-1302: P6-CLOSE adds this gate under its plan block (BUILD_PLAN P6-CLOSE Description, a row-named gate), not under D-15, which lists no closing-pass gate add; P2-TIME built the tree check it runs (G-CI4, builder P2-TIME, phase 2), so the builders are P2-TIME and P6-CLOSE and it is active from phase 2."
+    },
+    {
+      "id": "unit-tests",
+      "title": "Vitest unit tests",
+      "when": "merge",
+      "critical": false,
+      "builders": [
+        "P1-REPO"
+      ],
+      "activates": "P1-GATES",
+      "activeFromPhase": 1,
+      "cmd": "pnpm run test",
+      "timeoutS": 600,
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      }
+    },
+    {
+      "id": "typecheck-coverage",
+      "title": "Every tracked TypeScript file outside apps/ and packages/ is in the root typecheck",
+      "when": "merge",
+      "critical": false,
+      "builders": [
+        "P1-GATES"
+      ],
+      "activates": "P1-GATES",
+      "activeFromPhase": 1,
+      "cmd": "node ci/typecheck-coverage.ts",
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "test-reason-check",
+      "title": "Every test added since the merge base carries a why: tag (jl-dev test-reason-check.py, vendored)",
+      "when": "merge",
+      "critical": false,
+      "builders": [
+        "P1-GATES"
+      ],
+      "activates": "P1-GATES",
+      "activeFromPhase": 1,
+      "cmd": "bash ci/test-reason.sh",
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "page-inventory-check",
+      "title": "acceptance/page-inventory.json is set-equal to UI-SPECIFICATION section 2.3 (D-9)",
+      "when": "merge",
+      "critical": false,
+      "reads": [
+        "docs/UI-SPECIFICATION.md",
+        "acceptance/page-inventory.json"
+      ],
+      "builders": [
+        "P1-GATES"
+      ],
+      "activates": "P1-GATES",
+      "activeFromPhase": 1,
+      "cmd": "node ci/page-inventory.ts check",
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "no-hosted-runners",
+      "title": "No hosted runners; runner self-check",
+      "when": "merge",
+      "critical": true,
+      "builders": [
+        "P1-CI-SPECTRE"
+      ],
+      "activates": "P1-CI-SPECTRE",
+      "activeFromPhase": 1,
+      "cmd": "node ci/no-hosted-runners.ts",
+      "covers": [
+        "no-hosted-runners",
+        "runner self-check"
+      ],
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "gate-activation-check",
+      "title": "A merged activating task has its marker; a marker names a gate",
+      "when": "merge",
+      "critical": true,
+      "builders": [
+        "P1-GATES"
+      ],
+      "activates": "P1-GATES",
+      "activeFromPhase": 1,
+      "cmd": "node ci/gate-activation-check.ts",
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "spikes-index-check",
+      "title": "docs/build/SPIKES.md matches its record files (D-13)",
+      "when": "merge",
+      "critical": false,
+      "reads": [
+        "docs/build/**"
+      ],
+      "builders": [
+        "P1-REPO",
+        "P1-GATES"
+      ],
+      "activates": "P1-GATES",
+      "activeFromPhase": 1,
+      "cmd": "bash ci/spikes-index.sh --check",
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "G-CI1",
+      "title": "inv1-offline-exactly-once",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P3-ITEMS",
+        "P4-JOB",
+        "P4-TECHNICIANS",
+        "P5-TWA-OUTBOX"
+      ],
+      "activates": "P3-ITEMS",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "timeoutS": 900,
+      "note": "F-940 (P5-TWA-OUTBOX): step 3, the client stack step (ci/outbox-stack.sh), takes about 150 to 170 s on the Mac, and about 3 times that on the Spectre rig (about 510 s; a rule of thumb from W13, not a measure), so the 300 s default is too tight. timeoutS 900 s is PROVISIONAL, not a measured green: it is about 1.8 times that figure. The trigger: the first Spectre wave run that includes the client stack step sets the value (D-15 measured-value rule, F-602).",
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      }
+    },
+    {
+      "id": "G-CI2",
+      "title": "inv2-never-dropped",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P3-OUTBOX",
+        "P3-BILLING"
+      ],
+      "activates": "P3-OUTBOX",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "note": "F-1164: heavy, by the group's rule (over 100 s alone on the rig): 144.35 s alone on Spectre at b405206c (apps/worker/src/import.db.test.ts 130.9 s of it, 4 full imports). Beside look-values-comparator-nightly it took 137.9 to 262.9 s in 4 nightlies and was killed at its 300 s limit in nightly 40f8433c.",
+      "parallel": {
+        "exclusive": [
+          "heavy"
+        ]
+      }
+    },
+    {
+      "id": "G-CI3",
+      "title": "inv3-one-technician-capacity",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P3-OFFICE-WRITES",
+        "P3-JOB-WRITES",
+        "P4-ADMIN-WINDOWS"
+      ],
+      "activates": "P3-OFFICE-WRITES",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "G-CI4",
+      "title": "inv4-one-clock-zoned-times (push half: the time package under 3 zones)",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P2-TIME"
+      ],
+      "activates": "P2-TIME",
+      "activeFromPhase": 2,
+      "cmd": null,
+      "timeoutS": 90,
+      "parallel": {
+        "exclusive": [
+          "heavy"
+        ]
+      },
+      "note": "P3-CI-CADENCE (owner ruling Nov 2, 2026, \"Daily + phase close\"): the push half. Step 3 runs the time package (packages/time) under the 3 host zones; every merge-set test under 3 zones is the nightly gate G-CI4-nightly. Steps 1, 2, 4 and 5 (the committed cases, the real tree, DbClock, schema-time-zone-check) are unchanged. timeoutS 90 s (was 1260 s for the whole merge set under 3 zones), F-544, measured on the Spectre rig (P3-CI-CADENCE fix): the push half took 28.1 s alone at baed10b (narrow-green), 23.5 s alone at 7dc3156 (narrow-green2) and 17.5 s beside other gates in the push run at a7a17d1 (push-wave); 90 s is about 3 times the slowest, under D-15's measured-value rule. Evidence: .build/evidence/P3-CI-CADENCE/spectre/."
+    },
+    {
+      "id": "G-CI5",
+      "title": "inv5-location-window",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P5-LIVEMAP",
+        "P3-POSITIONS",
+        "P5-INBOX"
+      ],
+      "activates": "P5-LIVEMAP",
+      "activeFromPhase": 5,
+      "cmd": null,
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      }
+    },
+    {
+      "id": "G-CI6",
+      "title": "inv6-no-pii-in-links-logs",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P7-SCANS"
+      ],
+      "activates": "P7-SCANS",
+      "activeFromPhase": 7,
+      "cmd": null,
+      "timeoutS": 2400,
+      "note": "F-1527 (P7-SCANS): the P7-SCANS cycle 1 review measured this gate at 743 s on the Mac at lane head 45416506 (setup 71 s, suite 334 s, scan about 308 s), so the 300 s default would kill every run. timeoutS 2400 s is PROVISIONAL, not a measured green on the Spectre CI rig: no Spectre time exists yet, and 2400 s leaves room for a slower Spectre run. The trigger: the next nightly that runs G-CI6 measures its Spectre time, and timeoutS then becomes about 2.2 times that green time, recorded with the run sha (D-15 measured-value rule, F-940 pattern)."
+    },
+    {
+      "id": "G-CI7",
+      "title": "inv7-deny-by-default",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P2-KERNEL"
+      ],
+      "activates": "P2-KERNEL",
+      "activeFromPhase": 2,
+      "cmd": null,
+      "parallel": {
+        "exclusive": [
+          "heavy"
+        ]
+      }
+    },
+    {
+      "id": "G-CI8",
+      "title": "inv8-one-message",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P2-SMS",
+        "P3-TEXTS",
+        "P4-JOB",
+        "P4-NEWJOB",
+        "P4-TECHNICIANS"
+      ],
+      "activates": "P3-TEXTS",
+      "activeFromPhase": 3,
+      "cmd": null
+    },
+    {
+      "id": "G-CI9",
+      "title": "inv9-quiet-hours",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P3-OUTBOX",
+        "P3-REPLAY"
+      ],
+      "activates": "P3-OUTBOX",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "G-CI10",
+      "title": "inv10-billing-exactly-once",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P3-BILLING",
+        "P3-REPLAY",
+        "P4-JOB"
+      ],
+      "activates": "P3-BILLING",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "look-values-comparator",
+      "title": "look-values comparator (push half: Chromium)",
+      "when": "wave",
+      "critical": false,
+      "builders": [
+        "G-LOOK-PARITY"
+      ],
+      "activates": "G-LOOK-PARITY",
+      "activeFromPhase": 1,
+      "cmd": null,
+      "engines": ["chromium"],
+      "timeoutS": 600,
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      },
+      "note": "P3-CI-CADENCE: the push half runs on Chromium only (BW_PW_ENGINES=chromium); the WebKit compare is the nightly gate look-values-comparator-nightly. F-1552: the 300 s default killed the nightly at 14a96fe1 (300.4 s, 18 of its 27 files done, beside push run f749b607). Its green time grew with its cases: 165.7 s at 806f63a8, 244.7 s at 720ae977, 272.5 s at 54a12538 (nightlies on the Spectre CI rig). timeoutS 600 is about 2.2 times that slowest green (D-15 measured-value rule)."
+    },
+    {
+      "id": "page-walkers",
+      "title": "axe-scan, tap-target-44, outside-origin-guard, spanish-fallback-pass, overflow-pass (push half: Chromium, English passes on every built screen)",
+      "when": "wave",
+      "critical": false,
+      "builders": [
+        "P1-PAGE-GATES"
+      ],
+      "activates": "P1-PAGE-GATES",
+      "activeFromPhase": 1,
+      "cmd": null,
+      "engines": ["chromium"],
+      "timeoutS": 4350,
+      "note": "F-290, F-403: 15 steps run one after the other (ci/gates/page-walkers.sh): 1 and 2 the walkers (about 45 s) and then 13 stack steps: the shell stack (3), the auth stack (4), the events stack (5, ci/events-stack.sh), the billing stack (6, ci/billing-stack.sh, P4-BILLING-UI), the board stack (7, ci/board-stack.sh, P4-BOARD), the health stack (8, ci/health-stack.sh, P4-HEALTH), the messages stack (9, ci/messages-stack.sh, P4-MESSAGES) the job stack (10, ci/job-stack.sh, P4-JOB) the windows stack (11, ci/windows-stack.sh, P4-ADMIN-WINDOWS) and the reports stack (12, ci/reports-stack.sh, P4-REPORTS). P5-BOOKING (F-943): the booking stack (13, ci/booking-stack.sh) follows, 102 s on the Mac on Chromium; the nightly runs it on WebKit after the reports stack (66 s on the Mac). P5-INBOX (F-967): the inbox stack (14, ci/inbox-stack.sh) follows the booking stack in the same way, and the nightly runs it on WebKit after the booking stack. P5-TWA-MAP-ME: the map and Me stack (15, ci/mapme-stack.sh: the web technician app's Map tab, Directions, Parts, Me and install page) follows the inbox stack in the same way, and the nightly runs it on WebKit after the inbox stack. timeoutS 4350 s, F-1286 and D-15: 2 x 2171.4 s, the gate measured green at run sha 08681a2b in 1 narrow Spectre run (verdict .build/evidence/NARROW-RUNS/ci-verdict-08681a2b3fa7-20261110-044116.json). Earlier sizing, F-917: the gate took 1449.39 s green alone on the Spectre rig (narrow serial run at 994ff95e: the code of f8cbaf65 with the 2 page-walkers caps doubled for the measure and the new job suite's fetch errors naming their call), every step and all 12 stack steps; 2200 s was about 1.5 times that, the ratio of the older sizing, and 4350 s replaces it. At 806f63a8 it was killed at the 1300 s limit in its last step (reports, 1390.9 s). Earlier, timeoutS 1300 s, F-602 (W22-CLOSE-CI): steps 1 to 9 took 697 s on a Mac and 695 s on Spectre (a red run, sha 5a99e5de; the cap was then 720 s, which was already 1.03 times that); the job step, step 10, took 177.6 s on a Mac with warm images (a Mac headless pre-check, W22-CLOSE-CI; no Spectre run of step 10 yet), so steps 1 to 10 are about 873 s, and 1300 s is about 1.5 times that, the ratio of the older sizing. The cap is a gate limit, not the checks job's 900 s (page-walkers is a wave gate); the whole-run cap still clears it (ci/wave-job-timeout.test.ts). The first Spectre run of record with step 10 sets the value (re-size from it). Older figures, measured with the first 4 steps only: The first 3 sum to about 290 s on Spectre; wave runs measured 311 to 370 s for the gate with the 3 stack steps, and with the events stack about 420 to 470 s. 720 s is about 1.5 times that, below the 900 s job limit, past half the 300 s default (ci/README.md: raise below the job limit). Side by side is refused: net::ERR_NETWORK_CHANGED (ci/gates/page-walkers.sh). F-485: no parallel field, so it runs alone. Alone it took 515.7 s at cd7aa37; beside G-CI4 and G-CI7 it took 628.9 s at dcb5ca7 and hit 720 s at d822332. The wave run builds its BW_WEB_PREVIEW=1 web image in setup (ci/wave-run.sh), so the shell stack's build is a cache hit here. P3-CI-CADENCE: this is the push half, Chromium only (BW_PW_ENGINES=chromium), and on every built screen the English passes only (BW_APP_WALK_PASSES=english); the walkers' own proofs and the 3 stack steps run as before, on Chromium. WebKit and the all-screens Spanish and overflow passes are the nightly gate page-walkers-nightly. P4-ADMIN-WINDOWS: step 11, ci/windows-stack.sh (both engines in 1 world, 12 tests): measured on a Mac with a warm image, 86 s to bring up and set up the stack plus 24 s of suite (110 s), 200 s plus the suite with a cold image build; timeoutS is not resized for it (the first wave Spectre run of record sets it, F-602). P4-REPORTS: step 12, ci/reports-stack.sh (image build, setup and the suite on Chromium); it adds to the sum above and timeoutS 1300 is not resized for it (the first wave 23 Spectre run of record sets it, F-602, D-15). P4-TECHNICIANS adds no step: its suite (ci/technicians-stack) runs inside the shell stack step (ci/shell-stack.sh), after the customers suite, and adds about 13 s of suite on both engines on a Mac (6.5 s each) plus 1 fixture load, with no image build. P4-NEWJOB: 6 walker rows for SCR-OFC-04 (about +23 s for the walkers on both engines on a Mac, about half on Chromium alone) and the new job suite inside step 10 (ci/newjob-stack, run by ci/job-stack.sh on the job stack with no second bring-up: 160.9 s for both engines on a Mac, 10 tests, most of it the worker delivering the confirmation texts); timeoutS is not resized: the first wave 23 Spectre run of record sets it (F-602)."
+    },
+    {
+      "id": "license-gates",
+      "title": "license-inventory, ios-bundle-copyleft",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "G-LICENSE"
+      ],
+      "activates": "G-LICENSE",
+      "activeFromPhase": 1,
+      "cmd": null,
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "schema-gates",
+      "title": "schema-doc-parity, schema-time-zone-check",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P2-SCHEMA"
+      ],
+      "activates": "P2-SCHEMA",
+      "activeFromPhase": 2,
+      "cmd": null,
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "contract-gates",
+      "title": "contract-tests, contract-diff",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P2-API-CORE"
+      ],
+      "activates": "P2-API-CORE",
+      "activeFromPhase": 2,
+      "cmd": null,
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      }
+    },
+    {
+      "id": "catalog-parity",
+      "title": "catalog-parity; catalog merge driver",
+      "when": "wave",
+      "critical": false,
+      "builders": [
+        "P2-I18N"
+      ],
+      "activates": "P2-I18N",
+      "activeFromPhase": 2,
+      "cmd": null,
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "generator-gates",
+      "title": "generator-manifest, phone-range-scan",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P2-GENERATOR"
+      ],
+      "activates": "P2-GENERATOR",
+      "activeFromPhase": 2,
+      "cmd": null,
+      "parallel": {
+        "exclusive": []
+      }
+    },
+    {
+      "id": "import-target-counts",
+      "title": "import-target-counts",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P2-IMPORT",
+        "P2-SETUP"
+      ],
+      "activates": "P2-IMPORT",
+      "activeFromPhase": 2,
+      "cmd": null,
+      "timeoutS": 600,
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      },
+      "onlyWhenChanged": [
+        "packages/import/**",
+        "packages/setup/**",
+        "packages/generator/**",
+        "packages/db/src/**",
+        "packages/db/migrations/**",
+        "infra/compose.yaml",
+        "infra/image/**",
+        "ci/gates/import-target-counts.sh",
+        "ci/gates/import-target-counts/**",
+        "ci/setup-stack.sh",
+        "ci/setup-stack/**",
+        "ci/data-assets.ts"
+      ],
+      "note": "P3-CI-CADENCE (owner ruling Nov 2, 2026, \"Daily + phase close\"): in a push run (ci.sh --all) this gate runs only when a file under onlyWhenChanged changed since the last recorded run that ran it green (.build/ci-time.jsonl, scope push, nightly or full); otherwise it is recorded unchanged, naming that base sha. A nightly run (ci.sh --nightly) and --gates run it unscoped. The list is the gate's inputs: the import, setup and generator packages, the database seed (packages/db/src/seed), src and migrations (packages/db), the Compose file and app image its stack step builds, and the gate's own files."
+    },
+    {
+      "id": "map-manifest",
+      "title": "map-manifest",
+      "when": "wave",
+      "critical": false,
+      "builders": [
+        "P3-MAPS-BAKE"
+      ],
+      "activates": "P3-MAPS-BAKE",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "timeoutS": 2400,
+      "note": "P6-ROUTE-BAKE: step 5, ci/route-bake-stack.sh (the baked steps, API-104 and the routing service against the Compose stack), and the known-bad arm over the 26 routing files (a real copy of each, cloned where the disk can) join the gate. Measured on this Mac (Mac headless pre-check, warm image): stack up and set up 67 s, suite 307.8 s (most of it the reset test waiting out the 300 s cool-down setup's own reset starts), the real-file tests 10 s; with a cold image build 211 s to set up. About 6.5 minutes in all; at the 3 times Mac-to-Spectre figure of W13 (a rule of thumb, not a measure) about 20 minutes, so timeoutS 2400 s is PROVISIONAL, about 2 times the sum of the Mac figures at that ratio. The trigger: the first Spectre wave run with this step sets the value (D-15 measured-value rule, F-602). The default 300 s was the cap before this step.",
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      }
+    },
+    {
+      "id": "restore-test",
+      "title": "restore test (local backup stack)",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P3-BACKUP"
+      ],
+      "activates": "P3-BACKUP",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "timeoutS": 700,
+      "onlyWhenChanged": [
+        "infra/backup/**",
+        "packages/db/migrations/**",
+        "packages/db/src/**",
+        "infra/compose.yaml",
+        "infra/image/**",
+        "infra/hosted/systemd/brightwater-backup.*",
+        "infra/hosted/systemd/brightwater-restore-test.*",
+        "ci/gates/restore-test.sh",
+        "ci/data-assets.ts"
+      ],
+      "note": "F-408 (owner ruling 0b428574, scope: until phase 8): in a push run (ci.sh --all) this gate runs only when a file under onlyWhenChanged changed since the last recorded run (push, nightly or full) that ran it green; a nightly or --gates run runs it unscoped (.build/ci-time.jsonl); otherwise it is recorded unchanged, naming that sha. No record, a shallow clone or an unknown sha runs it. The list is the gate's own inputs: the backup scripts and their stack (infra/backup), the migrations and the migrate step it runs (packages/db), the Compose file and app image it builds, the gate script and the asset step stack.sh runs. F-387: measured green 117.5 s (wave run layout, fresh engine: stack up 63 s with the runner image built cold, the 8 proofs 53 s), 90.2 s on a warm engine, 107.2 s on this Mac's Docker Desktop. F-400, F-485: measured green on Spectre, 276.2 s alone at cd7aa37 and 278.3 s beside light gates at dcb5ca7; 700 s is about 2.5 times the slower, the rule F-387 set for this re-measure. At 360 s it ran at 77 percent of its limit alone, and it was killed at 360 s at d822332.",
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      }
+    },
+    {
+      "id": "catalog-review",
+      "title": "catalog-review",
+      "when": "wave",
+      "critical": false,
+      "builders": [
+        "P7-SPANISH"
+      ],
+      "activates": "P7-SPANISH",
+      "activeFromPhase": 7,
+      "cmd": null
+    },
+    {
+      "id": "privacy-secret-scan",
+      "title": "privacy scan, secret-scan",
+      "when": "wave",
+      "critical": true,
+      "builders": [
+        "P7-SCANS"
+      ],
+      "activates": "P7-SCANS",
+      "activeFromPhase": 7,
+      "cmd": null
+    },
+    {
+      "id": "smoke-public-tag",
+      "title": "smoke-public-tag",
+      "when": "wave",
+      "critical": false,
+      "builders": [
+        "P7-SMOKE"
+      ],
+      "activates": "P7-SMOKE",
+      "activeFromPhase": 7,
+      "cmd": null,
+      "timeoutS": 1220,
+      "note": "P7-SMOKE: measured 554.01 s on the Spectre rig (narrow run of this gate alone, run sha 7985dad55b4da6322ef71b9fe2315dda2a2519cd, verdict .build/evidence/NARROW-RUNS/ci-verdict-7985dad55b4d-20261111-200147.json); the 300 s default killed the run at b187be65 (verdict ci-verdict-b187be65ddb9-20261111-194115.json). timeoutS 1220 s is about 2.2 times the measure, rounded up to 10 s (D-15 measured-value rule). Earlier runs of the job alone took 225 s, so the time varies with the rig load."
+    },
+    {
+      "id": "native-no-demo",
+      "title": "native-no-demo",
+      "when": "wave",
+      "critical": false,
+      "builders": [
+        "P6-XCUITEST"
+      ],
+      "activates": "P6-XCUITEST",
+      "activeFromPhase": 6,
+      "cmd": null,
+      "runner": "mac"
+    },
+    {
+      "id": "native-suite",
+      "title": "native technician suite (XCUITest on the mac runner): FR-TECH-1 to FR-TECH-15, terminate and relaunch, the Spanish walk",
+      "when": "nightly",
+      "critical": false,
+      "builders": [
+        "P6-XCUITEST"
+      ],
+      "activates": "P6-XCUITEST",
+      "activeFromPhase": 6,
+      "cmd": "bash apps/tech-native/xcuitest/suite.sh",
+      "timeoutS": 5400,
+      "runner": "mac"
+    },
+    {
+      "id": "public-files-check",
+      "title": "spdx-header-check, readme-items, copying-ios-present",
+      "when": "wave",
+      "critical": false,
+      "builders": [
+        "P8-PUBLIC-FILES"
+      ],
+      "activates": "P8-PUBLIC-FILES",
+      "activeFromPhase": 8,
+      "cmd": null
+    },
+    {
+      "id": "outage-drill",
+      "title": "outage drill (monitor)",
+      "when": "wave",
+      "critical": false,
+      "builders": [
+        "P8-OUTAGE-DRILL"
+      ],
+      "activates": "P8-OUTAGE-DRILL",
+      "activeFromPhase": 8,
+      "cmd": null
+    },
+    {
+      "id": "G-CI4-nightly",
+      "title": "inv4-one-clock-zoned-times (nightly half: every merge-set test under 3 zones)",
+      "when": "nightly",
+      "critical": true,
+      "builders": [
+        "P3-CI-CADENCE"
+      ],
+      "activates": "P3-CI-CADENCE",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "timeoutS": 1000,
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      },
+      "note": "P3-CI-CADENCE: every merge-set test under the 3 host zones (ci/gates/G-CI4-nightly.sh), the root vitest.config.ts (engine-net, heavy). timeoutS 1000 s, F-576, measured on the Spectre rig: 461.9 s green alone in a narrow run (BW_CI_ARGS='--serial --gates G-CI4-nightly') at run sha 1a39d60 (.build/evidence/P3-CI-CADENCE/spectre/narrow-nightly/); 1000 s is about 2.2 times that. The 1800 s was provisional (Mac 306.9 to 322.6 s at e920109). The W22 nightly at 6a42975a measured 239.31 s, a red run (G-CI4-nightly failed there; F-602, W22-CLOSE-CI, F-775); 1000 s stays, about 2.2 times the slowest green of record (461.9 s). The narrow run's own WAVE RUN RED line is F-579 (check_verdict judges only mode all); the verdict's gate row is pass."
+    },
+    {
+      "id": "page-walkers-nightly",
+      "title": "page-walker rows on WebKit; all-screens Spanish and overflow passes; import stack suite",
+      "when": "nightly",
+      "critical": false,
+      "builders": [
+        "P3-CI-CADENCE"
+      ],
+      "activates": "P3-CI-CADENCE",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "engines": ["chromium", "webkit"],
+      "timeoutS": 5800,
+      "note": "P3-CI-CADENCE: WebKit walk with every pass, the Chromium Spanish and overflow passes on every built screen, the shell and auth stack suites on WebKit, and (F-519) the P3-IMPORT-WORKER stack suite ci/import-stack.sh. No parallel field, so it runs alone like page-walkers. P4-ADMIN-IMPORT: step 5, ci/import-ui-stack.sh (both engines, about 110 s of image build, setup and suite on Spectre, plus the walkers' extra screens) took the gate to 885 s of the old 900 s; timeoutS 1300 s is about 1.5 times that (run sha 809767e, a local probe-only run whose verdict was not kept, so 885 s is not a measured green of record, F-626; the first wave 21 Spectre run of record sets the value, F-602). P4-CLOCK: step 6, ci/clock-ui-stack.sh (image build, setup and both engines in 1 world; the second engine waits out the 5 minute reset cool-down, so the step is at least 5 real minutes), taking timeoutS from 1300 s to 2300 s as an estimate with no measured run of record (the first Spectre nightly after the merge sets the value, as F-602). Step 3 also runs the billing stack and the board stack on WebKit (ci/billing-stack.sh, ci/board-stack.sh). P4-REPORTS: step 3 also runs ci/reports-stack.sh on WebKit; timeoutS is not resized for it (the first Spectre nightly after the merge sets the value, as F-602). Earlier: timeoutS 900 s, measured on the Spectre rig (P3-CI-CADENCE fix, 7dc3156): the gate took 547.6 s green alone (4 steps incl. ci/import-stack.sh as step 4, F-519), 518.0 s and 489.9 s on 2 red runs; 900 s is about 1.6 times the green time. The 3000 s was provisional. F-602 (W22-CLOSE-CI): the W22 nightly at 6a42975a measured 1192.14 s with 1 assertion red (F-649), which is not a green of record. F-775, F-917: every later nightly was red too: 1975.48 s at 5a99e5de (86 percent of 2300 s), 2259.72 s at a2a63f6b, and killed at 2300 s at dbcfb35e (narrow) and at 806f63a8, in step 3, so steps 4 to 6 never ran there. timeoutS 5300 s, F-917: alone on the Spectre rig (narrow serial run at 994ff95e, as page-walkers' note says) the gate ran all 6 steps in 3545.56 s with 2 cases red (the new job suite on WebKit, 77.0 s and 40.3 s of it; both fixed after that run); 5300 s is about 1.5 times that. Step 1 (the WebKit walk of every built screen) alone grew from 353 s at 6a42975a to 990 s at 806f63a8 as screens were added. This gate alone is past the nightly budget of 2700 s (a plan row; ci-time-check reports it, advisory). F-644 (W27 closing pass): the measured green of record is 3447.44 s on the nightly at 2948853f (.build/evidence/NIGHTLY-2948853f/run.log). Since then the nightly gained 2 WebKit stack steps, the booking stack (F-943, 66 s on the Mac) and the inbox stack (F-967, taken as the same size); at the 3 times Mac-to-Spectre figure of W13 that is about 200 s each, an estimate and not a measure, so about 3850 s. timeoutS 5800 s is about 1.5 times that, the ratio of the older sizing (D-15 measured-value rule), replacing 5300 s (about 1.54 times 3447.44 s, before the 2 steps). PROVISIONAL for the 2 added steps only: the first Spectre nightly that runs them green sets the value (F-602)."
+    },
+    {
+      "id": "look-values-comparator-nightly",
+      "title": "look-values comparator (nightly half: WebKit)",
+      "when": "checkpoint",
+      "critical": false,
+      "builders": [
+        "P3-CI-CADENCE"
+      ],
+      "activates": "P3-CI-CADENCE",
+      "activeFromPhase": 3,
+      "cmd": null,
+      "engines": ["webkit"],
+      "timeoutS": 900,
+      "parallel": {
+        "exclusive": [
+          "engine-net",
+          "heavy"
+        ]
+      },
+      "note": "P3-CI-CADENCE: the look-values compare on WebKit (ci/gates/look-values-comparator-nightly.sh). timeoutS 900 s: provisional (the Chromium compare took 9.8 to 16.8 s on the Mac). Measured on Spectre in narrow runs: 84.5 s green at baed10b (narrow-green) and 87.6 s green at 7dc3156 (narrow-green2); 900 s stays until the first nightly run on Spectre sets the value (the trigger)."
+    }
+  ]
+}

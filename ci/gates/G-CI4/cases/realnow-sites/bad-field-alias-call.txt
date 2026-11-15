@@ -1,0 +1,7 @@
+// case-as: packages/outbox/src/planted.ts
+// expect: fail not a string literal
+import type { Clock } from '@bw/time';
+export const f = (clock: Clock, use: never) => {
+  const { realNow: read } = clock;
+  return read(use);
+};

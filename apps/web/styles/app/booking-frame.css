@@ -1,0 +1,11 @@
+/* The booking site frame on a screen narrower than the frame's 1440 px picture (P5-BOOKING-PAGES; CMP-15, SURF-CUS). Imported by BookingFrame, so every
+   booking page has it. Layout only, like shell.css: no color, contrast or compared value of its own at 1440 x 900 (OA-84, G-LOOK-PARITY).
+   The header tightens below 900 px; when it still does not fit, BookingHeader sets bw-narrow (CTL-CMP-15-05: the site menu and Book a visit move
+   into the Menu list) and the header may then wrap its remaining items onto a second row. */
+@media (max-width: 900px) {
+  .bw-screen .site { padding: 0 16px; gap: 12px; }
+  .bw-screen .site .brand, .bw-screen .site .btn { min-height: 44px; }
+}
+.bw-screen .site.bw-narrow { height: auto; min-height: 74px; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; row-gap: 4px; }
+.bw-screen .site .menu { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 1px solid var(--ink-300); border-radius: 10px; background: var(--white); color: var(--ink-800); }
+.bw-screen .site .menu:focus-visible, .bw-screen .site .tel:focus-visible { outline: 3px solid var(--teal-500); outline-offset: 2px; }

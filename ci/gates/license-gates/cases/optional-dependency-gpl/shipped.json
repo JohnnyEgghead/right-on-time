@@ -1,0 +1,14 @@
+{
+  "MIT": [
+    {
+      "name": "host-pkg",
+      "versions": [
+        "1.0.0"
+      ],
+      "paths": [
+        "/fixture/host-pkg"
+      ],
+      "license": "MIT"
+    }
+  ]
+}

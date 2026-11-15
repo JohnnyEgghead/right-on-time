@@ -1,0 +1,6 @@
+// Planted case (must fail type checking): a customer phone passed to @bw/log as an object literal field.
+import { createLogger } from '../src/index.ts';
+import { FixedClock } from '@bw/time';
+
+const log = createLogger({ process: 'web', clock: new FixedClock({ demo: '2026-09-15T14:00:00Z' }) });
+log.info({ status: 200, phone: '6145550100' });

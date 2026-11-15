@@ -1,0 +1,72 @@
+/* SCR-CUS-06 page-local rules (DK-125): the last <style> of mockups/pages/customer-reschedule.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/inbox.css. */
+  .screen { background: #f6f8f9; }
+  .chrome { flex: none; background: #f6f7f8; border-bottom: 1px solid #e3e5e8; padding-bottom: 8px; }
+  .url { margin: 2px 14px 0; height: 38px; border-radius: 12px; background: #e8eaed; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15.5px; color: #111; font-weight: 500; position: relative; }
+  .url .ic { width: 14px; height: 14px; color: #4b5563; }
+  .url .rl { position: absolute; right: 10px; color: #4b5563; }
+  .url .rl .ic { width: 17px; height: 17px; }
+  .pg { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 0 14px; gap: 8px; }
+  .brandrow { display: flex; align-items: center; justify-content: space-between; padding: 8px 2px 0; }
+  .brandrow .brand svg.mark { width: 26px; height: 26px; }
+  .brandrow .brand .word { font-size: 17px; }
+  .seg { display: flex; border: 1px solid var(--ink-300); border-radius: 10px; overflow: hidden; height: 44px; }
+  .seg span { min-width: 44px; padding: 0 10px; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: 650; color: var(--ink-600); background: #fff; }
+  .seg span.on { background: var(--teal-700); color: #fff; }
+  h1 { margin: 0 2px; font-size: 25px; font-weight: 780; letter-spacing: -.025em; }
+  .cur { background: #fff; border: 1px solid var(--ink-200); border-radius: 14px; padding: 9px 12px; display: flex; gap: 12px; align-items: center; }
+  .cur .ico { width: 40px; height: 40px; border-radius: 10px; background: var(--orange-100); color: var(--orange-600); display: flex; align-items: center; justify-content: center; flex: none; }
+  .cur .ico .ic { width: 22px; height: 22px; }
+  .cur small { display: block; font-size: 12px; font-weight: 700; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; }
+  .cur b { display: block; font-size: 16px; font-weight: 700; }
+  .cur span.s { font-size: 13.5px; color: var(--ink-600); }
+  .lab { font-size: 15px; font-weight: 720; margin: 2px 2px -2px; display: flex; justify-content: space-between; align-items: baseline; }
+  .lab small { font-size: 12.5px; color: var(--ink-500); font-weight: 550; }
+  .days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .day { height: 60px; border-radius: 11px; background: #fff; border: 1.5px solid var(--ink-200); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+  .day small { font-size: 11.5px; font-weight: 650; color: var(--ink-500); }
+  .day b { font-size: 17px; font-weight: 700; }
+  .day em { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--ink-600); margin-top: 1px; }
+  .day.busy em { color: var(--orange-700); }
+  .day.now { border-style: dashed; border-color: var(--ink-400); }
+  .day.sel { background: var(--teal-700); border-color: var(--teal-700); color: #fff; }
+  .day.sel small, .day.sel em { color: #fff; }
+  .busyb { display: flex; gap: 10px; align-items: flex-start; background: var(--orange-50); border: 1px solid var(--orange-300); border-radius: 12px; padding: 8px 12px; }
+  .busyb .ic { width: 20px; height: 20px; color: var(--orange-700); margin-top: 1px; }
+  .busyb b { display: block; font-size: 15px; color: var(--ink-900); }
+  .busyb span { font-size: 13px; color: var(--ink-700); line-height: 1.35; }
+  .wins { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .win { min-height: 60px; background: #fff; border: 1.5px solid var(--ink-200); border-radius: 12px; display: flex; align-items: center; padding: 0 12px; gap: 10px; font-size: 16px; font-weight: 680; line-height: 1.2; }
+  .win .tx { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+  /* Kit 0.9: a window with its zone (UD-15) can take 2 lines; the box grows rather than spill. */
+  .win { padding-top: 6px; padding-bottom: 6px; }
+  .win .r { font-size: 13px; font-weight: 600; color: var(--ink-500); }
+  .win .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--ink-400); flex: none; }
+  .win.sel { border-color: var(--teal-600); background: var(--teal-50); box-shadow: 0 0 0 3px rgba(18,115,139,.14); }
+  .win.sel .radio { border: 7px solid var(--teal-700); }
+  .win.sel .r { color: var(--teal-800); }
+  .win.full { background: repeating-linear-gradient(135deg, #f7f8f9 0 8px, #f1f3f5 8px 16px); color: var(--ink-500); }
+  .win.full .radio { border-color: var(--ink-200); background: var(--ink-100); }
+  .win.full .r { color: var(--ink-600); background: #fff; border: 1px solid var(--ink-300); border-radius: 6px; padding: 0 7px; }
+  .win.few .r { color: var(--orange-700); }
+  .foot { flex: none; background: #fff; border-top: 1px solid var(--ink-200); padding: 10px 14px 24px; display: flex; flex-direction: column; gap: 8px; }
+  .go { height: 52px; border-radius: 12px; background: var(--orange-600); color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16.5px; font-weight: 750; box-shadow: 0 4px 10px rgba(217,96,15,.3); }
+  .go .ic { width: 19px; height: 19px; }
+  .keep { height: 46px; border-radius: 12px; border: 1.5px solid var(--teal-700); color: var(--teal-800); display: flex; align-items: center; justify-content: center; font-size: 15.5px; font-weight: 700; }
+  .priv { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--ink-600); line-height: 1.35; padding: 0 2px; }
+  .priv .ic { width: 15px; height: 15px; color: var(--teal-700); margin-top: 1px; }
+  /* Step 5c lane 2: page rules for the spec controls and the states board. */
+  .brandrow { gap: 8px; }
+  .brandrow .tel14 { font-size: 12px; font-weight: 650; color: var(--ink-700); white-space: nowrap; margin-left: auto; }
+  .pg > * { flex: none; }
+  .foot .r1p-foot { padding-bottom: 0; }
+  .msgc { display: flex; gap: 10px; align-items: flex-start; border-radius: 12px; padding: 12px 14px; font-size: 15px; line-height: 1.4; background: var(--white); border: 1px solid var(--ink-200); color: var(--ink-800); }
+  .msgc .ic { width: 20px; height: 20px; color: var(--teal-700); margin-top: 1px; }
+  .msgc.ok { background: var(--st-site-bg); border-color: var(--st-site-bd); color: var(--st-site-ink); }
+  .msgc.ok .ic { color: var(--st-site-ink); }
+  .msgc.warn { background: var(--st-risk-bg); border-color: var(--st-risk-bd); color: var(--st-risk-ink); }
+  .msgc.warn .ic { color: var(--st-risk-ink); }
+  .go.busy { opacity: .85; }
+  .r1p-mini .pg { overflow: visible; padding-bottom: 12px; }
+  .r1p-mini .foot { padding-bottom: 14px; }
+

@@ -1,0 +1,21 @@
+{
+  "name": "@bw/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "migrate": "node src/cli/migrate.ts",
+    "generate-repositories": "node src/cli/generate-repositories.ts"
+  },
+  "dependencies": {
+    "@bw/log": "workspace:*",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "embedded-postgres": "18.4.0-beta.17"
+  }
+}

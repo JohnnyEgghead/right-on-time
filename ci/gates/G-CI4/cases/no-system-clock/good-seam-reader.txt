@@ -1,0 +1,4 @@
+// case-as: packages/time/src/real.ts
+// expect: pass 0
+export const t = Date.now();
+export const d = new Date();

@@ -1,0 +1,93 @@
+/* ---------- DK-14 Office screen frame and icons ---------- */
+/* source: mockups/src/assets/office.css (product) */
+/* Office app (dispatch board, job detail, reports) */
+body.office { width: 1440px; height: 900px; overflow: hidden; background: #f4f6f8; }
+.ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
+.ic svg { width: 100%; height: 100%; }
+
+/* ---------- DK-15 Office top bar, approved look (CMP-07) ---------- */
+/* source: mockups/src/assets/office.css (product) */
+/* Top bar */
+.topbar {
+  height: 58px; background: var(--teal-900); color: #fff; display: flex; align-items: center;
+  padding: 0 18px 0 20px; gap: 18px; position: relative; z-index: 5;
+}
+.topbar .brand .word { color: #fff; font-size: 20px; }
+.topbar .appname { white-space: nowrap; font-size: 13.5px; font-weight: 600; color: var(--teal-200); padding-left: 16px; border-left: 1px solid rgba(255,255,255,.22); height: 24px; display: flex; align-items: center; letter-spacing: .01em; }
+.topbar nav { display: flex; gap: 2px; margin-left: 10px; height: 100%; }
+.topbar nav a { display: flex; align-items: center; padding: 0 10px; color: rgba(255,255,255,.78); text-decoration: none; font-weight: 550; font-size: 14.5px; position: relative; }
+.topbar nav a.on { color: #fff; }
+.topbar nav a.on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--orange-500); }
+.topbar .spacer { flex: 1; }
+.topbar .branch { white-space: nowrap; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px 0 12px; border-radius: 8px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); font-weight: 600; font-size: 14px; }
+.topbar .branch .lbl { display: none; color: var(--teal-200); font-weight: 500; font-size: 12.5px; }
+.topbar .branch .ic { width: 16px; height: 16px; color: var(--teal-200); }
+.topbar .search { width: 210px; white-space: nowrap; height: 36px; border-radius: 8px; background: #fff; color: var(--ink-500); display: flex; align-items: center; gap: 9px; padding: 0 10px 0 11px; font-size: 14px; }
+.topbar .search .ic { width: 17px; height: 17px; color: var(--ink-500); }
+.topbar .search kbd { display: none; margin-left: auto; font: 600 11.5px Inter, sans-serif; color: var(--ink-500); border: 1px solid var(--ink-300); border-radius: 5px; padding: 1px 6px; background: var(--ink-50); }
+.topbar .iconbtn { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; position: relative; }
+.topbar .iconbtn .badge { position: absolute; top: 5px; right: 5px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--orange-500); font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--teal-900); color: var(--ink-900); }
+.topbar .user { flex: none; white-space: nowrap; display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 14px; }
+.topbar .user .av { width: 32px; height: 32px; background: var(--orange-600); font-size: 12.5px; }
+.topbar .user .role { display: block; font-size: 11.5px; color: var(--teal-200); font-weight: 500; }
+
+/* ---------- DK-16 Day board timeline ---------- */
+/* source: mockups/src/assets/office.css (product) */
+/* Timeline (shared by Option A and the finished board) */
+.tl { position: relative; background: #fff; }
+.tl-head { display: flex; height: 42px; border-bottom: 1px solid var(--ink-200); position: sticky; top: 0; background: #fff; z-index: 3; }
+.tl-head .corner { flex: none; display: flex; align-items: center; padding-left: 16px; font-size: 12px; font-weight: 600; color: var(--ink-500); text-transform: uppercase; letter-spacing: .06em; border-right: 1px solid var(--ink-200); }
+.tl-hours { position: relative; flex: 1; }
+.tl-hours span { position: absolute; bottom: 7px; line-height: 16px; display: flex; font-size: 12.5px; font-weight: 600; color: var(--ink-600); transform: translateX(-50%); white-space: nowrap; }
+.tl-hours span.first { transform: none; padding-left: 6px; }
+.tl-row { display: flex; border-bottom: 1px solid var(--ink-150); position: relative; }
+.tl-row .who { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 14px; border-right: 1px solid var(--ink-200); background: #fff; position: relative; z-index: 2; }
+.tl-row .who .av { width: 32px; height: 32px; font-size: 11.5px; }
+.tl-row .who .nm { font-weight: 640; font-size: 13.5px; color: var(--ink-900); white-space: nowrap; line-height: 1.2; }
+.tl-row .who .sub { font-size: 12px; color: var(--ink-500); white-space: nowrap; line-height: 1.3; margin-top: 1px; }
+.tl-row .lane { position: relative; flex: 1; }
+.tl-row.unas { background: repeating-linear-gradient(135deg, #fbfbfc 0 8px, #f5f6f8 8px 16px); }
+.tl-row.unas .who { background: #fbfbfc; }
+.tl-row.unas .who .av { background: #fff; border: 1.5px dashed var(--ink-400); color: var(--ink-600); }
+.tl-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--ink-150); }
+.tl-grid.half { background: transparent; border-left: 1px dashed #f0f1f3; }
+.tl-off { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(148,163,184,.12) 6px 12px); }
+.tl-now { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--orange-600); pointer-events: none; }
+.tl-now .flag { z-index: 6; position: absolute; top: 3px; left: 50%; transform: translateX(-50%); background: var(--orange-600); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 6px; line-height: 15px; border-radius: 5px; white-space: nowrap; }
+
+/* ---------- DK-17 Job and block buttons on the timeline ---------- */
+/* source: mockups/src/assets/office.css (product) */
+.job {
+  position: absolute; top: 5px; bottom: 5px; border-radius: 7px; border: 1px solid; border-left-width: 4px;
+  padding: 3px 7px 3px 7px; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  font-size: 12px; line-height: 1.28; box-shadow: 0 1px 1px rgba(16,24,40,.05); z-index: 1;
+}
+.job .l1 { font-weight: 680; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 5px; }
+.job .l2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .92; }
+.job .tag { flex: none; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 4px; line-height: 16px; }
+.job.sched { background: #fff; border-color: var(--st-sched-bd); color: var(--st-sched-ink); }
+.job.way { background: var(--st-way-bg); border-color: var(--st-way-bd); color: var(--st-way-ink); }
+.job.site { background: var(--st-site-bg); border-color: var(--st-site-bd); color: var(--st-site-ink); }
+.job.done { background: var(--st-done-bg); border-color: var(--st-done-bd); color: var(--st-done-ink); }
+.job.risk { background: var(--st-risk-bg); border-color: var(--st-risk-bd); color: var(--st-risk-ink); }
+.job.risk .tag { background: var(--st-risk-bd); color: var(--ink-900); }
+.job.late { background: var(--st-late-bg); border-color: var(--st-late-bd); color: var(--st-late-ink); }
+.job.late .tag { background: var(--st-late-bd); color: #fff; }
+.job.unas { background: #fff; border-style: dashed; border-color: var(--ink-400); border-left-style: solid; border-left-color: var(--ink-500); color: var(--ink-700); }
+.job.task { background: repeating-linear-gradient(135deg, #f3f4f6 0 5px, #eceef1 5px 10px); border-color: var(--ink-300); color: var(--ink-500); }
+.job.sel { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--st-way-bd); z-index: 3; }
+.job .ck { width: 13px; height: 13px; flex: none; }
+
+/* ---------- DK-18 Board legend ---------- */
+/* source: mockups/src/assets/office.css (product) */
+/* Legend */
+.legend { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+.legend .k { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 560; color: var(--ink-700); white-space: nowrap; padding: 0 4px; }
+.legend .sw { width: 18px; height: 13px; border-radius: 3px; border: 1px solid; border-left-width: 3px; }
+.legend .sw.sched { background: #fff; border-color: var(--st-sched-bd); }
+.legend .sw.way { background: var(--st-way-bg); border-color: var(--st-way-bd); }
+.legend .sw.site { background: var(--st-site-bg); border-color: var(--st-site-bd); }
+.legend .sw.done { background: var(--st-done-bg); border-color: var(--st-done-bd); }
+.legend .sw.risk { background: var(--st-risk-bg); border-color: var(--st-risk-bd); }
+.legend .sw.late { background: var(--st-late-bg); border-color: var(--st-late-bd); }
+

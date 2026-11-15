@@ -1,0 +1,11 @@
+# P3-BACKUP (SPECIFICATIONS section 11.7; NFR-07): the weekly restore test on Sunday at 4:00 AM
+# America/New_York (after that night's 2:30 AM backup), whatever the server clock's zone.
+[Unit]
+Description=Weekly Brightwater restore test, Sunday 4:00 AM America/New_York
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00 America/New_York
+Persistent=true
+
+[Install]
+WantedBy=timers.target

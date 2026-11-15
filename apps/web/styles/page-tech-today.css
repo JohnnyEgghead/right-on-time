@@ -1,0 +1,71 @@
+/* CMP-09 Technician app frame and the SCR-TEC-02 screen (DK-107) page-local rules: the last <style> of mockups/pages/tech-today.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/tech.css. */
+  .screen { background: #f2f4f6; }
+  .apphead { background: var(--teal-900); color: #fff; padding: 0 18px 14px; flex: none; }
+  .apphead .sbar { margin: 0 -18px; color: #fff; }
+  .apphead .r { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+  .apphead h1 { margin: 0; font-size: 24px; font-weight: 750; letter-spacing: -.02em; }
+  .apphead .d { font-size: 14px; color: var(--teal-200); margin-top: 2px; }
+  .sync { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 4px 10px 4px 7px; font-size: 12.5px; font-weight: 600; }
+  .sync .ic { width: 16px; height: 16px; color: #86efac; }
+  .prog { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13px; color: var(--teal-200); font-weight: 550; }
+  .prog .bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.18); overflow: hidden; }
+  .prog .bar i { display: block; width: 20%; height: 100%; background: var(--orange-500); border-radius: 3px; }
+  .list { flex: 1; padding: 9px 12px 0; display: flex; flex-direction: column; gap: 7px; overflow: hidden; }
+  .num { width: 26px; height: 26px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 750; background: #fff; border: 1.5px solid var(--ink-300); color: var(--ink-700); }
+  .done { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 9px 12px; color: var(--ink-500); font-size: 14px; border: 1px solid var(--ink-200); }
+  .done .num { background: var(--st-site-bd); border-color: var(--st-site-bd); color: #fff; }
+  .done .num .ic { width: 15px; height: 15px; }
+  .done b { color: var(--ink-700); font-weight: 650; }
+  .done .t { margin-left: auto; font-size: 12.5px; font-weight: 600; }
+  .next { background: #fff; border-radius: 16px; border: 2px solid var(--orange-500); box-shadow: 0 6px 18px rgba(217,96,15,.16); padding: 11px 14px 10px; }
+  .next .lab { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 750; color: var(--orange-700); letter-spacing: .06em; text-transform: uppercase; }
+  .next .lab .num { background: var(--orange-500); border-color: var(--orange-500); color: var(--ink-900); }
+  .next .lab .win { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 13.5px; color: var(--ink-800); background: var(--ink-100); border-radius: 6px; padding: 2px 8px; }
+  .next h2 { margin: 8px 0 0; font-size: 22px; font-weight: 750; letter-spacing: -.02em; }
+  .next .addr { font-size: 14.5px; color: var(--ink-700); margin-top: 2px; }
+  .next .what { display: flex; gap: 8px; margin-top: 9px; font-size: 14px; color: var(--ink-800); align-items: flex-start; }
+  .next .what .ic { width: 17px; height: 17px; color: var(--ink-500); margin-top: 1px; }
+  .next .what + .what { margin-top: 5px; }
+  .next .notebox { margin-top: 9px; background: #fffaf2; border: 1px solid #f3dfbf; border-radius: 10px; padding: 7px 10px; font-size: 13.5px; color: var(--ink-800); line-height: 1.35; }
+  .next .notebox b { color: var(--orange-700); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; display: block; margin-bottom: 1px; }
+  .next .row2 { display: flex; gap: 8px; margin-top: 11px; }
+  .pbtn { flex: 1; height: 44px; border-radius: 12px; border: 1.5px solid var(--teal-700); color: var(--teal-800); background: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15.5px; font-weight: 700; }
+  .pbtn .ic { width: 20px; height: 20px; }
+  .pbtn small { font-weight: 550; color: var(--ink-500); font-size: 13px; }
+  .pbtn.sq { flex: none; width: 52px; }
+  .omw { margin-top: 9px; height: 58px; border-radius: 14px; background: var(--orange-600); color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 20px; font-weight: 750; box-shadow: 0 4px 10px rgba(217,96,15,.35); letter-spacing: -.01em; }
+  .omw .ic { width: 24px; height: 24px; }
+  .omwnote { text-align: center; font-size: 12.5px; color: var(--ink-500); margin-top: 5px; }
+  .sec { font-size: 12px; font-weight: 750; color: var(--ink-500); text-transform: uppercase; letter-spacing: .07em; margin: 2px 4px -3px; }
+  .later { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 6px 12px; border: 1px solid var(--ink-200); }
+  .later .tx { flex: 1; min-width: 0; line-height: 1.3; }
+  .later .tx b { font-size: 15px; font-weight: 680; }
+  .later .tx small { display: block; font-size: 13px; color: var(--ink-600); }
+  .later .w { font-size: 13px; font-weight: 700; color: var(--ink-800); text-align: right; white-space: nowrap; }
+  .tabbar { height: 78px; flex: none; background: #fff; border-top: 1px solid var(--ink-200); display: flex; justify-content: space-around; padding: 8px 10px 0; }
+  .tabbar span { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--ink-500); width: 70px; }
+  .tabbar span .ic { width: 24px; height: 24px; }
+  .tabbar span.on { color: var(--teal-700); }
+  /* Step 5c lane 2: page rules for the spec controls and the states board. */
+  .clkrow { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+  .clkrow .r1p-clk { margin-top: 0; }
+  .sync { white-space: nowrap; }
+  .rf { width: 44px; height: 44px; margin: -12px -10px -12px 0; display: inline-flex; align-items: center; justify-content: center; color: var(--teal-100); }
+  .rf .ic { width: 20px; height: 20px; }
+  .lnk { color: var(--teal-700); font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+  .acts3 { display: flex; gap: 6px; margin-top: 8px; }
+  .acts3 span { flex: 1; min-height: 44px; border-radius: 11px; border: 1px solid var(--ink-300); background: var(--white); color: var(--ink-800); display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 13.5px; font-weight: 650; text-align: center; line-height: 1.15; padding: 2px 4px; }
+  .acts3 span .ic { width: 16px; height: 16px; color: var(--teal-700); }
+  .acts3 span.dis { background: var(--ink-100); border-color: var(--ink-200); color: var(--ink-500); }
+  .acts3 span.pri { background: var(--teal-700); border-color: var(--teal-700); color: var(--white); }
+  .acts3 span.pri .ic { color: var(--white); }
+  .why3 { font-size: 12px; color: var(--ink-600); text-align: center; margin-top: 3px; line-height: 1.3; }
+  .later .w small { display: block; font-size: 11.5px; font-weight: 600; color: var(--ink-500); }
+  .tabbar span[data-ctl] { min-height: 44px; }
+  .list .r1p-foot { margin-top: 2px; }
+  .r1p-mini .list { overflow: visible; padding-bottom: 10px; }
+  .r1p-mini .apphead { padding-top: 12px; }
+  .r1p-mini .next { margin-top: 0; }
+  .wt { margin-left: 6px; }
+

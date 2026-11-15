@@ -1,0 +1,35 @@
+{
+  "name": "bw-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "start": "node src/server.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bw/api": "workspace:*",
+    "@bw/api-server": "workspace:*",
+    "@bw/config": "workspace:*",
+    "@bw/i18n": "workspace:*",
+    "@bw/log": "workspace:*",
+    "@bw/outbox": "workspace:*",
+    "@bw/sms": "workspace:*",
+    "@bw/time": "workspace:*",
+    "@protomaps/basemaps": "5.7.2",
+    "dexie": "4.4.7",
+    "intl-messageformat": "12.1.3",
+    "maplibre-gl": "6.15.0",
+    "next": "16.4.2",
+    "pmtiles": "4.5.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-intl": "12.1.4"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "fake-indexeddb": "6.2.6"
+  }
+}

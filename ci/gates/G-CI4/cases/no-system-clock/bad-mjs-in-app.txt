@@ -1,0 +1,3 @@
+// case-as: apps/worker/src/planted.mjs
+// expect: fail 1
+export const t = Date.now();

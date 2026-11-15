@@ -1,0 +1,7 @@
+{
+  "why": "F-149: tz gate fails a day-start copy in world_snapshot that gained a timestamp (no time zone) column",
+  "only": "tz",
+  "expect": [
+    "schema-time-zone-check: FAIL column world_snapshot.equipment.stamp is timestamp without time zone; every stored instant is timestamptz (invariant 4)"
+  ]
+}

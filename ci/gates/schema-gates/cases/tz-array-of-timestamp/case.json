@@ -1,0 +1,8 @@
+{
+  "why": "F-149: tz gate fails an array of timestamp (no time zone)",
+  "only": "tz",
+  "expect": [
+    "schema-time-zone-check: FAIL column world.equipment.serviced_at is timestamp without time zone; every stored instant is timestamptz (invariant 4)",
+    "schema-time-zone-check: FAIL column world.equipment.serviced_at (timestamp without time zone[]) has no declared zone: no entry for world.equipment in packages/db/src/zone-registry.ts"
+  ]
+}

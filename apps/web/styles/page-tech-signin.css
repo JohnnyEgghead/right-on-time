@@ -1,0 +1,61 @@
+/* SCR-TEC-01 (DK-106) page-local rules: the last <style> of mockups/pages/tech-signin.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/tech-signin.css. */
+  .screen { background: #f2f4f6; }
+  .hero { background: var(--teal-900); color: #fff; padding: 0 24px 24px; flex: none; text-align: center; }
+  .hero .sbar { margin: 0 -24px; color: #fff; }
+  .hero .bigmark { margin: 14px auto 0; width: 76px; height: 76px; border-radius: 22px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+  .hero .bigmark svg.mark { width: 50px; height: 50px; }
+  .hero .co { margin-top: 14px; font-size: 15px; font-weight: 650; color: var(--teal-200); letter-spacing: .02em; }
+  .hero h1 { margin: 2px 0 0; font-size: 28px; font-weight: 780; letter-spacing: -.02em; }
+  .hero .d { margin-top: 4px; font-size: 14.5px; color: var(--teal-200); }
+  .form { flex: 1; padding: 22px 20px 0; display: flex; flex-direction: column; }
+  .form h2 { margin: 0; font-size: 22px; font-weight: 750; letter-spacing: -.02em; }
+  .form .lead { margin: 3px 0 0; font-size: 14.5px; color: var(--ink-600); }
+  .fld { margin-top: 16px; }
+  .fld label { display: block; font-size: 14px; font-weight: 650; color: var(--ink-800); margin-bottom: 6px; }
+  .inp { height: 54px; border-radius: 12px; background: #fff; border: 1.5px solid var(--ink-400); display: flex; align-items: center; padding: 0 6px 0 14px; font-size: 17px; color: var(--ink-900); gap: 10px; }
+  .inp .ic { width: 20px; height: 20px; color: var(--ink-500); }
+  .inp.focus { border-color: var(--teal-600); box-shadow: 0 0 0 3px rgba(18,115,139,.18); }
+  .inp .dots { letter-spacing: .18em; font-size: 19px; flex: 1; }
+  .inp .show { height: 44px; min-width: 64px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--teal-700); }
+  .inp .caret { display: inline-block; width: 2px; height: 22px; background: var(--teal-600); margin-left: -8px; }
+  .hint { font-size: 13px; color: var(--ink-500); margin-top: 5px; }
+  .stay { margin-top: 16px; display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; padding: 12px 14px; min-height: 44px; }
+  .box { width: 26px; height: 26px; border-radius: 7px; background: var(--teal-700); color: #fff; display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px; }
+  .box .ic { width: 18px; height: 18px; }
+  .stay b { font-size: 16px; font-weight: 650; display: block; }
+  .stay small { display: block; font-size: 13px; color: var(--ink-600); margin-top: 2px; line-height: 1.35; }
+  .go { margin-top: 18px; height: 56px; border-radius: 14px; background: var(--teal-700); color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 19px; font-weight: 750; box-shadow: 0 4px 10px rgba(15,94,115,.3); }
+  .go .ic { width: 22px; height: 22px; }
+  .forgot { margin-top: 14px; text-align: center; font-size: 14.5px; color: var(--ink-700); line-height: 1.5; }
+  .forgot b { color: var(--teal-700); font-weight: 700; }
+  .foot { margin-top: auto; padding: 12px 0 30px; text-align: center; font-size: 12.5px; color: var(--ink-500); line-height: 1.5; }
+  .foot .ic { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
+  /* Step 5c lane 2: page rules for the spec controls and the states board. */
+  .hero { position: relative; }
+  .hero .r1p-clk { justify-content: center; margin-top: 8px; }
+  .hero .hlang { position: absolute; right: 12px; top: 50px; }
+  .hero .r1-lang a { color: var(--teal-200); min-height: 44px; }
+  .hero .r1-lang a.on { color: var(--white); font-weight: 750; }
+  .hero .r1-lang .sep { color: var(--teal-300); }
+  .form { overflow: hidden; }
+  .form > * { flex: none; }
+  .inp .show[role] { cursor: pointer; }
+  .stay .box.off { background: var(--white); border: 1.5px solid var(--ink-400); }
+  .forgot a { color: var(--teal-700); font-weight: 700; text-decoration: underline; display: inline-flex; min-height: 44px; align-items: center; }
+  .sia { margin-top: 14px; background: var(--white); border: 1px solid var(--ink-200); border-radius: 12px; overflow: hidden; }
+  .sia h3 { margin: 0; padding: 9px 14px 6px; font-size: 12px; font-weight: 750; color: var(--ink-500); text-transform: uppercase; letter-spacing: .07em; }
+  .sia .r { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 14px; border-top: 1px solid var(--ink-150); font-size: 14.5px; }
+  .sia .r b { flex: 1; font-weight: 650; }
+  .sia .r small { color: var(--ink-600); font-size: 12.5px; }
+  .sia .r .ic { width: 16px; height: 16px; color: var(--teal-700); }
+  .msg { display: flex; gap: 9px; align-items: flex-start; border-radius: 12px; padding: 10px 12px; font-size: 14.5px; line-height: 1.4; margin-top: 12px; }
+  .msg .ic { width: 18px; height: 18px; margin-top: 1px; }
+  .msg.bad { background: var(--st-late-bg); color: var(--st-late-ink); border: 1px solid var(--st-late-bd); }
+  .msg.info { background: var(--teal-50); color: var(--teal-900); border: 1px solid var(--teal-200); }
+  .inp.bad { border-color: var(--st-late-bd); }
+  .inp.locked { background: var(--ink-100); color: var(--ink-700); }
+  .go.busy { opacity: .85; }
+  .r1p-mini .form { padding-bottom: 14px; overflow: visible; }
+  .r1p-mini .hero { padding-top: 14px; }
+

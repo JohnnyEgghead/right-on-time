@@ -1,0 +1,26 @@
+{
+  "MIT": [
+    {
+      "name": "left-pad-ok",
+      "versions": [
+        "1.0.0"
+      ],
+      "paths": [
+        "/fixture/left-pad-ok"
+      ],
+      "license": "MIT"
+    }
+  ],
+  "LGPL-3.0-or-later": [
+    {
+      "name": "@img/sharp-libvips-linux-x64",
+      "versions": [
+        "1.3.4"
+      ],
+      "paths": [
+        "/fixture/@img/sharp-libvips-linux-x64"
+      ],
+      "license": "LGPL-3.0-or-later"
+    }
+  ]
+}

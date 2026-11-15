@@ -1,0 +1,86 @@
+/* The System health page's adaptation of its frame (SCR-OFC-16), as styles/app/shell.css is for the shell: the frame is a 1440 x 900 picture; a page
+   scrolls and fits any width. It sets no color, contrast or spacing value of the frame's own beyond the states the frame does not draw (OA-84): at
+   1440 x 900 every compared value is the frame's. Loaded after the frame's page-local sheet. */
+
+/* The admin shell grows with its content (the frame fixes 842 px and a 900 px screen). */
+.bw-screen .shell { height: auto; min-height: 842px; }
+.bw-screen .r1k-in { height: auto; }
+
+/* What the frame set with a style attribute (the page's CSP forbids that attribute). */
+.hc .foot .ic.bw-ic15 { width: 15px; height: 15px; }
+.panel .ph.bw-ph10 { padding-bottom: 10px; }
+.bw-sub500 { font-weight: 500; }
+.hc .foot.bw-foot5 { padding-top: 5px; }
+.bw-note0 { margin: 4px 0 0; }
+.bw-lm { margin-left: auto; }
+.bw-n80 { width: 80px; }
+.bw-alerts-none { margin: 12px 16px; }
+
+/* Real controls where the frame drew a span: buttons keep the kit's .btn look; the select sits over the Show chip. */
+.bw-screen button.btn[aria-disabled="true"] { cursor: default; }
+.bw-screen .btn.dis { cursor: default; }
+.shw { position: relative; }
+.shw .bw-shw-select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font: inherit; }
+.tbt { background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
+.sw { cursor: pointer; }
+.sw:focus-visible, .rads2 span:focus-visible, .tbt:focus-visible, .shw:focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.rads2 span { cursor: pointer; }
+
+/* The states the frame does not draw: a night that failed or has no record. */
+.nights div.bad { border-color: #f3b4b4; background: var(--st-late-bg); color: var(--st-late-ink); }
+.nights div.none { border-color: var(--ink-200); background: var(--ink-100); color: var(--ink-600); }
+.al .chip.late, .hc .chip.late { background: var(--st-late-bg); color: var(--st-late-ink); }
+
+.simc .bw-simfield { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin-top: 8px; }
+.simc .bw-matches { display: flex; flex-direction: column; border: 1px solid var(--ink-200); border-radius: 8px; background: #fff; max-height: 120px; overflow: auto; }
+.simc .bw-matches button { text-align: left; padding: 6px 10px; cursor: pointer; font-size: 12.5px; }
+.simc .bw-matches button[aria-selected="true"] { background: var(--teal-50); }
+.bw-health-skel { grid-column: 1 / -1; padding: 8px 0; }
+.bw-delay-table { margin-top: 6px; }
+.hc .in .r1-fmsg, .ah .r1-fmsg { margin-left: 8px; }
+.hc .foot .r1-fmsg { margin-left: 8px; }
+
+/* A card holds the frame's fixed height; a longer text list scrolls inside it instead of clipping. */
+.hc { overflow: auto; }
+
+/* Narrow screens: the columns stack, the side menu sits above the page, and every control is at least 44 px. */
+@media (max-width: 900px) {
+  .bw-screen .shell { flex-direction: column; min-height: 0; }
+  .bw-screen .shell > .side { width: auto; border-right: 0; border-bottom: 1px solid var(--ink-200); }
+  .bw-screen .ah { flex-wrap: wrap; }
+  .bw-screen .ah .acts { margin-left: 0; flex-wrap: wrap; max-width: 100%; }
+  .bw-screen .ah .acts > span { max-width: 100%; }
+  .bw-screen .ah .chip, .bw-screen .hc .ph .chip { height: auto; min-height: 30px; white-space: normal; }
+  .bw-screen .ah .chk { white-space: normal; }
+  .bw-screen .rq div { flex-wrap: wrap; }
+  .bw-screen .body { grid-template-columns: minmax(0, 1fr); padding: 14px 12px; }
+  .bw-screen .cards { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-rows: auto; }
+  .bw-screen .hc { overflow: visible; }
+  .bw-screen .hc .in { min-height: 0; }
+  .bw-screen .hc .foot { flex-wrap: wrap; }
+  .bw-screen .loc div span { width: 110px; }
+  .bw-screen .al { grid-template-columns: minmax(0, 1fr) auto; }
+  .bw-screen .ph { flex-wrap: wrap; }
+  .bw-screen .btn, .bw-screen .btn.sm, .bw-screen .tbt, .bw-screen .shw, .bw-screen .r1-x, .bw-screen .side a, .bw-screen .rads2 span, .bw-screen .r1-link,
+  .bw-screen .r1-alerts li a, .bw-screen .simc .bw-matches button { min-height: 44px; min-width: 44px; }
+  .bw-screen .r1-link, .bw-screen .tbt, .bw-screen .rads2 span, .bw-screen .r1-alerts li a { display: inline-flex; align-items: center; }
+  .bw-screen .rads2 { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .al .r1-link.sm { margin-top: 0; }
+  .bw-screen .simc .r1-input, .bw-screen .simc input.r1-input { min-height: 44px; }
+  /* A switch keeps its 30 x 18 drawing inside a 44 px target: a transparent border carries the hit area. */
+  .bw-screen .sw { box-sizing: content-box; border: 13px solid transparent; background-clip: padding-box; margin: 0 -5px; }
+  .bw-screen .sw::after { top: 2px; }
+  .bw-screen .shw select { inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); }
+  .bw-screen .r1-alerts li a, .bw-screen .r1-alerts .ah2 .btn { margin-right: 10px; }
+  .bw-screen .ast table { display: block; overflow-x: auto; }
+  /* The office bar and the demo strip at phone width (the shell's own sheet leaves them as the frame draws them): wrap, and 44 px targets. */
+  .bw-screen .topbar { flex-wrap: wrap; height: auto; row-gap: 4px; }
+  .bw-screen .topbar .search { flex: 1 1 140px; min-width: 0; }
+  .bw-screen .topbar .search input.bw-search-input, .bw-screen .topbar .branch select, .bw-screen .topbar .iconbtn, .bw-screen .topbar .user, .bw-screen .topbar .brand,
+  .bw-screen .r1-demobar a { min-height: 44px; min-width: 44px; }
+  .bw-screen .topbar nav { flex-wrap: wrap; min-width: 0; }
+  .bw-screen .topbar .branch { min-height: 44px; }
+  .bw-screen .topbar nav a { min-height: 44px; display: inline-flex; align-items: center; }
+  .bw-screen .topbar .branch select { inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); }
+  .bw-screen .topbar .brand, .bw-screen .r1-demobar a { display: inline-flex; align-items: center; }
+}

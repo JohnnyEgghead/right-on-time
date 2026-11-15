@@ -1,0 +1,23 @@
+{
+  "name": "@bw/setup",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bw/db": "workspace:*",
+    "@bw/domain": "workspace:*",
+    "@bw/generator": "workspace:*",
+    "@bw/import": "workspace:*",
+    "@bw/log": "workspace:*",
+    "@bw/outbox": "workspace:*",
+    "@bw/time": "workspace:*"
+  },
+  "devDependencies": {
+    "@bw/config": "workspace:*"
+  }
+}

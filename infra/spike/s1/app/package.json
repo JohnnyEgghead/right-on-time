@@ -1,0 +1,18 @@
+{
+  "name": "bw-spike-s1-sse",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "description": "Spike S1 (G-S1-SSE): Next.js route handler streaming SSE fed by PostgreSQL LISTEN/NOTIFY. Throwaway; nothing here ships.",
+  "scripts": {
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "16.4.2",
+    "pg": "8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

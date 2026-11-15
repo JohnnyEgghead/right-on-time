@@ -1,0 +1,13 @@
+{
+  "_doc": "The release-asset data files the tests need (design rule D7: data files are release downloads, never git; setup downloads and verifies; a hash mismatch fails). The one committed source for each asset's repo, tag, name, size and SHA-256. ci/data-assets.ts reads it: it fetches into .build/data (git-ignored) and verifies; packages/db/src/street-list.ts verifies on every read. A new asset is a new entry here, and the SHA-256 must equal the one in its docs/build/spikes record (a test checks the street list).",
+  "assets": [
+    {
+      "id": "street-list.json",
+      "repo": "JohnnyEgghead/right-on-time",
+      "tag": "v1.0.0",
+      "asset": "street-list.json",
+      "bytes": 5345028,
+      "sha256": "afedbdadcf56be47e9611471e1fe7fd4ed1dfe657863a06e8bac7745858a0d47"
+    }
+  ]
+}

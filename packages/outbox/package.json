@@ -1,0 +1,21 @@
+{
+  "name": "@bw/outbox",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bw/api": "workspace:*",
+    "@bw/db": "workspace:*",
+    "@bw/sms": "workspace:*",
+    "@bw/time": "workspace:*",
+    "dexie": "4.4.7"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.6"
+  }
+}

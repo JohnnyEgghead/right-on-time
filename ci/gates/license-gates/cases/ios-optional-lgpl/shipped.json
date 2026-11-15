@@ -1,0 +1,14 @@
+{
+  "MIT": [
+    {
+      "name": "ios-app",
+      "versions": [
+        "1.0.0"
+      ],
+      "paths": [
+        "/fixture/ios-app"
+      ],
+      "license": "MIT"
+    }
+  ]
+}

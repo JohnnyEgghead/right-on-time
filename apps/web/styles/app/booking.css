@@ -1,0 +1,152 @@
+/* The booking site's pages (P5-BOOKING; SCR-CUS-01 to SCR-CUS-03): what the app draws that the frames draw as a span or a div (real buttons, inputs and a
+   select), the frames' fixed 1440 x 900 body lifted, the page CSP's no-style-attribute rule (fixed values as classes), and the narrow layouts. It sets no
+   color, contrast or spacing value that a frame states: at 1440 x 900 and at 520 px every compared value is the frame's (G-LOOK-PARITY). Loaded after the
+   page copies (page-booking*.css), which are never edited. */
+
+/* The page scrolls: the frame's body is a fixed picture. */
+html body.r1 { height: auto; min-height: 0; overflow: visible; }
+
+/* Real controls drawn as the frame's boxes. Zero specificity: any frame rule wins. */
+:where(.bw-screen button.tile, .bw-screen button.win, .bw-screen button.alt, .bw-screen button.go, .bw-screen button.other, .bw-screen button.d, .bw-screen button.day,
+  .bw-screen button.back, .bw-screen button.k, .bw-screen button.confirm, .bw-screen button.chg, .bw-screen button.ch, .bw-screen button.bw-opt, .bw-screen button.bw-arr, .bw-screen button.bw-chk) {
+  font-family: inherit; line-height: inherit; letter-spacing: inherit; color: inherit; cursor: pointer; background-color: transparent; text-align: inherit; appearance: none; margin: 0;
+  border: 0 none; padding: 0;
+}
+:where(.bw-screen button.tile, .bw-screen button.win, .bw-screen button.alt, .bw-screen button.other) { width: 100%; text-align: left; }
+:where(.bw-screen button.other) { text-align: center; }
+.bw-screen button.win:disabled, .bw-screen button.go[aria-disabled='true'] { cursor: default; }
+.bw-screen button.tile > b { text-align: left; }
+.bw-screen button.day:disabled { cursor: default; }
+
+/* The text fields are inputs inside the frame's .in box; the box keeps the frame's height. */
+.bw-screen .bw-field { flex: 1; min-width: 0; width: 100%; height: 100%; border: 0; background: transparent; font: inherit; color: inherit; outline: none; padding: 0; }
+.bw-screen .f .in:focus-within { border-color: var(--teal-600); box-shadow: 0 0 0 3px rgba(18, 115, 139, .14); }
+.bw-screen .f .in .bw-field:disabled { color: var(--ink-400); cursor: default; }
+/* The street results are options (buttons) in the frame's .res list. */
+.bw-screen .res .bw-opt { width: 100%; padding: 9px 12px; font-size: 14px; min-height: 44px; display: flex; align-items: center; justify-content: space-between; border: 0; text-align: left; }
+.bw-screen .res .bw-opt + .bw-opt { border-top: 1px solid var(--ink-150); }
+.bw-screen .res .bw-opt small { color: var(--ink-500); }
+.bw-screen .res .bw-opt[aria-selected='true'] { background: var(--teal-50); }
+/* The month arrows are buttons in the frame's .arr. */
+.bw-screen .cal .mh .arr .bw-arr { width: 30px; height: 30px; border: 1px solid var(--ink-300); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--ink-600); padding: 0; }
+.bw-screen .cal .mh .arr .bw-arr:disabled { opacity: .45; cursor: default; }
+.bw-screen .cal .mh .arr .bw-arr .ic { width: 15px; height: 15px; }
+.bw-screen .bw-link { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; margin-left: 6px; }
+.bw-screen .bw-right { text-align: right; }
+/* The days of the grid are buttons: the frame's dark selected day keeps its color. */
+.bw-screen .grid7 > [role='gridcell'] { font-family: inherit; }
+/* The Text me updates box: a 44 px target around the frame's 20 px box, and the language select laid invisibly over the frame's span. */
+.bw-screen .chk .bw-chk { width: 44px; height: 44px; margin: -12px -12px -12px -12px; padding: 0; border: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.bw-screen .chk .bw-chk:disabled { cursor: default; }
+.bw-screen .chk .bw-chk:focus-visible { outline: 3px solid var(--teal-500); outline-offset: -2px; border-radius: 8px; }
+.bw-screen .chk .sel.bw-overlay { position: relative; }
+.bw-screen .chk .sel.bw-overlay select { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); opacity: 0; cursor: pointer; font: inherit; margin: 0; border: 0; }
+.bw-screen .chk .sel.bw-overlay select:disabled { cursor: default; }
+.bw-screen .chk .sel.bw-overlay:focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+/* The app's screen root is .r1-screen, which the kit's `.r1-screen .ic` (18 px) outweighs the frames' 2-part icon sizes: restated here, 1 level up. */
+.bw-screen .demo .ic { width: 16px; height: 16px; }
+.bw-screen .confirm .ic { width: 20px; height: 20px; }
+.bw-screen .quiet .ic { width: 17px; height: 17px; }
+.bw-screen .sentchip .ic { width: 14px; height: 14px; }
+.bw-screen .way .ic { width: 20px; height: 20px; }
+.bw-screen .noacct .ic { width: 22px; height: 22px; }
+.bw-screen .seetx .ic { width: 17px; height: 17px; }
+.bw-screen .other .ic { width: 17px; height: 17px; }
+.bw-screen .callnote .ic { width: 18px; height: 18px; }
+
+/* Buttons in rows: the Continue and Back pair, Confirm. */
+.bw-screen .contb button { border: 0; font-family: inherit; min-height: 46px; padding: 0 18px; border-radius: 11px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 15px; }
+.bw-screen .contb button.k { border: 1.5px solid var(--ink-300); }
+.bw-screen .contb button.go { height: auto; margin-top: 0; }
+.bw-screen .contb button.go.dis { cursor: default; }
+.bw-screen .cbtns button.back { background: none; }
+.bw-screen button.confirm { border: 0; width: auto; }
+.bw-screen button.confirm:disabled, .bw-screen .cbtns button.back:disabled { cursor: default; }
+.bw-screen button.confirm .r1-spin { margin-right: 0; }
+.bw-screen .main { min-width: 0; }
+.bw-screen .main > * { min-width: 0; }
+
+/* The Window just taken page: the Book this window button spans the box, Pick another day too. */
+.bw-screen button.go { border: 0; }
+.bw-screen button.go.on { cursor: pointer; }
+.bw-screen section.box > button.go, .bw-screen section.box > button.other { width: 100%; }
+.bw-screen button.alt { border-style: solid; border-width: 1.5px; border-color: var(--ink-200); }
+.bw-screen button.alt.sel { border-color: var(--teal-600); }
+.bw-screen .alts .alt > div { text-align: left; }
+
+/* Skeleton shapes: the frame's inline sizes as classes. */
+.bw-screen .bw-mt-12 { margin-top: 12px; }
+.bw-screen .bw-skel-ico { width: 36px; height: 36px; }
+.bw-screen .bw-skel-60 { width: 60%; }
+.bw-screen .bw-skel-40 { width: 40%; }
+.bw-screen .bw-skel-70 { width: 70%; }
+.bw-screen .bw-skel-cal { height: 280px; }
+.bw-screen .bw-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.bw-screen .bw-nf-main { grid-template-columns: minmax(0, 1fr); }
+.bw-screen .bw-nf-h { margin: 8px 0 0; font-size: 22px; }
+.bw-screen .nf .btn { display: inline-flex; }
+.bw-screen .acts .btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.bw-screen .seetx { text-decoration: underline; }
+
+/* Below the wide layout: the columns stack and the tiles take 3 across. */
+@media (max-width: 1200px) {
+  .bw-screen .main { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .svc { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bw-screen .pick { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .hero { flex-wrap: wrap; padding-left: 20px; padding-right: 20px; }
+  .bw-screen .steps { margin-left: 0; flex-wrap: wrap; }
+  .bw-screen .visit { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .ways { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The phone layout (DK-119): the page's own width is the phone's; the frame's rules are scoped under .bw-ph. The frame has no step views but the window
+   step, so the other steps draw the same boxes in a single column, with 44 px targets (FR-BOOK-4). */
+.bw-screen .bw-ph { background: var(--ink-50); }
+.bw-screen .bw-ph .pg { display: flex; flex-direction: column; min-height: 0; overflow: visible; }
+.bw-screen .bw-ph .body { overflow: visible; }
+.bw-screen .bw-ph .svc { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bw-screen .bw-ph .addr2 { grid-template-columns: minmax(0, 1fr); }
+.bw-screen .bw-ph .f .in { min-height: 44px; }
+.bw-screen .bw-ph .grid7 { gap: 3px; }
+.bw-screen .bw-ph .d { height: 44px; min-width: 0; }
+.bw-screen .bw-ph .cal .mh .arr .bw-arr { width: 44px; height: 44px; }
+/* The phone steps draw the calendar outside the frame's .cal box (step 3 has no frame of its own), so its month arrows get their own 44 px square. */
+.bw-screen .bw-ph .mh .arr { display: flex; gap: 6px; }
+.bw-screen .bw-ph .mh .arr .bw-arr { width: 44px; height: 44px; border: 1px solid var(--ink-300); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--ink-600); padding: 0; }
+.bw-screen .bw-ph .mh .arr .bw-arr:disabled { opacity: .45; cursor: default; }
+.bw-screen .bw-ph .mh .arr .bw-arr .ic { width: 15px; height: 15px; }
+.bw-screen .bw-ph .msg { font-size: 14px; }
+.bw-screen .bw-ph .sum .li { gap: 12px; }
+.bw-screen .bw-ph .sum .li b { min-width: 0; overflow-wrap: anywhere; }
+.bw-screen .bw-ph .contb, .bw-screen .bw-ph .cbtns { margin-top: 12px; }
+.bw-screen .bw-ph button.go.bw-go-ph { border: 0; }
+.bw-screen .bw-ph .foot .go.dis { background: var(--ink-300); box-shadow: none; }
+.bw-screen .bw-ph .alert, .bw-screen .bw-ph .box { margin-bottom: 8px; }
+.bw-screen .bw-ph .chosen .ch { cursor: pointer; border: 0; background: none; }
+.bw-screen .bw-ph .day { font-family: inherit; }
+.bw-screen .bw-ph .day:disabled { opacity: .5; }
+.bw-screen .bw-ph .day.sel:disabled { opacity: 1; }
+.bw-screen .bw-ph h2 small[data-ctl='CTL-CUS-01-18'] { white-space: nowrap; }
+.bw-screen .bw-ph .contb button { min-height: 44px; }
+@media (max-width: 760px) {
+  .bw-screen .done-narrow { padding: 0; }
+  .bw-screen .hero { padding-left: 16px; padding-right: 16px; }
+  .bw-screen .main { padding-left: 16px; padding-right: 16px; }
+  .bw-screen .acts { flex-wrap: wrap; }
+  .bw-screen .acts .btn { min-width: 44px; min-height: 44px; }
+  .bw-screen .phonebox .bub { max-width: 100%; }
+  .bw-screen .next li { grid-template-columns: 44px minmax(0, 1fr); }
+  .bw-screen .sentchip { white-space: normal; }
+  .bw-screen .sent { flex-wrap: wrap; }
+}
+
+/* Phone targets of at least 44 px (FR-BOOK-4): fields, labels, links, the change buttons and the language select. */
+.bw-screen .bw-ph .f label { display: flex; align-items: center; min-height: 44px; }
+.bw-screen .bw-ph .f .in { min-height: 44px; }
+.bw-screen .bw-ph .bw-field { min-height: 44px; }
+.bw-screen .bw-ph .chosen .ch { min-width: 64px; min-height: 44px; }
+.bw-screen .bw-ph .box h2 .chg { min-height: 44px; min-width: 44px; justify-content: center; }
+.bw-screen .bw-ph .chk .sel { min-height: 44px; }
+.bw-screen .bw-link { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; justify-content: center; }
+.bw-screen .bw-ph .bw-opt { min-height: 44px; }
+@media (max-width: 760px) { .bw-screen .nf .btn { min-height: 44px; min-width: 44px; align-items: center; justify-content: center; } }

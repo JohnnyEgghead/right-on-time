@@ -1,0 +1,3 @@
+Provenance of the map's bundled files (F-530; SPECIFICATIONS SD-39, 6.10).
+Source: github.com/protomaps/basemaps-assets at commit 028c18f (Oct 31, 2025): fonts/Noto Sans Regular, Medium and Italic glyph ranges (OFL-1.1, text in fonts/OFL-1.1.txt) and the light sprite sheet in sprites/ (MIT, derived from tangrams/icons, text in sprites/LICENSE-tangrams-icons-MIT.txt).
+Checked at the review of P3-MAP-LABELS: the 4 sprite files, 9 sampled glyph files and the OFL text are byte-identical (git blob SHA) to that commit. The license texts are hashed in ci/license/build-verified.json.

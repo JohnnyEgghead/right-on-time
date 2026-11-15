@@ -1,0 +1,30 @@
+{
+  "_doc": "SPECIFICATIONS SD-39 allow-list for what ships (server image closure, web bundles, iPhone bundle). shippedRoots is the server and web closure by pnpm --prod; the iPhone app ships what Metro bundles (bundleApp), derived by an offline expo export; iosRoots is the native production closure for the HC-07 gate. Read by ci/license-gates.ts. Widening this list is an owner decision, never a lane's fix for a red gate.",
+  "allow": ["MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Apache-2.0", "0BSD", "CC0-1.0", "BlueOak-1.0.0"],
+  "restricted": {
+    "OFL-1.1": {
+      "_doc": "Font files only: allowed on a shipped package whose name matches one of these patterns.",
+      "namePatterns": ["^@fontsource(-variable)?/", "(^|[/-])fonts?([/-]|$)"]
+    },
+    "ODbL-1.0": {
+      "_doc": "Map data, tracks and the street list only: allowed on a shipped package named here.",
+      "names": []
+    },
+    "CC-BY-4.0": {
+      "_doc": "F-245: browser-support data only: allowed on a shipped package named here. Attribution is required; the credit is recorded here.",
+      "names": ["caniuse-lite"],
+      "credit": "caniuse-lite: browser support data from caniuse.com (Fyrd/caniuse), packaged by the browserslist project (https://github.com/browserslist/caniuse-lite), licensed CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/)."
+    },
+    "LGPL-3.0-or-later": {
+      "_doc": "Owner ruling 0963dc1d (answered Nov 10, 2026, 1:11 AM EST: 'Allow LGPL for libvips'; plan 0.26 section 11 item 25; F-1263): the libvips binary sharp loads for the photo small copy (SPECIFICATIONS SD-32), on the server only: allowed on a server-closure package whose name matches one of these patterns, never in the iPhone app (HC-07, FR-DIST-6: ios-bundle-copyleft still fails any GPL, LGPL or AGPL there, and so does license-inventory for a package in the iPhone bundle).",
+      "namePatterns": ["^@img/sharp-libvips-(darwin|linux|linuxmusl)-(arm64|x64)$"],
+      "serverOnly": true
+    }
+  },
+  "shippedRoots": ["bw-web", "bw-worker", "bw-pbs"],
+  "bundleApp": { "project": "bw-tech-native", "dir": "apps/tech-native" },
+  "iosRoots": ["bw-tech-native"],
+  "bundleFloor": 30,
+  "autolinkedFloor": 16,
+  "workspaceDirs": ["apps", "packages"]
+}

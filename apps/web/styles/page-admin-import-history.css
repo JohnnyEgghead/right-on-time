@@ -1,0 +1,21 @@
+/* SCR-OFC-15 page-local rules (DK-100): the last <style> of mockups/pages/r1-admin-history.html, copied byte for byte (UI-DESIGN-KIT 1.1).
+   Never edited; the app's adaptations of it are in page-admin-import.css. */
+
+.ah { padding-bottom: 0; align-items: flex-end; }
+.tabs { display: flex; gap: 4px; width: 100%; margin-top: 2px; }
+.tabs a { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; font-weight: 600; font-size: 14.5px; color: var(--ink-600); position: relative; }
+.tabs a.on { color: var(--teal-800); }
+.tabs a.on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--orange-500); }
+.tabs .n { min-width: 22px; height: 20px; border-radius: 10px; background: var(--ink-100); color: var(--ink-700); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; padding: 0 7px; }
+.body { padding: 14px 24px; display: flex; flex-direction: column; gap: 12px; min-height: 0; flex: 1; overflow: hidden; }
+.cnts { color: var(--ink-700); font-size: 13px; }
+.cnts b { font-variant-numeric: tabular-nums; }
+.who2 small { display: block; color: var(--ink-500); font-size: 12px; }
+.find { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.find label { font-size: 13.5px; font-weight: 650; color: var(--ink-700); }
+.find .r1-input { height: 36px; width: 260px; font-size: 14px; border-radius: 8px; }
+.pair b { display: block; font-weight: 650; }
+.pair small { display: block; color: var(--ink-500); font-size: 12px; }
+.ft { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-top: 1px solid var(--ink-150); font-size: 13px; color: var(--ink-600); }
+.btn.dis { pointer-events: none; }
+

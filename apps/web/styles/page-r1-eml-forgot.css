@@ -1,0 +1,10 @@
+/* SCR-EML-03 page-local rules (DK-131): the last <style> of mockups/pages/r1-eml-forgot.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/accounts.css. */
+
+.pcard.fp { width: 520px; }
+.fp form { margin-top: 20px; display: flex; flex-direction: column; gap: 16px; }
+.fp .btn.lg { width: 100%; }
+.res { margin-top: 18px; }
+.res .okbox a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 700; color: var(--teal-800); text-decoration: underline; text-underline-offset: 2px; }
+.backl { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 10px; font-weight: 650; color: var(--teal-700); }
+

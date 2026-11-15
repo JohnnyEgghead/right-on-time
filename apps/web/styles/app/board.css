@@ -1,0 +1,114 @@
+/* Page adaptation of the board (P4-BOARD), in the manner of shell.css: only real controls where the frame drew a span, the
+   timeline region and overlays the frame draws as pictures, and narrow widths. It sets no color, contrast or spacing value
+   that the comparator compares at 1440 x 900 (OA-84): every rule is zero-specificity or lifts a frame's fixed picture size. */
+
+/* The date: the visible text with the date field laid over it (CTL-OFC-02-04: a date field with a calendar). */
+:where(.bw-date) { position: relative; display: block; cursor: pointer; }
+:where(.bw-date) > input.bw-date-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; border: 0; padding: 0; cursor: pointer; }
+:where(.bw-date):focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; border-radius: 6px; }
+:where(.seg) > span[role="radio"] { cursor: pointer; }
+:where(.bw-w-30) { width: 30%; }
+/* The frame's work area is a fixed 1440 x 900 picture; a branch with more technicians than it holds grows the page, at least as
+   tall as the frame (so the frame's 12 rows compare at the frame's height). */
+.bw-screen .work { height: auto; min-height: calc(900px - 58px - 70px); }
+/* New job and Open job are links where the frame drew spans and buttons: no underline (not a compared value). */
+.bw-screen a.btn { text-decoration: none; }
+:where(.bw-m0) { margin: 0; }
+:where(.bw-board-loading) { display: flex; flex-direction: column; gap: 10px; margin: 16px; }
+:where(.r1-pop) { max-width: calc(100vw - 32px); }
+:where(.att) > p.r1-note { margin: 10px 14px; }
+/* CTL-OFC-02-15: a refused photo or signature the server kept shows as a tile, a photo's from its small copy (API-175 size thumb, UD-55). */
+:where(.bw-att-tile) { display: block; width: 88px; height: 60px; object-fit: cover; border-radius: 6px; margin: 4px 0; }
+:where(.bw-noothers) { margin: 0 0 10px; }
+/* A text input's default size would widen its half of the 2-column field grid (WebKit sizes 1fr columns by it). */
+:where(.g2f) input.bw-field-input { width: 0; }
+/* The frame draws the conflict message larger than a field message, with no margin (DK-85 SCR-OFC-19 tiles). */
+.r1-dlg .r1-fmsg.bw-conflict { margin: 0; font-size: 14px; }
+/* The office frame's set carries the options sheet (DK-21's white date arrows) and its body is .r1 (kit :where(body.r1) .panel .ph);
+   the board's frame has neither, so the board restores its own frame's values. */
+.bw-screen .datenav .arrow { background: transparent; }
+.bw-screen .panel .ph { gap: 12px; padding: 0 14px; flex-wrap: nowrap; }
+/* The map panel (P4-BOARD-MAP). The select is laid over the visible words, as the date field is: the frame's box keeps its width. */
+:where(.msel) { position: relative; cursor: pointer; }
+:where(.msel) > select.bw-msel-input { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); opacity: 0; margin: 0; border: 0; padding: 0; cursor: pointer; }
+:where(.msel):focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+:where(.vancard .top .chip) { margin-left: auto; }
+:where(.jtabs a) { cursor: pointer; }
+:where(.bw-vans) { position: relative; display: inline-flex; }
+:where(.bw-vans-menu) { position: absolute; top: calc(100% + 4px); right: 0; z-index: 20; display: block; max-height: 300px; overflow-y: auto; width: 220px; }
+:where(.bw-vans-menu) > button { display: block; width: 100%; text-align: left; }
+:where(.bw-skill-note) { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--ink-200); }
+:where(.bw-van-error) { padding: 8px 12px; }
+/* The tab panel fills the rest of the panel and scrolls: its height adds nothing to the page's, so the board's rows set it. */
+:where(.mapp) > [role="tabpanel"] { flex: 1 0 0; height: 0; overflow-y: auto; }
+/* F-1539: the technician column keeps its frame width and the lines inside keep the frame's boxes (a van and skill line can be longer
+   than the column, as in the frame); what runs past the column edge is cut there, never drawn over the grid. The line's title has it whole. */
+.tl-row .who { overflow: hidden; }
+/* F-1540: a day that runs past the frame's 6 PM edge is wider than the region (Timeline sets the width of .tl-in); the region
+   scrolls sideways with the technician column and its corner held at the left edge. */
+.bw-screen #tl.tl { overflow: auto; }
+.tl-in { position: relative; min-width: 100%; min-height: 100%; }
+.tl-row .who, .tl-head .corner { position: sticky; left: 0; }
+.tl-head .corner { z-index: 4; }
+.tl-head .corner::before { content: ""; position: absolute; inset: 0; z-index: -1; background: #fff; }
+/* F-1544: the larger map (CTL-OFC-02-35). The timeline is set aside, the panel takes the board's full width, and its one map (the same
+   MapView, so the same markers, toggle, legend and filter) is tall; the job list under it is set aside with the timeline. */
+.bw-mapbig { position: absolute; top: 10px; left: 10px; z-index: 3; background: #fff; box-shadow: var(--shadow); }
+.bw-screen .work.maplarge .boardp { display: none; }
+.bw-screen .work.maplarge .mapp { width: auto; flex: 1 1 auto; min-width: 0; }
+.bw-screen .work.maplarge .mapp .r1-map.bw-map-panel { height: max(520px, calc(100vh - 300px)); }
+.bw-screen .work.maplarge .mapp > .jtabs, .bw-screen .work.maplarge .mapp > [role="tabpanel"] { display: none; }
+/* The frame's board is a 1440 x 900 picture; a page scrolls and narrows. */
+@media (max-width: 1199px) {
+  .bw-screen .work { flex-direction: column; height: auto; }
+  .bw-screen .mapp { width: auto; }
+  .bw-screen .mapp > [role="tabpanel"] { flex: none; height: auto; }
+  .bw-screen .sumbar { height: auto; flex-wrap: wrap; padding: 8px 12px; }
+  .bw-screen .tiles { flex-wrap: wrap; }
+  .bw-screen .boardp .ph { height: auto; flex-wrap: wrap; padding: 8px 14px; }
+  .bw-screen .legend { flex-wrap: wrap; }
+  .bw-screen .boardp { min-height: 480px; }
+  .bw-screen .boardp { overflow-x: auto; }
+  .bw-screen #tl.tl { min-width: 900px; overflow: visible; }
+}
+/* Below 1000 px (a 1440 px window at 200% zoom is 720) the timeline keeps the width it has in a 1440 px window, so a job's words get the
+   room they have there (F-1614, 14.1 item 12); the board scrolls sideways in its own region, as the exception allows. */
+@media (max-width: 999px) {
+  .bw-screen #tl.tl { min-width: 1030px; }
+}
+@media (max-width: 719px) {
+  .bw-screen .datenav .arrow, .bw-screen .seg > *, .bw-screen .btn.sm { min-height: 44px; min-width: 44px; }
+  .bw-screen .att .row .btn, .bw-screen .att a.row { min-height: 44px; }
+  .bw-screen .mtools { flex-wrap: wrap; }
+  .bw-screen .msel, .bw-screen .jtabs a { min-height: 44px; }
+  /* The map's parts at a finger's size: each marker keeps its drawing in the middle of a 44 px box. */
+  .bw-screen .bw-map-panel [data-marker-id][role="button"] { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
+  .bw-screen .bw-map-panel .zm button { width: 44px; height: 44px; }
+  .bw-screen .bw-map-panel .osm { display: inline-flex; align-items: center; min-height: 44px; }
+  .bw-screen .jtabs { flex-wrap: wrap; }
+  .bw-screen .att .tx a { display: inline-flex; align-items: center; min-height: 44px; }
+  .bw-screen .seg { height: auto; }
+  .bw-screen .bw-date { min-height: 44px; display: flex; align-items: center; }
+  .bw-screen .sumbar .btn, .bw-screen .r1-dlg-f .btn, .bw-screen .r1-pop .btn, .bw-screen .r1-x { min-height: 44px; min-width: 44px; }
+  .bw-screen .r1-dlg .r1-input, .bw-screen .rl2 { min-height: 44px; }
+  .bw-screen .r1-dlg .r1-input > input, .bw-screen .r1-dlg .r1-input > select { min-height: 44px; }
+  .bw-screen .r1-dlg-f { flex-wrap: wrap; }
+  .bw-screen .r1-dlg-f .btn, .bw-screen .r1-pop .acts .btn { white-space: normal; height: auto; }
+  /* A phone shows each row's jobs and blocks as a list in time order, whole words and no time axis: a block on a 390 px
+     timeline would cut its words. The single-pointer ways to move them are the popovers' Reassign and Change (UD-7). */
+  .bw-screen #tl.tl { min-width: 0; }
+  .bw-screen .tl-hours, .bw-screen .tl-grid, .bw-screen .tl-off, .bw-screen .tl-now { display: none; }
+  .bw-screen .tl-row { flex-direction: column; height: auto !important; }
+  .bw-screen .tl-in { width: auto !important; }
+  .bw-screen .tl-row .who { width: auto !important; border-right: 0; padding: 8px 14px; position: static; overflow: visible; }
+  .bw-screen .tl-row .who .nm, .bw-screen .tl-row .who .sub, .bw-screen .tl-row .who .sub2 { white-space: normal; overflow: visible; }
+  .bw-screen .tl-head .corner { width: auto !important; }
+  .bw-screen .tl-row .lane { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; }
+  .bw-screen .tl-row .lane > .job { position: static; left: auto !important; width: auto !important; flex: 1 1 150px; min-height: 44px; }
+  .bw-screen .tl-row .lane > .job .l1, .bw-screen .tl-row .lane > .job .l2 { white-space: normal; overflow: visible; }
+  .bw-screen .tl-row .lane > .left-behind, .bw-screen .tl-row .lane > .drop-target, .bw-screen .tl-row .lane > .dragtip { display: none; }
+  .bw-screen .nojobs { position: static; transform: none; }
+}
+/* A technician's further skills on a board row (FR-DISP-15, FR-DISP-33): the frame's row prints 1 skill in its .sub line, whose width already fills the name
+   column, so more skills take a second line of the same look; the row's fixed 50 px holds both. */
+.tl-row .who .sub2 { font-size: 12px; color: var(--ink-500); white-space: nowrap; line-height: 1.3; margin-top: 1px; }

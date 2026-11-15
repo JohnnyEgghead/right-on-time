@@ -1,0 +1,3 @@
+// case-as: packages/time/src/format.ts
+// expect: fail 1
+export const t = Date.now();

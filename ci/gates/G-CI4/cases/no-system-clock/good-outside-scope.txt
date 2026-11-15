@@ -1,0 +1,3 @@
+// case-as: ci/planted.ts
+// expect: pass 0
+export const t = Date.now();

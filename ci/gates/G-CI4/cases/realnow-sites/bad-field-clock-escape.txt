@@ -1,0 +1,8 @@
+// case-as: packages/outbox/src/planted.ts
+// expect: fail used as a value
+import type { Clock } from '@bw/time';
+declare function sink(read: unknown): void;
+export const f = (clock: Clock) => {
+  const { realNow: x } = clock;
+  sink(x);
+};

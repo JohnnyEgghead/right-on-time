@@ -1,0 +1,8 @@
+// case-as: packages/outbox/src/planted.ts
+// expect: pass log_stamp
+import { realNow } from '@bw/time';
+export const f = (answer: { realNow: string; demoNow: string }) => {
+  const { demoNow, realNow: serverReal } = answer;
+  return [demoNow, serverReal, realNow('log_stamp')];
+};
+export const g = ({ realNow: shown }: { realNow: string }) => shown;

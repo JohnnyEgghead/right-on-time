@@ -1,0 +1,266 @@
+/* The live map pages' adaptation of their frames (SCR-CUS-04 and SCR-CUS-05), as styles/app/shell.css is for the shell: the frame draws a 390 px phone
+   screen inside a device; the page is that screen's body (.pg) on any phone and on a computer. It sets no color, contrast or spacing value of the
+   frame's own beyond the states the frame does not draw (OA-84). Loaded after the frames' page-local sheets (page-customer-live-map.css and
+   page-customer-live-map-ended.css, byte copies of the frames' last style blocks). */
+
+/* The page: the phone screen's body, centered and no wider than a large phone; the frame's device presentation set .screen and its icon size. */
+.lm { max-width: 480px; min-height: 100vh; margin: 0 auto; background: #fff; }
+.lm .pg { min-height: 100vh; }
+:where(.lm) .ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
+:where(.lm) .ic svg { width: 100%; height: 100%; }
+
+/* The 2 frames' sheets share selectors: a screen takes its own frame's value (the live heading has no top margin and a blue time; the ended one, the site color). */
+.lm[data-screen="SCR-CUS-04"] .hero h1 { margin: 0; }
+.lm[data-screen="SCR-CUS-04"] .hero p b { color: #1745a8; }
+.lm[data-screen="SCR-CUS-05"] .hero h1 { margin: 8px 0 0; }
+.lm[data-screen="SCR-CUS-05"] .hero p b { color: var(--st-site-ink); }
+
+/* The language switch as the frame's plain "English | Español" text (the kit's .r1-lang is a pill on a desktop header). The links keep a 44 px tap target
+   through vertical padding on an inline box, which adds no height to the brand row.
+   F-1078: the chosen word is the frame's <b> in a 550 line, which a browser draws bolder, 900 (not 700); and the gaps around the bar are the frame's
+   own space characters, not a margin. A 4.365 px margin made the line as wide as the frame's on the Mac only (it made up for the lighter word);
+   on Linux Chromium, whose glyph advances are whole pixels, the line was 109.72 px against the frame's 108. */
+.lm .brandrow .lang { display: block; gap: normal; background: none; border: 0; padding: 0; height: auto; box-shadow: none; }
+.lm .brandrow .lang a { display: inline; color: var(--ink-500); font-weight: 550; text-decoration: none; padding: 15px 0; background: none; height: auto; min-height: 0; border-radius: 0; }
+.lm .brandrow .lang a.on { color: var(--teal-700); font-weight: 900; }
+.lm .brandrow .lang .sep { color: var(--ink-500); }
+.lm .brandrow .lang .sep::before, .lm .brandrow .lang .sep::after { content: ' '; }
+
+/* The frame's Update failed tile draws a shorter map (inline height); the page does the same with the van removed. */
+.lm .mapw.short { height: 200px; }
+
+/* The ended frame's technician line is inline text (its sheet has no .who rules of the live frame's); the live sheet's block line here is for SCR-CUS-04 only. */
+.lm[data-screen="SCR-CUS-05"] .who span.s { display: inline; line-height: inherit; }
+
+/* The map box: the frame's .mapw holds the drawing; here it holds the map (CMP-05), filling the box. */
+.lm .mapw .r1-map { position: absolute; inset: 0; height: auto; border: 0; border-radius: 0; background: none; }
+.lm .mapw .r1-map .osm { left: 8px; bottom: 6px; }
+.lm .mapw .r1-skel.fill { height: 100%; border-radius: 0; }
+
+/* What the frame set with a style attribute (the page's CSP forbids that attribute): the loading skeleton's 2 lines. */
+.lm .skl .r1-skel.w70 { width: 70%; }
+.lm .skl .r1-skel.w90 { width: 90%; }
+.lm .skl .r1-skel.tall { height: 22px; }
+
+/* Call Brightwater: the button is the frame's .call (a div there, a link or a button here); the box around it takes no space of its own. */
+.lm .bw-callbox { display: block; flex: none; }
+.lm .bw-callbox .call { background: none; font-family: inherit; cursor: pointer; width: auto; text-decoration: none; box-sizing: border-box; padding: 0; }
+.lm .bw-callbox .bw-call { display: block; }
+.lm .bw-callbox button.call { width: calc(100% - 36px); }
+.lm .bw-callbox .bw-call-live { margin: 0 18px; }
+.lm .bw-callbox a.call { box-sizing: border-box; }
+
+/* A phone's finger (tap-target-44) and a long Spanish clock line (overflow-pass at the wide-font probe): on a narrow screen the map's zoom buttons and credit link,
+   the footer's source link and the demo bar take the room they need. The 1440 px look comparison does not see these. */
+@media (max-width: 719px) {
+  .lm .mapw .zm button { min-width: 44px; min-height: 44px; }
+  .lm .mapw a.osm { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+  .lm .r1p-foot a { display: inline-flex; align-items: center; min-height: 44px; }
+  .lm .brandrow { flex-wrap: wrap; }
+  .lm .eta { flex-wrap: wrap; }
+  .lm .r1-demobar.ph { height: auto; min-height: 30px; flex-wrap: wrap; padding-top: 4px; padding-bottom: 4px; row-gap: 2px; }
+}
+
+/* The trip progress: the frame sets these 2 widths inline; the page cannot (CSP), so each whole percent is a class on .eta. */
+.eta.pct0 .track i { width: 0%; }
+.eta.pct0 .track b { left: 0%; }
+.eta.pct1 .track i { width: 1%; }
+.eta.pct1 .track b { left: 1%; }
+.eta.pct2 .track i { width: 2%; }
+.eta.pct2 .track b { left: 2%; }
+.eta.pct3 .track i { width: 3%; }
+.eta.pct3 .track b { left: 3%; }
+.eta.pct4 .track i { width: 4%; }
+.eta.pct4 .track b { left: 4%; }
+.eta.pct5 .track i { width: 5%; }
+.eta.pct5 .track b { left: 5%; }
+.eta.pct6 .track i { width: 6%; }
+.eta.pct6 .track b { left: 6%; }
+.eta.pct7 .track i { width: 7%; }
+.eta.pct7 .track b { left: 7%; }
+.eta.pct8 .track i { width: 8%; }
+.eta.pct8 .track b { left: 8%; }
+.eta.pct9 .track i { width: 9%; }
+.eta.pct9 .track b { left: 9%; }
+.eta.pct10 .track i { width: 10%; }
+.eta.pct10 .track b { left: 10%; }
+.eta.pct11 .track i { width: 11%; }
+.eta.pct11 .track b { left: 11%; }
+.eta.pct12 .track i { width: 12%; }
+.eta.pct12 .track b { left: 12%; }
+.eta.pct13 .track i { width: 13%; }
+.eta.pct13 .track b { left: 13%; }
+.eta.pct14 .track i { width: 14%; }
+.eta.pct14 .track b { left: 14%; }
+.eta.pct15 .track i { width: 15%; }
+.eta.pct15 .track b { left: 15%; }
+.eta.pct16 .track i { width: 16%; }
+.eta.pct16 .track b { left: 16%; }
+.eta.pct17 .track i { width: 17%; }
+.eta.pct17 .track b { left: 17%; }
+.eta.pct18 .track i { width: 18%; }
+.eta.pct18 .track b { left: 18%; }
+.eta.pct19 .track i { width: 19%; }
+.eta.pct19 .track b { left: 19%; }
+.eta.pct20 .track i { width: 20%; }
+.eta.pct20 .track b { left: 20%; }
+.eta.pct21 .track i { width: 21%; }
+.eta.pct21 .track b { left: 21%; }
+.eta.pct22 .track i { width: 22%; }
+.eta.pct22 .track b { left: 22%; }
+.eta.pct23 .track i { width: 23%; }
+.eta.pct23 .track b { left: 23%; }
+.eta.pct24 .track i { width: 24%; }
+.eta.pct24 .track b { left: 24%; }
+.eta.pct25 .track i { width: 25%; }
+.eta.pct25 .track b { left: 25%; }
+.eta.pct26 .track i { width: 26%; }
+.eta.pct26 .track b { left: 26%; }
+.eta.pct27 .track i { width: 27%; }
+.eta.pct27 .track b { left: 27%; }
+.eta.pct28 .track i { width: 28%; }
+.eta.pct28 .track b { left: 28%; }
+.eta.pct29 .track i { width: 29%; }
+.eta.pct29 .track b { left: 29%; }
+.eta.pct30 .track i { width: 30%; }
+.eta.pct30 .track b { left: 30%; }
+.eta.pct31 .track i { width: 31%; }
+.eta.pct31 .track b { left: 31%; }
+.eta.pct32 .track i { width: 32%; }
+.eta.pct32 .track b { left: 32%; }
+.eta.pct33 .track i { width: 33%; }
+.eta.pct33 .track b { left: 33%; }
+.eta.pct34 .track i { width: 34%; }
+.eta.pct34 .track b { left: 34%; }
+.eta.pct35 .track i { width: 35%; }
+.eta.pct35 .track b { left: 35%; }
+.eta.pct36 .track i { width: 36%; }
+.eta.pct36 .track b { left: 36%; }
+.eta.pct37 .track i { width: 37%; }
+.eta.pct37 .track b { left: 37%; }
+.eta.pct38 .track i { width: 38%; }
+.eta.pct38 .track b { left: 38%; }
+.eta.pct39 .track i { width: 39%; }
+.eta.pct39 .track b { left: 39%; }
+.eta.pct40 .track i { width: 40%; }
+.eta.pct40 .track b { left: 40%; }
+.eta.pct41 .track i { width: 41%; }
+.eta.pct41 .track b { left: 41%; }
+.eta.pct42 .track i { width: 42%; }
+.eta.pct42 .track b { left: 42%; }
+.eta.pct43 .track i { width: 43%; }
+.eta.pct43 .track b { left: 43%; }
+.eta.pct44 .track i { width: 44%; }
+.eta.pct44 .track b { left: 44%; }
+.eta.pct45 .track i { width: 45%; }
+.eta.pct45 .track b { left: 45%; }
+.eta.pct46 .track i { width: 46%; }
+.eta.pct46 .track b { left: 46%; }
+.eta.pct47 .track i { width: 47%; }
+.eta.pct47 .track b { left: 47%; }
+.eta.pct48 .track i { width: 48%; }
+.eta.pct48 .track b { left: 48%; }
+.eta.pct49 .track i { width: 49%; }
+.eta.pct49 .track b { left: 49%; }
+.eta.pct50 .track i { width: 50%; }
+.eta.pct50 .track b { left: 50%; }
+.eta.pct51 .track i { width: 51%; }
+.eta.pct51 .track b { left: 51%; }
+.eta.pct52 .track i { width: 52%; }
+.eta.pct52 .track b { left: 52%; }
+.eta.pct53 .track i { width: 53%; }
+.eta.pct53 .track b { left: 53%; }
+.eta.pct54 .track i { width: 54%; }
+.eta.pct54 .track b { left: 54%; }
+.eta.pct55 .track i { width: 55%; }
+.eta.pct55 .track b { left: 55%; }
+.eta.pct56 .track i { width: 56%; }
+.eta.pct56 .track b { left: 56%; }
+.eta.pct57 .track i { width: 57%; }
+.eta.pct57 .track b { left: 57%; }
+.eta.pct58 .track i { width: 58%; }
+.eta.pct58 .track b { left: 58%; }
+.eta.pct59 .track i { width: 59%; }
+.eta.pct59 .track b { left: 59%; }
+.eta.pct60 .track i { width: 60%; }
+.eta.pct60 .track b { left: 60%; }
+.eta.pct61 .track i { width: 61%; }
+.eta.pct61 .track b { left: 61%; }
+.eta.pct62 .track i { width: 62%; }
+.eta.pct62 .track b { left: 62%; }
+.eta.pct63 .track i { width: 63%; }
+.eta.pct63 .track b { left: 63%; }
+.eta.pct64 .track i { width: 64%; }
+.eta.pct64 .track b { left: 64%; }
+.eta.pct65 .track i { width: 65%; }
+.eta.pct65 .track b { left: 65%; }
+.eta.pct66 .track i { width: 66%; }
+.eta.pct66 .track b { left: 66%; }
+.eta.pct67 .track i { width: 67%; }
+.eta.pct67 .track b { left: 67%; }
+.eta.pct68 .track i { width: 68%; }
+.eta.pct68 .track b { left: 68%; }
+.eta.pct69 .track i { width: 69%; }
+.eta.pct69 .track b { left: 69%; }
+.eta.pct70 .track i { width: 70%; }
+.eta.pct70 .track b { left: 70%; }
+.eta.pct71 .track i { width: 71%; }
+.eta.pct71 .track b { left: 71%; }
+.eta.pct72 .track i { width: 72%; }
+.eta.pct72 .track b { left: 72%; }
+.eta.pct73 .track i { width: 73%; }
+.eta.pct73 .track b { left: 73%; }
+.eta.pct74 .track i { width: 74%; }
+.eta.pct74 .track b { left: 74%; }
+.eta.pct75 .track i { width: 75%; }
+.eta.pct75 .track b { left: 75%; }
+.eta.pct76 .track i { width: 76%; }
+.eta.pct76 .track b { left: 76%; }
+.eta.pct77 .track i { width: 77%; }
+.eta.pct77 .track b { left: 77%; }
+.eta.pct78 .track i { width: 78%; }
+.eta.pct78 .track b { left: 78%; }
+.eta.pct79 .track i { width: 79%; }
+.eta.pct79 .track b { left: 79%; }
+.eta.pct80 .track i { width: 80%; }
+.eta.pct80 .track b { left: 80%; }
+.eta.pct81 .track i { width: 81%; }
+.eta.pct81 .track b { left: 81%; }
+.eta.pct82 .track i { width: 82%; }
+.eta.pct82 .track b { left: 82%; }
+.eta.pct83 .track i { width: 83%; }
+.eta.pct83 .track b { left: 83%; }
+.eta.pct84 .track i { width: 84%; }
+.eta.pct84 .track b { left: 84%; }
+.eta.pct85 .track i { width: 85%; }
+.eta.pct85 .track b { left: 85%; }
+.eta.pct86 .track i { width: 86%; }
+.eta.pct86 .track b { left: 86%; }
+.eta.pct87 .track i { width: 87%; }
+.eta.pct87 .track b { left: 87%; }
+.eta.pct88 .track i { width: 88%; }
+.eta.pct88 .track b { left: 88%; }
+.eta.pct89 .track i { width: 89%; }
+.eta.pct89 .track b { left: 89%; }
+.eta.pct90 .track i { width: 90%; }
+.eta.pct90 .track b { left: 90%; }
+.eta.pct91 .track i { width: 91%; }
+.eta.pct91 .track b { left: 91%; }
+.eta.pct92 .track i { width: 92%; }
+.eta.pct92 .track b { left: 92%; }
+.eta.pct93 .track i { width: 93%; }
+.eta.pct93 .track b { left: 93%; }
+.eta.pct94 .track i { width: 94%; }
+.eta.pct94 .track b { left: 94%; }
+.eta.pct95 .track i { width: 95%; }
+.eta.pct95 .track b { left: 95%; }
+.eta.pct96 .track i { width: 96%; }
+.eta.pct96 .track b { left: 96%; }
+.eta.pct97 .track i { width: 97%; }
+.eta.pct97 .track b { left: 97%; }
+.eta.pct98 .track i { width: 98%; }
+.eta.pct98 .track b { left: 98%; }
+.eta.pct99 .track i { width: 99%; }
+.eta.pct99 .track b { left: 99%; }
+.eta.pct100 .track i { width: 100%; }
+.eta.pct100 .track b { left: 100%; }

@@ -1,0 +1,16 @@
+# P7-E2E (NFR-12): the network policy of the end-to-end copy, laid over infra/compose.yaml by ci/e2e-stack.sh.
+# Every service sits on the project's default network, and that network is internal: Docker gives it no route out, so no container
+# can reach an outside host. The proxy alone is also on `front`, a plain bridge, only so its 2 published ports reach the host (Docker
+# publishes no port of a container that is on internal networks only); ci/e2e-stack.sh then removes the proxy's default route, so
+# `front` carries the published ports in and nothing out. The script proves it from inside each container (a connect to an outside
+# address and a name lookup), before the suite and again after it.
+networks:
+  default:
+    internal: true
+  front: {}
+
+services:
+  proxy:
+    networks:
+      - default
+      - front

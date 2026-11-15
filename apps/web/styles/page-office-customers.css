@@ -1,0 +1,66 @@
+/* SCR-OFC-05 and SCR-OFC-38 (DK-90: mockups/pages/office-customer-search.html) page-local rules: the last <style> of the frame page, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's adaptations are in styles/app/customers.css. */
+  .pgh { background: #fff; border-bottom: 1px solid var(--ink-200); padding: 14px 24px 14px; }
+  .pgh .row { display: flex; align-items: center; gap: 12px; }
+  .pgh h1 { margin: 0; font-size: 25px; font-weight: 750; letter-spacing: -.02em; }
+  .pgh p { margin: 2px 0 0; font-size: 14px; color: var(--ink-600); }
+  .pgh .acts { margin-left: auto; display: flex; gap: 8px; }
+  .qrow { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+  .q { width: 470px; height: 42px; border: 1.5px solid var(--teal-600); box-shadow: 0 0 0 3px rgba(18,115,139,.16); border-radius: 9px; background: #fff; display: flex; align-items: center; gap: 10px; padding: 0 12px; font-size: 15.5px; }
+  .q .ic { width: 18px; height: 18px; color: var(--ink-500); }
+  .q .caret { width: 1.5px; height: 20px; background: var(--ink-900); margin-left: -8px; }
+  .q .clr { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--ink-600); border: 1px solid var(--ink-300); border-radius: 6px; padding: 1px 7px; }
+  .sel { white-space: nowrap; height: 36px; border: 1px solid var(--ink-400); border-radius: 8px; display: flex; align-items: center; gap: 7px; padding: 0 10px 0 12px; font-size: 14px; background: #fff; }
+  .sel .k { color: var(--ink-500); font-size: 13px; }
+  .sel b { font-weight: 620; }
+  .sel .ic { width: 15px; height: 15px; color: var(--ink-500); }
+  .hint { margin-top: 8px; font-size: 13px; color: var(--ink-600); display: flex; align-items: center; gap: 6px; }
+  .hint .ic { width: 15px; height: 15px; color: var(--teal-700); }
+
+  .body { display: grid; grid-template-columns: 1fr 440px; gap: 16px; padding: 14px 24px; }
+  .left { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .card { overflow: hidden; }
+  .card .card-h { padding: 12px 16px 10px; }
+  .card .card-h span { font-size: 13px; color: var(--ink-500); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; font-size: 12px; font-weight: 650; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; padding: 0 12px; height: 34px; border-top: 1px solid var(--ink-200); border-bottom: 1px solid var(--ink-200); background: var(--ink-50); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--ink-150); vertical-align: middle; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  tr.pick td { background: #f3f9fb; }
+  tr.pick td:first-child { box-shadow: inset 3px 0 0 var(--teal-600); }
+  .two { line-height: 1.3; }
+  .two b { font-weight: 660; font-size: 14px; }
+  .two small { display: block; color: var(--ink-500); font-size: 12px; }
+  mark { background: #fde9b8; color: inherit; border-radius: 3px; padding: 0 1px; }
+  .chip.club { background: var(--orange-100); color: var(--orange-700); border-color: var(--orange-300); height: 22px; font-size: 11.5px; }
+  .chip.sm { height: 22px; font-size: 11.5px; }
+  .also { padding: 10px 16px; font-size: 13px; color: var(--ink-600); border-top: 1px solid var(--ink-200); background: var(--ink-50); display: flex; gap: 8px; align-items: center; }
+  .also a { color: var(--teal-700); font-weight: 650; }
+
+  .pv { display: flex; flex-direction: column; }
+  .pv .top { padding: 16px 18px 12px; display: flex; gap: 12px; align-items: center; border-bottom: 1px solid var(--ink-200); }
+  .pv .top .av { width: 44px; height: 44px; font-size: 15px; background: var(--teal-700); }
+  .pv .top b { font-size: 18px; display: block; letter-spacing: -.01em; }
+  .pv .top span.s { font-size: 13px; color: var(--ink-500); }
+  .kv { display: grid; grid-template-columns: 104px 1fr; gap: 7px 12px; padding: 12px 18px; font-size: 13.5px; border-bottom: 1px solid var(--ink-200); }
+  .kv dt { color: var(--ink-500); }
+  .kv dd { margin: 0; font-weight: 520; }
+  .pv h4 { margin: 0; padding: 10px 18px 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-500); }
+  .nx { margin: 2px 18px 10px; border: 1px solid var(--ink-200); border-radius: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.4; }
+  .nx b { font-size: 14px; }
+  .hist .h { display: flex; gap: 12px; padding: 5px 18px; font-size: 13px; }
+  .hist .h .d { width: 92px; flex: none; font-weight: 600; color: var(--ink-700); }
+  .hist .h .t { color: var(--ink-700); }
+  .pv .acts { display: flex; gap: 8px; padding: 12px 18px 16px; margin-top: 4px; }
+  a.nm { color: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--ink-300); }
+  .r1-st .card { box-shadow: none; }
+  .r1-st .q { width: 100%; }
+  .ddl { margin-top: 4px; border: 1px solid var(--ink-200); border-radius: 8px; box-shadow: var(--shadow); background: #fff; }
+  .ddl div { padding: 7px 12px; font-size: 13.5px; border-bottom: 1px solid var(--ink-150); }
+  .ddl div:last-child { border-bottom: 0; }
+  .ddl small { color: var(--ink-500); }
+  .ck { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ink-800); }
+  .ck .bx { width: 20px; height: 20px; border-radius: 5px; background: var(--teal-700); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
+  .ck .bx .ic { width: 14px; height: 14px; }
+  .g2f { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .g2f .r1-field + .r1-field { margin-top: 0; }

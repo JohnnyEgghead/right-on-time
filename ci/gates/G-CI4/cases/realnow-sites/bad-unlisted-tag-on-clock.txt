@@ -1,0 +1,4 @@
+// case-as: packages/outbox/src/planted.ts
+// expect: fail is not a real-time use
+import type { Clock } from '@bw/time';
+export const t = (clock: Clock) => clock.realNow('now' as never);

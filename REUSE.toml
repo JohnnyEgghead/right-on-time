@@ -1,0 +1,11 @@
+version = 1
+SPDX-PackageName = "Right On Time"
+
+# These source files carry no header line, and this file covers them (REUSE specification 3.2).
+# packages/db/migrations/: the migration runner stores the SHA-256 of each file and refuses a changed one
+#   (packages/db/src/migrate.ts), so a header added to a migration would fail on every database already migrated.
+[[annotations]]
+path = ["packages/db/migrations/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 John Loring"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

@@ -1,0 +1,3 @@
+// case-as: packages/domain/src/planted.cts
+// expect: fail 1
+export const t = Date.now();

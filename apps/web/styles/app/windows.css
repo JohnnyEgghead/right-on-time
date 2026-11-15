@@ -1,0 +1,88 @@
+/* The arrival windows page's adaptation of its frame (SCR-OFC-12, SCR-OFC-24), as styles/app/health.css is for System health: the frame is a
+   1440 x 900 picture; a page scrolls and fits any width. It sets no color, contrast or spacing value of the frame's own beyond the states
+   the frame does not draw (OA-84): at 1440 x 900 every compared value is the frame's. Loaded after the frame's page-local sheet. */
+
+/* The admin shell grows with its content (the frame fixes 842 px and a 900 px screen). */
+.bw-screen .shell { height: auto; min-height: 842px; }
+.bw-screen .r1k-in { height: auto; }
+
+/* What the frame set with a style attribute (the page's CSP forbids that attribute): the legend swatches and the skeleton's first row. */
+.legend2 i.bw-lg-two { background: var(--teal-50); border: 1px solid var(--teal-200); }
+.legend2 i.bw-lg-four { background: var(--orange-100); border: 1px solid var(--orange-300); }
+.legend2 i.bw-lg-off { background: var(--ink-100); border: 1px solid var(--ink-200); }
+.bw-win-skel { grid-column: 1 / -1; padding: 8px 14px; }
+.bw-w-40 { width: 40%; }
+.bw-wd { display: none; }
+
+/* The Asking tile draws the picked-day panel above its dialog in a padded wrapper. */
+.bw-tile-pad { padding: 12px 14px 0; }
+
+/* Real controls where the frame drew a span or a div: a day is a button, a limit and a reason are inputs. */
+.bw-screen button.btn[aria-disabled="true"] { cursor: default; }
+.bw-screen .btn.dis { cursor: default; }
+button.day { font: inherit; text-align: left; color: inherit; cursor: pointer; width: 100%; }
+.day:focus-visible, .seg span:focus-visible, .tog:focus-visible, .reason:focus-within, .step:focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; }
+.seg span { cursor: pointer; }
+.step span { cursor: pointer; user-select: none; }
+.step .bw-step-in {
+  width: 36px; height: 100%; padding: 0; margin: 0; border: 0; border-left: 1px solid var(--ink-300); border-right: 1px solid var(--ink-300); border-radius: 0;
+  background: transparent; color: inherit; font: inherit; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 28px; text-align: center; outline: none;
+}
+.tog { cursor: pointer; }
+.tog[aria-disabled="true"] { cursor: default; }
+.tog[aria-disabled="true"] .sw { background: var(--ink-400); }
+.reason { cursor: text; }
+.reason .bw-reason-in { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; font: inherit; color: inherit; outline: none; padding: 0; }
+.reason .bw-reason-in::placeholder { color: var(--ink-500); }
+.dayset .acts .bw-win-sat { flex: 1 1 100%; margin: 0; }
+table.w .r1-fmsg { margin-top: 4px; }
+
+/* A meter's width and a dialog's field message sit inside their frame boxes. */
+.r1-dlg-b input.r1-input { width: 100%; box-sizing: border-box; }
+.r1-dlg-b .r1-field .r1-fmsg { margin-top: 4px; }
+.r1-dlg-b > .r1-fmsg { margin: 10px 0 0; }
+
+/* Narrow screens: the panels stack, the side menu sits above the page, the calendar is 2 days wide, and every control is at least 44 px. */
+@media (max-width: 900px) {
+  .bw-screen .shell { flex-direction: column; min-height: 0; }
+  .bw-screen .shell > .side { width: auto; border-right: 0; border-bottom: 1px solid var(--ink-200); }
+  .bw-screen .ah { flex-wrap: wrap; }
+  .bw-screen .ah .acts { margin-left: 0; flex-wrap: wrap; max-width: 100%; }
+  .bw-screen .body { grid-template-columns: minmax(0, 1fr); padding: 14px 12px; }
+  .bw-screen .wide { grid-column: auto; }
+  .bw-screen .ph { flex-wrap: wrap; }
+  .bw-screen .legend2 { margin-left: 0; flex-wrap: wrap; }
+  .bw-screen .peakin { flex-direction: column; }
+  .bw-screen .dayset { width: auto; grid-template-columns: minmax(0, 1fr) !important; }
+  .bw-screen .dayset > * { min-width: 0; }
+  .bw-screen .dayset .acts .reason { min-width: 0; }
+  .bw-screen .dayset .wins { flex-wrap: wrap !important; }
+  .bw-screen .dow { display: none; }
+  .bw-screen .wk { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bw-screen .day { height: auto; min-height: 84px; }
+  .bw-screen .bw-wd { display: inline; font-weight: 600; color: var(--ink-600); }
+  .bw-screen .seg { height: auto; flex-wrap: wrap; }
+  .bw-screen .btn, .bw-screen .btn.sm, .bw-screen .seg span, .bw-screen .tog, .bw-screen .r1-x, .bw-screen .side a { min-height: 44px; min-width: 44px; }
+  .bw-screen .btn { display: inline-flex; align-items: center; justify-content: center; }
+  .bw-screen .step { height: 46px; }
+  .bw-screen .step span { width: 44px; }
+  .bw-screen .step .bw-step-in { width: 56px; height: 44px; line-height: 44px; }
+  .bw-screen .reason { min-height: 46px; height: auto; }
+  .bw-screen .reason .bw-reason-in { min-height: 44px; }
+  .bw-screen .r1-dlg-b .r1-input { min-height: 44px; }
+  .bw-screen table.w { display: block; overflow-x: auto; }
+  .bw-screen .set { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .val { white-space: normal; height: auto; min-height: 34px; }
+  /* A switch keeps its 38 x 22 drawing inside a 44 px target. */
+  .bw-screen .tog { align-items: center; }
+  /* The office bar and the demo strip at phone width (the shell's own sheet leaves them as the frame draws them): wrap, and 44 px targets. */
+  .bw-screen .topbar { flex-wrap: wrap; height: auto; row-gap: 4px; }
+  .bw-screen .topbar .search { flex: 1 1 140px; min-width: 0; }
+  .bw-screen .topbar .search input.bw-search-input, .bw-screen .topbar .branch select, .bw-screen .topbar .iconbtn, .bw-screen .topbar .user, .bw-screen .topbar .brand,
+  .bw-screen .r1-demobar a { min-height: 44px; min-width: 44px; }
+  .bw-screen .topbar nav { flex-wrap: wrap; min-width: 0; }
+  .bw-screen .topbar .branch { min-height: 44px; }
+  .bw-screen .topbar nav a { min-height: 44px; display: inline-flex; align-items: center; }
+  .bw-screen .topbar .branch select { inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); }
+  .bw-screen .topbar .brand, .bw-screen .r1-demobar a { display: inline-flex; align-items: center; }
+}

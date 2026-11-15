@@ -1,0 +1,9 @@
+{
+  "name": "bw-spike-s2-selftest",
+  "private": true,
+  "description": "THROWAWAY Spike S2 self-test: WebKit drives the offline flow against https://bw.j7l.io/spike/s2/. Runs only inside a container on Spectre (run-on-spectre.sh).",
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.64.1"
+  }
+}

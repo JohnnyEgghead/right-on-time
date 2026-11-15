@@ -1,0 +1,8 @@
+{
+  "why": "D15 and section 3 Nullability: parity compares each column's type and nullability",
+  "only": "parity",
+  "expect": [
+    "schema-doc-parity: FAIL column world.job.version is bigint in the database but `integer` in section 3",
+    "schema-doc-parity: FAIL column world.job.problem is NOT NULL in the database but null in section 3"
+  ]
+}

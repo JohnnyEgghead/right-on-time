@@ -1,0 +1,82 @@
+/* SCR-OFC-03 and its dialogs (P4-JOB): the frame's inline style values as classes (the page CSP refuses style attributes), and the
+   few app-only rules the frames draw with spans that the app draws with form controls. Loaded after the page copy. */
+.bw-screen .bw-mt-10 { margin-top: 10px; }
+.bw-screen .bw-mt-12 { margin-top: 12px; }
+.bw-screen .bw-mt-0 { margin-top: 0; }
+.bw-screen .bw-pb-4 { padding-bottom: 4px; }
+.bw-screen .r1-results { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.bw-screen .tbox-in { width: 100%; min-height: 86px; border: 1.5px solid var(--teal-600); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 14.5px; line-height: 1.45; color: var(--ink-900); resize: vertical; display: block; }
+.bw-screen .tbox-in.bad { border-color: var(--st-late-bd); }
+.bw-screen .cnt.bad { color: var(--st-late-ink); }
+.bw-screen .r1-fin-lab .r1-input { width: 52px; }
+.bw-screen .qty .r1-input { width: 52px; }
+:where(.bw-screen) button.dy, :where(.bw-screen) button.win { width: 100%; text-align: left; font-family: inherit; line-height: inherit; letter-spacing: inherit; color: inherit; cursor: pointer; background-color: transparent; }
+.bw-screen .dy[aria-disabled='true'], .bw-screen .win[aria-disabled='true'] { cursor: default; }
+.bw-screen .mapm .van, .bw-screen .mapm .dest { position: absolute; width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%); }
+.bw-screen .mapm .van { background: #2f6fe0; border: 2px solid #fff; }
+.bw-screen .mapm .dest { background: var(--orange-600); border: 2px solid #fff; }
+.bw-screen .mapm { position: relative; }
+/* The frame draws these as spans inside .jh .meta, whose span rule sets their gap; the app's are buttons. */
+/* (The off ones of a closed job are buttons in the frame's tiles, at the kit's gap; none of them draws an icon.) */
+.bw-screen .jh .meta .acts2 .btn:not(.dis) { gap: 6px; }
+/* CMP-13 sits in its own wrapper (src/shell/Panels.tsx); the frame places the indicator itself top right of the header. */
+.bw-screen .jh > .bw-live { position: absolute; top: 10px; right: 24px; }
+/* A card-head link that runs an action (Open text inbox, Edit, + Add note) is a button drawn as the frame's .lnk. */
+.bw-screen button.lnk { background: none; border: 0; padding: 0; margin: 0; font-family: inherit; line-height: inherit; cursor: pointer; }
+/* Form controls take the frame's field box (its .r1-input is a div): full width, the inherited line height. */
+.bw-screen select.r1-input, .bw-screen input.r1-input { width: 100%; line-height: inherit; }
+/* The frame draws a select as a plain field (no arrow); a native menu list keeps a normal line height otherwise. */
+.bw-screen select.r1-input { appearance: none; }
+.bw-screen .r1-dlg-b .r1-field.bw-mt-10 { margin-top: 10px; }
+/* The frame's inline style values (the CSP refuses style attributes). */
+/* No parts used is a native checkbox at the frame's box size (.r1-fin-ck .bx: 20 px), so both engines draw the same row. */
+.bw-screen .r1-fin-ck input[type='checkbox'] { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--teal-700); }
+.bw-screen .bw-m-0 { margin: 0; }
+.bw-screen .bw-m-6-10 { margin: 6px 10px; }
+.bw-screen .bw-foot-note { flex-basis: 100%; text-align: right; margin: 0; }
+:where(.bw-screen) .bw-w-30 { width: 30%; }
+/* A page state drawn alone (Loading): the tile body's own padding. */
+.bw-screen .bw-job-state { padding: 14px; }
+/* Narrow windows (the page walkers' 520 and 390 px profiles): the frame is drawn at 1440 px only, so the 2 columns stack, the
+   header lines wrap, and every control of the page and its dialogs is at least 44 px on a phone (NFR tap targets). */
+@media (max-width: 999px) {
+  .bw-screen .body { grid-template-columns: minmax(0, 1fr); padding-left: 12px; padding-right: 12px; }
+  .bw-screen .left { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .left > *, .bw-screen .right > * { min-width: 0; }
+  .bw-screen .span2 { grid-column: auto; }
+  .bw-screen .notes { grid-template-columns: minmax(0, 1fr); }
+  .bw-screen .jh { padding-left: 12px; padding-right: 12px; }
+  .bw-screen .jh .row, .bw-screen .jh .meta, .bw-screen .jh .meta .jline { flex-wrap: wrap; }
+  .bw-screen .jh .acts, .bw-screen .jh .meta .acts2 { margin-left: 0; flex-wrap: wrap; }
+  .bw-screen .jh .chip.big { height: auto; min-height: 30px; white-space: normal; }
+  .bw-screen .card .card-h { flex-wrap: wrap; }
+  .bw-screen table.hist td, .bw-screen table.hist th { padding-left: 10px; padding-right: 10px; overflow-wrap: anywhere; }
+  .bw-screen .tech { flex-wrap: wrap; }
+  .bw-screen .g2f { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 719px) {
+  /* F-1550: the Service history visit links (F-1542, CTL-OFC-03-12) too, as the customer page's td a rule does. */
+  .bw-screen .jh .crumbs a, .bw-screen .card .lnk, .bw-screen .card a.r1-link, .bw-screen .bill a.r1-link, .bw-screen table.hist td a {
+    display: inline-flex; align-items: center; min-height: 44px; min-width: 44px;
+  }
+  .bw-screen .jh .btn, .bw-screen .card .btn, .bw-screen .r1-dlg .btn, .bw-screen .r1-x, .bw-screen .bw-call .btn { min-height: 44px; min-width: 44px; height: auto; }
+  .bw-screen .r1-dlg .r1-input, .bw-screen .r1-dlg select.r1-input, .bw-screen button.dy, .bw-screen button.win { min-height: 44px; height: auto; }
+  .bw-screen .r1-fin-ck { min-height: 44px; }
+  /* The panel's small map (CMP-05): its zoom buttons and its map credit link. */
+  .bw-screen .mapm [data-ctl='CTL-CMP-05-02'], .bw-screen .mapm [data-ctl='CTL-CMP-05-03'] { min-width: 44px; min-height: 44px; }
+  .bw-screen .mapm a.osm { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+  .bw-screen .r1-fin-ck input[type='checkbox'] { width: 44px; height: 44px; }
+}
+
+/* F-707, F-727 (P5-TWA-JOB): the stored photo in its thumbnail button and the viewer, and the signature image under its line.
+   Layout only; the thumbnail box is the frame's .thumbs .th. */
+.bw-screen .thumbs button.th { padding: 0; overflow: hidden; }
+.bw-screen .thumbs .bw-th-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bw-screen .bw-photo-full { display: flex; flex-direction: column; gap: 8px; }
+.bw-screen .bw-photo-img { display: block; max-width: 100%; max-height: 60vh; object-fit: contain; border-radius: 8px; }
+.bw-screen .wd .bw-sig-img { display: block; max-width: 100%; height: auto; max-height: 96px; margin-top: 6px; border: 1px solid var(--ink-200); border-radius: 8px; background: var(--white); }
+
+/* F-1543: a panel's body line that is not a frame row (an empty state, a status line, the work-done block, the billing line) sits at the inset the frame's
+   .card-h, .kv and .eq rows use (18px), so it lines up with the panel title. A margin, not padding: the Done look case sets the work-done box to the
+   frame tile's width, and the frame's list fills that box. */
+.bw-screen .card .bw-in-card { margin-left: 18px; margin-right: 18px; }

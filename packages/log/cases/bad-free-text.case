@@ -1,0 +1,6 @@
+// Planted case (must fail type checking): free text in the status field, where a phone number would slip through.
+import { createLogger } from '../src/index.ts';
+import { FixedClock } from '@bw/time';
+
+const log = createLogger({ process: 'worker', clock: new FixedClock({ demo: '2026-09-15T14:00:00Z' }) });
+log.error({ status: 'texted 614-555-0100' });

@@ -1,0 +1,5 @@
+// case-as: apps/worker/src/planted.ts
+// expect: fail not a string literal
+import { realNow } from '@bw/time';
+const kind = 'stamp';
+export const t = realNow(`log_${kind}` as never);

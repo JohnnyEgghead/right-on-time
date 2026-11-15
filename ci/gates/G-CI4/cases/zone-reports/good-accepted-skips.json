@@ -1,0 +1,51 @@
+{
+  "numPassedTests": 4,
+  "numFailedTests": 0,
+  "testResults": [
+    {
+      "name": "/work/packages/time/src/dst.test.ts",
+      "assertionResults": [
+        {
+          "title": "the host zone is the one this run was started under",
+          "fullName": "dst the host zone is the one this run was started under",
+          "status": "passed"
+        },
+        {
+          "title": "a Mon, Nov 2, 2026 visit booked in EDT is at 9:00 AM EST",
+          "fullName": "dst a Mon, Nov 2, 2026 visit booked in EDT is at 9:00 AM EST",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "name": "/work/infra/tests/render-session.test.ts",
+      "assertionResults": [
+        {
+          "title": "does not search a value for tokens",
+          "fullName": "render-session (P6-TESTFLIGHT-4) does not search a value for tokens",
+          "status": "passed"
+        },
+        {
+          "title": "refuses a mis-cased path into the repo (case-insensitive disks only)",
+          "fullName": "render-session (P6-TESTFLIGHT-4) refuses a mis-cased path into the repo (case-insensitive disks only)",
+          "status": "skipped"
+        }
+      ]
+    },
+    {
+      "name": "/work/infra/tests/seed-harold-photos.test.ts",
+      "assertionResults": [
+        {
+          "title": "reads --count, defaults to 3, refuses anything else",
+          "fullName": "F-1370 the seeded photos are labeled pictures, as many as --count says (P6-BUILD5-FIXES) reads --count, defaults to 3, refuses anything else",
+          "status": "passed"
+        },
+        {
+          "title": "makes n labeled pictures, each matching a fresh render of its label, pairwise different, n by the count flag",
+          "fullName": "F-1370 the pictures (macOS: rsvg-convert and sips) makes n labeled pictures, each matching a fresh render of its label, pairwise different, n by the count flag",
+          "status": "skipped"
+        }
+      ]
+    }
+  ]
+}

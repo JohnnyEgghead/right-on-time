@@ -1,0 +1,26 @@
+{
+  "_doc": "generator-manifest (FR-IMP-5; SPECIFICATIONS section 6.7): the SHA-256 and size of every file @bw/generator writes from seed 20260915 with the verified street list. The files are regenerated, never committed (D7); a changed byte or row order fails the check. Rewrite with: node packages/generator/src/cli.ts write-manifest",
+  "seed": 20260915,
+  "files": {
+    "customers.csv": {
+      "bytes": 3058225,
+      "sha256": "82608a412677e4360ce9b15756b0eebc5425c9fb03cd7d4466775a3f34e20d19"
+    },
+    "visits.csv": {
+      "bytes": 10743897,
+      "sha256": "08d9214e7f39ca617a078897674e541069bf500c1001b2d090938a28996d77cf"
+    },
+    "equipment.csv": {
+      "bytes": 3178694,
+      "sha256": "3ba6384defa662bc04f6b6f4c9a328d0cfe68f22f7d4b8fe8e772ed20781d82c"
+    },
+    "fixture.json": {
+      "bytes": 882732,
+      "sha256": "e10ec005e6ff7d8bbaf46ebebaa4c3e7837a35466a58e798a63c954addf8036f"
+    },
+    "truth.json": {
+      "bytes": 33800,
+      "sha256": "69025777d241b6c4d1922780d72e04708c2db0c76660e2faa48460a950e2634d"
+    }
+  }
+}

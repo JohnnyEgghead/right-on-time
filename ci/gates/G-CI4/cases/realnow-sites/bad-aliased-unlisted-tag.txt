@@ -1,0 +1,4 @@
+// case-as: apps/web/src/planted.js
+// expect: fail is not a real-time use
+import { realNow as rn } from '@bw/time';
+export const t = rn('oops');

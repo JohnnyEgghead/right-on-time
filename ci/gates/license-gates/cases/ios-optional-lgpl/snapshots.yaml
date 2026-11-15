@@ -1,0 +1,6 @@
+lockfileVersion: '9.0'
+snapshots:
+  ios-app@1.0.0:
+    optionalDependencies:
+      opt-lgpl-bin: 3.0.0
+  opt-lgpl-bin@3.0.0: {}

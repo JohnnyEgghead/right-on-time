@@ -1,0 +1,4 @@
+// case-as: apps/web/src/planted.ts
+// expect: fail 1
+const { now } = Date;
+export const t = now();

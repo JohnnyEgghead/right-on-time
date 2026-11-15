@@ -1,0 +1,5 @@
+// case-as: packages/domain/src/planted.ts
+// expect: pass 0
+export function f(Date: { now(): number }) {
+  return Date.now();
+}

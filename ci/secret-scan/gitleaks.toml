@@ -1,0 +1,31 @@
+# gitleaks config for the publish-set secret scan (P7-SCANS; NFR-14; SPECIFICATIONS section 11.5 Secrets, SD-40).
+# Read by ci/secret-scan/scan.ts for the P7-SCANS run AND for P8-PUBLISH's re-scan of the final publish set (ci/secret-scan/README.md).
+# The default rules stay on. The 2 allowances below are the only ones. Each is a file path plus a rule id (plus, for the second, the
+# shape of the value). Neither names a secret string (W-43: never whitelist by string), and a hit of any other rule in the same
+# file, or of the same rule in any other file, still fails the scan (ci/gates/privacy-secret-scan.sh proves both on every run).
+
+title = "Right On Time publish-set scan"
+
+[extend]
+useDefault = true
+
+# F-341, allowance 1: the published sample seed.
+# .env.example (P8-PUBLIC-FILES, F-321) holds the 1 published value of SAMPLE_PASSWORD_SEED (SPECIFICATIONS section 11.1: "the
+# published value in .env.example"). It is a non-secret sample password seed for the sample world, published on purpose. The key
+# name makes the generic rule fire on it. The allowance is the file at the repository root and the generic-api-key rule only.
+[[allowlists]]
+description = "F-341: .env.example at the repository root holds the 1 published SAMPLE_PASSWORD_SEED (non-secret by design, SPECIFICATIONS 11.1); rule generic-api-key only"
+targetRules = ["generic-api-key"]
+paths = ['''^\.env\.example$''']
+
+# Allowance 2: idempotency keys.
+# The phone's idempotency key is a UUID v4 the phone mints for each queued item (invariant 1; SPECIFICATIONS section 6): a public
+# row id, not a credential. Tests and spike notes carry them as key=<uuid>. Allowed only when the matched value is exactly a UUID
+# AND the file is a test file or a spike note, for the generic-api-key rule only.
+[[allowlists]]
+description = "idempotency-key UUIDs in test files and spike notes (a UUID value, a test or spike path, rule generic-api-key only)"
+condition = "AND"
+targetRules = ["generic-api-key"]
+paths = ['''\.test\.tsx?$''', '''^docs/build/spikes/''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$''']

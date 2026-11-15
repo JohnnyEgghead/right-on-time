@@ -1,0 +1,54 @@
+/* SCR-OFC-10 page-local rules (DK-95): the last <style> of mockups/pages/office-billing.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited. */
+  .pgh { background: #fff; border-bottom: 1px solid var(--ink-200); padding: 14px 24px 14px; }
+  .pgh .row { display: flex; align-items: center; gap: 12px; }
+  .pgh h1 { margin: 0; font-size: 25px; font-weight: 750; letter-spacing: -.02em; }
+  .pgh p { margin: 2px 0 0; font-size: 14px; color: var(--ink-600); }
+  .pgh .acts { margin-left: auto; display: flex; gap: 8px; }
+
+  .wrap { padding: 14px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .banner { display: grid; grid-template-columns: 1fr 1fr; background: #fff; border: 1px solid var(--ink-200); border-radius: 12px; box-shadow: var(--shadow-sm); overflow: hidden; }
+  .banner > div { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; }
+  .banner > div + div { border-left: 1px solid var(--ink-200); }
+  .banner .bi { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: none; }
+  .banner .bi .ic { width: 18px; height: 18px; }
+  .banner .ok .bi { background: var(--st-site-bg); color: var(--st-site-ink); }
+  .banner .keep .bi { background: var(--teal-100); color: var(--teal-700); }
+  .banner b { font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
+  .banner span.s { display: block; font-size: 13px; color: var(--ink-600); margin-top: 2px; line-height: 1.45; }
+  .banner .chip { height: 22px; font-size: 12px; }
+
+  .card { overflow: hidden; }
+  .card .card-h { padding: 12px 16px 10px; }
+  .card .card-h span { font-size: 13px; color: var(--ink-500); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; font-size: 12px; font-weight: 650; color: var(--ink-500); text-transform: uppercase; letter-spacing: .05em; padding: 0 12px; height: 34px; border-top: 1px solid var(--ink-200); border-bottom: 1px solid var(--ink-200); background: var(--ink-50); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--ink-150); vertical-align: middle; white-space: nowrap; }
+  td.rs { white-space: normal; }
+  tr:last-child td { border-bottom: 0; }
+  td.jn { font-weight: 650; color: var(--teal-700); font-variant-numeric: tabular-nums; }
+  .two { line-height: 1.3; }
+  .two b { font-weight: 640; }
+  .two small { display: block; color: var(--ink-500); font-size: 12px; }
+  tr.sel td { background: #f3f9fb; }
+  tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--teal-600); }
+  .why { display: flex; gap: 8px; align-items: flex-start; }
+  .why .chip { flex: none; height: 23px; font-size: 12px; }
+  .why .two { max-width: 340px; }
+  .chip.bill { background: var(--orange-100); color: var(--orange-700); border-color: var(--orange-300); }
+  .chip.retry { background: var(--st-risk-bg); color: var(--st-risk-ink); }
+  .acts { display: flex; gap: 6px; justify-content: flex-end; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  .lower { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .tries { margin-top: 12px; font-size: 13px; color: var(--ink-600); }
+  .tries b { color: var(--ink-800); }
+  .fixed td { padding: 11px 12px; }
+  .fixed .chip { height: 22px; font-size: 12px; }
+  .jn a.jl { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  .r1-st .card { box-shadow: none; }
+  .r1-st table { width: 100%; }
+  tr.busy td { opacity: .75; }
+  tr.live td { background: var(--teal-50); }
+  /* Review c1 K1: the live updates indicator (CMP-13) in place on the main frame */
+  .acts > .r1-live { align-self: center; }

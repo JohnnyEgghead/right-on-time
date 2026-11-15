@@ -1,0 +1,55 @@
+/* SCR-TEC-11 Install the app (DK-115) page-local rules: the last <style> of mockups/pages/r1-techweb-install.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/tech.css. */
+
+.lay { display: grid; grid-template-columns: 470px 1fr; gap: 28px; padding: 22px 28px 28px; align-items: start; background: radial-gradient(120% 90% at 20% 20%, #f4f7f9 0%, #e6ecf0 100%); }
+.lay > .device { margin: 0 auto; }
+.lay .r1-states { background: transparent; border: 0; padding: 0; }
+.lay .r1-grid { grid-template-columns: 1fr 1fr; }
+.screen { background: #f2f4f6; }
+.screen .ic, .r1-st .ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
+.screen .ic svg, .r1-st .ic svg { width: 100%; height: 100%; }
+.webclk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--teal-100); }
+.webclk .ic { width: 13px; height: 13px; color: var(--orange-300); }
+.webclk b { color: #fff; }
+.pfoot { font-size: 11.5px; color: var(--ink-600); line-height: 1.45; padding: 10px 4px 4px; text-align: center; }
+.pfoot a { color: var(--teal-700); font-weight: 650; text-decoration: underline; }
+.pfoot .demo { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: var(--orange-100); color: var(--orange-700); border: 1px solid var(--orange-300); font-weight: 650; }
+
+.screen.inst { background: #fff; }
+.safari { flex: none; background: #f7f7f8; border-top: 1px solid #d8d8dc; height: 104px; display: flex; flex-direction: column; align-items: center; padding-top: 8px; gap: 4px; }
+.safari .url { width: 340px; height: 36px; border-radius: 10px; background: #e9e9ec; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #111; }
+.safari .tb { height: 34px; align-items: center; display: flex; justify-content: space-between; width: 330px; color: #2f6fe0; }
+.safari .tb .ic { width: 22px; height: 22px; }
+.safari .tb .share { color: #2f6fe0; position: relative; }
+.safari .tb .share::after { content: ""; position: absolute; inset: -6px; border: 2.5px solid var(--orange-500); border-radius: 10px; }
+.ph11 { flex: none; }
+.ph11 .sbar { color: #111; }
+.top11 { display: flex; align-items: center; gap: 8px; padding: 0 16px 8px; border-bottom: 1px solid var(--ink-200); }
+.top11 .brand svg.mark { width: 26px; height: 26px; }
+.top11 .brand .word { font-size: 16px; }
+.top11 .grow { flex: 1; }
+.top11 .tel { font-size: 12.5px; font-weight: 650; color: var(--ink-700); }
+.top11 .r1-lang { font-size: 13px; }
+.top11 .r1-lang a { min-height: 44px; padding: 0 4px; }
+.clk11 { display: flex; align-items: center; gap: 6px; font-size: 12px; background: var(--teal-950); color: var(--teal-100); padding: 5px 16px; }
+.clk11 .ic { width: 13px; height: 13px; color: var(--orange-300); }
+.clk11 b { color: #fff; }
+.body11 { flex: 1; min-height: 0; overflow: hidden; padding: 16px 18px 0; }
+.body11 h1 { margin: 0; font-size: 23px; font-weight: 770; letter-spacing: -.02em; line-height: 1.2; }
+.body11 .lead { margin: 6px 0 12px; font-size: 14.5px; color: var(--ink-600); line-height: 1.45; }
+.steps11 { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.steps11 li { display: flex; gap: 12px; align-items: center; background: var(--ink-50); border: 1px solid var(--ink-200); border-radius: 12px; padding: 10px 12px; font-size: 15px; line-height: 1.35; }
+.steps11 .n { width: 28px; height: 28px; border-radius: 50%; background: var(--teal-700); color: #fff; font-weight: 750; display: inline-flex; align-items: center; justify-content: center; flex: none; font-size: 14px; }
+.steps11 .gl { width: 34px; height: 34px; border-radius: 9px; background: #fff; border: 1px solid var(--ink-200); color: #2f6fe0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.cont { display: flex; width: 100%; margin-top: 14px; height: 48px; font-size: 16px; border-radius: 12px; }
+.why11 { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-600); line-height: 1.45; }
+.pfoot { padding-bottom: 8px; }
+/* Kit 0.9 review fix (F-934): the web app's home-screen icon reuses the iPhone app's icon (DK-117 .appicon: the mark on a white tile). */
+.hs { display: flex; gap: 14px; justify-content: center; padding: 18px 12px 14px; border-radius: 14px; background: linear-gradient(160deg, var(--teal-700) 0%, var(--teal-950) 100%); }
+.hs .app { width: 116px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.hs .appicon { width: 60px; height: 60px; border-radius: 14px; background: var(--white); display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.hs .appicon svg.mark { width: 38px; height: 38px; }
+.hs .nm { max-width: 116px; font-size: 12px; font-weight: 500; color: var(--white); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hs .what2 { font-size: 11.5px; color: var(--teal-100); }
+.iconspec { margin: 10px 0 0; font-size: 13px; color: var(--ink-700); line-height: 1.45; }
+

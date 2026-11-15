@@ -1,0 +1,64 @@
+/* SCR-OFC-01 page-local rules (DK-84): the last <style> of mockups/pages/office-signin.html, copied byte for byte (UI-DESIGN-KIT 1.1: a frame page's own
+   style and markup hold the page's own rules). Never edited; the app's sheet adaptations are in styles/app/shell.css. */
+  .r1k-in { display: flex; background: #f4f6f8; }
+  .side { width: 600px; flex: none; height: 900px; background: var(--teal-900); color: #fff; padding: 48px 56px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  .side .brand svg.mark { width: 40px; height: 40px; }
+  .side .brand .word { font-size: 27px; }
+  .side .app { margin-top: 8px; font-size: 15px; font-weight: 600; color: var(--teal-200); letter-spacing: .01em; }
+  .side h1 { margin: 84px 0 0; font-size: 36px; font-weight: 760; letter-spacing: -.025em; line-height: 1.15; max-width: 440px; }
+  .side h1 em { font-style: normal; color: var(--orange-300); }
+  .side p.lead { margin: 16px 0 0; font-size: 16px; line-height: 1.55; color: #d5e9ee; max-width: 440px; }
+  .roles { margin-top: 40px; display: flex; flex-direction: column; gap: 12px; position: relative; z-index: 1; }
+  .role { display: flex; gap: 14px; align-items: flex-start; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 13px 16px; }
+  .role .ri { width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,.12); display: flex; align-items: center; justify-content: center; flex: none; color: var(--orange-300); }
+  .role .ri .ic { width: 20px; height: 20px; }
+  .role b { font-size: 15px; display: block; }
+  .role span { font-size: 13.5px; color: #cfe3e8; line-height: 1.45; }
+  .side .foot { margin-top: auto; font-size: 13px; color: #b6d6de; position: relative; z-index: 1; }
+  .side svg.wave { position: absolute; right: -60px; top: 120px; width: 360px; height: 360px; opacity: .08; }
+
+  .main { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .box { width: 440px; }
+  .box h2 { margin: 0; font-size: 28px; font-weight: 750; letter-spacing: -.02em; }
+  .box .sub { margin: 6px 0 0; font-size: 15px; color: var(--ink-600); }
+  .form { margin-top: 28px; background: #fff; border: 1px solid var(--ink-200); border-radius: 16px; padding: 26px 28px 26px; box-shadow: var(--shadow); }
+  label.l { display: block; font-size: 14px; font-weight: 620; color: var(--ink-800); margin-bottom: 6px; }
+  .field { height: 46px; border: 1.5px solid var(--ink-400); border-radius: 10px; display: flex; align-items: center; padding: 0 14px; font-size: 15.5px; color: var(--ink-900); gap: 10px; background: #fff; }
+  .field .ic { width: 18px; height: 18px; color: var(--ink-500); }
+  .field.focus { border-color: var(--teal-600); box-shadow: 0 0 0 3px rgba(18,115,139,.18); }
+  .field .dots { letter-spacing: .18em; font-size: 17px; }
+  .field .show { margin-left: auto; font-size: 13.5px; font-weight: 650; color: var(--teal-700); }
+  .field .caret { width: 1.5px; height: 20px; background: var(--ink-900); margin-left: -8px; }
+  .row2 { display: flex; align-items: center; justify-content: space-between; margin: 10px 0 0; }
+  .gap { height: 18px; }
+  .check { display: inline-flex; align-items: center; gap: 9px; font-size: 14px; color: var(--ink-700); }
+  .check .bx { width: 20px; height: 20px; border-radius: 5px; border: 2px solid var(--ink-400); background: #fff; }
+  a.link { font-size: 14px; font-weight: 620; color: var(--teal-700); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  .go { width: 100%; height: 48px; font-size: 16px; margin-top: 22px; border-radius: 10px; }
+  .note { margin-top: 18px; display: flex; gap: 10px; background: var(--teal-50); border: 1px solid var(--teal-200); border-radius: 10px; padding: 11px 13px; font-size: 13.5px; color: var(--teal-900); line-height: 1.5; }
+  .note .ic { width: 18px; height: 18px; color: var(--teal-700); margin-top: 1px; }
+  .help { margin-top: 20px; font-size: 13.5px; color: var(--ink-600); line-height: 1.6; text-align: center; }
+  .help b { color: var(--ink-800); }
+  /* Step 5c: the Sign in as list beside the form (CTL-OFC-01-05, demo mode on) */
+  .duo { display: flex; gap: 32px; align-items: flex-start; }
+  .box { width: 420px; }
+  .asl { width: 300px; flex: none; margin-top: 4px; }
+  .asl h3 { margin: 0; font-size: 18px; font-weight: 720; }
+  .asn { margin: 4px 0 12px; font-size: 13.5px; color: var(--ink-600); line-height: 1.45; }
+  .aslist { background: #fff; border: 1px solid var(--ink-200); border-radius: 14px; padding: 6px 12px 10px; box-shadow: var(--shadow-sm); }
+  .aslist h4 { margin: 10px 0 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-500); }
+  .who { all: unset; box-sizing: border-box; display: flex; gap: 10px; align-items: center; width: 100%; min-height: 48px; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
+  .who.busy { opacity: .85; cursor: progress; }
+  .who .av { width: 32px; height: 32px; font-size: 12px; flex: none; }
+  .who b { display: block; font-size: 14px; font-weight: 650; color: var(--ink-900); }
+  .who small { display: block; font-size: 12.5px; color: var(--ink-600); }
+  .asl .cust { display: inline-block; margin-top: 12px; }
+  .msgb { display: flex; gap: 10px; align-items: flex-start; border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.45; margin-bottom: 14px; }
+  .msgb .ic { width: 18px; height: 18px; margin-top: 1px; }
+  .msgb.bad { background: var(--st-late-bg); color: var(--st-late-ink); border: 1px solid var(--st-late-bd); }
+  .msgb.info { background: var(--teal-50); color: var(--teal-900); border: 1px solid var(--teal-200); }
+  .r1-st .form { margin-top: 0; box-shadow: none; }
+  .r1-st .aslist { box-shadow: none; }
+  /* Review c1 K1: the language switch (CMP-03) in the sign-in header, as tech-signin has it */
+  .main { position: relative; }
+  .main > .hlang { position: absolute; top: 14px; right: 28px; }

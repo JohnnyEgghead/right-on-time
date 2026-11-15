@@ -1,0 +1,28 @@
+# Spike S3 (G-S3-MAP-SAFARI): THROWAWAY file server, its own Compose project (brightwater-spike-s3),
+# kept apart from the product services and from every other spike. It joins the brightwater
+# project's network so the proxy can reach it as "spike-s3". Image: the nginx image the stack
+# already pins (no new pull). The page, the 2 vendored libraries and columbus.pmtiles are mounted
+# read-only; its access log (with the Range header) goes to /opt/brightwater-spike-s3/logs.
+# Run from /opt/brightwater-spike-s3:  docker compose -p brightwater-spike-s3 up -d
+name: brightwater-spike-s3
+
+services:
+  spike-s3:
+    image: nginx:1.30.6@sha256:66b50d24288dba67f3d000b31223daefc4868c58d29aaacb6a4ff9771597b5eb
+    restart: unless-stopped
+    volumes:
+      - /opt/brightwater-spike-s3/nginx/spike.conf:/etc/nginx/conf.d/default.conf:ro
+      - /opt/brightwater-spike-s3/site:/srv:ro
+      - /opt/brightwater-spike-s3/logs:/var/log/spike
+    expose:
+      - "8080"
+    mem_limit: 96m
+    networks:
+      brightwater:
+        aliases:
+          - spike-s3
+
+networks:
+  brightwater:
+    external: true
+    name: brightwater_default

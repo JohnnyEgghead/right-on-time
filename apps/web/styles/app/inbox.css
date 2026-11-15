@@ -1,0 +1,68 @@
+/* The app's adaptations of the phone frames SCR-INB-01 (DK-126 to DK-128) and SCR-CUS-06 (DK-125). The frames draw a phone on a stage; the
+   app draws the phone's screen as the page: centered on a wide window, the whole window on a phone. The frames' own rules are in
+   styles/page-customer-texts.css and styles/page-customer-reschedule.css (byte copies, never edited). Inline styles are refused by the
+   page CSP, so the frames' inline widths are classes here. */
+
+.bw-inb { display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; background: #e6ecf0; padding: 16px 0; }
+.bw-inb > .screen { flex: none; background: #fff; }
+.bw-resched > .screen { background: #f6f8f9; }
+@media (max-width: 430px) {
+  .bw-inb { padding: 0; background: #fff; }
+  /* overflow-y auto: when larger text makes the bars taller than the window the screen scrolls, instead of its frame cutting off the bottom (F-1614). The thread still scrolls on its own. */
+  .bw-inb > .screen { width: 100%; height: 100dvh; min-height: 640px; border-radius: 0; overflow-y: auto; }
+}
+.bw-inb :where(.thread) { justify-content: flex-start; overflow-y: auto; }
+.bw-inb :where(.thread > :first-child) { margin-top: auto; }
+.bw-inb :where(.pg) { overflow-y: auto; }
+
+/* The loading skeleton (frame: inline widths). */
+.bw-inb :where(.bw-w-30) { width: 30%; }
+.bw-inb :where(.bw-mid) { margin: 10px auto 6px; }
+.bw-inb :where(.bw-w-70) { width: 70%; }
+.bw-inb :where(.bw-w-80) { width: 80%; }
+.bw-inb :where(.bw-h-18) { height: 18px; }
+.bw-inb :where(.bw-w-260) { width: 260px; }
+.bw-inb :where(.bw-w-220) { width: 220px; }
+.bw-inb :where(.bw-gap) { margin-top: 8px; }
+
+/* The reply field: a real input inside the frame's .field box, in the frame's size and color. min-width 0 lets the box shrink below the input's own default width, so Send stays on screen at 320 px and at 200% text (14.1 items 11, 12). */
+.bw-inb .inputbar .field { min-width: 0; }
+.bw-inb .inputbar .field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; color: #111; padding: 0; height: 100%; }
+.bw-inb .inputbar .field input::placeholder { color: #9aa0a6; opacity: 1; }
+.bw-inb .inputbar .field:focus-within { outline: 2px solid var(--teal-600); outline-offset: 1px; }
+.bw-inb .inputbar .field.dis { border-color: var(--ink-200); background: var(--ink-100); }
+.bw-inb .rbtns span, .bw-inb .inputbar .send, .bw-inb .go, .bw-inb .keep, .bw-inb .day, .bw-inb .win, .bw-inb .seg span, .bw-inb .lang span[role="button"] { cursor: pointer; }
+.bw-inb .rbtns span.dis, .bw-inb .inputbar .dis, .bw-inb .win.full, .bw-inb .go.dis { cursor: not-allowed; }
+.bw-inb .go.dis { opacity: .55; box-shadow: none; }
+
+/* States and parts the frames draw with inline style. */
+.bw-inb .bub.out { margin-top: 8px; }
+.bw-inb .bub.in { margin-top: 6px; }
+.bw-inb .bub.in:first-child, .bw-inb .stamp + .bub { margin-top: 0; }
+.bw-inb .meta.bw-notsent { color: var(--st-late-ink); }
+.bw-inb .inbox-err { padding: 12px 14px; }
+.bw-inb .preview .bw-pv { display: block; width: 100%; height: 70px; object-fit: cover; }
+.bw-inb .preview .bw-pt-credit { padding-top: 0; }
+.bw-inb .bw-nowrap { white-space: nowrap; }
+.bw-inb .bw-retry { text-decoration: underline; cursor: pointer; margin-left: 4px; }
+.bw-inb .go.busy { opacity: .85; }
+
+/* A phone's finger (tap-target-44) and a long Spanish clock and language line (overflow-pass at the wide-font probe): on a narrow screen the controls take the
+   room they need, the way the live map page does (styles/app/livemap.css). Inline links and the language words keep their 44 px through vertical padding on an
+   inline box, which adds no height to their line; the reply field and the language segment grow by their border. The wide-window look comparison does not see
+   these. */
+@media (max-width: 719px) {
+  .bw-inb .lang span[role="button"] { display: inline; padding: 15px 4px; margin: 0 -4px; }
+  .bw-inb .bub a { padding: 14px 0; }
+  .bw-inb .r1p-foot a { padding: 16px 0; }
+  .bw-inb .thread { overflow: auto; }
+  .bw-inb .inputbar .field { min-height: 46px; height: auto; }
+  .bw-inb .seg { height: auto; flex: none; }
+  .bw-inb .seg span { min-height: 44px; white-space: nowrap; }
+  .bw-inb .ibrow, .bw-inb .brandrow { flex-wrap: wrap; }
+  .bw-inb .pg { overflow: auto; }
+  .bw-inb .inbox-err button { min-height: 44px; min-width: 44px; }
+  .bw-inb .inputbar .field input { height: 44px; }
+  .bw-inb .r1-demobar.ph .clk { flex-wrap: wrap; }
+  .bw-inb .r1-demobar.ph { white-space: normal; height: auto; min-height: 30px; flex-wrap: wrap; padding-top: 4px; padding-bottom: 4px; row-gap: 2px; }
+}

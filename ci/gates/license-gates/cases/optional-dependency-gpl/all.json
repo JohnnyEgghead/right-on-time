@@ -1,0 +1,36 @@
+{
+  "MIT": [
+    {
+      "name": "host-pkg",
+      "versions": [
+        "1.0.0"
+      ],
+      "paths": [
+        "/fixture/host-pkg"
+      ],
+      "license": "MIT"
+    },
+    {
+      "name": "opt-bin",
+      "versions": [
+        "1.0.0"
+      ],
+      "paths": [
+        "/fixture/opt-bin"
+      ],
+      "license": "MIT"
+    }
+  ],
+  "GPL-3.0": [
+    {
+      "name": "opt-bin-dep",
+      "versions": [
+        "2.0.0"
+      ],
+      "paths": [
+        "/fixture/opt-bin-dep"
+      ],
+      "license": "GPL-3.0"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+/* SCR-CUS-07 Booking site page: the adaptation of its frame (DK-122, kit slice DK-66 to DK-68) to a page that scrolls and fits any width
+   (P5-BOOKING-PAGES). The frame is a 1440 x 900 picture whose content row is a fixed height; here the row fills what is left of the screen and
+   grows with its content. Layout only: no color, contrast or compared value of its own at 1440 x 900 (OA-84, G-LOOK-PARITY). */
+.bw-screen.b-c .pg { overflow: visible; display: flex; flex-direction: column; }
+.bw-screen.b-c .split { height: auto; flex: 1; }
+.bw-screen.b-c .txt { min-width: 0; }
+.bw-screen.b-c .sq { min-width: 0; overflow-wrap: anywhere; }
+
+/* Below the frame's width the text and the drawing stack, and the drawing shrinks to fit. */
+@media (max-width: 1279px) {
+  .bw-screen.b-c .split { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 24px 32px; }
+  .bw-screen.b-c .art2 svg { width: min(100%, 360px); height: auto; margin: 0 auto; }
+}
+@media (max-width: 699px) {
+  .bw-screen.b-c .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .bw-screen.b-c .split { padding: 20px 16px; }
+  .bw-screen.b-c h1 { font-size: 30px; }
+}

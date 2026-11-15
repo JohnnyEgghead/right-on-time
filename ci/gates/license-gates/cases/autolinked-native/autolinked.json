@@ -1,0 +1,8 @@
+{
+  "modules": [
+    {
+      "packageName": "planted-native-mpl",
+      "packageVersion": "1.0.0"
+    }
+  ]
+}

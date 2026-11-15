@@ -1,0 +1,26 @@
+{
+  "API-171": {
+    "envelope": false,
+    "errors": [],
+    "labels": [],
+    "method": "GET",
+    "path": "/healthz",
+    "request": {
+      "properties": {},
+      "type": "object"
+    },
+    "response": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "ok",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "type": "object"
+    }
+  }
+}
