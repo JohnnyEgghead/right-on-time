@@ -4,6 +4,8 @@
 // React, no network.
 import type { AvailabilityAnswer, SuggestedTechniciansAnswer } from '@bw/api';
 import type { MessageKey } from '@bw/i18n';
+import { spanText } from '../board/model.ts';
+import { refusalShown, type Refusal, type Shown } from '../job/model.ts';
 import type { IconName } from '../shell/icon-paths.ts';
 import type { ClientT } from '../shell/intl.tsx';
 import type { Detail, SearchHit } from '../customers/types.ts';
@@ -145,3 +147,17 @@ export const visitOfDetail = (d: Detail): Visit | null => {
   const v = d.upcoming[0];
   return v ? { day: v.day, window: v.window, serviceId: v.serviceId, status: v.status, technician: v.technician?.name ?? null } : null;
 };
+
+/**
+ * The refusal words of Schedule: API-28's technician_no_room names the limit that refused it, in SCR-OFC-04's own 3 texts (F-1800); an answer
+ * with no limit is a server fault and keeps no text of its own (F-1813). The job writes' shared codes (time_overlap names the block) follow.
+ */
+export function scheduleShown(r: Refusal, name: string, window: string): Shown {
+  if (r.code === 'technician_no_room') {
+    const { limit, max } = r.detail as { limit?: string; max?: number };
+    if (limit === 'installer_day') return { key: 'newjob.refused.installerDay', values: { name } };
+    if (limit === 'day') return { key: 'newjob.refused.dayFull', values: { name, max: max ?? 0 } };
+    if (limit === 'window') return { key: 'newjob.refused.windowFull', values: { name, window, max: max ?? 0 } };
+  }
+  return refusalShown(r, spanText);
+}

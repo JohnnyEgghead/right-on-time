@@ -218,7 +218,7 @@ describe.each(run)('the sign-in screens on the Compose stack, %s', (_engine, typ
       await p.fill('#si-email', 'keisha.t@brightwater.example');
       await p.fill('#si-password', await shown('keisha.t@brightwater.example'));
       await p.click('[data-ctl="CTL-OFC-01-08"]');
-      expect(await p.getAttribute('[data-ctl="CTL-OFC-01-08"]', 'aria-checked')).toBe('true');
+      expect(await p.isChecked('[data-ctl="CTL-OFC-01-08"]')).toBe(true);
       await p.click('[data-ctl="CTL-OFC-01-04"]');
       await p.waitForURL('**/office/board');
       const cookie = (await ctx.cookies()).find((c) => c.name === 'bw_session');
@@ -481,6 +481,34 @@ describe.each(run)('the sign-in screens on the Compose stack, %s', (_engine, typ
       const left = await p.waitForURL((u) => !u.pathname.endsWith('/sign-in'), { timeout: 20_000 }).then(() => true, () => false);
       expect(sends, `API-03 sends (answers ${answers.join(',')}, left the page: ${left})`).toBe(1);
       expect(left, `the page did not leave sign-in (answers ${answers.join(',')})`).toBe(true);
+    });
+  }, 150_000);
+
+  // why: FR-AUTH-10, F-1063 a Stay signed in or Keep me signed in tick made before the page's script has run is sent as the box shows it: API-03 carries keepSignedIn true and the session lasts 90 days, on the office and the technician screens
+  it.each([
+    ['the office sign-in', '/sign-in', '#si-email', '#si-password', '[data-ctl="CTL-OFC-01-04"]', '[data-ctl="CTL-OFC-01-08"]', 'keisha.t@brightwater.example', 'keisha.t@brightwater.example'],
+    ['the technician sign-in', '/tech/sign-in', '#ts-login', '#ts-password', '[data-ctl="CTL-TEC-01-04"]', '[data-ctl="CTL-TEC-01-08"]', MARIA.employee, MARIA.email],
+  ] as const)('signs %s in with the box ticked before the page hydrated', async (_name, route, loginSel, passwordSel, buttonSel, boxSel, login, passwordOf) => {
+    await session(async (p, ctx) => {
+      await roomForSignIns(p, 2);
+      const sent: unknown[] = [];
+      p.on('request', (r) => {
+        if (r.method() === 'POST' && new URL(r.url()).pathname === '/api/v1/sessions') sent.push(r.postDataJSON());
+      });
+      const scripts = await holdScripts(p);
+      scripts.hold();
+      await p.goto(origin + route, { waitUntil: 'domcontentloaded' });
+      await p.fill(loginSel, login);
+      await p.fill(passwordSel, await shown(passwordOf));
+      await p.locator(boxSel).click();
+      expect(await p.locator(boxSel).isChecked(), 'the box shows the tick before any script has run').toBe(true);
+      await p.click(buttonSel);
+      expect(scripts.pending(), 'the page scripts are still held at the tap').toBeGreaterThan(0);
+      scripts.release();
+      await p.waitForURL((u) => !u.pathname.endsWith('/sign-in'), { timeout: 20_000 });
+      expect(sent.map((b) => (b as { keepSignedIn?: boolean }).keepSignedIn), 'the 1 API-03 send carries the box as it showed').toEqual([true]);
+      const cookie = (await ctx.cookies()).find((c) => c.name === 'bw_session');
+      expect(((cookie?.expires ?? 0) - Date.now() / 1000) / 86_400, 'a 90-day session').toBeGreaterThan(89);
     });
   }, 150_000);
 

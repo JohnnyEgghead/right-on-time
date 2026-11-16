@@ -6,7 +6,8 @@
 //   - the visit steps, as the technician app's status items leave them (packages/api-server/src/tech-items/apply.ts
 //     applyStatus, the autopilot's ctx): 1 tech_item ledger row per item (result applied), 1 job_change row of kind status
 //     by the technician (data from, to, itemKey, item, offlineAt, sentAt, rebased), the job's version + 1 per step, its
-//     on_the_way_at (arrived_at and ended_at are the fixture's, already written), and the technician_day start;
+//     on_the_way_at (arrived_at is the fixture's and ended_at the fixture's as fitPastVisitEnds fits it, F-1546, both already
+//     written), and the technician_day start;
 //     done: On my way, Arrived, Finished; no one home: On my way, No one home (a forward move from on the way, so the
 //     fixture's null arrival stays null and the report view reads the same rows);
 //   - the finish (FR-BILL-3, finishLines): job_part rows from the seeded parts list by partCodeForLine (aggregated by part,
@@ -142,6 +143,80 @@ export interface PastNote { id: string; key: string | null; kind: 'office' | 'te
 export interface PastFinish { laborMinutes: number; partCodes: string[]; noPartsUsed: boolean; workDone: string[] }
 export interface PastJob { jobNumber: number; steps: PastStep[]; finish: PastFinish | null; note: PastNote | null; onTheWayAt: Date }
 
+/** A no-one-home visit's minutes at the door before its end: 10 to 20, from its job number. */
+export const knockMinutes = (jobNumber: number): number => 10 + pick(`door:${jobNumber}`, 11);
+
+const hm = (t: string): number => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+const hhmm = (m: number): string => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+/** The minute of the day a pilot visit reached the door: its arrival, else (no one home) its knock. */
+export const doorMinute = (j: Pick<FixtureJob, 'jobNumber' | 'arrivedAt' | 'endedAt'>): number =>
+  j.arrivedAt !== null ? hm(j.arrivedAt) : hm(j.endedAt as string) - knockMinutes(j.jobNumber);
+/** The most minutes fitPastVisitEnds leaves between a fitted end and the next door. */
+export const FIT_GAP_MAX = 20;
+/** F-1802: the least minutes of work a fitted done visit keeps (arrival to end). */
+export const FIT_WORK_MIN = 30;
+/**
+ * F-1797: the drive minutes fitPastVisitEnds leaves between a fitted end and the next door at least. The planner's real drive minutes
+ * need the resolved customers and the routing legs, which exist only after this fit runs (world-seed.ts reads the fitted rows), so
+ * this is the proxy the owner's answer 25550018 was measured with.
+ */
+export const FIT_DRIVE_MIN = 10;
+
+/**
+ * F-1546: the generator draws each pilot visit's length apart from the next one's arrival, so in about 1 technician-day in 4 a
+ * visit "ended" after the same technician had reached the next door. The SD-25 figures read the arrivals, outcomes and
+ * technicians, so those stay (but for the doors F-1797 moves, below); a visit that ends at or after the next door ends instead
+ * FIT_GAP_MAX minutes before it, or half the time from its own door to the next door if that is less (at least 1 minute). A
+ * no-one-home visit's end never needs it in the fixture, and is refused if it would (its knock would move with it); so is a
+ * day whose 2 visits are less than 2 minutes apart at the door.
+ *
+ * F-1797 and F-1802 (owner answer 25550018, "Move 26 arrivals"): a fitted done visit keeps at least FIT_WORK_MIN minutes of work
+ * and leaves at least FIT_DRIVE_MIN before the next door. When the doors are closer than that, the NEXT visit's arrival moves
+ * later (and its end by the same minutes, so its work stays), the smallest move that makes room; per technician-day, in door
+ * order, so a visit moved onto the one after it moves that one in turn. A no-one-home next visit moves too (F-1827): its knock is its
+ * end less a drawn number of minutes (knockMinutes), so moving its end by the same minutes moves its knock with it, and the done
+ * visit before it keeps its 30 minutes. A move past 23:59 is refused. Returns the jobs in their order, changed rows copied, the rest the same objects.
+ */
+export function fitPastVisitEnds<J extends FixtureJob>(jobs: readonly J[]): J[] {
+  const ran = (j: J): boolean => j.endedAt !== null && (j.status === 'done' || j.status === 'no_one_home');
+  const days = new Map<string, J[]>();
+  for (const j of jobs) if (ran(j)) days.set(`${j.technician}|${j.date}`, [...(days.get(`${j.technician}|${j.date}`) ?? []), j]);
+  const arrivedAt = new Map<number, string>();
+  const endedAt = new Map<number, string>();
+  const arr = (j: J): string | null => arrivedAt.get(j.jobNumber) ?? j.arrivedAt;
+  const end = (j: J): string => endedAt.get(j.jobNumber) ?? (j.endedAt as string);
+  const door = (j: J): number => (arr(j) !== null ? hm(arr(j) as string) : hm(end(j)) - knockMinutes(j.jobNumber));
+  for (const day of days.values()) {
+    day.sort((x, y) => doorMinute(x) - doorMinute(y) || x.jobNumber - y.jobNumber);
+    // Forward: make room for each fitted done visit's work and drive by moving the next arrival later.
+    for (let i = 0; i < day.length - 1; i++) {
+      const a = day[i] as J;
+      const b = day[i + 1] as J;
+      if (arr(a) === null || hm(end(a)) < door(b)) continue;
+      const delta = door(a) + FIT_WORK_MIN + FIT_DRIVE_MIN - door(b);
+      if (delta <= 0) continue;
+      const movedEnd = hm(end(b)) + delta;
+      if (movedEnd > 23 * 60 + 59) throw new SetupError('fixture_invalid', `job ${b.jobNumber}: moving its arrival ${delta} minute(s) later for the visit before it ends it past the day`);
+      if (arr(b) !== null) arrivedAt.set(b.jobNumber, hhmm(hm(arr(b) as string) + delta));
+      endedAt.set(b.jobNumber, hhmm(movedEnd));
+    }
+    // Backward (latest first, so each end fits a door that no longer moves).
+    for (let i = day.length - 1; i >= 1; i--) {
+      const a = day[i - 1] as J;
+      const nextDoor = door(day[i] as J);
+      const room = nextDoor - door(a);
+      if (room < 2) throw new SetupError('fixture_invalid', `jobs ${a.jobNumber} and ${(day[i] as J).jobNumber}: ${room} minute(s) apart at the door`);
+      if (hm(end(a)) < nextDoor) continue;
+      if (arr(a) === null) throw new SetupError('fixture_invalid', `job ${a.jobNumber}: a no-one-home visit ends after the next door`);
+      let gap = Math.max(1, Math.min(FIT_GAP_MAX, Math.floor(room / 2)));
+      if (room >= FIT_WORK_MIN + FIT_DRIVE_MIN) gap = Math.min(Math.max(gap, FIT_DRIVE_MIN), room - FIT_WORK_MIN);
+      endedAt.set(a.jobNumber, hhmm(nextDoor - gap));
+    }
+  }
+  return jobs.map((j) => (arrivedAt.has(j.jobNumber) || endedAt.has(j.jobNumber)
+    ? { ...j, arrivedAt: arr(j), endedAt: end(j) } : j));
+}
+
 /**
  * The record of 1 past pilot job, a pure function of the fixture row and its visit facts. `at` turns a local date and time into
  * an instant; `drive` is the planner's drive minutes from the stop before (the technician's previous visit that day, else the
@@ -154,7 +229,7 @@ export function planPastJob(j: FixtureJob, input: { at: (date: string, time: str
   if (items.length === 0 || j.endedAt === null) throw new SetupError('fixture_invalid', `job ${j.jobNumber}: not an ended pilot job`);
   const ended = input.at(j.date, j.endedAt);
   const arrived = j.arrivedAt === null ? null : input.at(j.date, j.arrivedAt);
-  const atDoor = arrived ?? new Date(ended.getTime() - (10 + pick(`door:${j.jobNumber}`, 11)) * 60_000);
+  const atDoor = arrived ?? new Date(ended.getTime() - knockMinutes(j.jobNumber) * 60_000);
   const minute = 60_000;
   let onTheWay = atDoor.getTime() - Math.max(1, input.drive) * minute;
   if (input.prevEnd !== null) onTheWay = Math.max(onTheWay, input.prevEnd.getTime());

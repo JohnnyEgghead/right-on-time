@@ -13,4 +13,4 @@ export { FileItemStore, TEMP_PREFIX, type StoreDir } from './file-store.ts';
 export { sendWaiting, type CallFailure, type CallStop, type SendOptions, type SendReport, type Transport, type WireAnswer } from './send.ts';
 export { newItemKey, offsetFromClock, stampEntry } from './stamp.ts';
 export { blobContentType, blobQuery, failureOf, jsonOrNull, uploadAnswer, wireItem } from './wire.ts';
-export { NotReadyError, SYNC_EVERY_MS, TechOutbox, type EngineDeps, type EntryInput, type OutboxState } from './engine.ts';
+export { NotReadyError, SYNC_CALL_LIMIT_MS, SYNC_EVERY_MS, TechOutbox, uploadLimitMs, type EngineDeps, type EntryInput, type OutboxState } from './engine.ts';

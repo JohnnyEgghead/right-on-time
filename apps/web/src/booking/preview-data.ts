@@ -81,7 +81,7 @@ export const SUMMARY: BookingSummaryAnswer = {
   textsOn: true, textLanguage: 'en',
   confirmationText: {
     status: 'delivered', heldUntil: null, sentAt: wireAt(19.7, '2026-09-10'), to: '+16145550148',
-    body: "Brightwater: You're booked! Tue, Sep 15, technician arrives 10 AM-12 PM EDT for a furnace tune-up. Reply C to confirm or R to reschedule.",
+    body: "Brightwater: You're booked! Tue, Sep 15, technician arrives 10 AM-12 PM EDT. Service: furnace tune-up. Reply C to confirm or R to reschedule.",
   },
   inboxUrl: '/inbox/preview',
 };

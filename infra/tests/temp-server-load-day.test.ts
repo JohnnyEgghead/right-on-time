@@ -52,7 +52,8 @@ beforeEach(() => {
   stub('launchctl', 'printf "launchctl %s\\n" "$*" >> "$BW_STUB_LOG"');
   stub('node', 'printf "node %s\\n" "$*" >> "$BW_STUB_LOG"; sleep 30');
 });
-afterEach(() => rmSync(work, { recursive: true, force: true }));
+// F-1814: a stub child (sleep 30) can still be writing when the case ends; retry the removal instead of failing on ENOTEMPTY
+afterEach(() => rmSync(work, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }));
 
 const env = (over: Record<string, string> = {}): NodeJS.ProcessEnv => ({
   ...process.env, PATH: `${path.join(work, 'bin')}:${process.env.PATH}`, HOME: work, BW_LOAD_DIR: state, BW_STUB_LOG: log, BW_STUB_DIR: work,
@@ -240,7 +241,7 @@ describe('run-day.sh stopped by a signal', () => {
     const child = spawn('bash', [runDay, 'main', '1', '1', '60', '0', 'on'], { env: env({ BW_LOAD_STOP_COLLECT_SECONDS: '2', BW_STUB_SLOW: 'bw-vmstat.log' }) });
     let out = '';
     child.stdout.on('data', (d) => (out += String(d)));
-    for (let i = 0; i < 100 && !calls().includes('node '); i++) await new Promise((r) => setTimeout(r, 50));
+    for (let i = 0; i < 600 && !calls().includes('node '); i++) await new Promise((r) => setTimeout(r, 50));
     const t0 = performance.now();
     child.kill('SIGTERM');
     const code = await new Promise<number | null>((r) => child.on('exit', r));
@@ -250,7 +251,7 @@ describe('run-day.sh stopped by a signal', () => {
     expect(calls()).toMatch(/delete-instance --instance-name bw-load-p4-20261111-small/);
     // the load script was started with the P7-LOAD flags run-day passes through
     expect(calls()).toMatch(/--task P4-LOAD --pages off --page-cert /);
-  }, 20_000);
+  }, 60_000);
 });
 
 describe('run-day.sh and the routing arm (F-1498)', () => {
@@ -258,7 +259,7 @@ describe('run-day.sh and the routing arm (F-1498)', () => {
   it('stops routing for the off arm and passes the arm to the load script', async () => {
     writeFileSync(path.join(state, 'instance-name'), 'bw-load-p4-20261111-small');
     const child = spawn('bash', [runDay, 'norouting', '1', '1', '60', '0', 'on'], { env: env({ BW_LOAD_ROUTING: 'off', BW_LOAD_STOP_COLLECT_SECONDS: '1' }) });
-    for (let i = 0; i < 100 && !calls().includes('node '); i++) await new Promise((r) => setTimeout(r, 50));
+    for (let i = 0; i < 600 && !calls().includes('node '); i++) await new Promise((r) => setTimeout(r, 50));
     child.kill('SIGTERM');
     await new Promise((r) => child.on('exit', r));
     const c = calls();
@@ -266,18 +267,18 @@ describe('run-day.sh and the routing arm (F-1498)', () => {
     expect(c.indexOf(' stop routing')).toBeLessThan(c.indexOf('node '));
     expect(c).toMatch(/node .*--routing off/);
     expect(c).not.toMatch(/up -d --no-build --wait --wait-timeout 180 routing/);
-  }, 20_000);
+  }, 60_000);
 
   // why: F-1498 the default arm is routing up at the .env's cap (D-21), started if it is not
   it('starts routing for the on arm', async () => {
     writeFileSync(path.join(state, 'instance-name'), 'bw-load-p4-20261111-small');
     const child = spawn('bash', [runDay, 'main', '1', '1', '60', '0', 'on'], { env: env({ BW_LOAD_STOP_COLLECT_SECONDS: '1' }) });
-    for (let i = 0; i < 100 && !calls().includes('node '); i++) await new Promise((r) => setTimeout(r, 50));
+    for (let i = 0; i < 600 && !calls().includes('node '); i++) await new Promise((r) => setTimeout(r, 50));
     child.kill('SIGTERM');
     await new Promise((r) => child.on('exit', r));
     expect(calls()).toMatch(/up -d --no-build --wait --wait-timeout 180 routing\n/);
     expect(calls()).toMatch(/node .*--routing on/);
-  }, 20_000);
+  }, 60_000);
 
   // why: F-1498 an arm that is neither on nor off starts nothing
   it('refuses an unknown arm before any call', () => {

@@ -13,7 +13,7 @@ const msg = (id: number, direction: 'in' | 'out', sentAt: string, body: string, 
   id: `00000000-0000-7000-8000-${String(id).padStart(12, '0')}`, direction, body, sentAt, handling: null, links: [], liveMapPreview: null, ...extra,
 });
 
-const BOOKED = msg(1, 'out', at('2026-09-10', '19:42'), "Brightwater: You're booked! Tue, Sep 15, technician arrives 10 AM-12 PM EDT for a furnace tune-up. Reply C to confirm or R to reschedule.");
+const BOOKED = msg(1, 'out', at('2026-09-10', '19:42'), "Brightwater: You're booked! Tue, Sep 15, technician arrives 10 AM-12 PM EDT. Service: furnace tune-up. Reply C to confirm or R to reschedule.");
 const REMINDER = msg(2, 'out', at('2026-09-14', '18:00'), 'Brightwater reminder: your technician arrives tomorrow between 10 AM and 12 PM. Reply C to confirm or R to reschedule.');
 const REPLY_C = msg(3, 'in', at('2026-09-14', '18:01'), 'C', { handling: 'confirmed' });
 const MAP = 'bw.j7l.io/m/7Hk2Ab9Q';

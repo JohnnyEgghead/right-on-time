@@ -448,6 +448,26 @@ describe('POST /board-delay-samples through the real kernel (F-450)', () => {
     expect((await post()).status).toBe(401);
     expect(inserts()).toBe(1);
   });
+
+  // why: F-885 (SD-43) a board tab's held samples arrive in 1 request and go in 1 insert with 1 prune; a body with neither samples nor seq,
+  // or more than 50 samples, is validation_failed and stores nothing
+  it('takes a batch of samples in 1 request with 1 insert, and refuses a body with neither samples nor seq', async () => {
+    const emit = Date.parse('2026-11-01T11:59:58.000Z');
+    const k = kit(policyTable, { ...realHandlers }, {}, tokenChecks, { events: { emitTime: (seq: number) => (seq < 100 ? emit : undefined) } as never });
+    const office = await k.signIn('office');
+    const post = (body: unknown) => k.call('POST', '/api/v1/board-delay-samples', { body, headers: { origin: ORIGIN, cookie: office.cookie } });
+    const count = (text: string) => k.db.log.filter((q) => q.includes(text)).length;
+    const r = await post({ samples: [{ seq: 7, heldMs: 0 }, { seq: 8, heldMs: 1200 }, { seq: 9, heldMs: 60_000 }] });
+    expect(r.status).toBe(204);
+    expect(count('INSERT INTO system.delay_sample')).toBe(1);
+    expect(count('DELETE FROM system.delay_sample')).toBe(1);
+    for (const bad of [{}, { samples: [] }, { samples: Array.from({ length: 51 }, (_, i) => ({ seq: i + 1, heldMs: 0 })) }, { samples: [{ seq: 7, heldMs: 60_001 }] }]) {
+      const refused = await post(bad);
+      expect(refused.status, JSON.stringify(bad).slice(0, 60)).toBeGreaterThanOrEqual(400);
+      expect(((await refused.json()) as { code: string }).code).toBe('validation_failed');
+    }
+    expect(count('INSERT INTO system.delay_sample')).toBe(1);
+  });
 });
 
 describe('the clock row a request is stamped from (F-543)', () => {

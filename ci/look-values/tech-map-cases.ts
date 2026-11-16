@@ -78,6 +78,15 @@ export const TECH_MAP_CASES: TechMapCase[] = [
     frame: MAP_FRAME, captions: [`${M}Loading`], app: '/shell-preview/tech-map/loading', screen: 'SCR-TEC-15', widthFrom: sized(`${M}Loading`),
     pairs: within(APP, screenOf(`${M}Loading`), [...HEAD_R, '.tmap', '.tmap .skel', ...STOP_LIST, ...TABS]),
   },
+  // Kit 0.12 (57520d6c, F-1560; UI-SPECIFICATION 4.5 rule 12): the page before it has read the phone's copy. The header has no count or sync
+  // line, the stops are skeleton rows.
+  {
+    name: 'SCR-TEC-15 Reading the phone (header with a skeleton day line, map skeleton, skeleton stop rows)',
+    frame: MAP_FRAME, captions: [`${M}Reading the phone (web)`], app: '/shell-preview/tech-map/reading', screen: 'SCR-TEC-15', widthFrom: sized(`${M}Reading the phone (web)`),
+    pairs: within(APP, screenOf(`${M}Reading the phone (web)`), [
+      '.apphead .r', '.apphead h1', '.apphead .d', '.apphead .d .r1-skel', '.tmap', '.tmap .skel', '.below', '.below h3', '.stop', '.stop .num', '.stop .tx', '.stop .tx .r1-skel', ...TABS,
+    ]),
+  },
   {
     name: 'SCR-TEC-15 Offline (No signal card, the map needs signal, the saved Stops list)',
     frame: MAP_FRAME, captions: [`${M}Offline`], app: '/shell-preview/tech-map/offline', screen: 'SCR-TEC-15', widthFrom: sized(`${M}Offline`),
@@ -99,6 +108,12 @@ export const TECH_MAP_CASES: TechMapCase[] = [
     name: 'SCR-TEC-08 Loading (header, map skeleton, destination in words, 3 skeleton step rows)',
     frame: MAP_FRAME, captions: [`${D}Loading`], app: '/shell-preview/tech-dir/loading', screen: 'SCR-TEC-08', widthFrom: sized(`${D}Loading`),
     pairs: within(APP, screenOf(`${D}Loading`), [...DH, '.tmap', '.tmap .skel', ...DEST, ...STEPS_SKEL, ...TABS]),
+  },
+  // Kit 0.12 (57520d6c): the Loading skeleton, the destination's name and address skeletons too (they come from the phone's copy of the day).
+  {
+    name: 'SCR-TEC-08 Reading the phone (map skeleton, skeleton destination, 3 skeleton step rows)',
+    frame: MAP_FRAME, captions: [`${D}Reading the phone (web)`], app: '/shell-preview/tech-dir/reading', screen: 'SCR-TEC-08', widthFrom: sized(`${D}Reading the phone (web)`),
+    pairs: within(APP, screenOf(`${D}Reading the phone (web)`), [...DH, '.tmap', '.tmap .skel', '.dest', '.dest .lab', '.dest .r1-skel', '.dest a', ...STEPS_SKEL, ...TABS]),
   },
   {
     name: 'SCR-TEC-08 Route (map box, Show the whole route, destination, drive time, Next turn card, Steps list with the first marked Now)',
@@ -189,6 +204,15 @@ export const TECH_MAP_CASES: TechMapCase[] = [
     widthFrom: [{ app: `${APP} .r1-menu`, frame: '.r1-st:has(.r1-menu[data-ctl="CTL-TEC-10-09"]) .r1-menu' }],
     pairs: within(`${APP} .r1-menu`, '.r1-st:has(.r1-menu[data-ctl="CTL-TEC-10-09"]) .r1-menu', ['', '.mi', '.mi b']),
   },
+  // Kit 0.12 (57520d6c): the van, hours and sync cards as their titles over skeleton lines. The profile header's avatar is
+  // compared (F-1779: the reading state draws the kept profile since F-1775). Its name and role line are not: they sit in a box as wide as the
+  // longest line, and the frame names the branch there where the reading state draws a skeleton (F-1770), so the name's box is 45 px wider in
+  // the frame (a local Chromium run, h1 width 239.42 against 194.13).
+  {
+    name: 'SCR-TEC-10 Reading the phone (the van, hours and sync cards as skeletons)',
+    frame: ME_FRAME, captions: [`${ME}Reading the phone (web)`], app: '/shell-preview/tech-me/reading', screen: 'SCR-TEC-10', widthFrom: sized(`${ME}Reading the phone (web)`),
+    pairs: within(APP, screenOf(`${ME}Reading the phone (web)`), ['.prof .av', '.card[aria-busy]', '.card[aria-busy] .ch', '.card[aria-busy] .ch h3', '.card[aria-busy] > .r1-skel', ...TABS]),
+  },
   {
     name: 'SCR-TEC-16 Results (header, search field, count, results, read-only note, tab bar)',
     frame: PARTS_FRAME, captions: [`${P}Results`], app: '/shell-preview/tech-parts/results', screen: 'SCR-TEC-16', widthFrom: sized(`${P}Results`),
@@ -214,6 +238,20 @@ export const TECH_MAP_CASES: TechMapCase[] = [
     frame: PARTS_FRAME, captions: [`${P}No copy yet`], app: '/shell-preview/tech-parts/nocopy', screen: 'SCR-TEC-16',
     widthFrom: [{ app: `${APP} .emp`, frame: `${cap(`${P}No copy yet`)} .emp` }],
     pairs: within(APP, cap(`${P}No copy yet`), ['.emp', '.emp .ic', '.emp span']),
+  },
+  // Kit 0.12 (57520d6c): the search field, and skeleton rows in place of the count hint and the list. The skeleton rows are compared in every value but height (F-1744):
+  // the frame draws them in a state tile, whose skeleton height is a tile-only rule (r1-single.css .r1-st .b .r1-skel, 14 px) against CMP-12's
+  // 12 px, and every box around them takes its height from it (owner answer 2edb4bdc). The .res .pr row box is also held by the Results case (F-615).
+  {
+    name: 'SCR-TEC-16 Reading the phone (the search field idle)',
+    frame: PARTS_FRAME, captions: [`${P}Reading the phone (web)`], app: '/shell-preview/tech-parts/reading', screen: 'SCR-TEC-16',
+    widthFrom: [{ app: `${APP} .srch`, frame: `${cap(`${P}Reading the phone (web)`)} .srch` }, { app: `${APP} .res`, frame: `${cap(`${P}Reading the phone (web)`)} .res` }],
+    pairs: [
+      ...within(APP, cap(`${P}Reading the phone (web)`), ['.srch', '.srch .ic', '.srch .v']),
+      // F-1744: the 3 skeleton rows are compared in every value but height. A skeleton is 14 px in the frame's tile (r1-single.css .r1-st .b .r1-skel) and
+      // 12 px in CMP-12; the owner approved the pages with that difference (answer 2edb4bdc, Approve all pages), so the height of each box that follows it is not compared.
+      ...within(APP, cap(`${P}Reading the phone (web)`), ['.res', '.res .pr', '.res .pr .tx', '.res .pr .r1-skel']).map((x) => ({ ...x, wrapRuled: 'F-1744, owner answer 2edb4bdc: the tile skeleton is 14 px, CMP-12 is 12 px' })),
+    ],
   },
   {
     name: 'SCR-TEC-11 iPhone (brand row, steps, Continue, note, footer)',

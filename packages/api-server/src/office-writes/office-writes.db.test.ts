@@ -141,7 +141,9 @@ describe('the version gate and Move it anyway (FR-DISP-2, FR-DISP-6; D15)', () =
     expect([a.technicianId, b.technicianId]).toEqual([tech('Greg Hoffman'), tech('Greg Hoffman')]);
     const third = await created({ date: '2026-09-21', window: 'two_hour 08:00' });
     const full = await assign(third.jobNumber, 'Greg Hoffman', 1);
-    expect([full.status, (await problem(full)).code]).toEqual([409, 'technician_no_room']); // 2 in a 2-hour window (SD-27)
+    const fullProblem = await problem(full); // a Response body is read once (F-1803)
+    expect([full.status, fullProblem.code]).toEqual([409, 'technician_no_room']); // 2 in a 2-hour window (SD-27)
+    expect(fullProblem).toMatchObject({ limit: 'window', max: 2 }); // F-1701: the refusal names the window's limit
     // Chris Yoder works Monday to Thursday; Fri Sep 25 is not his day.
     const friday = await created({ date: '2026-09-25', window: 'two_hour 08:00' });
     const off = await assign(friday.jobNumber, 'Chris Yoder', 1);
@@ -270,7 +272,22 @@ describe('blocks (FR-DISP-34; OA-72, OA-74, OA-75)', () => {
       expect([w, (await create({ date, window: `two_hour ${w}`, technician: 'Kevin Doyle' })).status]).toEqual([w, 201]);
     }
     const sixth = await create({ date, window: 'two_hour 10:00', technician: 'Kevin Doyle' });
-    expect([sixth.status, (await problem(sixth)).code]).toEqual([409, 'technician_no_room']);
+    const sixthProblem = await problem(sixth); // a Response body is read once (F-1803)
+    expect([sixth.status, sixthProblem.code]).toEqual([409, 'technician_no_room']);
+    expect(sixthProblem).toMatchObject({ limit: 'day', max: 5 }); // F-1701: the day's limit, with its number
+  });
+
+  // why: F-1701 the owner moved a job to the installer and the refusal did not say why; an installer's day full is named installer_day with max 1, on a move and on a create
+  it('names the installer day as the limit that refused a move to the installer (F-1701)', async () => {
+    const date = '2026-09-22';
+    await created({ date, window: 'two_hour 08:00', technician: 'Chris Yoder' });
+    const other = await created({ date, window: 'two_hour 12:00' });
+    const move = await assign(other.jobNumber, 'Chris Yoder', 1);
+    const moveProblem = await problem(move); // a Response body is read once (F-1803)
+    expect([move.status, moveProblem.code]).toEqual([409, 'technician_no_room']);
+    expect(moveProblem).toMatchObject({ limit: 'installer_day', max: 1 });
+    const again = await create({ date, window: 'two_hour 14:00', technician: 'Chris Yoder' });
+    expect(await problem(again)).toMatchObject({ code: 'technician_no_room', limit: 'installer_day', max: 1 });
   });
 });
 

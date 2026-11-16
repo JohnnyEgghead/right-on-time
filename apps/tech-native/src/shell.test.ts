@@ -5,6 +5,7 @@
 import { readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FileItemStore, sendWaiting, SYNC_CALL_LIMIT_MS } from '@bw/outbox/src/items/native.ts';
 import { Temporal } from '@bw/time';
 import { NativeApp, SIGN_OUT_WAIT_MS, type NativeDeps } from './core.ts';
 import { SESSION_KEY } from './auth/session-store.ts';
@@ -267,7 +268,7 @@ describe('F-1368 Sign out with a server that never answers (CTL-TEC-10-04: the l
       held.push({ method: init?.method ?? 'GET', url: String(input), signal: init?.signal ?? null });
       return new Promise<Response>(() => undefined); // never settles, and ignores its signal: the bound cannot lean on the abort
     };
-    return { up, held, net: { fetch, upload: net.upload }, goSilent: () => (silent = true) };
+    return { up, held, net: { fetch, upload: net.upload }, goSilent: () => (silent = true), goLoud: () => (silent = false) };
   }
 
   // why: F-1368 the owner's build 4 case: signed in to a server that never answers, Sign out clears the phone within 5 s and says ok
@@ -311,6 +312,34 @@ describe('F-1368 Sign out with a server that never answers (CTL-TEC-10-04: the l
     const deletes = server.calls.filter((c) => c.method === 'DELETE' && c.url.endsWith('/api/v1/sessions/current'));
     expect(deletes.map((c) => c.auth)).toEqual([`Bearer ${SAMPLE_TOKEN}`]);
     expect(vi.getTimerCount()).toBe(0); // the limit's timer is cleared once the answer came
+  });
+
+  // why: F-1746 a sync whose API-07 call never answers ends at the call limit: the header leaves Sending, and the next sync sends the note once under its key
+  it('ends a sync at the call limit when API-07 never answers, then the next sync sends the note once', async () => {
+    const srv = silentServer();
+    const p = phone(srv.net);
+    await p.app.open();
+    await p.app.signIn('40712', PASSWORD, true);
+    await p.app.sync();
+    srv.up.setSignal(false);
+    const it1 = await p.app.enter({ jobNumber: 24830, baseVersion: 1, body: { kind: 'note', payload: { text: 'Flame sensor cleaned' } } });
+    await p.app.sync(); // the entry's own send, with no signal, is over
+    srv.up.setSignal(true);
+    srv.goSilent();
+    vi.useFakeTimers();
+    let done = false;
+    void p.app.sync().then(() => (done = true));
+    await vi.advanceTimersByTimeAsync(SYNC_CALL_LIMIT_MS - 1);
+    expect([done, p.app.snapshot.outbox.sending]).toEqual([false, true]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect([done, p.app.snapshot.outbox.sending, p.app.snapshot.outbox.waiting.length]).toEqual([true, false, 1]);
+    expect(srv.held.filter((c) => c.url.endsWith('/api/v1/me')).every((c) => c.signal?.aborted)).toBe(true);
+    vi.useRealTimers();
+    srv.goLoud();
+    await p.app.sync();
+    expect(p.app.snapshot.outbox.waiting).toHaveLength(0);
+    expect([...srv.up.ledger.keys()].filter((k) => k === it1.key)).toEqual([it1.key]);
+    expect(srv.up.calls.filter((c) => c.via === 'upload' && c.url.endsWith('/api/v1/tech/items'))).toHaveLength(1);
   });
 
   // why: F-1368, UD-20 a server that never answers changes nothing about the refusal while an item waits: refused at once, nothing sent, still signed in
@@ -373,5 +402,36 @@ describe('the native transport: every item call uploads from a file (R4 sections
     mode = 'down';
     expect(await t.sendItems([{ key: '00000000-0000-4000-8000-00000000000a' } as never])).toEqual({ ok: false, stop: 'network' });
     await expect(uploadFetch(port)(`${LOCAL}/x`, { method: 'GET' })).rejects.toThrow(/only a POST or PUT/);
+  });
+
+  // why: F-1035 nginx answers 413 for a photo over its cap; on the phone's path the photo leaves flagged by the server's answer to 1 empty body file, and its file is never uploaded again
+  it('answers a photo refused with 413 by 1 empty-body upload under its key, flagged, and never uploads its file again', async () => {
+    const store = new FileItemStore(nodeDir());
+    const key = '00000000-0000-4000-8000-00000000000b';
+    await store.put({ key, kind: 'photo', contentType: 'image/jpeg', jobNumber: 24830, baseVersion: null, userId: MARIA_ID, worldEpoch: 1, deviceTime: 'd', offsetSavedReal: 'o', sinceSaveMs: 0, demoTime: 't', enteredRealMs: ms } as never, new Uint8Array(4096));
+    const blobFile = store.blobUri(key);
+    const uploads: string[] = [];
+    const bodies: { text: string; done: boolean }[] = [];
+    const port: UploadPort = {
+      async upload(uri, url) {
+        const empty = bodies.find((b) => `file:///body-${bodies.indexOf(b)}.json` === uri);
+        uploads.push(empty ? `empty ${empty.text.length}` : uri === blobFile ? 'photo file' : uri);
+        expect(url).toContain(`/api/v1/tech/photos/${key}?`);
+        if (!empty) return { status: 413, body: '<html><head><title>413 Request Entity Too Large</title></head></html>', headers: {} };
+        return { status: 200, body: JSON.stringify({ data: { key, result: 'flagged', code: 'validation_failed', messageKey: 'tech.item.flagged.validation_failed', values: { job: 24830 } }, meta: {} }), headers: {} };
+      },
+      bodyFile(text) {
+        const b = { text, done: false };
+        bodies.push(b);
+        return { uri: `file:///body-${bodies.length - 1}.json`, done: () => (b.done = true) };
+      },
+    };
+    const t = nativeTransport({ origin: LOCAL, token: SAMPLE_TOKEN, blobUri: (k) => store.blobUri(k), port });
+    const r = await sendWaiting(store, t, { userId: MARIA_ID, nowMs: () => ms });
+    await sendWaiting(store, t, { userId: MARIA_ID, nowMs: () => ms });
+    expect(uploads).toEqual(['photo file', 'empty 0']);
+    expect(bodies).toEqual([{ text: '', done: true }]);
+    expect(r.answered.map((x) => [x.key, x.result, x.code])).toEqual([[key, 'flagged', 'validation_failed']]);
+    expect(await store.waiting()).toHaveLength(0);
   });
 });

@@ -9,6 +9,7 @@ import Constants from 'expo-constants';
 import { useState } from 'react';
 import { ActionSheetIOS, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { waitingTotal } from '../../core.ts';
+import { useLastTry } from '../../ui/last-try.ts';
 import { Icon } from '../../ui/Icon.tsx';
 import type { NativeIcon } from '../../ui/icon-paths.ts';
 import { useT } from '../../ui/intl.tsx';
@@ -19,10 +20,11 @@ import { useBigText } from '../../ui/text-size.tsx';
 import { color, type } from '../../ui/tokens.ts';
 import { Bar2, c, Grp, NoSignal, Row, RowText, Scroll, T } from './parts.tsx';
 import {
-  branchName, durationText, ENDING_KINDS, jobsDone, minutesOnClock, phoneStart, SIZE_KEY, startOfDay, TEXT_SIZES, type TextSize,
+  branchName, durationText, ENDING_KINDS, jobsDone, mePhase, minutesOnClock, phoneStart, SIZE_KEY, startOfDay, TEXT_SIZES, type TextSize,
 } from './model.ts';
 import { forgetMapMe, useMapMe } from './use-mapme.ts';
 import { openWaiting } from '../job/nav.ts';
+import { ErrBox, InfoBox } from '../job/ui.tsx';
 
 /** A setting's row (.row.set): the icon, the key and what the row ends in. */
 function SetRow(props: { id: string; icon: NativeIcon; label: string; first?: boolean; onPress?: (() => void) | undefined; value?: string; stack?: boolean; children?: React.ReactNode }) {
@@ -76,6 +78,9 @@ export function MeTab() {
   const stops = data.route?.data.stops ?? [];
   const offline = !state.outbox.online || !data.online;
   const waiting = state.outbox.waiting;
+  const phase = mePhase(day !== null, offline, data.settled, data.failed);
+  const [tries, setTries] = useState(0);
+  const lastTry = useLastTry(phase === 'error', tries);
   const n = waitingTotal(state); // F-985: a damaged item still waits on the phone
 
   // Today's hours: the server's start, or the phone's own first action until the server's arrives (OI-40).
@@ -111,16 +116,32 @@ export function MeTab() {
             <RowText id="me.profile.tx" title={day?.technician.name ?? state.session?.name ?? ''} small={day ? `${roleLine} - ${branchLine}` : ''} />
           </Row>
         </Grp>
+        {phase === 'error' ? (
+          // SCR-TEC-10 Day not loaded (F-1747): CMP-12 in place of the van and today's hours, with Try again reading the day again
+          <ErrBox id="me.dayfail" text={t('tech.me.dayError')} lastTry={lastTry && t('shell.error.lastTry', { time: lastTry })} link={{ id: 'me.retry', label: t('shell.error.tryAgain'), onPress: () => { setTries((n) => n + 1); void reads?.refresh(); } }} />
+        ) : phase === 'offlineNone' ? (
+          <InfoBox id="me.nosaved" text={t('tech.me.noSaved')} />
+        ) : null}
         <Grp id="me.day.grp">
-          <Row id="me.van" first>
-            <RowText id="me.van.tx" title={day?.van ? t('tech.me.vanNumber', { number: day.van.number }) : t('tech.me.noVan')} small={day?.van?.vehicle} />
-          </Row>
-          <Row id="me.hours">
-            <RowText id="me.hours.tx"
-              title={started ? `${t('tech.me.started')} ${clockOfWire(started)}${onClock === null ? '' : ` - ${durationText(t, onClock)}`}` : t('tech.me.notStarted')}
-              small={`${t('tech.me.jobsDone')} ${t('tech.me.ofTotal', { done, total: stops.length })}`} />
-          </Row>
-          <Row id="me.sync">
+          {phase === 'day' ? (
+            <>
+              <Row id="me.van" first>
+                <RowText id="me.van.tx" title={day?.van ? t('tech.me.vanNumber', { number: day.van.number }) : t('tech.me.noVan')} small={day?.van?.vehicle} />
+              </Row>
+              <Row id="me.hours">
+                <RowText id="me.hours.tx"
+                  title={started ? `${t('tech.me.started')} ${clockOfWire(started)}${onClock === null ? '' : ` - ${durationText(t, onClock)}`}` : t('tech.me.notStarted')}
+                  small={`${t('tech.me.jobsDone')} ${t('tech.me.ofTotal', { done, total: stops.length })}`} />
+              </Row>
+            </>
+          ) : phase === 'loading' ? (
+            // Loading: skeletons in place of the van and today's hours, never "No van assigned" or "Not started yet" (the day is not read yet)
+            <>
+              <Row id="me.van" first><View {...lk('me.van.skel', s.skel)} /></Row>
+              <Row id="me.hours"><View {...lk('me.hours.skel', s.skel)} /></Row>
+            </>
+          ) : null}
+          <Row id="me.sync" first={phase === 'error' || phase === 'offlineNone'}>
             <RowText id="me.sync.tx" title={n > 0 ? t('tech.sync.waiting', { n }) : t('tech.me.syncedAt', { time: data.now ? clockOfWire(data.now) : '' })}
               small={n > 0 ? t('tech.me.waiting', { n }) : t('tech.me.syncedNothing')} onPress={() => openWaiting(nav)} />
             <Pressable {...lk('me.sendnow', [s.sbtn, offline || waiting.length === 0 ? s.sbtnOff : s.sbtnOn])} disabled={offline || waiting.length === 0} onPress={() => void app.sync()}
@@ -140,7 +161,12 @@ export function MeTab() {
           <SetRow id="me.language" icon="globe" label={t('tech.me.language')} stack>
             <LanguageSegments id="me.lang" value={state.language} onChange={(l) => void app.setLanguage(l)} width={170} />
           </SetRow>
-          <SetRow id="me.call" icon="phone" label={t('tech.me.call')} value={day?.officePhone ?? ''} onPress={day ? () => { void Linking.openURL(`tel:${day.officePhone.replace(/[^0-9+]/g, '')}`); } : undefined} />
+          {day ? (
+            <SetRow id="me.call" icon="phone" label={t('tech.me.call')} value={day.officePhone} onPress={() => { void Linking.openURL(`tel:${day.officePhone.replace(/[^0-9+]/g, '')}`); }} />
+          ) : phase === 'loading' ? (
+            // Loading: the number is a skeleton, never a call row with no number (F-1747)
+            <SetRow id="me.call" icon="phone" label={t('tech.me.call')}><View {...lk('me.call.skel', s.skel)} /></SetRow>
+          ) : null}
           <SetRow id="me.server" icon="cloud" label={t('tech.server.row')} value={server} />
           <SetRow id="me.version" icon="info" label={t('tech.me.version')} value={t('tech.me.versionValue', { version })} />
         </Grp>
@@ -165,6 +191,7 @@ const s = StyleSheet.create({
   colBig: { flex: 1, minWidth: 0 },
   keyBig: type(600, 15, 21, color.ink900),
   sbtn: { minHeight: 44, borderWidth: 1, borderRadius: 11, paddingVertical: 3, paddingHorizontal: 6, columnGap: 6, rowGap: 6, alignItems: 'center', justifyContent: 'center' },
+  skel: { height: 14, width: 120, borderRadius: 6, backgroundColor: c.ink100, marginVertical: 2 },
   sbtnOff: { backgroundColor: c.ink100, borderColor: color.ink200 },
   sbtnOn: { backgroundColor: color.white, borderColor: color.ink300 },
   sbtnText: type(650, 13.5, 16.2, color.ink800),

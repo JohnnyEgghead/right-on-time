@@ -7,7 +7,7 @@
 import '../shell/css/signin.ts';
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { branchById } from '../shell/branches.ts';
-import { fieldText } from '../shell/early-form.ts';
+import { fieldFlag, fieldText } from '../shell/early-form.ts';
 import type { AppInfo } from '../shell/Footer.tsx';
 import { Icon, Mark } from '../shell/Icon.tsx';
 import { useT } from '../shell/intl.tsx';
@@ -58,10 +58,11 @@ export function SignInScreen({ returnTo = null, returned = false, passwordSet = 
   const [info, setInfo] = useState<AppInfo | null>(givenInfo ?? null);
   const [people, setPeople] = useState<PeopleList>(givenPeople ?? 'loading');
   // F-1037 (shell/early-form.ts): the 2 fields are uncontrolled; `kept` is what they hold after the form's reset, the values the last submit sent.
-  const [kept, setKept] = useState({ email: typedEmail, password: '' });
+  // F-1063: Keep me signed in is a native checkbox, read from the tap's FormData (a tap before hydration ticks it with no script), and from the box itself for Sign in as.
+  const [kept, setKept] = useState({ email: typedEmail, password: '', keep: false });
+  const keepField = useRef<HTMLInputElement>(null);
   const passwordField = useRef<HTMLInputElement>(null);
   const [show, setShow] = useState(false);
-  const [keep, setKeep] = useState(false);
   const [busy, setBusy] = useState(givenBusy);
   // F-1064: the in-flight guard is a ref; React replays every submit it held before hydration in 1 task, each reading the same render's busy.
   const sending = useRef(false);
@@ -125,7 +126,7 @@ export function SignInScreen({ returnTo = null, returned = false, passwordSet = 
   // The form's action (F-1037), a tap made before hydration included: React holds that one and replays it here. The fields come from the
   // tap's FormData, and are kept first, so the form's reset after this action gives them back as sent.
   const submit = async (data: FormData) => {
-    const typed = { email: fieldText(data, 'email'), password: fieldText(data, 'password') };
+    const typed = { email: fieldText(data, 'email'), password: fieldText(data, 'password'), keep: fieldFlag(data, 'keep') };
     setKept(typed);
     if (sending.current) return;
     const errs = { email: typed.email.trim() === '', password: typed.password === '' };
@@ -134,7 +135,7 @@ export function SignInScreen({ returnTo = null, returned = false, passwordSet = 
     sending.current = true;
     setBusy(true);
     setMessage(null);
-    const r = await read().read<{ user: { id: string; role: SamplePerson['role'] } }>('API-03', { login: typed.email.trim(), password: typed.password, client: 'web', keepSignedIn: keep });
+    const r = await read().read<{ user: { id: string; role: SamplePerson['role'] } }>('API-03', { login: typed.email.trim(), password: typed.password, client: 'web', keepSignedIn: typed.keep });
     if (r.ok) await land(r.data.user);
     else failed(r.code);
   };
@@ -145,7 +146,7 @@ export function SignInScreen({ returnTo = null, returned = false, passwordSet = 
     setBusy(true);
     setPressed(p.personId);
     setMessage(null);
-    const r = await read().read<{ user: { id: string; role: SamplePerson['role'] } }>('API-05', { personId: p.personId, keepSignedIn: keep });
+    const r = await read().read<{ user: { id: string; role: SamplePerson['role'] } }>('API-05', { personId: p.personId, keepSignedIn: keepField.current?.checked ?? kept.keep });
     if (r.ok) await land(r.data.user);
     else failed(r.code);
   };
@@ -244,10 +245,11 @@ export function SignInScreen({ returnTo = null, returned = false, passwordSet = 
                   </div>
                 ) : null}
                 <div className="row2">
-                  <button type="button" className={`check bw-btn-reset${keep ? ' on' : ''}`} role="checkbox" aria-checked={keep} data-ctl="CTL-OFC-01-08" onClick={() => setKeep(!keep)}>
-                    <span className="bx" />
+                  <label className="check">
+                    <input type="checkbox" name="keep" className="bw-keep-cb" defaultChecked={kept.keep} ref={keepField} data-ctl="CTL-OFC-01-08" />
+                    <span className="bx"><Icon name="check" sw={3} /></span>
                     {t('auth.signin.keep')}
-                  </button>
+                  </label>
                   <a className="link" href="/forgot-password" data-ctl="CTL-OFC-01-07">
                     {t('auth.signin.forgot')}
                   </a>

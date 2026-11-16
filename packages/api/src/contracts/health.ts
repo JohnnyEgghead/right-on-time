@@ -19,16 +19,26 @@ export const healthz = defineContract({
   examples: [{ name: 'database answers', expectStatus: 200 }],
 });
 
+/** SD-43 (F-885): a board tab sends at most this many held samples in 1 request. */
+export const DELAY_SAMPLES_MAX = 50;
+/** SD-43: a sample's heldMs, the whole milliseconds from the finished re-read to the send, is 0 to this. */
+export const DELAY_SAMPLE_HELD_MAX_MS = 60_000;
+const delaySeq = z.number().int().positive();
+
 /**
- * API-172 (SPECIFICATIONS 7.4, SD-43): a board tab posts the seq of the event whose re-read it just finished; the server
- * stores ms = receive time minus the seq's emit time. No UI control; answers 204 even for a seq it no longer holds.
+ * API-172 (SPECIFICATIONS 7.4, SD-43): a board tab sends the samples it held, each the seq of an event whose re-read it finished
+ * and the milliseconds it held it; the server stores ms = receive time minus the seq's emit time minus heldMs, floored at 0. No UI
+ * control; answers 204 even for a seq it no longer holds. The old body, seq alone, stays accepted as 1 sample with heldMs 0 (F-885).
  */
 export const boardDelaySample = defineContract({
   id: 'API-172',
   name: 'Board delay sample',
   method: 'POST',
   path: '/board-delay-samples',
-  request: z.object({ seq: z.number().int().positive() }),
+  request: z.object({
+    samples: z.array(z.object({ seq: delaySeq, heldMs: z.number().int().min(0).max(DELAY_SAMPLE_HELD_MAX_MS) })).min(1).max(DELAY_SAMPLES_MAX).optional(),
+    seq: delaySeq.optional(),
+  }).refine((v) => v.samples !== undefined || v.seq !== undefined, { message: 'samples or seq' }),
   response: z.object({}),
   successStatus: [204],
   errors: [],

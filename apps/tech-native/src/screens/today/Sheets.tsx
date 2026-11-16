@@ -16,6 +16,7 @@ import { AccessibilityInfo, findNodeHandle, Pressable, ScrollView, StyleSheet, V
 import { T as Text, useBigText } from '../../ui/text-size.tsx';
 import { Icon } from '../../ui/Icon.tsx';
 import type { NativeIcon } from '../../ui/icon-paths.ts';
+import { SHORT_DETENTS, TALL_DETENTS } from '../../ui/sheet-detents.ts';
 import { useT } from '../../ui/intl.tsx';
 import { lk, useLookDump } from '../../ui/look.ts';
 import { color, type } from '../../ui/tokens.ts';
@@ -82,8 +83,9 @@ export function StatusSheet() {
   // and stacks its 2 buttons; go stays on the screen and reachable.
   const big = useBigText();
   useEffect(() => {
-    // Back to the Confirm route's own detent (App.tsx) when the text gets smaller while the sheet is up.
-    nav.setOptions({ sheetAllowedDetents: big ? [0.92] : [0.32] });
+    // Back to the JobStatus route's own height (screens/job/routes.tsx, as tall as the content) when the text gets smaller while the sheet
+    // is up. Not the Confirm route's 0.32 (App.tsx): that is another sheet, and the On my way sheet is taller (F-1733).
+    nav.setOptions({ sheetAllowedDetents: big ? TALL_DETENTS : SHORT_DETENTS });
   }, [big, nav]);
   const online = p.online ?? state.outbox.online;
   const spec = SPEC[p.kind];

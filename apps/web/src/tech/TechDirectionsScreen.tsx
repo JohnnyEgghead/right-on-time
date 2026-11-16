@@ -17,6 +17,8 @@ import { isBranchId, type MapMarker, type MapRoute } from '../map/map-model.ts';
 import { Icon } from '../shell/Icon.tsx';
 import { useT } from '../shell/intl.tsx';
 import { techReads, useTechData, type TechData } from './data.ts';
+import { realNow } from '@bw/time';
+import { lastTryOf, TechErrorPanel } from './TechErrorPanel.tsx';
 import type { OutboxState } from './engine.ts';
 import { isRestOf, nextTurn, stepRows, stepsPhase, streetOf, type RouteRead, type ShownRoute, type StepRow } from './steps.ts';
 import { NoSignalCard } from './SyncStrip.tsx';
@@ -54,6 +56,7 @@ export function TechDirectionsScreen({ jobNumber, from, fixedData, fixedOutbox, 
   const [focus, setFocus] = useState<{ at: readonly [number, number]; key: number } | null>(null);
   const [fitKey, setFitKey] = useState(0);
   const [tries, setTries] = useState(0);
+  const [failedAt, setFailedAt] = useState<number | null>(null); // F-1777: when the last route read failed, for the panel's Last try time
   const offline = !outbox.online || !data.online;
   const fixed = fixedOutbox ? { fixed: fixedOutbox } : {};
 
@@ -72,7 +75,11 @@ export function TechDirectionsScreen({ jobNumber, from, fixedData, fixedOutbox, 
   useEffect(() => {
     if (fixedRoute !== undefined || offline || jobNumber <= 0) return;
     let live = true;
-    void techReads().leg(jobNumber, from).then((r) => live && setRead(r));
+    void techReads().leg(jobNumber, from).then((r) => {
+      if (!live) return;
+      if (r.kind === 'failed') setFailedAt(realNow('device_stamp').epochMilliseconds);
+      setRead(r);
+    });
     return () => {
       live = false;
     };
@@ -123,7 +130,16 @@ export function TechDirectionsScreen({ jobNumber, from, fixedData, fixedOutbox, 
   };
   const minutes = route && route.leg.track !== null && (phase === 'route' || phase === 'offlineSaved') ? route.leg.minutes : null;
 
-  const destCard = (
+  // Reading the phone (rule 12, F-1434; kit 0.12 57520d6c): the destination comes from the kept day, so until the page has read it the
+  // name and address are skeletons, never an empty card.
+  const destCard = data.reading === true && dest === null ? (
+    <div className="dest" data-ctl="CTL-TEC-08-02" aria-busy="true">
+      <div className="lab">{t('tech.dir.next')}</div>
+      <span className="r1-skel bw-skel-name" />
+      <span className="r1-skel bw-skel-80" />
+      <a role="link" href={`/tech/jobs/${jobNumber}`} data-ctl="CTL-TEC-08-04">{t('tech.dir.openJob')}</a>
+    </div>
+  ) : (
     <div className="dest" data-ctl="CTL-TEC-08-02">
       <div className="lab">{t('tech.dir.next')}</div>
       <h2 translate="no">{dest?.customer ?? ''}</h2>
@@ -160,15 +176,7 @@ export function TechDirectionsScreen({ jobNumber, from, fixedData, fixedOutbox, 
       {phase === 'offline' || phase === 'offlineSaved' ? <div className="bw-tech-pad"><NoSignalCard {...fixed} /></div> : null}
       {phase === 'failed' ? (
         <div className="bw-tech-pad10">
-          <div className="r1-errpanel" role="alert" data-ctl="CTL-CMP-12-01" data-cmp="CMP-12">
-            <Icon name="alert" />
-            <div>
-              <b>{t('tech.dir.notLoaded')}</b>
-              {t('tech.dir.notLoadedBody')}
-              <br />
-              <button type="button" className="btn try" data-ctl="CTL-CMP-12-02" onClick={() => setTries((n) => n + 1)}>{t('shell.error.tryAgain')}</button>
-            </div>
-          </div>
+          <TechErrorPanel title={t('tech.dir.notLoaded')} hint={t('tech.dir.notLoadedBody')} btn="btn try" lastTry={lastTryOf(failedAt, data.day?.data.zone, t.lang)} onRetry={() => setTries((n) => n + 1)} />
         </div>
       ) : null}
       {phase === 'moved' ? <div className="moved"><div className="r1p-empty" role="alert"><Icon name="alert" /><span>{t('tech.dir.moved')}</span></div></div> : null}

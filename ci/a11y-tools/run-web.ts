@@ -79,6 +79,7 @@ try {
   };
   await prove('reflow', '/reflow-bad.html', 'flagged');
   await prove('reflow', '/reflow-clean.html', 'clean');
+  await prove('reflow', '/reflow-ypanel-bad.html', 'flagged'); // F-1630
   await prove('text', '/text-bad.html', 'flagged');
   await prove('text', '/text-clean.html', 'clean');
   // The page-zoom method (desktop rows, 200% = a 720 x 450 viewport): its bad page, its clean twin, and a page that only scrolls sideways (not a loss of text).
@@ -87,6 +88,8 @@ try {
   await prove('text', '/zoom-sideways.html', 'clean', undefined, true);
   await prove('motion', '/motion-bad.html', 'flagged');
   await prove('motion', '/motion-clean.html', 'clean');
+  await prove('motion', '/motion-script-bad.html', 'flagged'); // F-1631
+  await prove('motion', '/motion-script-clean.html', 'clean');
   // The 200% check fires because of the doubling, not because the label clips already: at 100% the bad label fits.
   const at100 = await withPage(b0, [fixtureOrigin], { viewport: DESKTOP }, async (p) => { await p.goto(fixtureOrigin + '/text-bad.html'); }, async (p) => overflowPass(p, [DESKTOP]));
   proofs.push({ check: 'text', page: '/text-bad.html at 100%', expect: 'clean', got: at100.length, ok: at100.length === 0, findings: at100.map((f) => f.message) });

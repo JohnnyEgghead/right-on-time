@@ -6,6 +6,7 @@
 #   scripts/publish.sh image   <vX.Y.Z> [--clone <dir>] [--docker-context <name>]
 #   scripts/publish.sh push    <vX.Y.Z> --granted [--clone <dir>]
 #   scripts/publish.sh release <vX.Y.Z> --granted [--clone <dir>] [--data <dir>]
+#   scripts/publish.sh docs [--ref <ref>] [--clone <dir>] [--remote <url>] [--dry-run] [--granted]
 #   scripts/publish.sh --help
 #
 # --dry-run exports the publish set: the tree at <ref> (default HEAD) minus the private paths list (scripts/private-paths.txt), into
@@ -43,18 +44,22 @@
 #            <data>, default .build/data: maps/<name>, and the street list at the top), creates the GitHub release as a draft, uploads
 #            what is missing, replaces what differs, publishes it, and checks every asset's size and sha256 digest. A published release
 #            whose assets differ is refused (it is never changed by this script).
+#   docs     (between releases; owner grant only) puts only PRIVACY.md and SUPPORT.md of <ref> (default HEAD) on the public main: the
+#            files must be in the dry-run export, byte for byte the private ones, and pass the secret scan; 1 commit on the public
+#            main whose tree differs from it in those 2 paths only, pushed without a tag and never forced. --dry-run builds and
+#            checks the commit and prints what it would push (exit 0); without --granted it prints the same and exits 3.
 # Exit 0 done, 1 a check failed, 2 usage, 3 a grant step without --granted. Only push and release write outside this machine.
 # Test seams: BW_PUBLISH_SCAN (run as "<it> dir <path>") and BW_PUBLISH_FILES (run as "<it> <path>") stand in for the 2 checks,
 # BW_GH and BW_DOCKER for gh and docker.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-usage() { sed -n '3,9p' "$root/scripts/publish.sh" | sed 's/^# //' >&2; }
+usage() { sed -n '3,10p' "$root/scripts/publish.sh" | sed 's/^# //' >&2; }
 
 sub=dry
 case "${1:-}" in
-  prepare|image|push|release) sub="$1"; shift ;;
-  -h|--help) sed -n '3,48p' "$root/scripts/publish.sh" | sed -e 's/^# \{0,1\}//'; exit 0 ;;
+  prepare|image|push|release|docs) sub="$1"; shift ;;
+  -h|--help) sed -n '3,53p' "$root/scripts/publish.sh" | sed -e 's/^# \{0,1\}//'; exit 0 ;;
 esac
 
 dry=0
@@ -69,7 +74,9 @@ remote="https://github.com/JohnnyEgghead/right-on-time.git"
 data="$root/.build/data"
 dctx="${BW_PUBLISH_DOCKER_CONTEXT:-spectre}"
 granted=0
-if [ "$sub" != dry ]; then
+if [ "$sub" = docs ]; then
+  tag=docs
+elif [ "$sub" != dry ]; then
   tag="${1:-}"
   [ -n "$tag" ] && [ "${tag#-}" = "$tag" ] || { usage; exit 2; }
   shift
@@ -80,13 +87,14 @@ while [ "$#" -gt 0 ]; do
     dry:--out) out="${2:?--out needs a value}"; shift 2 ;;
     dry:--list) list="${2:?--list needs a value}"; shift 2 ;;
     dry:--release-tag) rtag="${2:?--release-tag needs a value}"; shift 2 ;;
-    dry:--ref|prepare:--ref) ref="${2:?--ref needs a value}"; shift 2 ;;
-    dry:--slug|prepare:--slug) slug="${2:?--slug needs a value}"; shift 2 ;;
-    prepare:--remote) remote="${2:?--remote needs a value}"; shift 2 ;;
-    prepare:--clone|image:--clone|push:--clone|release:--clone) clone="${2:?--clone needs a value}"; shift 2 ;;
+    dry:--ref|prepare:--ref|docs:--ref) ref="${2:?--ref needs a value}"; shift 2 ;;
+    dry:--slug|prepare:--slug|docs:--slug) slug="${2:?--slug needs a value}"; shift 2 ;;
+    docs:--dry-run) dry=1; shift ;;
+    prepare:--remote|docs:--remote) remote="${2:?--remote needs a value}"; shift 2 ;;
+    prepare:--clone|docs:--clone|image:--clone|push:--clone|release:--clone) clone="${2:?--clone needs a value}"; shift 2 ;;
     release:--data) data="${2:?--data needs a value}"; shift 2 ;;
     image:--docker-context) dctx="${2:?--docker-context needs a value}"; shift 2 ;;
-    push:--granted|release:--granted) granted=1; shift ;;
+    push:--granted|release:--granted|docs:--granted) granted=1; shift ;;
     *) usage; exit 2 ;;
   esac
 done
@@ -95,6 +103,9 @@ tag_ok() { [[ "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "publish: a release
 
 # ---------------------------------------------------------------------------------------------------------------------------- dry run
 dry_run() {
+  # F-1694, F-1639: a guard that stopped under load left no stderr; name the line and the exit status the dry run stopped at, so the next red says which.
+  set -E
+  trap 'rc=$?; echo "publish: the dry run stopped at line $LINENO (exit $rc): $BASH_COMMAND" >&2' ERR
   cd "$root"
   git rev-parse --verify --quiet "$ref^{tree}" >/dev/null || { echo "publish: no such ref: $ref" >&2; exit 2; }
   if [ -n "$rtag" ]; then tag_ok "$rtag"; fi
@@ -122,7 +133,12 @@ dry_run() {
     esac
   done <<<"$plist"
 
-  git archive --format=tar "$ref" | tar -x -C "$out"
+  # F-1639, F-1694, F-1823: a file, not a pipe. Under pipefail, tar stopping at the end-of-archive blocks while git archive still writes its
+  # padding gave exit 141 (SIGPIPE) under load.
+  local tarf; tarf="$(mktemp "${TMPDIR:-/tmp}/publish-archive.XXXXXX")"
+  git archive --format=tar -o "$tarf" "$ref" || { rm -f "$tarf"; exit 1; }
+  tar -xf "$tarf" -C "$out" || { rm -f "$tarf"; exit 1; }
+  rm -f "$tarf"
   local total kept bad=0 d f n g re udid udid_split
   total="$(cd "$out" && find . -type f -o -type l | wc -l | tr -d ' ')"
 
@@ -195,6 +211,8 @@ state_set() {
 state_del() { [ -f "$state" ] || return 0; { grep -v -E "^$1=" "$state" || true; } > "$state.new"; mv "$state.new" "$state"; }
 run_scan() { if [ -n "${BW_PUBLISH_SCAN:-}" ]; then "$BW_PUBLISH_SCAN" dir "$1"; else node "$root/ci/secret-scan/scan.ts" dir "$1"; fi; }
 run_files() { if [ -n "${BW_PUBLISH_FILES:-}" ]; then "$BW_PUBLISH_FILES" "$1"; else node "$root/ci/public-files.ts" all --root "$1" --export; fi; }
+# F-1714: the docs-only folder gets the content checks prepare gives the export (ipv4, private-refs, owner-ids); the others (SPDX, README items) are about the whole tree.
+run_docs_files() { if [ -n "${BW_PUBLISH_FILES:-}" ]; then "$BW_PUBLISH_FILES" "$1"; else local c; for c in ipv4 private-refs owner-ids; do node "$root/ci/public-files.ts" "$c" --root "$1" || return 1; done; fi; }
 # The prepared tag, checked against the state file: sets commit, tree, base.
 load_prepared() {
   [ -f "$state" ] || die "no prepared release $tag in $clone (run scripts/publish.sh prepare $tag first)"
@@ -223,7 +241,12 @@ image_bound() {
   echo "publish: the release image $img ($id, context $ictx) carries the prepared commit $commit"
 }
 # The tag's tree as files in a fresh folder (the image context and the push re-scan).
-archive_to() { rm -rf "$1"; mkdir -p "$1"; g archive --format=tar "refs/tags/$tag" | tar -x -C "$1"; }
+archive_to() {
+  local tarf; rm -rf "$1"; mkdir -p "$1"; tarf="$(mktemp "${TMPDIR:-/tmp}/publish-archive.XXXXXX")"
+  g archive --format=tar -o "$tarf" "refs/tags/$tag" || { rm -f "$tarf"; return 1; }
+  tar -xf "$tarf" -C "$1" || { rm -f "$tarf"; return 1; }
+  rm -f "$tarf"   # a file, not a pipe (F-1823: SIGPIPE 141 under load)
+}
 # The sha of 1 ref of the public repo, by its exact name (empty when absent); --refs leaves out the peeled ^{} lines.
 remote_ref() { g ls-remote --refs origin "$1" | awk -v r="$1" '$2 == r { print $1 }'; }
 
@@ -462,6 +485,69 @@ release() {
   echo "publish: released $tag on $slug with $(printf '%s\n' "$cmp" | grep -c '^ok ') assets, each size and sha256 digest checked"
 }
 
+# Between releases: PRIVACY.md and SUPPORT.md alone onto the public main (the App Store listing links to them). 1 commit, no tag, no force.
+DOCS_FILES=(PRIVACY.md SUPPORT.md)
+docs() {
+  local priv out list f idx tree base name email when commit blob changed paths
+  priv="$(git -C "$root" rev-parse --verify --quiet "$ref^{commit}")" || { echo "publish: no such ref: $ref" >&2; exit 2; }
+  out="$work/export"
+  list="$work/export.list"
+  bash "$root/scripts/publish.sh" --dry-run --ref "$priv" --out "$out" --list "$list" --slug "$slug" || die "the export of $ref did not pass its guards"
+  mkdir -p "$work/docs-only"
+  for f in "${DOCS_FILES[@]}"; do
+    grep -q -x -e "$f" "$list" || die "$f is not in the export of $ref (is it committed, and not on the private paths list?)"
+    git -C "$root" show "$priv:$f" > "$work/docs-only/$f" || die "reading $f at $ref"
+    cmp -s "$work/docs-only/$f" "$out/$f" || die "$f in the export is not the private file's bytes"
+  done
+  run_scan "$work/docs-only" || die "the secret scan of the 2 files"
+  # F-1714: the files check lists files with git, so the folder is made a repo that holds the private paths list (the export's copy).
+  git init --quiet "$work/docs-only"
+  mkdir -p "$work/docs-only/scripts"
+  git -C "$root" show "$priv:scripts/private-paths.txt" > "$work/docs-only/scripts/private-paths.txt" || die "reading scripts/private-paths.txt at $ref"
+  run_docs_files "$work/docs-only" || die "the public files check of the 2 files (ipv4, private-refs, owner-ids)"
+  if [ -d "$clone/.git" ]; then
+    [ "$(g remote get-url origin)" = "$remote" ] || die "$clone is a clone of $(g remote get-url origin), not $remote"
+    g fetch --quiet origin '+refs/heads/*:refs/remotes/origin/*'
+  else
+    mkdir -p "$(dirname "$clone")"
+    git clone --quiet --no-checkout "$remote" "$clone"
+  fi
+  base="$(g rev-parse --verify --quiet refs/remotes/origin/main)" || die "the public repo has no main branch"
+  idx="$work/index"
+  rm -f "$idx"
+  GIT_INDEX_FILE="$idx" git --git-dir="$clone/.git" read-tree "$base"
+  for f in "${DOCS_FILES[@]}"; do
+    blob="$(git --git-dir="$clone/.git" hash-object -w "$work/docs-only/$f")"
+    GIT_INDEX_FILE="$idx" git --git-dir="$clone/.git" update-index --add --cacheinfo "100644,$blob,$f"
+  done
+  tree="$(GIT_INDEX_FILE="$idx" git --git-dir="$clone/.git" write-tree)"
+  if [ "$tree" = "$(g rev-parse "$base^{tree}")" ]; then
+    echo "publish: PRIVACY.md and SUPPORT.md are already on the public main $base: nothing to push"
+    return 0
+  fi
+  # The new tree differs from the public main in the 2 files and nothing else.
+  changed="$(g diff-tree -r --no-commit-id --name-only "$base" "$tree" | LC_ALL=C sort | paste -sd ' ' -)"
+  paths="$(printf '%s\n' "${DOCS_FILES[@]}" | LC_ALL=C sort | paste -sd ' ' -)"
+  for f in $changed; do case " $paths " in *" $f "*) ;; *) die "the commit would change $f: only $paths may change" ;; esac; done
+  name="${BW_PUBLISH_NAME:-$(g log -1 --format=%an "$base")}"
+  email="${BW_PUBLISH_EMAIL:-$(g log -1 --format=%ae "$base")}"
+  when="$(git -C "$root" log -1 --format=%cI "$priv")"
+  export GIT_AUTHOR_NAME="$name" GIT_AUTHOR_EMAIL="$email" GIT_AUTHOR_DATE="$when"
+  export GIT_COMMITTER_NAME="$name" GIT_COMMITTER_EMAIL="$email" GIT_COMMITTER_DATE="$when"
+  # F-1714: the public message does not name the private commit id (the v1.0.0 commit's message does not either).
+  commit="$(printf 'Add the privacy policy and support pages\n\nPRIVACY.md and SUPPORT.md.\n' | g commit-tree --no-gpg-sign -p "$base" "$tree")"
+  echo "publish: docs commit $commit (parent $base, the public main) changes: $changed"
+  if [ "$dry" -eq 1 ]; then echo "publish: dry run: nothing was pushed. It would run: git -C $clone push origin $commit:refs/heads/main"; return 0; fi
+  if [ "$granted" -ne 1 ]; then
+    echo "publish: docs writes to the public repo $remote; it runs only with --granted (the owner's grant). It would run:"
+    echo "  git -C $clone push origin $commit:refs/heads/main"
+    exit 3
+  fi
+  g push origin "$commit:refs/heads/main" || die "the push"
+  [ "$(remote_ref refs/heads/main)" = "$commit" ] || die "after the push the public main is not $commit"
+  echo "publish: pushed $commit: PRIVACY.md and SUPPORT.md are on the public main"
+}
+
 case "$sub" in
   dry)
     if [ "$dry" -ne 1 ]; then usage; exit 2; fi
@@ -470,4 +556,5 @@ case "$sub" in
   image) mkwork; image ;;
   push) mkwork; push ;;
   release) mkwork; release ;;
+  docs) mkwork; docs ;;
 esac

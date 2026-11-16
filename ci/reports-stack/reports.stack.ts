@@ -857,27 +857,29 @@ describe('the live week: SC-02 holds the visits the autopilot finished', () => {
   };
 
   let at7: Json;
-  // why: SC-02 the autopilot alone, end of Sep 15: 3 of 137 is 2.2%, typed and from the job rows (56 pilot jobs of Sep 14, 1 of them No one home, and 81 live jobs, 2 of them No one home); the live finished visits move the no-one-home denominator and no other figure, on the API, in the file and on the page
-  it('end of Sep 15: 3 of 137 visits, 2.2%', async () => {
+  // why: SC-02 the autopilot alone, end of Sep 15: 1 of 134 is 0.7%, typed and from the job rows (56 pilot jobs of Sep 14, 1 of them No one home, and 78 live jobs, none of them No one home); the live finished visits move the no-one-home denominator and no other figure, on the API, in the file and on the page
+  // The Jobs page story (dcc50303, F-292, F-1733) left 24840 to 24842 unassigned, so 3 fewer live visits, and redrew the week's
+  // sample-day outcomes: Sep 15's scripted No one home visits went from 2 (24804, 24818) to none (3 of 137 and 7 of 428 before).
+  it('end of Sep 15: 1 of 134 visits, 0.7%', async () => {
     at7 = (await report(LIVE_QUERY)).data;
     await jumpTo('2026-09-15T23:59:00-04:00[America/New_York]');
     const r = (await report(LIVE_QUERY)).data;
     expect(r.headline.week).toBe(LIVE_WEEK);
-    expect(fromJobs()).toEqual({ visits: 137, noh: 3 });
-    expect(r.headline.noOneHome).toMatchObject({ rate: 2.2, count: 3, visits: 137 });
+    expect(fromJobs()).toEqual({ visits: 134, noh: 1 });
+    expect(r.headline.noOneHome).toMatchObject({ rate: 0.7, count: 1, visits: 134 });
     await expectOnlyTheDenominatorMoved(at7, r);
-    await pageSays({ visits: 137, noh: 3, rate: 2.2 });
+    await pageSays({ visits: 134, noh: 1, rate: 0.7 });
   }, 600_000);
 
-  // why: SC-02 the autopilot alone, end of the demo week: 7 of 428 is 1.6%, typed and from the job rows, and the after period stays under the 3% goal
-  it('end of the demo week: 7 of 428 visits, 1.6%', async () => {
+  // why: SC-02 the autopilot alone, end of the demo week: 6 of 425 is 1.4%, typed and from the job rows, and the after period stays under the 3% goal
+  it('end of the demo week: 6 of 425 visits, 1.4%', async () => {
     await jumpTo('2026-09-20T23:59:00-04:00[America/New_York]');
     const r = (await report(LIVE_QUERY)).data;
     expect(r.headline.week).toBe(LIVE_WEEK);
-    expect(fromJobs()).toEqual({ visits: 428, noh: 7 });
-    expect(r.headline.noOneHome).toMatchObject({ rate: 1.6, count: 7, visits: 428 });
+    expect(fromJobs()).toEqual({ visits: 425, noh: 6 });
+    expect(r.headline.noOneHome).toMatchObject({ rate: 1.4, count: 6, visits: 425 });
     expect(r.headline.noOneHome.after).toBeLessThan(3);
     await expectOnlyTheDenominatorMoved(at7, r);
-    await pageSays({ visits: 428, noh: 7, rate: 1.6 });
+    await pageSays({ visits: 425, noh: 6, rate: 1.4 });
   }, 600_000);
 });

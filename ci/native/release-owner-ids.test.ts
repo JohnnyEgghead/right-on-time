@@ -121,13 +121,16 @@ describe('release/export-upload.sh plist from the template (F-1621)', () => {
     spawnSync('bash', [path.join(tmp, rel, 'export-upload.sh'), mode, path.join(tmp, 'ev')], { encoding: 'utf8', env: envWith(extra) });
 
   // why: F-1621 the committed template holds a placeholder, never a team id: each run writes the plist with the owner's team id once
-  it.each([['export', 'export'], ['upload', 'upload']])('writes the %s plist with the team id and the %s destination', (mode, dest) => {
+  // why: F-1721 export and upload stay TestFlight internal only (true); store is the App Store eligible upload (false)
+  it.each([['export', 'export', 'true'], ['upload', 'upload', 'true'], ['store', 'upload', 'false']])('writes the %s plist with the team id, the %s destination and internal-only %s', (mode, dest, internal) => {
     const r = run(mode, { BW_APPLE_TEAM_ID: TEAM });
     expect(r.status, r.stderr).toBe(0);
     const plist = readFileSync(plistOf(mode), 'utf8');
     expect(plist.split(`<string>${TEAM}</string>`).length - 1).toBe(1);
     expect(plist).not.toContain('<string>BW_APPLE_TEAM_ID</string>');
     expect(plist).toMatch(new RegExp(`<key>destination</key>\\s*<string>${dest}</string>`));
+    expect(plist).toMatch(new RegExp(`<key>testFlightInternalTestingOnly</key>\\s*<${internal}/>`));
+    expect(plist).not.toContain('BW_INTERNAL_TESTING_ONLY');
     expect(statSync(plistOf(mode)).mode & 0o077).toBe(0);
     expect(readFileSync(path.join(tmp, 'calls.log.plist'), 'utf8')).toBe(plist);
     expect(calls()).toHaveLength(1);
@@ -139,6 +142,7 @@ describe('release/export-upload.sh plist from the template (F-1621)', () => {
     const template = readFileSync(path.join(repo, rel, 'ExportOptions-manual.template.plist'), 'utf8');
     expect(template).toMatch(/<key>teamID<\/key>\s*<string>BW_APPLE_TEAM_ID<\/string>/);
     expect(template).toMatch(/<key>destination<\/key>\s*<string>export<\/string>/);
+    expect(template).toMatch(/<key>testFlightInternalTestingOnly<\/key>\s*<BW_INTERNAL_TESTING_ONLY\/>/);
   });
 
   // why: F-1621 with no team id in the environment the owner's private file supplies it

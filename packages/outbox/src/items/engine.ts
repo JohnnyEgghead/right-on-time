@@ -23,6 +23,19 @@ import { failureOf } from './wire.ts';
 
 export const SYNC_EVERY_MS = 60_000;
 
+/**
+ * F-1746: the longest 1 call of a sync may take (the client's timeoutMs, @bw/api createClient): a call with no answer by then is cancelled
+ * and read as no signal, so the sync ends, the screen leaves Sending and the next sync tries again under the same keys (I3).
+ */
+export const SYNC_CALL_LIMIT_MS = 30_000;
+/** F-1746: the slowest line an upload's limit allows for, in bytes per ms (32 KB/s, about 0.26 Mbit/s: 10 MB in about 5.5 minutes). */
+export const UPLOAD_FLOOR_BYTES_PER_MS = 32;
+/**
+ * F-1746: the limit for 1 photo or signature upload (API-103): the call limit plus its bytes' time at the floor rate, so a large photo on
+ * a slow line still finishes and a small one that never answers ends as soon as a read would.
+ */
+export const uploadLimitMs = (bytes: number): number => SYNC_CALL_LIMIT_MS + Math.ceil(bytes / UPLOAD_FLOOR_BYTES_PER_MS);
+
 export interface OutboxState {
   /** The store has been read once. */
   ready: boolean;

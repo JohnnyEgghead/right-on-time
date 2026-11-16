@@ -11,7 +11,7 @@ import { markFixed } from './fixed.ts';
 import type { SendOutcome } from './client.ts';
 import { startDispatcher, type Dispatcher, type ParallelLane } from '../dispatcher.ts';
 import { billingLane, billingLaneFor, type PreparedSend } from './link.ts';
-import { billingList, resendCorrected, retryAll, retryNow, sendAgain } from './queue.ts';
+import { billFinishedJob, billingList, resendCorrected, retryAll, retryNow, sendAgain } from './queue.ts';
 import { DEMO_START, useBillingWorld } from './testing.ts';
 
 const HOLD_MS = 600;
@@ -395,5 +395,42 @@ describe('re-run semantics', () => {
     await w.admin().query('UPDATE system.demo_clock SET world_epoch = world_epoch - 1 WHERE id = 1');
     await pause(HOLD_MS + 300);
     await w.setMode('up');
+  });
+});
+
+describe('billing lock order (F-401)', () => {
+  // why: F-401, FR-BILL-1, FR-BILL-2 a finish write that holds the job row and a link send recording that job's answer run at once and both apply, with no deadlock and no lock-order retry
+  it('applies a finish write holding the job row and a send recording its answer at once: no 40P01, both applied', async () => {
+    await w.setDemo(at(1100));
+    await w.setMode('up');
+    const job = await w.newJob();
+    expect(await w.finish(job, { noPartsUsed: true })).toEqual({ queued: true });
+    const ev = (await w.rows<{ id: string; kind: string; subject: string; payload: unknown }>(`SELECT id, kind, subject, payload FROM world.scheduled_event WHERE subject = $1 AND state = 'due'`, [String(job)]))[0]!;
+    const now = Temporal.Instant.from(at(1100));
+    // A: a finish-path write (the version-gated job write, then the billing half) holding the job row.
+    const a = await w.worker().connect();
+    try {
+      await a.query('BEGIN');
+      await a.query('UPDATE world.job SET version = version + 1 WHERE job_number = $1', [job]);
+      // B: the send; its tx 2 takes the item row and then waits for the job row A holds.
+      const b = w.link().handle(ev, now);
+      const waiting = async () => Number((await w.rows<{ n: string }>(
+        `SELECT count(*) AS n FROM pg_locks l JOIN pg_stat_activity s ON s.pid = l.pid WHERE s.datname = current_database() AND NOT l.granted AND l.locktype IN ('transactionid', 'tuple')`))[0]?.n);
+      for (let i = 0; (await waiting()) < 1; i++) {
+        if (i > 400) throw new Error('timed out waiting for the send to wait on the job row');
+        await pause(25);
+      }
+      // A's billing half: the item exists and B holds it. Before F-401 the INSERT waits on B while B waits on A: 40P01.
+      const billed = await billFinishedJob(a, { jobNumber: job, at: now }).catch((e: { code?: string }) => ({ error: e.code ?? String(e) }));
+      await a.query(('error' in billed) ? 'ROLLBACK' : 'COMMIT');
+      const sent = await b.catch((e: { code?: string }) => `error ${e.code ?? String(e)}`);
+      expect([billed, sent]).toEqual([{ queued: false, why: 'already_queued' }, 'success']);
+    } finally {
+      a.release();
+    }
+    expect(await item(job)).toMatchObject({ state: 'in_billing', tries: 1 });
+    expect(await attempts(job)).toHaveLength(1);
+    expect(await jobState(job)).toBe('in_billing');
+    expect(await due(job)).toEqual([]);
   });
 });

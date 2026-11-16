@@ -1,6 +1,6 @@
 -- SPDX-License-Identifier: AGPL-3.0-or-later
 -- F-1582 test oracle, never run by the product: after these 4 header lines, infra/backup/checksums.sql as deployed before F-1579 (commit c9821657),
--- the code that made the key-only sets now in the hosted bucket. infra/backup/tests/backup.stack.test.ts computes an old-way
+-- the code that made the key-only sets the deployed code makes. infra/backup/tests/backup.stack.test.ts computes an old-way
 -- manifest with it, so the key-only-v1 method of the current checksums.sql is checked against the real old code, not itself.
 -- P3-BACKUP (SPECIFICATIONS section 11.7): per-table row counts and checksums for the schemas world, pbs and system,
 -- as 1 jsonb object {"<schema>.<table>": {"rows": n, "md5": "<hex>"}}. The checksum is MD5 over the primary keys in

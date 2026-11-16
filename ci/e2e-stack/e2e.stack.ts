@@ -76,6 +76,56 @@ async function until<T>(what: string, read: () => Promise<T> | T, cond: (v: T) =
   }
 }
 
+/**
+ * F-1735: the phone's API requests (sent, answered, failed) and the item engine's state every 5 s, kept in memory and added to the error
+ * only when the step fails, so a red names where the send stopped (a call that never answered, an engine that never started a sync, or
+ * one that never ended). A green run prints nothing.
+ */
+function phoneTrail(ctx: BrowserContext, page: Page, origin: string) {
+  const t0 = Date.now();
+  const lines: string[] = [];
+  const note = (m: string) => {
+    lines.push(`+${Date.now() - t0}ms ${m}`);
+    if (lines.length > 300) lines.shift();
+  };
+  const at = (u: string) => u.replace(origin, '').replace(/[?].*$/, '');
+  const api = (u: string) => u.startsWith(`${origin}/api/`);
+  const onReq = (r: { url(): string; method(): string }) => { if (api(r.url())) note(`sent ${r.method()} ${at(r.url())}`); };
+  const onFin = (r: { url(): string; method(): string }) => { if (api(r.url())) note(`answered ${r.method()} ${at(r.url())}`); };
+  const onFail = (r: { url(): string; method(): string; failure(): { errorText: string } | null }) => {
+    if (api(r.url())) note(`failed ${r.method()} ${at(r.url())} ${r.failure()?.errorText ?? ''}`);
+  };
+  ctx.on('request', onReq);
+  ctx.on('requestfinished', onFin);
+  ctx.on('requestfailed', onFail);
+  const sampler = setInterval(() => {
+    void page.evaluate(() => {
+      const g = globalThis as unknown as { navigator: { onLine: boolean }; __bwTechOutbox?: { state(): { sending: boolean; online: boolean; waiting: { kind: string; lastTry?: { outcome?: string } | null }[] } } };
+      const st = g.__bwTechOutbox?.state();
+      return JSON.stringify({ onLine: g.navigator.onLine, sending: st?.sending, online: st?.online, waiting: st?.waiting.map((w) => `${w.kind}:${w.lastTry?.outcome ?? '-'}`) });
+    }).then((x) => note(`engine ${x}`), (e: unknown) => note(`engine unread ${String(e).slice(0, 120)}`));
+  }, 5000);
+  const stop = () => {
+    clearInterval(sampler);
+    ctx.off('request', onReq);
+    ctx.off('requestfinished', onFin);
+    ctx.off('requestfailed', onFail);
+  };
+  return {
+    note,
+    async around<T>(run: () => Promise<T>): Promise<T> {
+      try {
+        return await run();
+      } catch (e) {
+        if (e instanceof Error) e.message += `\nphone trail (F-1735):\n${lines.join('\n')}`;
+        throw e;
+      } finally {
+        stop();
+      }
+    },
+  };
+}
+
 /** A PNG of noise, width x height RGB (the photo Maria picks). */
 function noisePng(width: number, height: number): Buffer {
   const row = width * 3 + 1;
@@ -402,8 +452,11 @@ describe.skipIf(plant).each(engines)('the 7-step happy path on %s', (engine, typ
       for (const p of list) if (await w.caches.match(`${w.location.origin}${p}`)) held.push(p);
       return held.length;
     }, pages), (n) => n === pages.length, 90_000);
+    // F-1735: what the phone did from here, kept and printed only if the items do not send (the nightly WebKit red left no trace of it).
+    const trail = phoneTrail(phone.context, maria, origin);
     await maria.reload({ waitUntil: 'load' });
     await maria.waitForSelector('[data-ctl="CTL-TEC-04-02"] h1', { timeout: 60_000 });
+    trail.note('signal off');
     await phone.context.setOffline(true);
     await maria.locator('[data-ctl="CTL-TEC-04-09"]').click();
     await maria.waitForSelector('[data-ctl="CTL-TEC-05-01"]', { timeout: 30_000 });
@@ -420,11 +473,12 @@ describe.skipIf(plant).each(engines)('the 7-step happy path on %s', (engine, typ
     const during = await api(keisha.g.context, 'GET', `/jobs/${s.job}`);
     expect(JSON.stringify(during.data)).not.toContain(note);
     // Signal returns: the waiting items send by themselves.
+    trail.note('signal on');
     await phone.context.setOffline(false);
-    await until('both items to send', async () => {
+    await trail.around(() => until('both items to send', async () => {
       const seen = JSON.stringify((await api(keisha.g.context, 'GET', `/jobs/${s.job}`)).data);
       return seen.includes(note);
-    }, (v) => v, 120_000);
+    }, (v) => v, 120_000));
     await until('the photo to reach the job', async () => ((await api(keisha.g.context, 'GET', `/jobs/${s.job}`)).data.photos ?? []).length, (n) => n >= 1, 120_000);
     await expect.poll(() => maria.locator('.r1p-wait').count(), { timeout: 60_000 }).toBe(0);
     s.headlineBefore = ((await api(dana.g.context, 'GET', `/reports${LIVE_WEEK_QUERY}`)).data.headline.noOneHome.visits as number) ?? 0;

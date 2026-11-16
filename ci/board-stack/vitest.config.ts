@@ -4,7 +4,7 @@ import { junitReporters } from '../../vitest.reporters.ts';
 
 // The P4-BOARD stack suite (ci/board-stack.sh sets BW_BOARD_STACK_URL): Playwright on Chromium and WebKit against the
 // Compose stack. The files are *.stack.ts so neither the merge-set run nor the browser config picks them up. One file,
-// run in order: the suite moves the shared demo clock forward (7:00 AM, 10:00 AM, 10:30 AM, then 2:00 PM).
+// run in order: the suite moves the shared demo clock forward (7:00 AM, 9:45 AM, 10:30 AM, 2:00 PM, then 5:45 PM and 6:05 PM).
 export default defineConfig({
   test: {
     // F-974: per-test times. The gate runner sets BW_JUNIT_DIR; each vitest run then also writes a junit file there (ci/test-times.sh records it).

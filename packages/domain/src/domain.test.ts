@@ -3,7 +3,7 @@
 // them are tested on PostgreSQL in packages/api-server/src/office-writes/office-writes.db.test.ts.
 import { describe, expect, it } from 'vitest';
 import {
-  approximateDriveMinutes, dayKind, dayRoom, firstOverlap, isoWeek, offeredWindows, planDay, technicianDayCapacity, technicianHasRoom,
+  approximateDriveMinutes, dayKind, dayRoom, firstOverlap, isoWeek, offeredWindows, planDay, technicianDayCapacity, technicianHasRoom, technicianRoomLimit,
   timingOf, windowRoom, worksOn, type TechnicianFacts,
 } from './index.ts';
 
@@ -88,6 +88,17 @@ describe('capacity (FR-BOOK-5, FR-BOOK-6, SD-27)', () => {
     expect(technicianHasRoom({ capacity: 5, jobsThatDay: 5, jobsInWindow: 0, windowMode: 'two_hour' })).toBe(false);
     expect(technicianHasRoom({ capacity: 5, jobsThatDay: 2, jobsInWindow: 2, windowMode: 'two_hour' })).toBe(false);
     expect(technicianHasRoom({ capacity: 6, jobsThatDay: 2, jobsInWindow: 2, windowMode: 'four_hour' })).toBe(true);
+  });
+
+  // why: F-1701 the refusal names the limit that refused: the installer's day, the day, or the window; the day is named when both are reached
+  it('names the limit that refuses a placement, the day first when both are reached', () => {
+    const base = { capacity: 5, installer: false, windowMode: 'two_hour' as const };
+    expect(technicianRoomLimit({ ...base, capacity: 1, installer: true, jobsThatDay: 1, jobsInWindow: 0 })).toEqual({ limit: 'installer_day', max: 1 });
+    expect(technicianRoomLimit({ ...base, jobsThatDay: 5, jobsInWindow: 1 })).toEqual({ limit: 'day', max: 5 });
+    expect(technicianRoomLimit({ ...base, jobsThatDay: 2, jobsInWindow: 2 })).toEqual({ limit: 'window', max: 2 });
+    expect(technicianRoomLimit({ ...base, capacity: 6, windowMode: 'four_hour', jobsThatDay: 3, jobsInWindow: 3 })).toEqual({ limit: 'window', max: 3 });
+    expect(technicianRoomLimit({ ...base, jobsThatDay: 5, jobsInWindow: 2 })).toEqual({ limit: 'day', max: 5 });
+    expect(technicianRoomLimit({ ...base, jobsThatDay: 4, jobsInWindow: 1 })).toBeNull();
   });
 });
 

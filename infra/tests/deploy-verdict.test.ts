@@ -61,7 +61,22 @@ describe('infra/deploy/deploy.sh verdicts (stubbed ssh and curl)', () => {
       text.slice(start),
     ].join('\n');
     const r = spawnSync('bash', ['-c', harness], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` } });
-    expect(r.stdout).toMatch(/DEPLOY FAILED \(server exit 0, \/healthz , routes locked answered: 0\)/);
+    expect(r.stdout).toMatch(/DEPLOY FAILED \(server exit 0, \/healthz , routes locked answered: 0, HSTS: 0\)/);
     expect(r.status).toBe(1);
+  });
+
+  // why: F-1808 the live answer must carry Strict-Transport-Security: a stand-in curl that answers 200 with and without the header
+  it.each([
+    ['with', 'strict-transport-security: max-age=31536000; includeSubDomains', 1],
+    ['without', 'x-other: 1', 0],
+  ] as const)('the verdict reads the live HSTS header (%s it)', (_name, header, ok) => {
+    const start = text.indexOf('log "== public probes"');
+    const bin = stubs(`hsts-${ok}`, { curl: `case "$*" in *-D*) printf 'HTTP/2 200\\r\\n${header}\\r\\n\\r\\n' ;; *-w*) printf 200 ;; *) printf placeholder ;; esac` });
+    const harness = [
+      'set -euo pipefail', `cd ${JSON.stringify(root)}`, 'log() { echo "$*"; }',
+      'DOMAIN=bw.example.test routes=open drill="" live_routes=open rc=0 stage_note=""', text.slice(start),
+    ].join('\n');
+    const r = spawnSync('bash', ['-c', harness], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` } });
+    expect(r.stdout).toContain(`HSTS: ${ok}`.replace('HSTS: 1', 'Strict-Transport-Security: yes').replace('HSTS: 0', 'Strict-Transport-Security: NO'));
   });
 });

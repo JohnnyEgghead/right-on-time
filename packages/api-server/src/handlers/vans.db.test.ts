@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: FR-DISP-3, FR-DISP-19, FR-DISP-21, FR-DEMO-8, F-515 (API-21 Van positions on the real database, through the production kernel)
 // The demo clock is set per case: a position is computed from it. Run by gate G-CI7 step 3.
+import { createHash } from 'node:crypto';
 import { approximateDriveMinutes } from '@bw/domain';
 import { CLOCK_CACHE_MS } from '@bw/time';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -115,6 +116,28 @@ describe('van positions (API-21)', () => {
     const v = await van(MARIA);
     expect(v.route.track).toEqual([[-120.2, 38.5], [-120.95, 40.7], [-126.453, 43.252]]);
     expect(v.position).toEqual({ lon: -120.95, lat: 40.7 });
+  });
+
+  // why: F-817 (the leg of the case above) the route's key is the first 16 hex of the SHA-256 of the encoded polyline, and a read that names it in have answers track null and the same position
+  it('keys the route by its encoded polyline and answers track null for a key the read names in have', async () => {
+    const v = await van(MARIA);
+    expect(v.route.track).not.toBeNull();
+    expect(v.route.key).toBe(createHash('sha256').update('_p~iF~ps|U_ulLnnqC_mqNvxq`@').digest('hex').slice(0, 16));
+    const held = await api.get(`/vans?branch=columbus&have=${v.route.key},0123456789abcdef`, keisha);
+    expect(held.status).toBe(200);
+    const again = ((await held.json()) as { data: { vans: Json[] } }).data.vans.find((x) => x.name === MARIA);
+    expect(again.route).toEqual({ ...v.route, track: null });
+    expect(again.position).toEqual(v.position);
+  });
+
+  // why: F-817 have takes at most 50 keys of 16 lowercase hex characters; anything else is validation_failed
+  it('refuses a have with a key that is not 16 lowercase hex characters, or more than 50 keys', async () => {
+    const keys = (n: number) => Array.from({ length: n }, (_, i) => i.toString(16).padStart(16, '0')).join(',');
+    expect((await api.get(`/vans?branch=columbus&have=${keys(50)}`, keisha)).status).toBe(200);
+    for (const have of [keys(51), 'ABCDEF0123456789', '0123456789abcde', '', `${keys(1)},`]) {
+      const r = await api.get(`/vans?branch=columbus&have=${have}`, keisha);
+      expect(((await r.json()) as { code: string }).code, have.slice(0, 40)).toBe('validation_failed');
+    }
   });
 
   // why: FR-DEMO-8, FR-DISP-3 F-811 past the shift end, through both real readers: API-21 and API-135 answer 1 point for the van on the way, an on-site van stays, and a van with nothing left drops off

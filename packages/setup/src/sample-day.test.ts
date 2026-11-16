@@ -3,7 +3,7 @@
 // The census over the real generated demo week: the fixture the generator writes for seed 20260915, the verified street list
 // and, where the release download is present, the baked tracks. The world seed runs the same sampleDay (world-seed.ts).
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { DATA_DIR } from '../../db/src/data-asset.ts';
@@ -144,13 +144,17 @@ describe('the demo week chained (owner answer 36d87aec)', () => {
   });
 
   // why: SD-21, SD-15 the same census on the drive minutes setup really uses, wherever the track set is present (the stack suite always has it)
-  it.runIf(existsSync(TRACKS))('has 0 of 329 pairs out of order on the baked tracks', () => {
+  it('has 0 of 329 pairs out of order on the baked tracks', (ctx) => {
+    const skip = storyTracksSkip(TRACKS); // F-1668: a missing track file skips with its reason printed
+    if (skip) ctx.skip(skip);
     const seconds = new Map(parseTracks(readFileSync(TRACKS, 'utf8')).map((t) => [`${t.from_ref}|${t.to_ref}`, t.seconds[t.seconds.length - 1] as number]));
     expect(census(trackedDriveMinutes(seconds))).toEqual({ pairs: 329, leftDuringVisit: 0, onSiteAtTwo: 0, tooSoon: 0, wrongArrival: 0 });
   });
 
   // why: F-292 the approved Jobs page at 10:28 AM: 24790 done 9:30, 24800 done 9:50, 24791 on site since 9:55, 24825 done, on the drive minutes setup uses
-  it.runIf(existsSync(TRACKS))('chains the Jobs page story visits to the times the page tells', () => {
+  it('chains the Jobs page story visits to the times the page tells', (ctx) => {
+    const skip = storyTracksSkip(TRACKS);
+    if (skip) ctx.skip(skip);
     const seconds = new Map(parseTracks(readFileSync(TRACKS, 'utf8')).map((t) => [`${t.from_ref}|${t.to_ref}`, t.seconds[t.seconds.length - 1] as number]));
     const at = storySteps(trackedDriveMinutes(seconds));
     const t = (n: number, k: 'arrived' | 'ended'): number => at.get(n)?.[k] ?? NaN;

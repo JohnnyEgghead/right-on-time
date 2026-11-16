@@ -12,7 +12,8 @@
 //      Commit: the event is still due; nothing is written.
 //   2. no transaction: send through the billing client: 30 s real-time timeout, Idempotency-Key job-<n>, the world
 //      epoch (SD-12).
-//   3. tx 2 (short): the job's billing lock, the item row, then the event row (the order every billing writer uses);
+//   3. tx 2 (short): the job's billing lock, the item row, then the event row and the job row (item first, the order
+//      every billing writer uses, F-401: queue.ts);
 //      record: append billing_attempt n, move the item and the job's billing_state, retire the event, and write the
 //      next retry 15 demo minutes after this try (timeout, down, wrong_epoch), or hold a data error for a person with
 //      no retry (FR-BILL-7), or record the success with left_at/left_how when the item had been listed.

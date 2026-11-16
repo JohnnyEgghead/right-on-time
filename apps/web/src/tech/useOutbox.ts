@@ -12,7 +12,7 @@ import { appInfo, createClient } from '@bw/api';
 import { DexieItemStore } from '@bw/outbox/src/items/index.ts';
 import { realNow } from '@bw/time';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { SYNC_EVERY_MS, TechOutbox, type OutboxState } from './engine.ts';
+import { SYNC_CALL_LIMIT_MS, SYNC_EVERY_MS, TechOutbox, uploadLimitMs, type OutboxState } from './engine.ts';
 import { signedInPerson } from './local.ts';
 import { webTransport } from './transport.ts';
 
@@ -28,11 +28,12 @@ export function deviceName(ua: string): string {
 export function techOutbox(): TechOutbox {
   if (engine) return engine;
   const base = window.location.origin;
-  const client = createClient({ baseUrl: base });
+  // F-1746: every call of a sync has a time limit, so a request that never answers cannot hold Sending and every later sync.
+  const client = createClient({ baseUrl: base, timeoutMs: SYNC_CALL_LIMIT_MS });
   const locks = (navigator as Navigator & { locks?: LockManager }).locks;
   const e = new TechOutbox({
     store: new DexieItemStore(),
-    transport: webTransport(client, { baseUrl: base }),
+    transport: webTransport(client, { baseUrl: base, limitMs: uploadLimitMs }),
     client,
     deviceNow: () => realNow('device_stamp'),
     bannerNow: () => realNow('tech_waiting_banner').epochMilliseconds,

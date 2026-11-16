@@ -3,6 +3,8 @@
 // (BUILD_PLAN line 141, "the Compose stack at its default settings"). Shared by every stack gate, on the Mac and in the
 // wave run's own engine.
 //   node ci/wave/stack-settings.ts <project>
+// BW_STACK_COMPOSE names the Compose file the stack was built from when that is not this tree's (the native suite builds its stack from
+// a git ref, the phase 5 tag by default, whose file lacks the settings added since: F-1820's sibling cause); default infra/compose.yaml here.
 // The expected values come from the Compose file itself: each service's environment entry ${KEY:-default} expects
 // KEY=default, and a literal entry expects that literal. The actual values are each running container's environment
 // (docker inspect). Exit 0: every value of every service matches. Exit 1: a mismatch, a missing service or a value
@@ -97,7 +99,7 @@ function main(argv: string[]): number {
     return 2;
   }
   const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
-  const file = path.join(root, 'infra', 'compose.yaml');
+  const file = process.env.BW_STACK_COMPOSE ?? path.join(root, 'infra', 'compose.yaml');
   const expected = applyOverrides(expectedEnv(readFileSync(file, 'utf8')), overrides);
   const actual: Record<string, string[] | null> = {};
   for (const svc of STACK_SERVICES) {

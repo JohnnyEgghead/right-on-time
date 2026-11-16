@@ -1,0 +1,1 @@
+To see a working day with jobs, you can also sign in as a sample technician, Maria Santos. On the sign-in screen enter her employee number, 40712, then enter {{SAMPLE_TECHNICIAN_PASSWORD}} as the password, with the dash. She has 5 sample jobs on the sample day. Anything you change on her day goes back at the nightly reset.

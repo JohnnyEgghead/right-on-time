@@ -187,10 +187,10 @@ describe('the reference seed on an empty migrated database', () => {
   it('pins the generated catalog: digest of every code, name and price in order, and 3 spot rows', () => {
     const digest = createHash('sha256').update(PARTS.map((p) => `${p.code}|${p.name}|${p.cents}`).join('\n')).digest('hex');
     expect(PARTS).toHaveLength(1240);
-    expect(digest).toBe('8d4fbe9bbba973c304e75e30df3ec7fce28c682489e86c24583d939c72281777');
-    expect(PARTS[10]).toEqual({ code: 'VLV-2000', name: 'Ball valve 1/4 in', cents: 1860 });
-    expect(PARTS[11]).toEqual({ code: 'FIT-2000', name: 'Coupling 1/4 in', cents: 1560 });
-    expect(PARTS[1239]).toEqual({ code: 'MSC-2122', name: 'Pipe insulation, 6 ft 1-1/2 in, 1/2 in wall', cents: 770 });
+    expect(digest).toBe('eca22f1375fd3a8076311c25d71f7e71695ac5575adfd5db6c276dc94887be87');
+    expect(PARTS[10]).toEqual({ code: 'VLV-2000', name: 'Ball valve 1/4 in', cents: 655 });
+    expect(PARTS[11]).toEqual({ code: 'FIT-2000', name: 'Coupling 1/4 in', cents: 260 });
+    expect(PARTS[1239]).toEqual({ code: 'MSC-2122', name: 'Pipe insulation, 6 ft 1-1/2 in, 1/2 in wall', cents: 1335 });
     expect(PARTS.every((p) => Number.isInteger(p.cents) && p.cents > 0 && p.cents % 5 === 0)).toBe(true);
   });
 
@@ -409,5 +409,32 @@ describe('the uniqueness migration 0009', () => {
       await insertJob(q, ref, { ...over, booking_token: 'x'.repeat(22) });
       return errorCode(insertJob(q, ref, { ...over, booking_token: 'x'.repeat(22) }));
     })).toBe('23505');
+  });
+});
+
+describe('a database seeded before the parts list changed (F-440)', () => {
+  // why: F-440 the seed's part insert used to skip a code it already held, so a database seeded from the old list kept the old names and
+  // prices; a repeat reference seed (a setup stopped after step 1) now leaves every row equal to the list (all 1,240, stale ones
+  // included). A world that finished setup takes the list only through infra/deploy/reset-world.sh (F-1801).
+  it('rewrites stale part rows to the list at a repeat reference seed, and leaves matching rows alone', async () => {
+    const a = db.admin();
+    await a.query('BEGIN');
+    try {
+      const ids = async () => new Map((await a.query<{ code: string; id: string }>('SELECT code, id FROM world.part')).rows.map((r) => [r.code, r.id]));
+      const before = await ids();
+      const stale = await a.query(`UPDATE world.part SET price_cents = price_cents + 1235, name = name || ' (old)', name_search = name_search || ' old'
+                                    WHERE code IN ('VLV-2000', 'FIT-2000', 'MSC-2122', 'CTL-2003', 'FLT-16254')`);
+      expect(stale.rowCount).toBe(5);
+      await seedReference(a, OPTS);
+      const got = (await a.query<{ code: string; name: string; name_search: string; price_cents: number }>('SELECT code, name, name_search, price_cents FROM world.part')).rows;
+      const want = new Map(PARTS.map((p) => [p.code, [p.name, foldStreetName(`${p.name} ${p.code}`), p.cents]]));
+      expect(got).toHaveLength(PARTS.length);
+      expect(got.filter((r) => JSON.stringify([r.name, r.name_search, r.price_cents]) !== JSON.stringify(want.get(r.code)))).toEqual([]);
+      expect(await ids()).toEqual(before);
+      const again = await a.query(`SELECT count(*)::int AS n FROM world.part WHERE xmin = pg_current_xact_id()::xid`);
+      expect(again.rows[0]).toEqual({ n: 5 });
+    } finally {
+      await a.query('ROLLBACK');
+    }
   });
 });

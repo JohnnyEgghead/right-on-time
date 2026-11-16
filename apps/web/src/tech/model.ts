@@ -90,3 +90,14 @@ export const miles = (meters: number | null): string | null => (meters === null 
 
 /** The sign-in name as the server matches it (API-03 trims, and matches an email without case), so the UD-20 lock compares like the server (F-1065). */
 export const loginKey = (login: string): string => login.trim().toLowerCase();
+
+/** The person's initials as the kit draws them (first and last word's first letter): Me's avatar before the day is read (F-1740). */
+export function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '')).toUpperCase();
+}
+
+/** Me's profile (local.ts Profile) from the API-07 answer, read on the phone (data.ts) or on the server for the first paint (app/tech/me/page.tsx; F-1775). */
+export function profileOf(who: { name: string; skill: string | null }): { name: string; initials: string; skill: string | null } {
+  return { name: who.name, initials: initialsOf(who.name), skill: who.skill };
+}

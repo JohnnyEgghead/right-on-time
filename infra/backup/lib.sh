@@ -17,6 +17,7 @@
 #   BW_BACKUP_WORK     the host folder for dumps in flight (default /var/lib/brightwater-backup, root only)
 #   BW_BACKUP_LOCK     the lock file that keeps backup, restore test and retention apart
 #                      (default /run/lock/brightwater-backup.lock)
+#   BW_BACKUP_LOCK_WAIT  seconds to wait for that lock before giving up (default 3600; the proofs set it short, F-492)
 #
 # Layout in the target: <prefix><stamp>/brightwater.dump and <prefix><stamp>/manifest.json, stamp =
 # YYYYMMDDTHHMMSSZ (UTC, the backup's start). The manifest is uploaded last, so a set without one never
@@ -34,6 +35,7 @@ BACKUP_KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 BW_PROJECT="${BW_PROJECT:-brightwater}"
 BW_BACKUP_WORK="${BW_BACKUP_WORK:-/var/lib/brightwater-backup}"
 BW_BACKUP_LOCK="${BW_BACKUP_LOCK:-/run/lock/brightwater-backup.lock}"
+BW_BACKUP_LOCK_WAIT="${BW_BACKUP_LOCK_WAIT:-3600}"
 BW_DB_USER=brightwater
 BW_DB_NAME=brightwater
 DUMP_NAME=brightwater.dump
@@ -147,10 +149,35 @@ psql_() {
 }
 
 # lock: 1 backup job at a time on this host (backup, restore test, retention).
+# F-492: backup.sh and restore-test.sh set their EXIT trap before this, so a lock wait that times out still runs their
+# cleanup (a failed record). Only restore-test.sh sets LOCKED=1 after it, and drops shared things (restore_check) only then: without
+# the lock, those belong to the job that holds it. backup.sh shares nothing, so it has no such flag (F-1774).
 take_lock() {
+  [[ "$BW_BACKUP_LOCK_WAIT" =~ ^[0-9]+$ ]] || die "BW_BACKUP_LOCK_WAIT must be a whole number of seconds" 2
   mkdir -p "$(dirname "$BW_BACKUP_LOCK")"
   exec 9>"$BW_BACKUP_LOCK"
-  flock -w 3600 9 || die "another backup job held the lock for an hour"
+  flock -w "$BW_BACKUP_LOCK_WAIT" 9 || die "another backup job held the lock for $BW_BACKUP_LOCK_WAIT seconds"
+}
+
+# F-1697: world_set_up returns 0 once setup has finished (a system.day_snapshot row, SD-12: the same mark SD-30's
+# backup_failed rule counts from, F-434), 1 when it has not. So a timer that fires before setup (Persistent=true on a
+# first deploy) backs up and restore-tests nothing. Call it as "if ! world_set_up; then ...", in the script's own shell.
+# F-1771: a database that does not answer, a query that errors, or an answer that is not t or f is an error: it exits
+# the script (die, so the caller's EXIT trap writes its failed record), never returns 1. Each query is checked by its
+# own status, as errexit is off inside an if condition and inside a command substitution; and a call from a subshell
+# (DB="$(...)"-style) is refused, as its exit would end only the subshell.
+world_set_up() {
+  [ "$BASH_SUBSHELL" = 0 ] || die "world_set_up must run in the script's own shell, not a subshell"
+  local q t
+  for q in "SELECT to_regclass('system.day_snapshot') IS NOT NULL" "SELECT EXISTS (SELECT 1 FROM system.day_snapshot)"; do
+    t="$(psql_ "$BW_DB_NAME" -c "$q")" || die "the database did not answer whether a world is set up"
+    case "$t" in
+      t) ;;
+      f) return 1 ;;
+      *) die "the database gave no t or f when asked whether a world is set up" ;;
+    esac
+  done
+  return 0
 }
 
 new_workdir() {

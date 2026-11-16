@@ -113,7 +113,7 @@ export function TodayScreen({ initial }: { initial: TodayAnswer | null }) {
 
   return (
     <TodayShell
-      day={day} jobs={jobs} loading={loading} online={outbox.online} savedAt={day?.asOf ?? null} failed={failed} notice={notice} newDay={track.newDayAt !== null && day !== null} driveMinutes={drive && drive.job === nextNo ? drive.minutes : null}
+      day={day} jobs={jobs} loading={loading} online={outbox.online} savedAt={day?.asOf ?? null} failed={failed} failedAt={reads.failedAt ?? null} notice={notice} newDay={track.newDayAt !== null && day !== null} driveMinutes={drive && drive.job === nextNo ? drive.minutes : null}
       sheet={sheet && open ? { kind: sheet.kind, job: open } : null}
       onRefresh={() => void techReads().refresh()} onOpen={(kind, job) => setSheet({ kind, jobNumber: job.jobNumber })}
       onCancel={() => setSheet(null)} onConfirm={() => void confirm()}

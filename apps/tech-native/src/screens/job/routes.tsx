@@ -11,6 +11,7 @@ import { NoteSheet } from './NoteSheet.tsx';
 import { PhotoSheet } from './PhotoSheet.tsx';
 import { StatusSheet } from '../today/Sheets.tsx';
 import { WaitingScreen } from './WaitingScreen.tsx';
+import { SHORT_DETENTS, TALL_DETENTS } from '../../ui/sheet-detents.ts';
 
 export interface ScreenEntry { name: string; component: ComponentType; options?: NativeStackNavigationOptions }
 
@@ -22,10 +23,9 @@ export const TAB_SCREENS: Record<string, ScreenEntry[]> = {
   Me: [{ name: 'Waiting', component: WaitingScreen }],
 };
 
-/** The tall sheets of DK-117 (.nsheet.tall: from 64 pt under the top of an 844 pt screen) and the confirm sheet (.nsheet). */
-const TALL: NativeStackNavigationOptions = { presentation: 'formSheet', sheetAllowedDetents: [0.92], sheetGrabberVisible: true, sheetCornerRadius: 14 };
-/** The confirm sheet is as tall as its content: Today's On my way sheet adds the arrival line and the text preview. */
-const SHORT: NativeStackNavigationOptions = { presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true, sheetCornerRadius: 14 };
+/** The tall sheets of DK-117 and the confirm sheet (.nsheet); their heights are ui/sheet-detents.ts's, which the status sheet reads too. */
+const TALL: NativeStackNavigationOptions = { presentation: 'formSheet', sheetAllowedDetents: TALL_DETENTS, sheetGrabberVisible: true, sheetCornerRadius: 14 };
+const SHORT: NativeStackNavigationOptions = { presentation: 'formSheet', sheetAllowedDetents: SHORT_DETENTS, sheetGrabberVisible: true, sheetCornerRadius: 14 };
 
 /** The sheets on the root stack, over the tabs (signed in only). */
 export const ROOT_SCREENS: ScreenEntry[] = [

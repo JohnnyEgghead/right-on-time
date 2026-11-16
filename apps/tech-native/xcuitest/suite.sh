@@ -30,7 +30,7 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../../.." && pwd)"
 here="$root/apps/tech-native/xcuitest"
-classes="ShellUITests,MapMeUITests,JobUITests,TodayUITests,WaitingUITests,SpanishUITests,StepsUITests"
+classes="ShellUITests,MapMeUITests,JobUITests,TodayUITests,WaitingUITests,SpanishUITests,StepsUITests,AccessibilityUITests" # F-1475: the audit class runs in the nightly too
 build=1
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -44,16 +44,30 @@ mkdir -p "$out"
 summary="$out/summary.txt"
 : >"$summary"
 fail=0
+# F-1475, F-1820: AccessibilityUITests is not 1 pass. Its methods change the stack (test1's walk takes the job On my way, which the next method's
+# first card then lacks) and need their own simulator settings, so run.sh runs each in its own pass on its own stack (BW_A11Y_METHOD, BW_A11Y_REDUCE);
+# testPlants is the must-fail proof and never runs here. A run is <class>[=<method>[=<Reduce Motion on|off>]]; its name is the class, then the method.
+runs_list=()
 for c in ${classes//,/ }; do
-  # each class on its own stack: its own project name (run.sh's form) and evidence folder
-  p="bw-w28-native-$(echo "$c" | tr '[:upper:]' '[:lower:]' | sed 's/uitests$//')"
+  if [ "$c" = AccessibilityUITests ]; then
+    runs_list+=("$c=test1AccessibilityAuditOfEveryNativeScreen" "$c=test2Structure" "$c=test3LargestTextSize" "$c=test4ReduceMotion=on" "$c=test4ReduceMotion=off")
+  else
+    runs_list+=("$c")
+  fi
+done
+for r in "${runs_list[@]}"; do
+  IFS='=' read -r c method reduce <<<"$r"
+  label="$c"; [ -z "$method" ] || label="$c-$method${reduce:+-$reduce}"
+  # each run on its own stack: its own project name (run.sh's form) and evidence folder
+  p="bw-w28-native-$(echo "$label" | tr '[:upper:]' '[:lower:]' | sed 's/uitests//; s/[^a-z0-9]*$//' | cut -c1-40)"
   args=()
   [ "$build" -eq 1 ] || args+=(--no-build)
   set +e
-  BW_NATIVE_TESTS="$c" BW_NATIVE_PROJECT="$p" BW_NATIVE_EVIDENCE="$out/$c" bash "$here/run.sh" ${args[@]+"${args[@]}"} >"$out/$c.log" 2>&1
+  BW_NATIVE_TESTS="$c" BW_NATIVE_PROJECT="$p" BW_NATIVE_EVIDENCE="$out/$label" BW_A11Y_METHOD="$method" BW_A11Y_REDUCE="$reduce" bash "$here/run.sh" ${args[@]+"${args[@]}"} >"$out/$label.log" 2>&1
   rc=$?
   set -e
-  echo "$c: run.sh exit $rc ($(grep -h 'test-without-building' "$out/$c/times.txt" 2>/dev/null | tail -1))" | tee -a "$summary"
+  echo "$label: run.sh exit $rc ($(grep -h 'test-without-building' "$out/$label/times.txt" 2>/dev/null | tail -1))" | tee -a "$summary"
+  c="$label"
   [ "$rc" -eq 0 ] || fail=1
   # F-1207: every later class runs --no-build on this build, so a run that did not build ends the suite here, with its cause.
   if [ "$build" -eq 1 ] && ! grep -q '^build-for-testing: exit 0,' "$out/$c/times.txt" 2>/dev/null; then

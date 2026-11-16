@@ -1,0 +1,25 @@
+{
+  "locale": "en-US",
+  "versionString": "1.0.1",
+  "buildVersion": "9",
+  "copyright": "2026 John Loring",
+  "supportUrl": "https://github.com/JohnnyEgghead/right-on-time/issues",
+  "privacyPolicyUrl": "https://github.com/JohnnyEgghead/right-on-time/blob/main/PRIVACY.md",
+  "primaryCategory": "BUSINESS",
+  "contentRightsDeclaration": "USES_THIRD_PARTY_CONTENT",
+  "ageRating": "all-none",
+  "releaseType": "MANUAL",
+  "price": { "baseTerritory": "USA", "free": true },
+  "availability": { "territories": ["USA"], "availableInNewTerritories": false },
+  "screenshots": [
+    { "displayType": "APP_IPHONE_67", "width": 1320, "height": 2868, "dir": "screenshots/iphone-6.9" },
+    { "displayType": "APP_IPHONE_61", "width": 1206, "height": 2622, "dir": "screenshots/iphone-6.3" }
+  ],
+  "review": {
+    "demoAccountName": "reviewer@brightwater.example",
+    "demoAccountRequired": true,
+    "notes": "review-notes",
+    "sampleTechnician": { "include": true, "notes": "review-notes-sample-technician", "employeeNumber": "40712", "email": "maria.santos@brightwater.example" }
+  },
+  "submit": true
+}

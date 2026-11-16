@@ -68,6 +68,8 @@ describe('the legs of the seeded schedule', () => {
   it('stops on a job whose street is not in the list or is in another branch than its technician', () => {
     expect(() => buildLegs(fixture([job(40, 'C1', '3', '2026-09-15', '08:00')]), streets, roster)).toThrow(/street is in branch columbus/);
     expect(() => buildLegs(fixture(jobs), [], roster)).toThrow(/not in the street list/);
+    // F-1691: an Unassigned job (technician null) whose street is missing gets the street message, not the customer-or-technician one
+    expect(() => buildLegs(fixture([{ ...job(41, 'C1', '1', '2026-09-15', '08:00'), technician: null }]), [], roster)).toThrow(/not in the street list/);
   });
 });
 

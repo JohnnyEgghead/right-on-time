@@ -362,7 +362,7 @@ describe.each(engines)('the web technician app on the Compose stack, %s', (engin
     expect(await p.locator('.msg.info').textContent()).toContain('Your password is set. Sign in.');
     expect(await p.locator('[data-ctl="CTL-TEC-01-07"]').getAttribute('href')).toBe('/forgot-password?app=tech');
     // Stay signed in is off by default (CTL-TEC-01-08).
-    expect(await p.locator('[data-ctl="CTL-TEC-01-08"]').getAttribute('aria-checked')).toBe('false');
+    expect(await p.locator('[data-ctl="CTL-TEC-01-08"]').isChecked()).toBe(false);
   }, 120_000);
 
   // why: FR-TECH-1 (F-252 item 7, F-278) the reviewer sample user, a technician with no technician row, signs in and meets an empty day, not an error

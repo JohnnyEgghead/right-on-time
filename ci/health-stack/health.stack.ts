@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// why-file: FR-HLTH-1, FR-HLTH-2, FR-HLTH-3, FR-HLTH-4, FR-DISP-12, FR-TEXT-16, FR-AUTH-8, UC-06 (P4-HEALTH Acceptance: Playwright on Chromium and WebKit against the Compose stack)
+// why-file: FR-HLTH-1, FR-HLTH-2, FR-HLTH-3, FR-HLTH-4, FR-DISP-12, FR-TEXT-16, FR-AUTH-8, UC-06, F-1156 (P4-HEALTH Acceptance: Playwright on Chromium and WebKit against the Compose stack)
 // System health and the alert bell against the Compose stack at its default settings (real PostgreSQL 18, real handlers, the worker and pbs
 // running), set up by the setup service (the seeded world), through its proxy, every page opened through the outside-origin guard. UC-06 runs for
 // real: the manager sets the text simulator to "All sends fail" on the page, a text is written into the outbox as the booking writes it, and the
@@ -365,4 +365,51 @@ describe.each(engines)('System health and the bell on %s', (engine, type) => {
       psql(`DELETE FROM world.alert WHERE subject = '${subject}'`);
     }
   }, 240_000);
+
+  // why: F-1156, SD-30, FR-DISP-12 an alert dismissed in 1 tab shows Resolved with no Dismiss in a second open tab, in its bell and on its System health page, with no reload
+  it('clears a dismissed alert in a second open tab with no reload: the bell and System health re-read on alert.dismissed', async () => {
+    await api('dana', 'PUT', '/system/alert-settings/text_gave_up', { bell: true, managersEmail: false });
+    const [who] = customers(1, engine === 'webkit' ? 13 : 12) as [{ id: string; name: string }];
+    // An office text about no visit that gave up (the dismissible kind, SD-30); the alert check opens its alert as the outbox would.
+    const now = new Date(ms((await api('dana', 'GET', '/clock')).body.data.demoNow)).toISOString();
+    const textId = psql(`INSERT INTO world.outbox_text (customer_id, job_number, kind, language, encoding, body, characters, status, tries, due_at, created_at)
+      VALUES ('${who.id}', NULL, 'office', 'en', 'gsm7', 'Brightwater: a note from the office.', 36, 'gave_up', 5, '${now}', '${now}') RETURNING id`).split('\n')[0]!;
+    expect((await api('dana', 'POST', '/system/checks', {})).status).toBe(200);
+    await until('the dismissible alert', async () => ((await api('keisha', 'GET', '/alerts?branch=columbus')).body.data.alerts as Json[]).find((a) => a.messageValues?.textId === textId), (a) => a?.dismissible === true);
+
+    // Tab 1: the dispatcher's board with the bell open. Tab 2: the manager's System health page with its bell open too.
+    const one = await open(browser, 'keisha', '/office/board?branch=columbus&date=today');
+    const two = await open(browser, 'dana', '/office/admin/health');
+    try {
+      await one.page.waitForSelector('[data-screen="SCR-OFC-02"]', { timeout: 60_000 });
+      await two.page.waitForSelector('[data-ctl="CTL-OFC-16-01"]', { timeout: 60_000 });
+      await Promise.all([one.streamOpen, two.streamOpen]);
+      // A reload would drop this mark.
+      await two.page.evaluate(() => { (globalThis as unknown as { f1156: number }).f1156 = 1; });
+      const row2 = two.page.locator('#alerts .al', { hasText: who.name });
+      await until('the alert on tab 2 System health', () => row2.count(), (n) => n === 1);
+      expect(await row2.locator('button[data-ctl="CTL-OFC-16-28"]').count()).toBe(1);
+      const bellItem = async (o: Open) => {
+        await o.page.locator('button[data-ctl="CTL-CMP-07-06"]').click();
+        const item = o.page.locator('.r1-alerts[role="dialog"] li', { hasText: who.name });
+        await item.waitFor({ timeout: 30_000 });
+        return item;
+      };
+      const item1 = await bellItem(one);
+      const item2 = await bellItem(two);
+      expect(await item2.locator('button[data-ctl="CTL-OFC-28-05"]').count()).toBe(1);
+
+      // Dismiss in tab 1.
+      await item1.locator('button[data-ctl="CTL-OFC-28-05"]').click();
+      await until('the alert resolved', async () => ((await api('keisha', 'GET', '/alerts?branch=columbus')).body.data.alerts as Json[]).find((a) => a.messageValues?.textId === textId)?.state, (v) => v === 'resolved');
+
+      // Tab 2, with no reload: its bell list and its System health row show Resolved and no Dismiss. F-1810: the System health row is read first and the bell second. Both must show Resolved with no reload and f1156 must be 1; the old order cannot be shown red (plants.log), so this guarantees the end state, not that each half fails on its own.
+      await until('tab 2 System health to show Resolved', async () => [await row2.locator('button[data-ctl="CTL-OFC-16-28"]').count(), await row2.locator('.chip').innerText()], ([n, text]) => n === 0 && String(text).includes('Resolved'), 40);
+      await until('tab 2 bell to show Resolved', async () => [await item2.locator('button[data-ctl="CTL-OFC-28-05"]').count(), await item2.innerText()], ([n, text]) => n === 0 && String(text).includes('Resolved'), 40);
+      expect(await two.page.evaluate(() => (globalThis as unknown as { f1156?: number }).f1156)).toBe(1);
+    } finally {
+      await close(one);
+      await close(two);
+    }
+  }, 180_000);
 });

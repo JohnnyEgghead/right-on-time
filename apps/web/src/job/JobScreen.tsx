@@ -36,7 +36,7 @@ import { PhotoViewer, StoredImage, thumbSrc } from './PhotoViewer.tsx';
 import { RescheduleJobDialog } from './RescheduleJobDialog.tsx';
 import { DoneTrail } from '../newjob/DoneTrail.tsx';
 import { takeHandoff } from '../newjob/model.ts';
-import { actionsOpen, can, chipClass, closedKey, CONTROL_CONTRACT, equipmentWord, feedKey, notesOf, statusKey, textStatusKey, type Job, type Shown } from './model.ts';
+import { actionsOpen, can, chipClass, closedKey, CONTROL_CONTRACT, equipmentWord, jobFeed, notesOf, statusKey, textStatusKey, type Job, type Shown } from './model.ts';
 
 export type JobModal =
   | { kind: 'reassign' } | { kind: 'reschedule' } | { kind: 'cancel' } | { kind: 'edit' } | { kind: 'finish' } | { kind: 'text' } | { kind: 'note' }
@@ -232,10 +232,7 @@ export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScre
   const panel = j.job.status === 'on_the_way' && way !== null;
   const notes = notesOf(j);
   // CTL-OFC-03-17: the timeline entries and the texts in 1 list, in time order (the newest last, marked while the job is On the way).
-  const feed = [
-    ...j.timeline.map((e, i) => ({ key: `${e.kind}-${i}`, at: e.at, kind: e.kind, by: e.by, words: feedKey(e), text: null })),
-    ...j.texts.map((x) => ({ key: x.id, at: x.at, kind: 'text', by: null, words: null, text: x })),
-  ].sort((a, b) => Date.parse(a.at.replace(/\[.*\]$/, '')) - Date.parse(b.at.replace(/\[.*\]$/, '')));
+  const feed = jobFeed(j);
 
   return frame(
     <>
@@ -385,7 +382,7 @@ export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScre
                 const now = i === feed.length - 1 && j.job.status === 'on_the_way';
                 return e.text ? (
                   <div className={now ? 'ev now' : 'ev'} key={e.key}><span className="dot"><Icon name={e.text.kind === 'on_the_way' ? 'truck' : 'message'} /></span>
-                    <div className="t">{t('job.feed.text', { kind: t(`job.feed.textKind.${e.text.kind}` as MessageKey), status: t(textStatusKey(e.text.status)) })}<small>{`${dateShort(e.at, t.lang)}, ${timeText(e.at)} - `}<a className="r1-link" href={`/office/messages?text=${e.text.id}`} data-ctl="CTL-OFC-03-18">{t('job.feed.openMessages')}</a></small></div></div>
+                    <div className="t">{e.textBy !== null ? t('job.feed.kind.office_text', { by: e.textBy }) : t('job.feed.text', { kind: t(`job.feed.textKind.${e.text.kind}` as MessageKey), status: t(textStatusKey(e.text.status)) })}<small>{`${e.textBy !== null ? `${t(textStatusKey(e.text.status))}, ` : ''}${dateShort(e.at, t.lang)}, ${timeText(e.at)} - `}<a className="r1-link" href={`/office/messages?text=${e.text.id}`} data-ctl="CTL-OFC-03-18">{t('job.feed.openMessages')}</a></small></div></div>
                 ) : (
                   <div className={now ? 'ev now' : 'ev'} key={e.key}><span className="dot"><Icon name={FEED_ICON[e.kind] ?? 'clock'} /></span>
                     <div className="t">{t(e.words as MessageKey, { by: e.by ?? '' })}<small>{`${dateShort(e.at, t.lang)}, ${timeText(e.at)}`}</small></div></div>

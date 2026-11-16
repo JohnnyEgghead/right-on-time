@@ -19,10 +19,30 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * F-1746: a call that had no answer within the client's time limit. A TypeError, as fetch's own rejection with no connection is, so every
+ * reader that takes a rejected fetch for no signal (the technician apps' wire.ts failureOf) takes this the same way.
+ */
+export class CallTimeout extends TypeError {
+  readonly contract: string;
+  readonly limitMs: number;
+  constructor(contract: string, limitMs: number) {
+    super(`${contract}: no answer within ${limitMs} ms`);
+    this.name = 'CallTimeout';
+    this.contract = contract;
+    this.limitMs = limitMs;
+  }
+}
+
 export interface ClientOptions {
   baseUrl: string;
   fetch?: typeof fetch;
   headers?: Record<string, string>;
+  /**
+   * F-1746: the longest 1 call may take, from the request to the whole answer read; past it the request is cancelled and the call rejects with
+   * CallTimeout. Absent: no limit (a page's own reads, where the browser gives up). The technician apps' sync sets it (SYNC_CALL_LIMIT_MS).
+   */
+  timeoutMs?: number;
 }
 
 export type CallResult<Res extends z.ZodType> = { status: number; data: z.output<Res>; envelope: Envelope<z.output<Res>> | null; fileName?: string };
@@ -58,16 +78,42 @@ function build(row: ContractRow, input: Record<string, unknown>, base: string): 
   return { url, body: Object.keys(rest).length > 0 ? JSON.stringify(rest) : undefined };
 }
 
+/**
+ * F-1746: runs 1 call under a time limit, when there is one. At the limit the request is cancelled (its signal aborts) and the call rejects with
+ * CallTimeout at once, whether or not the fetch honors the signal: the limit never leans on the abort.
+ */
+export async function withTimeLimit<T>(contract: string, limitMs: number | undefined, run: (signal: AbortSignal | undefined) => Promise<T>): Promise<T> {
+  if (limitMs === undefined) return run(undefined);
+  const ctl = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new CallTimeout(contract, limitMs)); // first, so the race answers CallTimeout, never the fetch's own AbortError
+      ctl.abort();
+    }, limitMs);
+  });
+  const call = run(ctl.signal);
+  call.catch(() => undefined); // a call cancelled at the limit rejects after the race is over: never an unhandled rejection
+  try {
+    return await Promise.race([call, late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function createClient(opts: ClientOptions): ApiClient {
   const doFetch = opts.fetch ?? fetch;
   const raw: ApiClient['raw'] = async (row, input = {}, headers = {}) => {
     const { url, body } = build(row, input, opts.baseUrl);
-    const res = await doFetch(url, {
+    const init: RequestInit = {
       method: row.method,
       headers: { accept: 'application/json, application/problem+json', ...(body !== undefined ? { 'content-type': 'application/json' } : {}), ...opts.headers, ...headers },
       ...(body !== undefined ? { body } : {}),
+    };
+    const { res, text } = await withTimeLimit(row.id, opts.timeoutMs, async (signal) => {
+      const r = await doFetch(url, signal ? { ...init, signal } : init);
+      return { res: r, text: await r.text() };
     });
-    const text = await res.text();
     let parsed: unknown = text === '' ? undefined : text;
     // A file row's success answer is the file's text, never JSON (its Problem answers still are).
     const fileAnswer = row.file !== undefined && res.status < 400;

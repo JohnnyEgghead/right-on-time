@@ -3,9 +3,9 @@
 // FR-DISP-12, FR-TEXT-16, FR-AUTH-8): API-43 Office alerts, API-70 System health, API-71 Set text simulator, API-160 Check now and
 // API-161 Set an alert switch, each called over the real handlers as a signed-in manager (the web process's login bw_web, the real
 // session layer) on real PostgreSQL 18. Run by gate G-CI7 (ci/gates/G-CI7/vitest.db.config.ts); the merge set excludes *.db.test.ts.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { loadConfig } from '@bw/config';
-import { createPool, openEmailLink } from '@bw/db';
+import { BUS_CHANNEL, createClient, createPool, decodeNotification, openEmailLink } from '@bw/db';
 import { alertSettingDefaults } from '@bw/domain';
 import { createLogger } from '@bw/log';
 import { realNow, Temporal } from '@bw/time';
@@ -367,5 +367,29 @@ describe('Dismiss an alert (API-176; SD-30, F-875, owner ruling 9f7f745a)', () =
     expect((await db.admin().query(`SELECT 1 FROM world.alert WHERE type = 'text_gave_up' AND subject = $1 AND state = 'open'`, [t])).rows).toEqual([]);
     expect((await call('POST', '/alerts/00000000-0000-4000-8000-000000000000/dismiss', {}, manager)).status).toBe(404);
     expect((await call('POST', `/alerts/${id}/dismiss`, {}, null)).status).toBe(401);
+  });
+
+  // why: F-1156, SD-30, EVT-04 Dismiss publishes alert.dismissed with the alert id and its branch at commit, so every other open bell and System health page re-reads; a refused dismiss publishes nothing
+  it('publishes alert.dismissed with the alert and its branch when Dismiss commits, and nothing on a refusal', async () => {
+    const t = await gaveUpOffice(await addCustomer(db.admin(), ref, { name: 'Tab Two' }));
+    const id = (await alertOf(t)).id as string;
+    const listener = createClient({ connectionString: db.url() });
+    await listener.connect();
+    const notices: { name: string; ids: Record<string, unknown> }[] = [];
+    listener.on('notification', (m) => {
+      const d = m.channel === BUS_CHANNEL ? decodeNotification(m.payload) : null;
+      if (d?.name === 'alert.dismissed') notices.push(d);
+    });
+    await listener.query(`LISTEN ${BUS_CHANNEL}`);
+    try {
+      expect((await call('POST', `/alerts/${id}/dismiss`, {}, office)).status).toBe(200);
+      await vi.waitFor(() => expect(notices).toEqual([{ name: 'alert.dismissed', ids: { alertId: id, branch: 'columbus' } }]), { timeout: 5_000, interval: 20 });
+      expect((await call('POST', `/alerts/${id}/dismiss`, {}, office)).status).toBe(409);
+      await settle();
+      expect(notices).toHaveLength(1);
+    } finally {
+      listener.removeAllListeners('notification');
+      await listener.end();
+    }
   });
 });

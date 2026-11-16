@@ -7,6 +7,7 @@ import { clockOfWire, windowLabelOfWire } from '@bw/i18n/src/text-rows.ts';
 import { useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import type { ComponentRef, Ref } from 'react';
+import { useLastTry } from '../../ui/last-try.ts';
 import { Icon } from '../../ui/Icon.tsx';
 import { useT } from '../../ui/intl.tsx';
 import { useBigText } from '../../ui/text-size.tsx';
@@ -15,8 +16,9 @@ import { color, type } from '../../ui/tokens.ts';
 import { NativeMap } from './NativeMap.tsx';
 import { Bar2, c, Chip, Grp, NoSignal, Num, Row, RowText, Scroll, T } from './parts.tsx';
 import {
-  distText, isBranchId, legTo, mapLayers, mapPhase, STATE_KEY, type RouteData, type Stop,
+  distText, isBranchId, legTo, mapLayers, mapPhase, mapSummary, STATE_KEY, type RouteData, type Stop,
 } from './model.ts';
+import { ErrBox } from '../job/ui.tsx';
 import { STOP_COLOR } from './map-style.ts';
 import { openJob } from '../job/nav.ts';
 import { useMapMe } from './use-mapme.ts';
@@ -97,7 +99,7 @@ function StopRow(props: { id: string; s: Stop; first: boolean; onPress: () => vo
 export function MapTab() {
   const t = useT();
   const nav = useNavigation<NavigationProp<ParamListBase>>();
-  const { state, data } = useMapMe();
+  const { state, data, reads } = useMapMe();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const [fitKey, setFitKey] = useState(0);
   const [listY, setListY] = useState(0);
@@ -106,13 +108,15 @@ export function MapTab() {
   const [focused, setFocused] = useState('none');
   const route = data.route?.data ?? null;
   const offline = !state.outbox.online || !data.online;
-  const phase = mapPhase(route, offline, data.settled);
+  const phase = mapPhase(route, offline, data.settled, data.failed);
+  const [tries, setTries] = useState(0);
+  const lastTry = useLastTry(phase === 'error', tries);
   const stops = route?.stops ?? [];
   const done = stops.filter((x) => x.state === 'done').length;
   const nextStop = route && route.next !== null ? stops.find((x) => x.jobNumber === route.next) : undefined;
   const layers = useMemo(() => (route ? mapLayers(t, route) : null), [route, t]);
   const branch = route && isBranchId(route.branch) ? route.branch : 'columbus';
-  const summary = phase === 'loading' || phase === 'none' ? t('tech.map.summaryOpen', { stops: stops.length }) : t('tech.map.summary', { stops: stops.length, done });
+  const summary = mapSummary(t, phase, stops.length, done);
   const drawn = layers !== null && stops.length > 0 && (phase === 'route' || phase === 'alldone' || phase === 'offline');
   // The look dump of this frame's state (the Route frame): once the day's route is on the screen.
   useLookDump(phase === 'route' ? 'map' : null);
@@ -129,7 +133,7 @@ export function MapTab() {
   // 14.2 item 2: at the largest text sizes the bar and the map scroll away with the Next stop card and the list (they stay pinned above them at
   // every other size), so Directions and the Stops list are never pushed under the tab bar.
   const big = useBigText();
-  const mapBlock = phase === 'none' ? null : drawn && layers ? (
+  const mapBlock = phase === 'none' || phase === 'error' ? null : drawn && layers ? (
         <View style={s.mapw}>
           <NativeMap id="map.view" branch={branch} origin={state.session?.origin ?? state.server} stops={layers.stops} legs={phase === 'alldone' ? [] : layers.legs}
             fitKey={fitKey} online={!offline} label={t('tech.map.label')} />
@@ -155,7 +159,10 @@ export function MapTab() {
         {phase === 'route' && route && nextStop ? (
           <NextCard route={route} stop={nextStop} onDirections={() => openDirections(nav, nextStop.jobNumber)} onOpen={() => openJob(nav, nextStop.jobNumber)} />
         ) : null}
-        {phase === 'none' ? (
+        {phase === 'error' ? (
+          // SCR-TEC-15 Route not loaded (F-1757): CMP-12 in place of the map and the stop list, with Try again reading the day and route again
+          <ErrBox id="map.failed" text={t('tech.map.error')} lastTry={lastTry && t('shell.error.lastTry', { time: lastTry })} link={{ id: 'map.retry', label: t('shell.error.tryAgain'), onPress: () => { setTries((n) => n + 1); void reads?.refresh(); } }} />
+        ) : phase === 'none' ? (
           <View {...lk('map.none', s.note)}><Icon name="map" size={18} color={color.ink500} /><T style={s.noteText}>{t('tech.map.noJobs')}</T></View>
         ) : (
           <View onLayout={(e) => setListY(e.nativeEvent.layout.y)}>
@@ -165,7 +172,7 @@ export function MapTab() {
         {phase === 'alldone' ? (
           <View {...lk('map.alldone', s.note)}><Icon name="check" size={18} color={color.okText} /><T style={s.noteText}>{t('tech.map.allDone')}</T></View>
         ) : null}
-        {route && phase !== 'none' && phase !== 'alldone' ? (
+        {route && phase !== 'none' && phase !== 'alldone' && phase !== 'error' ? (
           <Grp id="map.stops">
             {stops.map((x, i) => <StopRow key={x.jobNumber} {...(i === 0 ? { rowRef: firstStop } : {})} id={`map.stop.${x.state}.${stops.slice(0, i).filter((y) => y.state === x.state).length}`} s={x} first={i === 0} onPress={() => openJob(nav, x.jobNumber)} />)}
           </Grp>

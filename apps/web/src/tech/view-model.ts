@@ -10,17 +10,44 @@ import { legTo, miles, searchParts, wireMs, type Leg, type Part, type RouteData,
 
 export const STATE_KEY: Record<Stop['state'], MessageKey> = { done: 'tech.map.state.done', next: 'tech.map.state.next', later: 'tech.map.state.later' };
 
-export type MapPhase = 'loading' | 'route' | 'offline' | 'none' | 'alldone';
+export type MapPhase = 'loading' | 'error' | 'route' | 'offline' | 'none' | 'alldone';
 
 /**
  * Which of the frame's states the screen is in. Offline shows the saved day (a day with no stops is "none" whatever else is true); the first
- * read still out is loading, with the saved stop list under the skeleton; then a day with no stops, every stop done, or the route.
+ * read still out is loading, with the saved stop list under the skeleton; with signal, no route saved and the read failed it is "error"
+ * (Route not loaded, F-1750: never Loading with no end); then a day with no stops, every stop done, or the route.
  */
-export function mapPhase(route: RouteData | null, offline: boolean, settled: boolean): MapPhase {
+export function mapPhase(route: RouteData | null, offline: boolean, settled: boolean, failed = false): MapPhase {
   if (offline) return route && route.stops.length === 0 ? 'none' : 'offline';
-  if (!settled || !route) return 'loading';
+  if (!settled) return 'loading';
+  if (!route) return failed ? 'error' : 'loading';
   if (route.stops.length === 0) return 'none';
   return route.next === null ? 'alldone' : 'route';
+}
+
+/**
+ * The route summary of the header (CTL-TEC-15-08). A count of stops is shown only when a route is held: Loading with no saved route and
+ * Route not loaded read "Today's route" alone, never "0 stops" (F-1750, F-1758).
+ */
+export function mapSummary(t: ClientT, phase: MapPhase, route: RouteData | null): string {
+  if (route === null || phase === 'error') return t('tech.map.title');
+  const stops = route.stops.length;
+  if (phase === 'loading' || phase === 'none') return t('tech.map.summaryOpen', { stops });
+  return t('tech.map.summary', { stops, done: route.stops.filter((s) => s.state === 'done').length });
+}
+
+export type MePhase = 'reading' | 'loading' | 'error' | 'nosaved' | 'day';
+
+/**
+ * Which of the Me card states the screen is in (UI-SPECIFICATION SCR-TEC-10): Reading the phone before the copy is read; with no day saved,
+ * no signal is Offline, nothing saved, a failed day read with signal is Day not loaded, and anything else is Loading (F-1739: never No van
+ * assigned, a call button with no number or a title that ends in a separator); a saved or read day is the day.
+ */
+export function mePhase(reading: boolean, hasDay: boolean, offline: boolean, settled: boolean, failed: boolean): MePhase {
+  if (reading) return 'reading';
+  if (hasDay) return 'day';
+  if (offline) return 'nosaved';
+  return settled && failed ? 'error' : 'loading';
 }
 
 

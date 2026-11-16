@@ -9,6 +9,7 @@ import { MAX_ITEMS_PER_BATCH } from '../../../api/src/contracts/tech.ts';
 import { fromWire, Temporal } from '@bw/time';
 import { DexieItemStore } from './dexie-store.ts';
 import { hasOldItem, ITEMS_PER_SEND, OLD_ITEM_MS, StoreWriteError, type QueuedItem } from './model.ts';
+import { SYNC_CALL_LIMIT_MS, uploadLimitMs } from './engine.ts';
 import { sendWaiting, type CallFailure, type Transport, type WireAnswer } from './send.ts';
 import { uploadAnswer } from './wire.ts';
 import { newItemKey, offsetFromClock, stampEntry } from './stamp.ts';
@@ -227,6 +228,33 @@ describe('I2 an item leaves only on its key\'s answer (UI-SPECIFICATION 4.5 rule
     const r = await sendWaiting(s, t, { userId: MARIA, nowMs: clock });
     expect(r.answered.map((x) => x.key)).toEqual([a.key]);
     expect((await s.waiting()).map((i) => [i.key, i.lastTry?.outcome, i.lastTry?.code])).toEqual([[ph.key, 'refused', 'not_found'], [b.key, 'unanswered', undefined]]);
+  });
+  // why: F-1035 a photo the proxy refused for its size (413) is sent once more with no bytes under its key, leaves with the server's flagged answer, and its bytes are never sent again
+  it('answers a photo refused with 413 by 1 no-bytes upload under its key, and never sends its bytes again', async () => {
+    const s = store();
+    const ph = photo();
+    await s.put(ph, BYTES);
+    const { t, calls } = transport(all, (i) => ({ ok: true, answer: ok(i.key, 'flagged', { code: 'validation_failed', messageKey: 'tech.item.flagged.validation_failed' }) }));
+    const sized: Transport = { ...t, uploadBlob: async (i, bytes) => (bytes.byteLength > 0 ? (calls.push(`blob ${i.key} ${bytes.byteLength}`), { ok: false, stop: null, status: 413, code: 'http_413' }) : t.uploadBlob(i, bytes)) };
+    const r = await sendWaiting(s, sized, { userId: MARIA, nowMs: clock });
+    await sendWaiting(s, sized, { userId: MARIA, nowMs: clock });
+    expect(calls).toEqual([`blob ${ph.key} ${BYTES.byteLength}`, `blob ${ph.key} 0`]);
+    expect(r.answered.map((x) => [x.key, x.result, x.code])).toEqual([[ph.key, 'flagged', 'validation_failed']]);
+    expect(await s.waiting()).toHaveLength(0);
+  });
+  // why: F-1746 an upload's time limit grows with its bytes, so a 10 MB photo on a slow line (32 KB/s) still finishes and an empty body ends like a read
+  it('limits an upload to the call limit plus its bytes at 32 KB/s', () => {
+    expect([uploadLimitMs(0), uploadLimitMs(10 * 1024 * 1024)]).toEqual([SYNC_CALL_LIMIT_MS, SYNC_CALL_LIMIT_MS + 327_680]);
+  });
+  // why: F-1035 the no-bytes try is made once: when it fails too the photo waits with that failure, and the next send starts over
+  it('keeps a photo refused with 413 when its no-bytes upload fails too, with that failure as its last try', async () => {
+    const s = store();
+    const ph = photo();
+    await s.put(ph, BYTES);
+    const { t, calls } = transport(all, () => ({ ok: false, stop: null, status: 413, code: 'http_413' }));
+    const r = await sendWaiting(s, t, { userId: MARIA, nowMs: clock });
+    expect([calls, r.answered]).toEqual([[`blob ${ph.key} ${BYTES.byteLength}`, `blob ${ph.key} 0`], []]);
+    expect((await s.waiting()).map((i) => [i.key, i.lastTry?.outcome, i.lastTry?.code])).toEqual([[ph.key, 'refused', 'http_413']]);
   });
 });
 

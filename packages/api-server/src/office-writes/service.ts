@@ -26,7 +26,7 @@ import { addDays, localDateOf, Temporal } from '@bw/time';
 import { endOnTheWay } from '../tech-items/effects.ts';
 import {
   at, officeWindowRoom, readBranch, readDayKind, readTechnician, readWindow, serviceIsInstall, settleDay,
-  technicianRoom, windowOffered, wire, type Overlap, type Technician, type Window,
+  technicianRoom, technicianRoomRefusal, windowOffered, wire, type Overlap, type Technician, type Window,
 } from './day.ts';
 import { LockOrderRetry, type HeldDay } from '@bw/import';
 import { drawnOnceForCall } from '../../../maps/src/route-source.ts';
@@ -248,9 +248,8 @@ export async function assignJob(tx: Queryable, ctx: WriteContext, input: { jobNu
     const t = await workingTechnician(tx, input.technicianId, job.branch_id, job.date);
     const window = await readWindow(tx, job.window_id) as Window;
     const kind = await readDayKind(tx, job.branch_id, job.date);
-    if (!(await technicianRoom(tx, t, job.date, window, kind, job.job_number))) {
-      throw new WriteRefused('technician_no_room', `technician ${t.id} has no room in window ${window.id} on ${job.date}`);
-    }
+    const refused = await technicianRoomRefusal(tx, t, job.date, window, kind, job.job_number);
+    if (refused) throw new WriteRefused('technician_no_room', `technician ${t.id} has no room in window ${window.id} on ${job.date}`, refused);
   }
   await settleOrRefuse(tx, days);
   if (reassigned) await endBegunVisit(tx, job, ctx.at);
@@ -447,9 +446,8 @@ export async function createJob(tx: Queryable, ctx: WriteContext | OnlineContext
   }
   if (input.technicianId !== null) {
     const t = await workingTechnician(tx, input.technicianId, branch.id, input.date);
-    if (!(await technicianRoom(tx, t, input.date, window, kind, -1))) {
-      throw new WriteRefused('technician_no_room', `technician ${t.id} has no room in window ${window.id} on ${input.date}`);
-    }
+    const refused = await technicianRoomRefusal(tx, t, input.date, window, kind, -1);
+    if (refused) throw new WriteRefused('technician_no_room', `technician ${t.id} has no room in window ${window.id} on ${input.date}`, refused);
   }
   // F-1509: the web server may run this call twice (route-source.ts routedOutside), and a rollback does not return a sequence's number, so
   // the number is drawn once for the call: the second pass reuses the first pass's number ($17) while the sequence has handed it out

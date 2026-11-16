@@ -2,13 +2,13 @@
   "expo": {
     "name": "Right On Time",
     "slug": "right-on-time",
-    "version": "0.1.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.johnloring.rightontime",
-      "buildNumber": "5",
+      "buildNumber": "9",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

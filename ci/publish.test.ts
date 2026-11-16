@@ -461,6 +461,65 @@ describe('publish.sh push and release (P8-PUBLISH, owner grant)', () => {
   });
 });
 
+describe('publish.sh docs (P8-APPSTORE: PRIVACY.md and SUPPORT.md between releases)', () => {
+  const docsClone = () => path.join(tmp, 'docs-clone');
+  const docsArgs = (...more: string[]) => ['docs', '--clone', docsClone(), '--remote', bare, '--slug', 'Test/pub', ...more];
+  const tagsBefore = (): string => spawnSync('git', ['tag', '-l'], { cwd: bare, encoding: 'utf8' }).stdout;
+  // why: P8-APPSTORE the 2 listing pages go to the public main alone, as 1 commit, with a dry run, an owner grant and no force
+  it('dry run and no grant push nothing; the grant pushes 1 commit that changes only the 2 files, no tag', () => {
+    put(priv, 'PRIVACY.md', '# Privacy\n');
+    put(priv, 'SUPPORT.md', '# Support\n');
+    git(priv, 'add', 'PRIVACY.md', 'SUPPORT.md');
+    git(priv, 'commit', '-q', '-m', 'listing pages');
+    const main0 = bareRef('refs/heads/main');
+    const tags0 = tagsBefore();
+
+    const dry = publish(docsArgs('--dry-run'));
+    expect(dry.status, dry.stderr).toBe(0);
+    expect(dry.stdout).toContain('changes: PRIVACY.md SUPPORT.md');
+    expect(dry.stdout).toContain('nothing was pushed');
+    expect(bareRef('refs/heads/main')).toBe(main0);
+
+    const plan = publish(docsArgs());
+    expect(plan.status).toBe(3);
+    expect(plan.stdout).toContain('only with --granted');
+    expect(bareRef('refs/heads/main')).toBe(main0);
+
+    const bad = publish(docsArgs('--granted'), { FAIL_SCAN: '1' });
+    expect(bad.status).toBe(1);
+    expect(bareRef('refs/heads/main')).toBe(main0);
+
+    // F-1714: the content checks (the files check stand-in) run on the 2 files and a failure there stops the push
+    const badFiles = publish(docsArgs('--granted'), { FAIL_FILES: '1' });
+    expect(badFiles.status).toBe(1);
+    expect(badFiles.stderr).toContain('the public files check of the 2 files');
+    expect(bareRef('refs/heads/main')).toBe(main0);
+
+    const go = publish(docsArgs('--granted'));
+    expect(go.status, go.stderr).toBe(0);
+    const main1 = bareRef('refs/heads/main');
+    // F-1714: the public message does not name the private commit id
+    expect(git(bare, 'log', '-1', '--format=%B', main1)).not.toContain(git(priv, 'rev-parse', 'HEAD'));
+    expect(main1).not.toBe(main0);
+    expect(git(bare, 'rev-parse', `${main1}^`)).toBe(main0);
+    expect(git(bare, 'diff-tree', '-r', '--no-commit-id', '--name-only', main0, main1).split('\n').sort()).toEqual(['PRIVACY.md', 'SUPPORT.md']);
+    expect(git(bare, 'show', `${main1}:PRIVACY.md`)).toBe('# Privacy');
+    expect(tagsBefore()).toBe(tags0);
+
+    const again = publish(docsArgs('--granted'));
+    expect(again.status, again.stderr).toBe(0);
+    expect(again.stdout).toContain('nothing to push');
+    expect(bareRef('refs/heads/main')).toBe(main1);
+  });
+
+  // why: P8-APPSTORE a file the export does not carry is refused before any push
+  it('refuses a file that is not committed at the ref', () => {
+    const r = publish(docsArgs('--granted', '--ref', 'HEAD~1'));
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('is not in the export');
+  });
+});
+
 describe('publish-assets helpers (P8-PUBLISH)', () => {
   const assets = assetsOf(MAPS, STREET);
   // why: F-364(b) the manifests are rewritten to the public release for every asset and keep their committed layout
@@ -505,6 +564,16 @@ describe('publish-assets helpers (P8-PUBLISH)', () => {
     expect(sameTree(p, lsTree(z([['100644', 'a1', 'README.md'], ['100644', 'c1', 'CONTRIBUTING.md']])), list, carry)).toEqual([]);
     expect(sameTree(p, lsTree(z([['100644', 'a1', 'README.md'], ['100644', 'c2', 'CONTRIBUTING.md']])), list, carry).join('\n')).toMatch(/CONTRIBUTING.md is 100644 c2 in the public tree, 100644 c1 on the public main/);
     expect(sameTree(p, lsTree(z([['100644', 'a1', 'README.md']])), list, carry).join('\n')).toMatch(/CONTRIBUTING.md is absent/);
+  });
+
+  // why: F-1639 F-1694 F-1823 a git archive piped into tar exits 141 (SIGPIPE) under load; the export is a file, then extracted
+  it('never pipes git archive into tar', () => {
+    for (const f of ['scripts/publish.sh', 'apps/tech-native/xcuitest/run.sh']) {
+      const src = readFileSync(path.join(import.meta.dirname, '..', f), 'utf8');
+      const code = src.split('\n').filter((l) => !l.trimStart().startsWith('#')).join('\n');
+      expect(code, f).not.toMatch(/archive[^\n]*\|\s*tar\b/);
+      expect(code, f).toMatch(/archive[^\n]* -o /);
+    }
   });
 
   // why: F-1682 only the named public-only files are carried: a file deleted, renamed or made private since leaves the next release

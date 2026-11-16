@@ -23,9 +23,18 @@ const REFLOW_SCRIPT = `(() => {
   const inRegion = (el) => {
     for (let p = el.parentElement; p && p !== document.documentElement; p = p.parentElement) {
       const cs = getComputedStyle(p);
-      if (cs.overflowX === 'auto' || cs.overflowX === 'scroll') return true;
+      if ((cs.overflowX === 'auto' || cs.overflowX === 'scroll') && p.scrollWidth > p.clientWidth + 1 && setSideways(p)) return true;
     }
     return false;
+  };
+  // F-1630: overflow-y auto alone computes overflow-x to auto, so an up-and-down panel looks like a sideways region. A sideways region is one whose
+  // overflow-x stays auto or scroll with overflow-y taken back to visible (the 2-dimension exception is for a region that was given a sideways scroll).
+  const setSideways = (p) => {
+    const keep = p.style.getPropertyValue('overflow-y'), prio = p.style.getPropertyPriority('overflow-y');
+    p.style.setProperty('overflow-y', 'visible', 'important');
+    const ox = getComputedStyle(p).overflowX;
+    if (keep) p.style.setProperty('overflow-y', keep, prio); else p.style.removeProperty('overflow-y');
+    return ox === 'auto' || ox === 'scroll';
   };
   const named = (el) => el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/)[0] : '');
   const reported = new Set();
@@ -62,7 +71,19 @@ const MOTION_SCRIPT = `(async () => {
     if (cs.animationName !== 'none' && secs(cs.animationDuration)) declared.push('animation declared: ' + cs.animationName + ' on ' + name(el));
     if (cs.transitionProperty !== 'none' && secs(cs.transitionDuration)) declared.push('transition declared: ' + cs.transitionProperty + ' ' + cs.transitionDuration + ' on ' + name(el));
   }
-  return { reduced, found: [...running, ...declared.slice(0, 12)] };
+  // F-1631: motion driven by script (requestAnimationFrame, a MapLibre marker) is no animation or transition. Sample every box 3 times, 120 ms apart;
+  // a box that moved in both gaps in the same direction is gliding (a change that happens once, as data arrives, moves in 1 gap only).
+  const els = [...document.body.querySelectorAll('*')].filter((el) => { const r = el.getBoundingClientRect(); return r.width > 1 && r.height > 1; }).slice(0, 1500);
+  const at = () => els.map((el) => { const r = el.getBoundingClientRect(); return [r.left, r.top]; });
+  const a = at(); await new Promise((r) => setTimeout(r, 120)); const b = at(); await new Promise((r) => setTimeout(r, 120)); const c = at();
+  const scripted = [];
+  els.forEach((el, i) => {
+    for (const k of [0, 1]) {
+      const d1 = b[i][k] - a[i][k], d2 = c[i][k] - b[i][k];
+      if (Math.abs(d1) > 1 && Math.abs(d2) > 1 && Math.sign(d1) === Math.sign(d2)) { scripted.push('moved by script: ' + name(el) + (k ? ' (top)' : ' (left)')); break; }
+    }
+  });
+  return { reduced, found: [...running, ...declared.slice(0, 12), ...scripted.slice(0, 5)] };
 })()`;
 
 export async function reflow320(page: Page): Promise<Finding[]> {
@@ -108,6 +129,8 @@ export const fixtures: Record<string, string> = {
   '/reflow-bad.html': page('<h1>Pedido</h1><div style="width:400px;height:30px;background:#888">box</div>'),
   // clean: a box that fits, and a wide table inside a region of its own that scrolls (the item's exception)
   '/reflow-clean.html': page('<h1>Pedido</h1><div style="max-width:100%;height:30px;background:#888">box</div><div style="overflow-x:auto"><table style="width:600px"><tr><td>Uno</td><td>Dos</td></tr></table></div>'),
+  // reflow-320, F-1630: a 400 px box inside an up-and-down panel (overflow-y auto alone, which computes overflow-x to auto) is not the sideways exception
+  '/reflow-ypanel-bad.html': page('<h1>Pedido</h1><div style="overflow-y:auto;max-height:300px"><div style="width:400px;height:30px;background:#888">box</div></div>'),
   // text-200: a label that fits at 100% (a 130 px box) and clips at 200%
   '/text-bad.html': page('<h1>Pedido</h1><div id="l" style="width:130px;overflow:hidden;white-space:nowrap;font-size:16px">Guardar cambios</div>'),
   '/text-clean.html': page('<h1>Pedido</h1><div style="width:400px;overflow:hidden;white-space:nowrap;font-size:16px">Guardar cambios</div>'),
@@ -119,6 +142,10 @@ export const fixtures: Record<string, string> = {
   '/zoom-sideways.html': page('<h1>Pedido</h1><table style="width:1000px"><tr><td>Uno</td><td>Dos</td></tr></table>'),
   // motion: an element that animates (and one that declares a transition)
   '/motion-bad.html': page('<h1>Pedido</h1><div style="width:40px;height:40px;background:#888;animation:slide 1s linear infinite;position:relative">m</div><button style="transition:background .3s">Guardar</button>', '<style>@keyframes slide{from{left:0}to{left:100px}}</style>'),
+  // motion, F-1631: a box moved every frame by script (no CSS animation and no transition declared)
+  '/motion-script-bad.html': page('<h1>Pedido</h1><div id="g" style="width:40px;height:40px;background:#888;position:relative">m</div>', '<script>addEventListener("DOMContentLoaded",()=>{let x=0;const g=document.getElementById("g");const f=()=>{x+=2;g.style.left=x+"px";requestAnimationFrame(f)};requestAnimationFrame(f)})</script>'),
+  // clean: a box that moves once, as data arriving does, and then rests
+  '/motion-script-clean.html': page('<h1>Pedido</h1><div id="g" style="width:40px;height:40px;background:#888;position:relative">m</div>', '<script>addEventListener("DOMContentLoaded",()=>{setTimeout(()=>{document.getElementById("g").style.left="40px"},300)})</script>'),
   // clean: the same animation only where the person has not asked for reduced motion
   '/motion-clean.html': page('<h1>Pedido</h1><div style="width:40px;height:40px;background:#888;position:relative" class="m">m</div><button>Guardar</button>', '<style>@keyframes slide{from{left:0}to{left:100px}}@media (prefers-reduced-motion:no-preference){.m{animation:slide 1s linear infinite}}</style>'),
 };

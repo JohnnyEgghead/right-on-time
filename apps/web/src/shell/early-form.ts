@@ -16,3 +16,11 @@ export function fieldText(data: FormData, name: string): string {
   const v = data.get(name);
   return typeof v === 'string' ? v : '';
 }
+
+/**
+ * F-1063: whether the named native checkbox was ticked at the tap. A checkbox is in a form's FormData only when it is checked, so the
+ * state a tap made before hydration left on it is read at the submit, and the box the person saw is the box that was sent.
+ */
+export function fieldFlag(data: FormData, name: string): boolean {
+  return data.get(name) !== null;
+}

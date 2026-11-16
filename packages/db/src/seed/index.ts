@@ -73,10 +73,17 @@ export async function seedReference(db: Queryable, opts: SeedOptions): Promise<S
   }
 
   // 4. The parts catalog (OA-54; F-339): the 10 mockup parts and the generated rest, about 1,240, searched by name or code.
-  //    The generator rule is disclosed beside the list in reference-data.ts. One statement; a second run adds nothing.
+  //    The generator rule is disclosed beside the list in reference-data.ts. One statement; a second run changes nothing.
+  //    F-440: a part row a database already holds takes the list's name and price (a row that already matches is not touched).
+  //    That reaches only a database whose setup stopped after this step, or a repeat seed in a test. It never reaches a world that
+  //    finished setup: setup stops on it (world_not_fresh, packages/setup/src/pipeline.ts assertFresh), and the nightly reset refills
+  //    world.part from world_snapshot. Such a world takes the corrected rows only when its database is recreated and set up again:
+  //    infra/deploy/reset-world.sh (F-1801).
   await db.query(
-    `INSERT INTO world.part (code, name, name_search, price_cents)
-     SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::int[]) ON CONFLICT (code) DO NOTHING`,
+    `INSERT INTO world.part AS p (code, name, name_search, price_cents)
+     SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::int[])
+     ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, name_search = EXCLUDED.name_search, price_cents = EXCLUDED.price_cents
+      WHERE (p.name, p.name_search, p.price_cents) IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.name_search, EXCLUDED.price_cents)`,
     [PARTS.map((p) => p.code), PARTS.map((p) => p.name), PARTS.map((p) => foldStreetName(`${p.name} ${p.code}`)), PARTS.map((p) => p.cents)],
   );
 

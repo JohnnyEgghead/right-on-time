@@ -20,7 +20,7 @@ import { partCodeForLine } from '../../db/src/seed/reference-data.ts';
 import { catalogs } from '../../i18n/src/catalog.ts';
 import { SetupError } from './errors.ts';
 import type { FixtureJob, WorldFixture } from './fixture.ts';
-import { pastJobVersion, planPastJob, writePastJobs, type PastJob, type PbsHistory } from './past-jobs.ts';
+import { doorMinute, fitPastVisitEnds, pastJobVersion, planPastJob, writePastJobs, type PastJob, type PbsHistory } from './past-jobs.ts';
 import { sampleDay, type SampleDayJob } from './sample-day.ts';
 
 /** F-272: the office user the approved pages' customer history names ("Marco P."), seeded with the sample world. */
@@ -117,7 +117,8 @@ async function insertMany(tx: Queryable, table: string, cols: readonly Col[], ro
 const sample = <T>(xs: readonly T[], n: number): string => xs.slice(0, n).map(String).join(', ') + (xs.length > n ? ` and ${xs.length - n} more` : '');
 
 export async function seedWorld(tx: Queryable, opts: WorldSeedOptions): Promise<WorldSeedResult> {
-  const fx = opts.fixture;
+  // F-1546: a pilot visit that ran past the same technician's next door ends before it (past-jobs.ts fitPastVisitEnds); every row below reads the fitted end.
+  const fx: WorldFixture = { ...opts.fixture, pilotJobs: fitPastVisitEnds(opts.fixture.pilotJobs) };
   const zone = fx.zone;
   const at = (date: string, time: string): Date => new Date(atLocal(date, time, zone, 'reject').epochMilliseconds);
   const plus = (d: Date, minutes: number): Date => new Date(d.getTime() + minutes * 60_000);
@@ -402,7 +403,7 @@ export async function seedWorld(tx: Queryable, opts: WorldSeedOptions): Promise<
   const pastRows: Parameters<typeof writePastJobs>[1]['jobs'][number][] = [];
   for (const [list, drive] of pilotDrive) {
     const t = tech.get((list[0] as FixtureJob).technician as string) as { id: string; branch: string };
-    const door = (j: FixtureJob): number => at(j.date, (j.arrivedAt ?? j.endedAt) as string).getTime();
+    const door = doorMinute; // the arrival, else the no-one-home knock (F-1546: the order the day ran)
     const ran = list.filter((j) => j.endedAt !== null && (j.status === 'done' || j.status === 'no_one_home')).sort((x, y) => door(x) - door(y) || x.jobNumber - y.jobNumber);
     let prev: { j: FixtureJob; past: PastJob } | null = null;
     for (const j of ran) {

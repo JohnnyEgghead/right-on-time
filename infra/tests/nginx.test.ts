@@ -79,9 +79,9 @@ describe('nginx access log (11.4)', () => {
       for (const b of blocks) expect(b, f).toMatch(/access_log \/var\/log\/nginx\/access\.log bw;/);
     }
     expect(readdirSync(dir).filter((f) => f.endsWith('.conf')).sort()).toEqual(
-      ['bootstrap.conf', 'hosted.conf', 'http.conf', 'local.conf', 'routes-locked.conf', 'routes-open.conf', 'security-headers.conf'],
+      ['bootstrap.conf', 'hosted.conf', 'http.conf', 'local.conf', 'proxied-headers.conf', 'routes-locked.conf', 'routes-open.conf', 'security-headers.conf'],
     );
-    expect(strip(read('security-headers.conf'))).not.toMatch(/\bserver\b|\blocation\b/); // a header snippet, never a site
+    for (const f of ['security-headers.conf', 'proxied-headers.conf']) expect(strip(read(f)), f).not.toMatch(/\bserver\b|\blocation\b/); // a header snippet, never a site
   });
 });
 
@@ -120,6 +120,47 @@ describe('nginx routes', () => {
     const fileLocations = [...locked.matchAll(/location ([^{]+)\{([^}]*)\}/g)].filter((m) => /\broot\b/.test(m[2]!));
     expect(fileLocations.map((m) => m[1]!.trim())).toEqual(['= /placeholder.css', '/']);
     for (const m of fileLocations) expect(m[2], m[1]).toContain('include /etc/nginx/bw/security-headers.conf;');
+  });
+
+  // why: F-1795 (the port-80 bootstrap answered with no 11.5 header; hosted.conf and the locked routes send them)
+  it('sends the same 11.5 headers from bootstrap.conf as hosted.conf and its routes do', async () => {
+    const { SECURITY_HEADERS } = await import('../../packages/api-server/src/kernel/headers.ts');
+    const names = [...strip(read('security-headers.conf')).matchAll(/add_header ([A-Za-z-]+) /g)].map((m) => m[1]!.toLowerCase()).sort();
+    expect(names).toEqual([...Object.keys(SECURITY_HEADERS), 'strict-transport-security'].sort());
+    const boot = strip(read('bootstrap.conf'));
+    const server = /server \{([\s\S]*)\}\s*$/.exec(boot)![1]!;
+    // At server level, so every answer without a header of its own gets them
+    expect(server.replace(/location [^{]+\{[^}]*\}/g, '')).toContain('include /etc/nginx/bw/security-headers.conf;');
+    // A location that adds a header of its own drops the inherited ones, so it repeats the include
+    for (const m of server.matchAll(/location ([^{]+)\{([^}]*)\}/g)) {
+      if (/add_header/.test(m[2]!)) expect(m[2], m[1]).toContain('include /etc/nginx/bw/security-headers.conf;');
+    }
+    // and the hosted site adds the same HSTS value at server level, so the two answer alike
+    expect(strip(read('hosted.conf'))).toContain('add_header Strict-Transport-Security $bw_hsts always;');
+  });
+
+  // why: F-214 (nginx's own 502 answers in the proxied locations carried HSTS only; proxy-headers.maps.test.ts is the live check)
+  it("adds the 11.5 headers to nginx's own answers in the proxied locations, and none a web answer already sent", async () => {
+    const { SECURITY_HEADERS } = await import('../../packages/api-server/src/kernel/headers.ts');
+    const snippet = strip(read('proxied-headers.conf'));
+    // Each header comes from a map in http.conf keyed on the web answer's own header: the 11.5 value when web sent none, else empty.
+    const lines = [...snippet.matchAll(/add_header ([A-Za-z-]+) \$(\w+) always;/g)];
+    expect(lines.map((m) => m[1]!.toLowerCase()).sort()).toEqual(Object.keys(SECURITY_HEADERS).sort());
+    expect(snippet).not.toMatch(/Strict-Transport-Security/); // hosted.conf adds HSTS at server level; a 2nd line would double it
+    for (const [, header, variable] of lines) {
+      const upstream = `$upstream_http_${header!.toLowerCase().replace(/-/g, '_')}`;
+      const map = new RegExp(`map \\${upstream} \\$${variable} \\{\\s*""\\s+"([^"]+)";\\s*default "";\\s*\\}`).exec(http);
+      expect(map?.[1], header).toBe(SECURITY_HEADERS[header!.toLowerCase()]);
+    }
+    // Included at server level (before any location) in both routes files, so every location without its own add_header inherits it.
+    for (const f of ['routes-open.conf', 'routes-locked.conf']) {
+      const conf = strip(read(f));
+      const at = conf.indexOf('include /etc/nginx/bw/proxied-headers.conf;');
+      expect(at, f).toBeGreaterThan(-1);
+      expect(at, f).toBeLessThan(conf.indexOf('location '));
+      // Every proxied location adds no header of its own (an add_header there would drop the inherited ones).
+      for (const m of conf.matchAll(/location ([^{]+)\{([^}]*)\}/g)) if (/proxy_pass/.test(m[2]!)) expect(m[2], `${f} ${m[1]}`).not.toMatch(/add_header/);
+    }
   });
 
   // why: F-101

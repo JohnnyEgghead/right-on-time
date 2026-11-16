@@ -314,6 +314,113 @@ describe('backup and restore test on the local stack (SPECIFICATIONS 11.7)', () 
     }
   });
 
+  // why: F-492
+  it('a lock wait that times out runs the cleanup: a failed record, no work folder, no set, and the holder keeps restore_check', async () => {
+    // Another job holds the lock and owns restore_check, as a running restore test does.
+    sql('DROP DATABASE IF EXISTS restore_check', 'postgres');
+    sql('CREATE DATABASE restore_check', 'postgres');
+    const since = sql('SELECT clock_timestamp()');
+    const before = sets();
+    try {
+      for (const [script, kind] of [['backup.sh', 'backup'], ['restore-test.sh', 'restore_test']] as const) {
+        const r = await sh(`lock-timeout-${kind}`, [
+          'mkdir -p /run/lock', 'exec 8>/run/lock/brightwater-backup.lock', 'flock 8',
+          `BW_BACKUP_LOCK_WAIT=2 bash /opt/brightwater/backup/${script}; echo "rc=$?"`,
+          'echo "work=$(find /var/lib/brightwater-backup -mindepth 1 2>/dev/null | wc -l)"', ''].join('\n'));
+        expect(r.out, r.out).toMatch(/^rc=1$/m);
+        expect(r.out, r.out).toMatch(/^work=0$/m);
+        expect(events(r.out).find((e) => e.event === 'error')?.msg).toMatch(/held the lock for 2 seconds/);
+        expect(sql(`SELECT string_agg(result, ',') FROM system.backup_record WHERE kind = '${kind}' AND started_real >= '${since}'`), r.out).toBe('failed');
+      }
+      // F-1774: the backup's failed row starts when the run did (before the 2 s wait), not when it finished
+      expect(sql(`SELECT bool_and(finished_real - started_real >= interval '2 seconds') FROM system.backup_record WHERE kind = 'backup' AND started_real >= '${since}'`)).toBe('t');
+      expect(sql("SELECT count(*) FROM pg_database WHERE datname = 'restore_check'", 'postgres')).toBe('1');
+      expect(sets()).toEqual(before);
+    } finally {
+      sql(`DELETE FROM system.backup_record WHERE result = 'failed' AND started_real >= '${since}'`);
+      sql('DROP DATABASE IF EXISTS restore_check', 'postgres');
+    }
+  });
+
+  // why: F-1697
+  it('before setup (no day_snapshot row) a timer run of the backup and the restore test exits 0 by name and writes nothing', async () => {
+    sql('CREATE TABLE public.f1697_kept AS SELECT * FROM system.day_snapshot; DELETE FROM system.day_snapshot');
+    const records = sql('SELECT count(*) FROM system.backup_record');
+    const before = sets();
+    try {
+      for (const script of ['backup.sh', 'restore-test.sh']) {
+        const r = await runner(script, `not-set-up-${script.replace('.sh', '')}`);
+        expect(r.code, r.out).toBe(0);
+        expect(events(r.out).map((e) => `${e.event} ${e.msg}`)).toEqual([expect.stringMatching(/^not_set_up no world is set up yet \(no system\.day_snapshot row\)/)]);
+      }
+      expect(sql('SELECT count(*) FROM system.backup_record')).toBe(records);
+      expect(sets()).toEqual(before);
+    } finally {
+      sql('INSERT INTO system.day_snapshot SELECT * FROM public.f1697_kept; DROP TABLE public.f1697_kept');
+    }
+  });
+
+  // why: F-1773
+  it('a snapshot session that ends after the preflight fails the backup with its failed record, never an unbound variable', async () => {
+    const since = sql('SELECT clock_timestamp()');
+    const before = sets();
+    try {
+      const r = await runner('backup.sh', 'session-ends', {
+        mounts: [`${path.join(root, 'infra/backup/tests/stubs-session')}:/stubs-session:ro`],
+        path: '/stubs-session:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+      });
+      expect(r.code, r.out).toBe(1);
+      expect(r.out).not.toMatch(/unbound variable/);
+      const ev = events(r.out);
+      expect(ev.find((e) => e.event === 'backup_failed')?.msg, r.out).toMatch(/a failed backup_record row is written/);
+      expect(sql(`SELECT string_agg(result, ',') FROM system.backup_record WHERE kind = 'backup' AND started_real >= '${since}'`), r.out).toBe('failed');
+      expect(sets()).toEqual(before);
+    } finally {
+      sql(`DELETE FROM system.backup_record WHERE result = 'failed' AND started_real >= '${since}'`);
+    }
+  });
+
+  // why: F-1771
+  it('the setup preflight never reads a database that does not answer, or a query that errors, as not set up: both runs fail with their failed records', async () => {
+    const before = sets();
+    const scripts = [['backup.sh', 'backup', 'backup_failed'], ['restore-test.sh', 'restore_test', 'failed']] as const;
+    // 1. The db container paused, as the reviewer ran it: docker exec is refused, so no query answers and no record can be written.
+    execFileSync('docker', ['pause', dbId]);
+    try {
+      for (const [script, , event] of scripts) {
+        const r = await runner(script, `db-paused-${script.replace('.sh', '')}`);
+        expect(r.code, r.out).toBe(1);
+        const ev = events(r.out);
+        expect(ev.map((e) => e.event), r.out).not.toContain('not_set_up');
+        expect(ev.find((e) => e.event === 'error')?.msg, r.out).toBe('the database did not answer whether a world is set up');
+        expect(ev.map((e) => e.event), r.out).toContain(event);
+      }
+    } finally {
+      execFileSync('docker', ['unpause', dbId]);
+    }
+    // 2. The database answers but the preflight's query errors: each run fails and writes its failed record.
+    const since = sql('SELECT clock_timestamp()');
+    sql(`ALTER TABLE system.day_snapshot RENAME TO day_snapshot_f1771;
+      CREATE VIEW system.day_snapshot AS SELECT x FROM generate_series(1, 1) x WHERE x / 0 = 1`);
+    try {
+      for (const [script, kind, event] of scripts) {
+        const r = await runner(script, `query-error-${script.replace('.sh', '')}`);
+        expect(r.code, r.out).toBe(1);
+        const ev = events(r.out);
+        expect(ev.map((e) => e.event), r.out).not.toContain('not_set_up');
+        expect(ev.find((e) => e.event === 'error')?.msg, r.out).toBe('the database did not answer whether a world is set up');
+        expect(ev.map((e) => e.event), r.out).toContain(event);
+        expect(sql(`SELECT string_agg(result, ',') FROM system.backup_record WHERE kind = '${kind}' AND started_real >= '${since}'`), r.out).toBe('failed');
+      }
+      expect(events(readFileSync(path.join(evidence, 'arm-query-error-backup.log'), 'utf8')).find((e) => e.event === 'backup_failed')?.msg)
+        .toMatch(/a failed backup_record row is written/);
+    } finally {
+      sql('DROP VIEW system.day_snapshot; ALTER TABLE system.day_snapshot_f1771 RENAME TO day_snapshot');
+      sql(`DELETE FROM system.backup_record WHERE result = 'failed' AND started_real >= '${since}'`);
+    }
+    expect(sets()).toEqual(before);
+  });
+
   // why: F-394
   it('a retention failure is logged and the backup it follows is kept and recorded passed', async () => {
     const stub = path.join(state, 'retention-fails.sh');

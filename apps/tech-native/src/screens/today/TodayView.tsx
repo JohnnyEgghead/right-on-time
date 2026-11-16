@@ -6,13 +6,14 @@
 import type { TodayAnswer } from '@bw/api';
 import type { MessageKey } from '@bw/i18n/src/catalog.ts';
 import { fromWire } from '@bw/time';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { T as Text, useBigText } from '../../ui/text-size.tsx';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../ui/Icon.tsx';
 import type { NativeIcon } from '../../ui/icon-paths.ts';
 import { useT, type T } from '../../ui/intl.tsx';
+import { useLastTry } from '../../ui/last-try.ts';
 import { lk } from '../../ui/look.ts';
 import { color, type } from '../../ui/tokens.ts';
 import { tone } from './palette.ts';
@@ -366,6 +367,8 @@ function Toast(props: { id: string; text: string; ok?: boolean; icon: NativeIcon
 export function TodayView(p: TodayViewProps) {
   const t = useT();
   const zone = p.day?.zone ?? 'America/New_York';
+  const [tries, setTries] = useState(0);
+  const lastTry = useLastTry(!!p.failed, tries, zone);
   const done = p.jobs.filter((j) => ENDED.has(j.status));
   const next = nextJob(p.jobs);
   const later = p.jobs.filter((j) => !ENDED.has(j.status) && j.jobNumber !== next?.jobNumber);
@@ -393,7 +396,8 @@ export function TodayView(p: TodayViewProps) {
             <View style={s.errTx}>
               <Text {...lk('today.error.title', s.errTitle)}>{t('tech.today.error')}</Text>
               {p.savedAt ? <Text {...lk('today.error.text', s.errText)}>{t('tech.today.errorSaved', { time: timeOf(p.savedAt, zone, p.lang) })}</Text> : null}
-              <Pressable {...lk('today.error.retry', s.retry)} onPress={p.onRefresh} accessibilityRole="button">
+              {lastTry ? <Text {...lk('today.error.lastTry', s.errText)}>{t('shell.error.lastTry', { time: lastTry })}</Text> : null}
+              <Pressable {...lk('today.error.retry', s.retry)} onPress={() => { setTries((n) => n + 1); p.onRefresh(); }} accessibilityRole="button">
                 <Text {...lk('today.error.retry.text', s.retryText)}>{t('shell.error.tryAgain')}</Text>
               </Pressable>
             </View>

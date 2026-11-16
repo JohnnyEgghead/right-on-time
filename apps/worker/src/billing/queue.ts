@@ -16,6 +16,14 @@
 // Invariant held by every writer here and by the link (invariant 2, "listed, never dropped"): an item in `sending` or
 // `retrying` has exactly 1 due billing event (or a send in flight that will write the next one), an item in
 // `waiting_person` has none, and an item that left (`in_billing`, `marked_fixed`) has none.
+//
+// Lock order (F-401): every billing writer takes the job's billing_item row first, and only then the job row and the
+// job's scheduled_event rows (the link takes the job's billing advisory lock before the item). The item row is the
+// gate: 2 writers of 1 job queue on it, so neither can hold the job row while it waits for the item. lockItemThenJob is
+// that order for a writer that changes both. The finish is the one writer that arrives holding the job row (its
+// version-gated write): billFinishedJob never waits on an existing item row there, and takes the job row at the
+// strength that write holds (FOR NO KEY UPDATE), since raising it to FOR UPDATE queues behind a link's tx 2 already
+// waiting on that row: a deadlock with no item row in it.
 import { publishEvent, type Queryable } from '@bw/db';
 import { BILLING_EVENT_KINDS, storedFinishHasLines, type BillingEventKind, type BillingState } from '@bw/domain';
 import type { Instant } from '@bw/time';
@@ -65,6 +73,18 @@ export async function supersedeDueBillingEvents(tx: Queryable, jobNumber: number
   return r.rowCount ?? 0;
 }
 
+/** The item and job a billing writer changes, locked item first (F-401). Null when the job has no billing item. */
+export async function lockItemThenJob(tx: Queryable, jobNumber: number): Promise<{ state: BillingState; tries: number; version: number; branch_id: string } | null> {
+  const i = await tx.query<{ state: BillingState; tries: number }>('SELECT state, tries FROM world.billing_item WHERE job_number = $1 FOR UPDATE', [jobNumber]);
+  const item = i.rows[0];
+  if (!item) return null;
+  // FOR NO KEY UPDATE: the strength the job's own UPDATE takes, so a job_change insert's key-share check is not held up.
+  const j = await tx.query<{ version: number; branch_id: string }>('SELECT version, branch_id FROM world.job WHERE job_number = $1 FOR NO KEY UPDATE', [jobNumber]);
+  const job = j.rows[0];
+  if (!job) return null;
+  return { state: item.state, tries: item.tries, version: job.version, branch_id: job.branch_id };
+}
+
 async function setJobBillingState(tx: Queryable, jobNumber: number, state: BillingState): Promise<void> {
   await tx.query('UPDATE world.job SET billing_state = $2 WHERE job_number = $1', [jobNumber, state]);
 }
@@ -86,11 +106,15 @@ export async function billFinishedJob(tx: Queryable, input: { jobNumber: number;
   const { jobNumber, at } = input;
   const j = await tx.query<{ status: string; no_parts_used: boolean; parts: number; branch_id: string }>(
     `SELECT status, no_parts_used, branch_id, (SELECT count(*) FROM world.job_part p WHERE p.job_number = j.job_number)::integer AS parts
-       FROM world.job j WHERE job_number = $1 FOR UPDATE`, [jobNumber]);
+       FROM world.job j WHERE job_number = $1 FOR NO KEY UPDATE`, [jobNumber]);
   const job = j.rows[0];
   if (!job) return { queued: false, why: 'not_found' };
   if (job.status !== 'done') return { queued: false, why: 'not_finished' };
   if (!storedFinishHasLines(job.parts, job.no_parts_used)) throw new BillingRefusedError(jobNumber);
+  // F-401: the finish holds the job row, so an existing item is seen by a plain read, never waited on: a link's tx 2
+  // holding that item (and waiting for this job row) would otherwise deadlock with the INSERT's unique check below.
+  const had = await tx.query('SELECT 1 FROM world.billing_item WHERE job_number = $1', [jobNumber]);
+  if (had.rows.length > 0) return { queued: false, why: 'already_queued' };
   const ins = await tx.query(`INSERT INTO world.billing_item (job_number, state, tries) VALUES ($1, 'sending', 0) ON CONFLICT (job_number) DO NOTHING`, [jobNumber]);
   if ((ins.rowCount ?? 0) === 0) return { queued: false, why: 'already_queued' };
   await setJobBillingState(tx, jobNumber, 'sending');
@@ -103,10 +127,7 @@ async function requeueByPerson(
   tx: Queryable, cause: 'sent_again' | 'corrected', input: { jobNumber: number; by: string; at: Instant }, publish: Publish,
 ): Promise<{ ok: true } | { ok: false; code: QueueRefusal }> {
   const { jobNumber, by, at } = input;
-  const r = await tx.query<{ state: BillingState; version: number; branch_id: string }>(
-    `SELECT bi.state, j.version, j.branch_id FROM world.billing_item bi JOIN world.job j USING (job_number)
-      WHERE bi.job_number = $1 FOR UPDATE OF bi`, [jobNumber]);
-  const item = r.rows[0];
+  const item = await lockItemThenJob(tx, jobNumber);
   if (!item) return { ok: false, code: 'not_found' };
   if (item.state !== 'waiting_person') return { ok: false, code: 'not_waiting' };
   await tx.query(

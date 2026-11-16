@@ -15,7 +15,8 @@
 #   5. import      the import rows equal the FR-IMP-6 targets (import-check.sql);
 #   6. record      the manifest equals the backup_record row written in the backup's own transaction.
 # It drops restore_check and writes a backup_record row of kind restore_test (result passed or failed).
-# Exit 0 passed, 1 failed, 2 refused (settings), 0 with nothing done when BACKUP_TARGET=none.
+# Exit 0 passed, 1 failed, 2 refused (settings), 0 with nothing done when BACKUP_TARGET=none or before setup has
+# finished (F-1697). A lock wait that times out is a failed test with its record, and drops nothing (F-492).
 # BACKUP_RECORD=off (the planted-manifest arms of the proofs and the hosted check) writes no record, so a planted
 # run never shows on the System health page; every scheduled run writes one.
 set -euo pipefail
@@ -26,7 +27,6 @@ check_settings
 BACKUP_RECORD="${BACKUP_RECORD:-on}"
 case "$BACKUP_RECORD" in on|off) ;; *) die "BACKUP_RECORD must be on or off" 2 ;; esac
 if [ "$BACKUP_TARGET" = none ]; then log not_set_up "BACKUP_TARGET is none: no restore test"; exit 0; fi
-take_lock
 
 # F-390: declared empty first so the exit trap can run when the db container is missing or does not answer.
 DB=""
@@ -35,6 +35,8 @@ STARTED=""
 LOCATION=""
 FAILED=()
 RECORDED=0
+# F-492: 1 once this run holds the backup lock. Before that, restore_check is the lock holder's and finish keeps it.
+LOCKED=0
 
 record() {
   [ "$RECORDED" = 0 ] || return 0
@@ -49,8 +51,8 @@ drop_check() { psql_ postgres -c 'DROP DATABASE IF EXISTS restore_check WITH (FO
 # shellcheck disable=SC2329 # the EXIT trap runs it
 finish() {
   local rc=$?
-  drop_check || log warn "could not drop restore_check"
-  rm -rf "$WORK"
+  if [ "$LOCKED" = 1 ]; then drop_check || log warn "could not drop restore_check"; fi
+  [ -z "$WORK" ] || rm -rf "$WORK"
   if [ "$RECORDED" = 0 ]; then
     log failed "the restore test stopped early (exit $rc)"
     record failed || true
@@ -63,6 +65,16 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 DB="$(db_container)"
+# F-1697: before setup there is no world to test, and a failed run would show on System health; nothing is written.
+# F-1771: a database that does not answer exits inside world_set_up, so finish writes the failed record.
+if ! world_set_up; then
+  log not_set_up "no world is set up yet (no system.day_snapshot row): no restore test"
+  RECORDED=1
+  exit 0
+fi
+# F-492: after the trap, so a lock wait that times out writes its failed restore_test row.
+take_lock
+LOCKED=1
 WORK="$(new_workdir restore)"
 STARTED="$(psql_ "$BW_DB_NAME" -c 'SELECT clock_timestamp()')"
 

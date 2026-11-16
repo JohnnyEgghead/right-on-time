@@ -96,4 +96,4 @@ SQL
 BW_IMPORT_STACK_URL="http://127.0.0.1:$port" BW_IMPORT_STACK_SESSION="$token" BW_IMPORT_STACK_PROJECT="$project" BW_IMPORT_STACK_TMP="$tmp" \
   pnpm exec vitest run --config ci/import-stack/vitest.config.ts ${BW_IMPORT_STACK_FILTER:+-t "$BW_IMPORT_STACK_FILTER"}
 [ ! -f "$tmp/worker-peak" ] || echo "import-stack: worker memory.peak after 1 office dry run: $(cat "$tmp/worker-peak") (mem_limit 768m)"
-[ ! -f "$tmp/worker-after-run" ] || echo "import-stack: worker memory.current after the run settled: $(cat "$tmp/worker-after-run")"
+[ ! -f "$tmp/worker-after-run" ] || echo "import-stack: worker memory.current read right after the run (not a settled idle level): $(cat "$tmp/worker-after-run")"

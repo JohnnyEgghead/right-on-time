@@ -93,7 +93,9 @@ export const RULES: Readonly<Partial<Record<AlertType, Rule>>> = {
     return r.rows.map((x) => ({ subject: x.id, branchId: x.branch_id, link: ALERT_FACTS.offline_conflict.link, values: { conflictId: x.id, jobNumber: x.job_number } }));
   },
 
-  // The last finished backup failed, or (the hosted copy only) none passed in the last 26 real hours.
+  // The last finished backup failed, or (the hosted copy only) none passed in the last 26 real hours. F-434: on a copy
+  // with no finished backup yet, the 26 hours count from its setup, the earliest system.day_snapshot.created_real; a
+  // copy with no snapshot row (setup not finished) opens none.
   async backup_failed(tx, env) {
     const last = await tx.query<{ result: string }>(
       `SELECT result FROM system.backup_record WHERE kind = 'backup' AND result IS NOT NULL ORDER BY started_real DESC, id DESC LIMIT 1`,
@@ -101,11 +103,15 @@ export const RULES: Readonly<Partial<Record<AlertType, Rule>>> = {
     const failed = last.rows[0]?.result === 'failed';
     let stale = false;
     if (env.backupTarget !== 'none') {
-      const fresh = await tx.query(
-        `SELECT 1 FROM system.backup_record WHERE kind = 'backup' AND result = 'passed' AND finished_real > $1::timestamptz - make_interval(hours => $2) LIMIT 1`,
+      const r = await tx.query<{ fresh: boolean; setup_old: boolean | null }>(
+        `SELECT EXISTS (SELECT 1 FROM system.backup_record WHERE kind = 'backup' AND result = 'passed'
+                          AND finished_real > $1::timestamptz - make_interval(hours => $2)) AS fresh,
+                (SELECT min(created_real) FROM system.day_snapshot) <= $1::timestamptz - make_interval(hours => $2) AS setup_old`,
         [iso(env.realBackup), BACKUP_STALE_HOURS],
       );
-      stale = fresh.rows.length === 0;
+      const row = r.rows[0]!;
+      // last.rows is empty exactly when no backup has finished (passed or failed) on this copy.
+      stale = last.rows.length > 0 ? !row.fresh : row.setup_old === true;
     }
     return failed || stale
       ? [{ subject: 'backup', branchId: null, link: ALERT_FACTS.backup_failed.link, values: { reason: failed ? 'failed' : 'stale' } }]

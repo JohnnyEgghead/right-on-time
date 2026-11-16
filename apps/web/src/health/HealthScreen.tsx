@@ -13,7 +13,8 @@ import { useBranch } from '../shell/useBranch.ts';
 import { HealthView, IDLE_UI, type HealthState, type HealthUi } from './HealthView.tsx';
 import { applyInput, type Health, type Picked, type SimMode } from './model.ts';
 
-const LIVE_EVENTS = new Set(['text.changed', 'alert.created', 'billing.changed', 'settings.changed']);
+// F-1156: alert.dismissed (any close of an open alert, SD-30) re-reads, so an alert closed in another tab shows Resolved here.
+const LIVE_EVENTS = new Set(['text.changed', 'alert.created', 'alert.dismissed', 'billing.changed', 'settings.changed']);
 
 /** The pick that matches what is in force, so Apply starts disabled (CTL-OFC-16-02). */
 const pickOf = (s: Health['textSimulator']): Picked => ({ mode: s.mode, customerId: s.customerId, n: s.nLeft === null ? '' : String(s.nLeft) });

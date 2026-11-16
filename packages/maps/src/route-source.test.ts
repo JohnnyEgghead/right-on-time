@@ -397,13 +397,15 @@ describe('the operator signal of the live client (F-1306)', () => {
     ['step refused', ok({ code: 'Ok', routes: [bad] })],
   ];
 
-  // why: F-1306 (osrm-routed answers NoRoute and NoSegment as HTTP 400 with a JSON body, F-1337) a stub service failing by each cause class gives 1 warn line naming that class, through @bw/log, with no point or job in it
+  // why: F-1306 F-1767 (osrm-routed answers NoRoute and NoSegment as HTTP 400 with a JSON body, F-1337; the clock stamp is no field that can carry a location) a stub service failing by each cause class gives 1 warn line naming that class, through @bw/log, with no point or job in it
   it.each(byClass)('writes 1 warn line naming %s', async (cause, f) => {
     const lines: Record<string, unknown>[] = [];
     expect(await osrmRoutingService('http://x', { fetch: f as typeof fetch, log: logTo(lines) }).route(A, B)).toBeNull();
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatchObject({ level: 'warn', process: 'web', status: 'live route failed', errorCode: cause, failures: 1 });
-    expect(JSON.stringify(lines)).not.toMatch(/-83|39\.9|Test Rd|Second St/);
+    // the clock stamp (realTime) is no field that can carry a location; a stamp reading :39.9 must not fail this
+    const fields = Object.fromEntries(Object.entries(lines[0]!).filter(([k]) => k !== 'realTime'));
+    expect(JSON.stringify(fields)).not.toMatch(/-83|39\.9|Test Rd|Second St/);
     expect(Object.keys(lines[0]!).sort()).toEqual(['errorCode', 'failures', 'level', 'process', 'realTime', 'status']);
   });
 

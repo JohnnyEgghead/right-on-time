@@ -12,6 +12,6 @@ export {
   startBillingHealer, WORKER_POOL_MAX, type BillingEvent, type HandleResult, type PreparedSend, type RunDeps,
 } from './link.ts';
 export {
-  billFinishedJob, BillingRefusedError, billingList, billingSubject, busPublish, resendCorrected, retryAll, retryNow, sendAgain,
+  billFinishedJob, BillingRefusedError, billingList, billingSubject, busPublish, lockItemThenJob, resendCorrected, retryAll, retryNow, sendAgain,
   type BillFinishedResult, type LeftItem, type ListedItem, type Publish,
 } from './queue.ts';

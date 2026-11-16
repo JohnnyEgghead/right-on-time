@@ -93,6 +93,21 @@ export function technicianHasRoom(input: { capacity: number; jobsThatDay: number
   return input.jobsThatDay < input.capacity && input.jobsInWindow < PER_WINDOW_LIMIT[input.windowMode];
 }
 
+/** The limit that refused a technician a window, and that limit's number (F-1701; UI-SPECIFICATION API-22 `limit`, `max`). */
+export type RoomLimit = { limit: 'installer_day' | 'day' | 'window'; max: number };
+
+/**
+ * Which limit refuses the placement, or null when there is room (the same test as technicianHasRoom). The day's limit
+ * is named first when both are reached, since no other window that day has room either (F-1701).
+ */
+export function technicianRoomLimit(
+  input: { capacity: number; installer: boolean; jobsThatDay: number; jobsInWindow: number; windowMode: DayMode },
+): RoomLimit | null {
+  if (input.jobsThatDay >= input.capacity) return { limit: input.installer ? 'installer_day' : 'day', max: input.capacity };
+  if (input.jobsInWindow >= PER_WINDOW_LIMIT[input.windowMode]) return { limit: 'window', max: PER_WINDOW_LIMIT[input.windowMode] };
+  return null;
+}
+
 /**
  * dayRoom(branch, date, service) (FR-BOOK-5): the capacity of the technicians who work the date and count for the
  * service's pool, minus the day's live jobs in that pool. Never below 0. Blocks never count.

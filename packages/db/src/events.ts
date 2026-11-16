@@ -12,7 +12,7 @@ import type { Queryable } from './client.ts';
 export const BUS_CHANNEL = 'bw_events';
 
 export const EVENT_NAMES = [
-  'job.changed', 'board.refresh', 'text.changed', 'alert.created', 'clock.changed',
+  'job.changed', 'board.refresh', 'text.changed', 'alert.created', 'alert.dismissed', 'clock.changed',
   'world.reset', 'billing.changed', 'import.run.changed', 'settings.changed', 'block.changed',
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
@@ -55,6 +55,12 @@ export function decodeNotification(payload: string | undefined): { name: EventNa
   }
   return { name: name as EventName, ids: out };
 }
+
+/**
+ * EVT-04's ids for 1 alert (alert.created, alert.dismissed): the alert, and its branch when it has one, which the bus
+ * filters on (SD-30). A copy-wide alert (no branch) goes to every branch.
+ */
+export const alertEventIds = (alertId: string, branch: string | null): EventIds => (branch === null ? { alertId } : { alertId, branch });
 
 /**
  * Publish 1 event inside the writing transaction: the notification leaves the database only when `tx` commits and is

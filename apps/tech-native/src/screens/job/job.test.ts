@@ -13,6 +13,7 @@ import { JobCopies } from './copies.ts';
 import { JobData } from './data.ts';
 import { HAROLD, haroldJob, jobServer, PARTS } from './fixtures.test-data.ts';
 import { checkFinish, emptyFinish, shownNotes, shownPhotos } from './model.ts';
+import { compressPhoto } from './photo.ts';
 import { signaturePng } from './signature.ts';
 import { MapMeReads } from '../mapme/reads.ts';
 import { routeRead } from '../mapme/steps.ts';
@@ -237,6 +238,19 @@ describe('SCR-TEC-05 to -07 entries through the file store', () => {
     await again.app.sync();
     expect(again.app.snapshot.outbox.waiting).toEqual([]);
     expect(server.ledger.get(note.key)).toBe(1);
+  });
+
+  // why: F-1781, F-931 an unconvertible photo (HEIC) goes through the real store, is sent under the unreadable mark, and carries no place
+  it('a photo the phone cannot convert is stored and sent as the unreadable text, with no location data', async () => {
+    const { app, server } = await signedIn();
+    const heic = new Uint8Array([...'\0\0\0\x18ftypheic'].map((c) => c.charCodeAt(0)).concat([...'GPS 39.9612N 82.9988W'].map((c) => c.charCodeAt(0))));
+    const c = await compressPhoto({ uri: 'file:///x.heic', width: 4000, height: 3000 }, { jpeg: async () => null, original: async () => heic });
+    expect(c.ok).toBe(false);
+    const photo = await app.enter({ jobNumber: HAROLD, baseVersion: null, body: { kind: 'photo', contentType: 'image/jpeg' }, blob: c.bytes });
+    expect(Buffer.from((await app.store.blob(photo.key)) ?? new Uint8Array(0)).includes('GPS')).toBe(false);
+    await app.sync();
+    expect(app.snapshot.outbox.waiting).toEqual([]);
+    expect(server.photos.get(photo.key)).toEqual({ bytes: c.bytes.byteLength, type: 'image/jpeg', count: 1 });
   });
 
   // why: FR-TECH-4, FR-TECH-3, FR-IOS-1 a photo queued with no signal survives terminate and relaunch and reaches API-103 once, from its file

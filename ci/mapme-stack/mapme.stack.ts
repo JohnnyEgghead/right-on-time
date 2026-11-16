@@ -513,6 +513,25 @@ describe.each(engines)('P5-TWA-MAP-ME on %s', (engine, type) => {
     }
   });
 
+  // why: F-1775 (F-1740, FR-TECH-15) Me's first paint, before the phone's copy is read, names Maria from API-07 read on the server with her session; the page carries X-Bw-Server-State (F-980) and its shell variant holds no name and no mark
+  it('names the person in Me\'s server draw, and keeps the name out of the shell variant', async () => {
+    const g = await phone({ off: false, calls: [] });
+    try {
+      const full = await g.context.request.get(`${origin}/tech/me`);
+      expect(full.status()).toBe(200);
+      expect(full.headers()['x-bw-server-state']).toBe('1');
+      const html = await full.text();
+      expect(html).toContain('<span class="av">MS</span>');
+      expect(html).toContain('<h1 translate="no">Maria Santos</h1>');
+      const shell = await g.context.request.get(`${origin}/tech/me?bw-shell=1`);
+      expect(shell.status()).toBe(200);
+      expect(shell.headers()['x-bw-server-state']).toBeUndefined();
+      expect(await shell.text(), 'the shell holds no name').not.toContain('Maria Santos');
+    } finally {
+      await g.context.close();
+    }
+  });
+
   // why: FR-TECH-15 setting Text size to Large enlarges the app's text and it stays set after the app closes
   it('keeps Text size Large after the app is closed and opened again', async () => {
     const dir = profile();

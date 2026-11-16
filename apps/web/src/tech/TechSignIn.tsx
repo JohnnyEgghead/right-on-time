@@ -8,13 +8,13 @@ import '../shell/css/phone.ts';
 import '../../styles/page-tech-signin.css';
 import '../../styles/app/tech-signin.css';
 import { DexieItemStore } from '@bw/outbox/src/items/index.ts';
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { safeReturn } from '../auth/return-path.ts';
 import type { SamplePerson } from '../auth/SignInScreen.tsx';
 import type { ClockAnswer } from '../shell/clock.ts';
 import { branchById } from '../shell/branches.ts';
 import { DemoStrip } from '../shell/DemoStrip.tsx';
-import { fieldText } from '../shell/early-form.ts';
+import { fieldFlag, fieldText } from '../shell/early-form.ts';
 import type { AppInfo } from '../shell/Footer.tsx';
 import { Icon, Mark } from '../shell/Icon.tsx';
 import { useT } from '../shell/intl.tsx';
@@ -75,11 +75,12 @@ export function TechSignIn(p: TechSignInProps) {
   const [info, setInfo] = useState<AppInfo | null>(p.info ?? null);
   const [people, setPeople] = useState<SamplePerson[] | null>(p.people ?? null);
   // F-1037 (shell/early-form.ts): the 2 fields are uncontrolled; `kept` is what they hold after the form's reset, the values the last submit sent.
-  const [kept, setKept] = useState({ login: p.typed ?? '', password: p.typedPassword ? 'password-sample' : '' });
+  // F-1063: Stay signed in is a native checkbox too, read from the tap's FormData (a tap before hydration ticks it with no script), and from the box itself for Sign in as.
+  const [kept, setKept] = useState({ login: p.typed ?? '', password: p.typedPassword ? 'password-sample' : '', stay: p.stay ?? false });
+  const stayField = useRef<HTMLInputElement>(null);
   const loginField = useRef<HTMLInputElement>(null);
   const passwordField = useRef<HTMLInputElement>(null);
   const [show, setShow] = useState(false);
-  const [stay, setStay] = useState(p.stay ?? false);
   const [busy, setBusy] = useState(p.busy ?? false);
   const [pressed, setPressed] = useState<string | null>(null);
   const [focus, setFocus] = useState<'login' | 'password' | null>(p.focusPassword ? 'password' : null);
@@ -167,7 +168,7 @@ export function TechSignIn(p: TechSignInProps) {
   // The form's action (F-1037), a tap made before hydration included: React holds that one and replays it here. The fields come from the
   // tap's FormData, and are kept first, so the form's reset after this action gives them back as sent.
   const submit = async (data: FormData) => {
-    const typed = { login: fieldText(data, 'login'), password: fieldText(data, 'password') };
+    const typed = { login: fieldText(data, 'login'), password: fieldText(data, 'password'), stay: fieldFlag(data, 'stay') };
     setKept(typed);
     if (sending.current) return;
     const errs = { login: typed.login.trim() === '', password: typed.password === '' };
@@ -185,7 +186,7 @@ export function TechSignIn(p: TechSignInProps) {
       setWaiting({ count: lock.count, name: lock.name, pick: lock.pick });
       return;
     }
-    const r = await read().read<{ user: { id: string; role: SamplePerson['role'] } }>('API-03', { login: typed.login.trim(), password: typed.password, client: 'web', keepSignedIn: stay });
+    const r = await read().read<{ user: { id: string; role: SamplePerson['role'] } }>('API-03', { login: typed.login.trim(), password: typed.password, client: 'web', keepSignedIn: typed.stay });
     if (r.ok) await signedIn(r.data.user, typed.login.trim());
     else failed(r.code);
   };
@@ -204,7 +205,7 @@ export function TechSignIn(p: TechSignInProps) {
       setWaiting({ count: lock.count, name: lock.name, pick: lock.pick });
       return;
     }
-    const r = await read().read<{ user: { id: string; role: SamplePerson['role'] } }>('API-05', { personId: who.personId, keepSignedIn: stay });
+    const r = await read().read<{ user: { id: string; role: SamplePerson['role'] } }>('API-05', { personId: who.personId, keepSignedIn: stayField.current?.checked ?? kept.stay });
     if (r.ok) await signedIn(r.data.user, `${PICKED}${who.personId}`);
     else failed(r.code);
   };
@@ -213,13 +214,6 @@ export function TechSignIn(p: TechSignInProps) {
   const calm = message === 'set' || message === 'returned';
   const words: Record<NonNullable<TechSignInMessage>, string> = {
     bad: t('tech.signin.bad'), off: t('auth.signin.off'), set: t('auth.signin.passwordSet'), returned: t('auth.signin.returned'), limited: t('auth.error.limited'), failed: t('auth.signin.failed'), unsaved: t('auth.signin.unsaved'),
-  };
-  const toggle = () => setStay(!stay);
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === ' ') {
-      e.preventDefault();
-      toggle();
-    }
   };
   const locked = waiting !== null;
   // F-1066: locked to a Sign in as pick, the list holds that person alone; locked to a typed name, no list.
@@ -268,8 +262,9 @@ export function TechSignIn(p: TechSignInProps) {
             </div>
             {empty.password ? <div className="r1-fmsg" role="alert"><Icon name="alert" />{t('auth.signin.passwordEmpty')}</div> : null}
           </div>
-          <label className="stay" role="checkbox" tabIndex={0} aria-checked={stay} data-ctl="CTL-TEC-01-08" onClick={(e) => { e.preventDefault(); toggle(); }} onKeyDown={onKey}>
-            <span className={`box${stay ? '' : ' off'}`} aria-hidden="true">{stay ? <Icon name="check" sw={3} /> : null}</span>
+          <label className="stay">
+            <input type="checkbox" name="stay" className="bw-stay-cb" defaultChecked={kept.stay} ref={stayField} data-ctl="CTL-TEC-01-08" />
+            <span className="box" aria-hidden="true"><Icon name="check" sw={3} /></span>
             <div><b>{t('tech.signin.stay')}</b><small>{t('tech.signin.stayNote')}</small></div>
           </label>
           <button type="submit" className={`go${formBusy ? ' busy' : ''}`} aria-busy={formBusy || undefined} data-ctl="CTL-TEC-01-04">

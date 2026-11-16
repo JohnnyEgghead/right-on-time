@@ -5,7 +5,7 @@
 // changes the text simulator row, an alert switch, or runs the alert checks at once.
 import { ALERT_FACTS, ALERT_TYPES, BOARD_DELAY_GOAL_MS, BOARD_DELAY_WINDOW_MINUTES } from '@bw/domain';
 import type { alertEmailLink, checkNow, dismissAlert, officeAlerts, setAlertSwitch, setTextSimulator, systemHealth } from '@bw/api';
-import { publishEvent } from '@bw/db';
+import { alertEventIds, publishEvent } from '@bw/db';
 import { Temporal, toWire } from '@bw/time';
 import { runAlertChecks, showAlertEmailLink } from 'bw-worker/alerts';
 import { billingList } from 'bw-worker/billing';
@@ -362,8 +362,8 @@ export function healthHandlers(client = pbsClientFor()): { 'API-43': Handler<unk
     if (!caller) return { ok: false, status: 401, code: 'unauthenticated' };
     if (caller === 'gone') return { ok: false, status: 404, code: 'not_found' };
     const p = req.params as In<typeof dismissAlert>;
-    const a = (await tx.query<{ id: string; type: string; state: string; text_kind: string | null; text_job: number | null }>(
-      `SELECT a.id, a.type, a.state, o.kind AS text_kind, o.job_number AS text_job
+    const a = (await tx.query<{ id: string; type: string; state: string; branch_id: string | null; text_kind: string | null; text_job: number | null }>(
+      `SELECT a.id, a.type, a.state, a.branch_id, o.kind AS text_kind, o.job_number AS text_job
          FROM world.alert a LEFT JOIN world.outbox_text o ON a.type = 'text_gave_up' AND o.id::text = a.message_values->>'textId'
         WHERE a.id = $1 FOR UPDATE OF a`, [p.alertId])).rows[0];
     if (!a) return { ok: false, status: 404, code: 'not_found' };
@@ -371,6 +371,8 @@ export function healthHandlers(client = pbsClientFor()): { 'API-43': Handler<unk
       return { ok: false, status: 409, code: 'rule_refused' };
     }
     await tx.query(`UPDATE world.alert SET state = 'resolved', resolved_at = $2 WHERE id = $1`, [a.id, req.demoNow.toString()]);
+    // SD-30, F-1156: every open bell and System health page re-reads, so the alert shows Resolved in every other tab.
+    await publishEvent(tx, 'alert.dismissed', alertEventIds(a.id, a.branch_id));
     return { ok: true, status: 200, data: { alert: { id: a.id, state: 'resolved' as const, resolvedAt: toWire(req.demoNow, caller.zone) } } };
   };
 

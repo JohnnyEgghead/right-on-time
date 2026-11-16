@@ -18,9 +18,13 @@
 // Each step prints a NATIVE-<step> line; run.sh keeps them in the evidence log and reads the ledger against NATIVE-WALKED.
 import XCTest
 
+/// F-1782 (a): how far the sheet after the text shrinks may differ from the standard-text sheet, in points.
+let SHEET_FIT_TOLERANCE: CGFloat = 8
+
 final class TodayUITests: XCTestCase {
   private let env = ProcessInfo.processInfo.environment
   private var app: XCUIApplication!
+  private var savePromptDismissed = false // this test's Save Password sheet has come and gone (F-1202)
 
   override func setUp() {
     continueAfterFailure = false
@@ -28,6 +32,7 @@ final class TodayUITests: XCTestCase {
     app.launchArguments = ["-bwLook", "1", "-bwProbeControl", env["BW_CONTROL"] ?? "", "-bwServer", env["BW_RELAY"] ?? ""]
     _ = get("/signal/on") // a test that failed with the signal off leaves the next one a phone with signal
     _ = get("/rule/clear")
+    _ = get("/textsize?to=large") // F-1743: a test that failed at the largest text leaves the next one the standard size
   }
 
   // ---- helpers -------------------------------------------------------------------------------------------------------------------
@@ -144,17 +149,35 @@ final class TodayUITests: XCTestCase {
     origin.replacingOccurrences(of: "http://", with: "").replacingOccurrences(of: "https://", with: "")
   }
 
-  /// iOS offers to save the password after a sign-in (a system sheet over the app): Not Now, so the keyboard focus stays with the app.
-  private func dismissSavePrompt(within s: TimeInterval = 1) {
-    if app.staticTexts["Save Password?"].waitForExistence(timeout: s) {
+  /// iOS offers to save the password after a typed sign-in: a system sheet over the app (SafariViewService's, another process, shown in the
+  /// app's window). Not Now, so the keyboard focus and the taps stay with the app. `within` 0 looks once, with no wait.
+  /// F-1202 (the full suite's test0 reds, read frame by frame from the xcresult recordings): the sheet is in the accessibility tree about
+  /// 0.2 s before its first frame and fades in for about 0.45 s, and a Not Now tap made in that entrance is dropped. The sheet then stays,
+  /// with the app's elements still found under it, and the suite's next tap (tab.me) lands on the sheet's backdrop: it takes the sheet away
+  /// and never reaches the app, so Me never opens. So the tap waits out the entrance, and the sheet must be gone after it: one still there
+  /// is tapped once more (marked), and one that outlasts that fails here, by name.
+  @discardableResult
+  private func dismissSavePrompt(within s: TimeInterval = 1) -> Bool {
+    let sheet = app.staticTexts["Save Password?"]
+    guard (s > 0 ? sheet.waitForExistence(timeout: s) : sheet.exists) else { return false }
+    Thread.sleep(forTimeInterval: 1) // the entrance is over (about 0.65 s from the first sight)
+    for tap in 1...2 {
       let notNow = app.buttons["Not Now"]
       if notNow.exists { notNow.tap() } else {
         // the sheet is another process's: Not Now is at {51, 500.7} 140 x 48 on this phone
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 121, dy: 525)).tap()
       }
-      mark("SAVE-PASSWORD-PROMPT dismissed")
-      Thread.sleep(forTimeInterval: 1)
+      let left = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: sheet)
+      if XCTWaiter().wait(for: [left], timeout: 5) == .completed {
+        mark("SAVE-PASSWORD-PROMPT dismissed (tap \(tap))")
+        savePromptDismissed = true
+        Thread.sleep(forTimeInterval: 1)
+        return true
+      }
+      mark("SAVE-PASSWORD-PROMPT stayed after tap \(tap)")
     }
+    XCTFail("the Save Password sheet stays over the app after 2 taps on Not Now")
+    return false
   }
 
   /// Types into an empty field as a person does: a tap, the keyboard focus, then the keys. The focus is waited for (and the tap made again
@@ -214,7 +237,13 @@ final class TodayUITests: XCTestCase {
   private func signOutIfSignedIn() {
     if el("signin.submit").waitForExistence(timeout: 8) { return }
     XCTAssertTrue(exists("tab.me", within: 20), "neither the sign-in screen nor the tabs")
-    el("tab.me").tap()
+    // F-1202: a Save Password sheet over the app takes the tab's tap for itself (its backdrop), so it goes first, and the tab must take taps
+    dismissSavePrompt(within: 0)
+    let me = el("tab.me")
+    let reachable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: me)
+    XCTAssertTrue(XCTWaiter().wait(for: [reachable], timeout: 10) == .completed,
+                  "tab.me takes no tap (covered; a Save Password sheet shown: \(app.staticTexts["Save Password?"].exists))")
+    me.tap()
     XCTAssertTrue(exists("me.signout"))
     el("me.signout").tap()
     XCTAssertTrue(exists("signin.submit", within: 20), "sign-out did not open the sign-in screen")
@@ -300,6 +329,9 @@ final class TodayUITests: XCTestCase {
     let before = signins().count
     submit()
     XCTAssertTrue(exists("today.title", within: 45), "the typed sign-in did not open Today")
+    // F-1202: iOS's Save Password sheet comes once the sign-in screen has gone, at times after submit()'s 1 s look for it (the full suite's
+    // reds: seen 1.5 and 1.8 s after Sign in). Until it has come and gone, Today's elements are found under it but a tap meets the sheet.
+    if !savePromptDismissed && !dismissSavePrompt(within: 10) { mark("SAVE-PASSWORD-PROMPT none in 10 s on Today") }
     XCTAssertTrue(eventually(10) { self.signins().count == before + 1 }, "the relay saw \(signins().count - before) sign-ins")
     XCTAssertEqual(signins().last, "true", "the sign-in did not carry Stay signed in")
     mark("TYPED-SIGNIN stay=\(signins().last ?? "?")")
@@ -464,6 +496,17 @@ final class TodayUITests: XCTestCase {
     XCTAssertTrue(label("card.st.text", is: status, within: 20), "after \(button): \(el("card.st.text").label)")
   }
 
+  /// F-1743: the height of the On my way sheet (opened and cancelled); the sheet's own frame.
+  private func sheetHeight() -> CGFloat {
+    el("card.omw").tap()
+    XCTAssertTrue(exists("sheet.go", within: 20), "no On my way sheet")
+    settle()
+    let h = el("sheet").frame.height
+    el("sheet.cancel").tap()
+    XCTAssertTrue(gone("sheet.go", within: 20), "Cancel did not close the sheet")
+    return h
+  }
+
   private func tab(_ name: String) {
     XCTAssertTrue(exists("tab.\(name)", within: 20), "no \(name) tab")
     el("tab.\(name)").tap()
@@ -480,7 +523,7 @@ final class TodayUITests: XCTestCase {
     XCTAssertTrue(exists("today.title", within: 20))
   }
 
-  // why: UC-12, FR-TECH-1, FR-TECH-2, FR-TECH-8, FR-TECH-9, FR-TECH-12, FR-TECH-13, FR-TECH-15, FR-TEXT-5 Today shows each state of SCR-TEC-02 and the card's arrival estimate, its links open their screens (Directions, See history, Open job, the list rows, Finish job), a late text shows on the card, the waiting count opens Waiting to send, day-changed notices follow the Me switch, On my way / Arrived / No one home send only after their confirm (with the drive minutes and miles online, the no-signal line offline), a session ended with items waiting asks for the same technician, and every job can be walked to No one home; UC-12: Maria works her day end to end in the native app, from sign-in to All done, each status in the server's ledger once (run.sh), against the Compose stack from p5-checkpoint, the plan's stand-in for the hosted demo (installed by xcodebuild, not the Unlisted link)
+  // why: F-1743, F-1782 the sheet at the largest text is the tall detent and the sheet after the text shrinks is the fitted height; UC-12, FR-TECH-1, FR-TECH-2, FR-TECH-8, FR-TECH-9, FR-TECH-12, FR-TECH-13, FR-TECH-15, FR-TEXT-5 Today shows each state of SCR-TEC-02 and the card's arrival estimate, its links open their screens (Directions, See history, Open job, the list rows, Finish job), a late text shows on the card, the waiting count opens Waiting to send, day-changed notices follow the Me switch, On my way / Arrived / No one home send only after their confirm (with the drive minutes and miles online, the no-signal line offline), a session ended with items waiting asks for the same technician, and every job can be walked to No one home; UC-12: Maria works her day end to end in the native app, from sign-in to All done, each status in the server's ledger once (run.sh), against the Compose stack from p5-checkpoint, the plan's stand-in for the hosted demo (installed by xcodebuild, not the Unlisted link)
   func test2TodayAndTheConfirmSteps() throws {
     app.launch()
     signOutIfSignedIn()
@@ -619,6 +662,33 @@ final class TodayUITests: XCTestCase {
     XCTAssertEqual(itemArrivals(), arrivedBase, "Cancel sent a request")
     XCTAssertTrue(label("card.st.text", is: "Scheduled", within: 5), "Cancel changed the job: \(el("card.st.text").label)")
     XCTAssertFalse(el("card.wait.text").exists, "Cancel saved an item")
+
+    // F-1743: the sheet's detent at the largest text. Standard text: the fitted height; the largest text: the tall detent (0.92), scrolling.
+    // The phone's size is set through the relay and the app is closed and opened again (a running app does not redraw at a new size).
+    let standardH = sheetHeight()
+    _ = get("/textsize?to=accessibility-extra-extra-extra-large")
+    app.terminate()
+    app.launch()
+    XCTAssertTrue(exists("card.omw", within: 60), "no Today at the largest text")
+    let bigH = sheetHeight()
+    let window = app.windows.firstMatch.frame.height
+    mark("SHEET-DETENT standard=\(Int(standardH)) big=\(Int(bigH)) window=\(Int(window))")
+    _ = get("/textsize?to=large")
+    app.terminate()
+    app.launch()
+    XCTAssertTrue(exists("card.omw", within: 60), "no Today after the text size went back")
+    // F-1782 (a), F-1743: after the text shrinks the sheet is measured again and is the fitted height, not only not tall
+    // F-1792: this measurement follows a cold relaunch, so it repeats standardH; a fail-before run reds at an earlier step. The in-place shrink
+    // path (Sheets.tsx setOptions effect on big) cannot be walked on the simulator: a running app does not redraw on a live text-size change
+    // (measured in P8-A11Y-TOOLS, F-1627 fix pass; the size reaches useWindowDimensions().fontScale only by a relaunch). That path reads
+    // correct (big comes from fontScale and the effect depends on big); the walk that covers the size change is this relaunch one.
+    let afterH = sheetHeight()
+    mark("SHEET-DETENT-AFTER after=\(Int(afterH)) standard=\(Int(standardH)) tolerance=\(SHEET_FIT_TOLERANCE)")
+    XCTAssertEqual(afterH, standardH, accuracy: SHEET_FIT_TOLERANCE, "the sheet after the text shrank is not the fitted height: \(afterH) against \(standardH)")
+    XCTAssertGreaterThan(bigH, standardH + 60, "the sheet at the largest text is not taller than the fitted one")
+    XCTAssertGreaterThan(bigH, window * 0.8, "the sheet at the largest text is not at the tall detent: \(bigH) of \(window)")
+    XCTAssertLessThan(standardH, window * 0.8, "the sheet at standard text is at the tall detent: \(standardH) of \(window)")
+    mark("SHEET-DETENT-BIG")
 
     confirm("card.omw", status: "On the way")
     XCTAssertTrue(exists("card.wait.text", within: 10), "no Waiting to send")

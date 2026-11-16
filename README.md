@@ -90,3 +90,5 @@ pnpm run test
 | `packages/` | Shared code: domain rules, database, API, import, maps, text messages |
 | `infra/` | Compose file, nginx, the image, deploy scripts |
 | `ci/` | The checks that run before a change merges |
+
+Some comments and test notes in the code name paths under `docs/build/` and `.build/evidence/`. Those are the maintainer's private build records. They are not part of this repository, so those paths do not exist here and need no action from you.

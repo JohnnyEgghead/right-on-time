@@ -33,6 +33,11 @@ x-settings: &settings
   RESET_COOLDOWN_SECONDS: ${RESET_COOLDOWN_SECONDS:-300}
   SOURCE_REPO_URL: ${SOURCE_REPO_URL:-https://github.com/JohnnyEgghead/right-on-time}
   BACKUP_TARGET: ${BACKUP_TARGET:-none}
+  # F-1696: where each kind of data lives, as the System health page says it (API-70, FR-HLTH-2); the demo profile sets the hosted words.
+  DATA_LOCATION_APP: ${DATA_LOCATION_APP:-This computer}
+  DATA_LOCATION_BACKUPS: ${DATA_LOCATION_BACKUPS:-This computer}
+  DATA_LOCATION_TEXTS: ${DATA_LOCATION_TEXTS:-This computer}
+  DATA_LOCATION_MAPS: ${DATA_LOCATION_MAPS:-This computer}
   PHOTOS_DIR: ${PHOTOS_DIR:-/data/photos}
   LOG_LEVEL: ${LOG_LEVEL:-info}
 

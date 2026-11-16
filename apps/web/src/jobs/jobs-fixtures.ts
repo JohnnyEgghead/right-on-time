@@ -68,7 +68,8 @@ function row(x: Plant): JobRow {
 
 const FILTERS: JobsData['filters'] = {
   technicians: Object.values(TECH).map(([id, name]) => ({ id, name })),
-  services: Object.keys(JOBS_SERVICE_WORDS),
+  // F-1659: the service ids (the frame's), not the 2 language keys of JOBS_SERVICE_WORDS.
+  services: Object.keys(FRAME_WORDS),
 };
 
 const BASE = {
@@ -92,8 +93,12 @@ const SUCCESS_ROWS: JobRow[] = [
   row({ n: 24871, customer: 'Beth Whitfield', area: 'Westerville', service: 'heat_pump_check', day: '2026-09-16', from: '08:00', to: '12:00', tech: 'MS', status: 'scheduled', four: true, via: 'online' }),
   row({ n: 24866, customer: "Sean O'Brien", area: 'Clintonville', service: 'furnace_tune_up', day: '2026-09-17', from: '10:00', to: '12:00', tech: 'RM', status: 'scheduled', via: 'online' }),
 ];
+/** F-1664: the page's problem words, so the look case draws the 220 px cell. F-1736: in the page's language, as the service words are. */
+const withProblemWords = (words: Record<string, string>): JobRow[] => SUCCESS_ROWS.map((r) => ({ ...r, problem: words[r.service] ?? null }));
 
-export const JOBS_SUCCESS: JobsData = { ...BASE, rows: SUCCESS_ROWS, total: 226, pages: 19 };
+export const JOBS_SUCCESS: JobsData = { ...BASE, rows: withProblemWords(FRAME_WORDS), total: 226, pages: 19 };
+/** The Success rows on a Spanish page: the problem words are fixture data in Spanish (the Spanish walker flags an English catalog value). */
+export const JOBS_SUCCESS_ES: JobsData = { ...JOBS_SUCCESS, rows: withProblemWords(FRAME_WORDS_ES) };
 
 /** Empty tab: the Late tab has no job. */
 export const JOBS_EMPTY: JobsData = { ...BASE, counts: { ...BASE.counts, late: 0 }, rows: [], total: 0, pages: 0 };

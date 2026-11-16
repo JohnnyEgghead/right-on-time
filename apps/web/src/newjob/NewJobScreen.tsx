@@ -12,22 +12,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ServicesAnswer } from '@bw/api';
 import { CustomerFormDialog } from '../customers/CustomerFormDialog.tsx';
 import { Dialog } from '../customers/ui.tsx';
-import { firstName } from '../customers/model.ts';
-import { refusalShown, type Refusal, type Shown } from '../job/model.ts';
-import { spanText } from '../board/model.ts';
+import { firstName, windowText } from '../customers/model.ts';
 import { OfficeFrame } from '../shell/Frames.tsx';
 import { BRANCHES } from '../shell/branches.ts';
 import { useT } from '../shell/intl.tsx';
 import { newJobApi, type NewJobApi } from './api.ts';
-import { confirmationKey, hasInput, NO_PICKS, offeredDays, writeHandoff, type Day, type Picks } from './model.ts';
+import type { Shown } from '../job/model.ts';
+import { confirmationKey, scheduleShown, hasInput, NO_PICKS, offeredDays, writeHandoff, type Day, type Picks } from './model.ts';
 import { NewJobView, type CustomerState, type SearchState, type TechState } from './NewJobView.tsx';
 
 const DEBOUNCE_MS = 200;
-
-/** The refusal words of Schedule: API-28's own codes first, then the job writes' shared ones (time_overlap names the block). */
-function scheduleShown(r: Refusal): Shown {
-  return r.code === 'technician_no_room' ? { key: 'newjob.refused.technicianNoRoom' } : refusalShown(r, spanText);
-}
 
 export interface NewJobScreenProps {
   /** The `customer` query value, already checked as an id (CTL-OFC-06-01, CTL-OFC-05-14). */
@@ -180,7 +174,9 @@ export function NewJobScreen({ customerId, date, api: given }: NewJobScreenProps
       return;
     }
     setSaving(false);
-    setShown(scheduleShown(r));
+    const picked = techs.kind === 'ready' ? techs.technicians.find((x) => x.id === picks.technicianId) : undefined;
+    const win = days && Array.isArray(days) ? days.find((d) => d.date === day)?.windows.find((w) => w.windowId === windowId) : undefined;
+    setShown(scheduleShown(r, picked?.name ?? '', win ? windowText(win.start, win.end) : ''));
     if (r.code === 'window_full') {
       // The window turns Full and its pick is dropped; the other fields keep their values.
       setDays((ds) => (Array.isArray(ds) ? ds.map((d) => (d.date === day ? { ...d, windows: d.windows.map((w) => (w.windowId === windowId ? { ...w, state: 'full' as const, left: 0 } : w)) } : d)) : ds));

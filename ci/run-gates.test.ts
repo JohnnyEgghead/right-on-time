@@ -36,6 +36,12 @@ function isRunning(pid: number): boolean {
   }
 }
 
+/** F-1819: wait until every pid has stopped (up to 10 s), never a fixed time. */
+async function gone(pids: number[]): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (pids.some((p) => isRunning(p)) && Date.now() < deadline) await new Promise((res) => setTimeout(res, 50));
+}
+
 function run(...args: string[]) {
   return runEnv({}, ...args);
 }
@@ -252,7 +258,7 @@ describe('ci/run-gates.ts', () => {
     expect(v.gates[0].status).toBe('fail');
     expect(v.gates[0].reason).toMatch(/^timeout/);
     const pid = Number(readFileSync(pidFile, 'utf8').trim());
-    await new Promise((res) => setTimeout(res, 200));
+    await gone([pid]);
     expect(isRunning(pid)).toBe(false);
   });
 
@@ -588,7 +594,7 @@ describe('ci/run-gates.ts side by side (F-410)', () => {
     while (!pids.every((p) => existsSync(p) && readFileSync(p, 'utf8').trim() !== '') && Date.now() < deadline) await new Promise((res) => setTimeout(res, 50));
     child.kill('SIGTERM');
     expect(await exited).toBe(143);
-    await new Promise((res) => setTimeout(res, 200));
+    await gone(pids.map((p) => Number(readFileSync(p, 'utf8').trim())));
     for (const p of pids) expect(isRunning(Number(readFileSync(p, 'utf8').trim()))).toBe(false);
     expect(existsSync(path.join(root, '.build', 'ci', 'ci-verdict.json'))).toBe(false);
   });

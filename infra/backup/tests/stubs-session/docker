@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# F-1773 rehearsal (backup.stack.test.ts): a stand-in for docker in the runner container that lets the backup's setup preflight and its
+# failed-record write through, and ends the snapshot session at once, as a database that drops the connection after the preflight does.
+# The snapshot session is the one call shaped `docker exec -i <container> psql ...` (psql_ adds `-e PGOPTIONS=...` before the container).
+# Test-only: never shipped (deploy.sh drops infra/backup/tests from the stage).
+set -uo pipefail
+if [ "${1:-}" = exec ] && [ "${2:-}" = -i ] && [ "${4:-}" = psql ]; then exit 0; fi
+real="$(PATH="${PATH#/stubs-session:}" command -v docker)"
+exec "$real" "$@"

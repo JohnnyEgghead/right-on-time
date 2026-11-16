@@ -15,7 +15,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           ...timeouts,
-          include: ['ci/**/*.test.ts', 'infra/**/*.test.ts', 'apps/*/src/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
+          include: ['ci/**/*.test.ts', 'infra/**/*.test.ts', 'apps/*/src/**/*.test.ts', 'apps/*/app/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
           // Browser tests run in the page-walkers wave gate (vitest.browser.config.ts), not here.
           // Database tests (*.db.test.ts, a real PostgreSQL 18) run in the schema-gates wave gate (packages/db/vitest.db.config.ts).
           // ci/gates/contract-gates/** are live contract tests against a running stack (that gate's own config runs them; F-136).

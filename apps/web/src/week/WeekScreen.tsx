@@ -13,7 +13,8 @@ import { OfficeFrame } from '../shell/Frames.tsx';
 import { useT } from '../shell/intl.tsx';
 import type { LiveState } from '../shell/Panels.tsx';
 import { useBranch } from '../shell/useBranch.ts';
-import { postDelaySamples } from '../board/delay-samples.ts';
+import { keepaliveClient } from '../board/api.ts';
+import { delaySampler } from '../board/delay-samples.ts';
 import { dayText as windowsDayText, switchBar, switchRefusal } from '../windows/model.ts';
 import { SwitchDialog, type DialogUi } from '../windows/WindowsView.tsx';
 import { WeekView, type WeekState } from './WeekView.tsx';
@@ -92,6 +93,9 @@ export function WeekScreen() {
   // The event stream: each event for this branch re-reads the week, and the finished re-read posts its seq (API-172).
   useEffect(() => {
     if (!client || !branch || !week) return;
+    // F-885: the finished re-reads' samples are held and leave in batches (SD-43); a hidden page's batch is sent with keepalive.
+    const kept = keepaliveClient();
+    const samples = delaySampler((batch, keepalive) => (keepalive ? kept : client).call(boardDelaySample, { samples: batch }));
     let pending: number[] = [];
     let running = false;
     const drain = async () => {
@@ -101,9 +105,7 @@ export function WeekScreen() {
         // 1 sample per seq the re-read covers (F-606), so a burst's slowest event is sampled.
         const seqs = pending;
         pending = [];
-        if (await read()) {
-          await postDelaySamples(seqs, (seq) => client.call(boardDelaySample, { seq }));
-        }
+        if (await read()) samples.hold(seqs);
       }
       running = false;
     };
@@ -118,7 +120,10 @@ export function WeekScreen() {
       onReconnect: () => void read(),
       onState: (s) => setLive(s === 'live' ? 'live' : s === 'closed' ? 'paused' : 'reconnecting'),
     });
-    return () => handle.close();
+    return () => {
+      handle.close();
+      samples.close();
+    };
   }, [client, branch, week, read]);
 
   // CTL-OFC-34-15 opens SCR-OFC-24 for the day (UI-SPECIFICATION CTL-OFC-34-15): API-90 for that 1 day gives the dialog its windows and its kept count.

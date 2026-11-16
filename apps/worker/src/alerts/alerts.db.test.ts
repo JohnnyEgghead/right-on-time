@@ -3,8 +3,8 @@
 // it when the condition clears; the default switches; the alert email in the on-screen store with one one-time link per
 // manager that opens once (SD-29, FR-AUTH-8); the alert.check event and the worker heartbeat through the worker as
 // main.ts starts it. Run by gate G-CI2 (ci/gates/G-CI2/vitest.db.config.ts); the merge set excludes *.db.test.ts.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { openEmailLink, type Queryable } from '@bw/db';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { BUS_CHANNEL, createClient, decodeNotification, openEmailLink, type Queryable } from '@bw/db';
 import { ALERT_FACTS, ALERT_TYPES, alertSettingDefaults, type AlertType } from '@bw/domain';
 import { useMigratedDatabase } from '../../../../packages/db/src/testing/fixture.ts';
 import { addCustomer, addJob, I, loginPool, seedOutboxWorld, setDemoClock, type OutboxRef } from '../../../../packages/outbox/src/testing/world.ts';
@@ -109,6 +109,32 @@ describe('SD-30 rules: each opens 1 alert for a planted condition and resolves i
     expect((await alertsOf('billing_waiting_person')).map((a) => a.state)).toEqual(['resolved']);
   });
 
+  // why: F-1156, SD-30, EVT-04 a check that resolves an open alert publishes alert.dismissed with its id and branch in the check's transaction, so every open bell and System health page re-reads
+  it('publishes alert.dismissed for each alert a check resolves, with its branch', async () => {
+    const c = await addCustomer(db.admin(), ref);
+    const job = await addJob(db.admin(), ref, c);
+    await db.admin().query(`INSERT INTO world.billing_item (job_number, state, reason_key, tries) VALUES ($1, 'waiting_person', 'billing.data_error', 1)`, [job]);
+    await check();
+    const opened = (await open('billing_waiting_person')).find((a) => a.subject === String(job))!;
+    const listener = createClient({ connectionString: db.url() });
+    await listener.connect();
+    const notices: { name: string; ids: Record<string, unknown> }[] = [];
+    listener.on('notification', (m) => {
+      const d = m.channel === BUS_CHANNEL ? decodeNotification(m.payload) : null;
+      if (d?.name === 'alert.dismissed') notices.push(d);
+    });
+    await listener.query(`LISTEN ${BUS_CHANNEL}`);
+    try {
+      await db.admin().query(`UPDATE world.billing_item SET state = 'marked_fixed', left_at = $2, left_how = 'marked_fixed' WHERE job_number = $1`, [job, NOW]);
+      const report = await check();
+      expect(report.resolved).toContain(opened.id);
+      await vi.waitFor(() => expect(notices).toContainEqual({ name: 'alert.dismissed', ids: { alertId: opened.id, branch: 'columbus' } }), { timeout: 5_000, interval: 20 });
+    } finally {
+      listener.removeAllListeners('notification');
+      await listener.end();
+    }
+  });
+
   // why: FR-HLTH-4, SD-30, F-448 (owner-approved 7ccb76ec: each billing alert resolves when its own state ends)
   it('a retrying item that hits a data error moves from billing_retrying_long to billing_waiting_person while still listed', async () => {
     const c = await addCustomer(db.admin(), ref);
@@ -191,6 +217,40 @@ describe('SD-30 rules: each opens 1 alert for a planted condition and resolves i
     await check(NOW, 'lightsail');
     expect(await open('backup_failed')).toEqual([]);
     await db.admin().query(`DELETE FROM system.backup_record`);
+  });
+
+  // why: F-434
+  it('backup_failed on a hosted copy with no finished backup yet: none before setup, then 26 real hours counted from the earliest snapshot', async () => {
+    const snapshot = (createdReal: string) => db.admin().query(
+      `INSERT INTO system.day_snapshot (schema_name, created_real, label) VALUES ('world', $1, 'F-434 test')`, [createdReal]);
+    await db.admin().query(`DELETE FROM system.backup_record`);
+    const kept = await db.admin().query(`DELETE FROM system.day_snapshot RETURNING schema_name, created_real, label`);
+    try {
+      // No snapshot row: setup has not finished, so no alert, however old the copy.
+      await check(NOW, 'lightsail');
+      expect(await open('backup_failed')).toEqual([]);
+      // Setup 25 h 59 min 59 s before REAL: not yet 26 hours.
+      await snapshot('2026-10-31T14:00:01Z');
+      await check(NOW, 'lightsail');
+      expect(await open('backup_failed')).toEqual([]);
+      // A later snapshot (a reset's) does not restart the count; an earlier one, 26 h + 1 s before REAL, opens it.
+      await snapshot('2026-11-01T15:00:00Z');
+      await snapshot('2026-10-31T13:59:59Z');
+      await check(NOW, 'lightsail');
+      expect(await open('backup_failed')).toMatchObject([{ message_values: { reason: 'stale' } }]);
+      // An own copy never has the stale rule; the first passed backup clears it on the hosted copy.
+      await check(NOW, 'none');
+      expect(await open('backup_failed')).toEqual([]);
+      await backupRecord('backup', 'passed', '2026-11-01T03:00:00Z');
+      await check(NOW, 'lightsail');
+      expect(await open('backup_failed')).toEqual([]);
+    } finally {
+      await db.admin().query(`DELETE FROM system.backup_record`);
+      await db.admin().query(`DELETE FROM system.day_snapshot`);
+      for (const k of kept.rows as { schema_name: string; created_real: Date; label: string }[]) {
+        await db.admin().query(`INSERT INTO system.day_snapshot (schema_name, created_real, label) VALUES ($1, $2, $3)`, [k.schema_name, k.created_real, k.label]);
+      }
+    }
   });
 
   // why: FR-HLTH-4, SD-30

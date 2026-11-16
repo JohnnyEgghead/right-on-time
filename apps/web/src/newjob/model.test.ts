@@ -6,7 +6,7 @@ import { createIntl } from 'react-intl';
 import { describe, expect, it } from 'vitest';
 import type { ClientT } from '../shell/intl.tsx';
 import {
-  canSchedule, confirmationKey, hasInput, hourText, listed, noOpenWindow, noTexts, NO_PICKS, offeredDays, reasonLine, roomFill, standout, takeHandoff, writeHandoff,
+  canSchedule, confirmationKey, scheduleShown, hasInput, hourText, listed, noOpenWindow, noTexts, NO_PICKS, offeredDays, reasonLine, roomFill, standout, takeHandoff, writeHandoff,
   type Day, type Tech,
 } from './model.ts';
 import { NJ_DAYS, NJ_TECHS } from './preview-data.ts';
@@ -16,6 +16,19 @@ const tOf = (lang: 'en' | 'es') => {
   return ((key: string, values?: Record<string, string | number>) => intl.formatMessage({ id: key }, values)) as unknown as ClientT;
 };
 const [kevin, marcus, greg] = NJ_TECHS.technicians as [Tech, Tech, Tech];
+
+// why: F-1800 Schedule's technician_no_room names the limit that refused it, in its own 3 texts, never 1 text for every limit
+describe('the no-room texts of Schedule (F-1800, F-1813)', () => {
+  const refusal = (detail: Record<string, unknown>) => ({ ok: false as const, code: 'technician_no_room', status: 409, detail });
+  it('names the installer day, the day and the window', () => {
+    expect(scheduleShown(refusal({ limit: 'installer_day', max: 1 }), 'Chris Yoder', '12-2 PM')).toEqual({ key: 'newjob.refused.installerDay', values: { name: 'Chris Yoder' } });
+    expect(scheduleShown(refusal({ limit: 'day', max: 5 }), 'Chris Yoder', '12-2 PM')).toEqual({ key: 'newjob.refused.dayFull', values: { name: 'Chris Yoder', max: 5 } });
+    expect(scheduleShown(refusal({ limit: 'window', max: 2 }), 'Chris Yoder', '12-2 PM')).toEqual({ key: 'newjob.refused.windowFull', values: { name: 'Chris Yoder', window: '12-2 PM', max: 2 } });
+  });
+  it('gives the server text for an answer with no limit', () => {
+    expect(scheduleShown(refusal({}), 'Chris Yoder', '12-2 PM').key).toBe('job.refused.server');
+  });
+});
 
 describe('Schedule and the days (FR-DISP-8)', () => {
   // why: FR-DISP-8 (Schedule is enabled once the customer, service, day and window are picked; the technician is optional)

@@ -136,6 +136,10 @@ export const TECH_JOB_CASES: TechShellCase[] = [
   // F-1024: the other states the frames show.
   tile('SCR-TEC-04 Job: Loading (DK-110)', JOB_FRAME, `${C4}Loading`, '/shell-preview/tech-job/loading', '.r1-skel',
     ['.apphead', ...CLK, '.apphead .nav', '.nav .mid', '.apphead > .r1-skel', '.body > .card', '.card .r1-skel', '.tabbar']),
+  // Kit 0.12 (57520d6c, F-1560; UI-SPECIFICATION 4.5 rule 12): the frame draws Reading the phone (web) with the Loading tile itself, and the app's
+  // job reads start in their loading state (useJob), so the case reads the Loading preview.
+  tile('SCR-TEC-04 Job: Reading the phone (DK-110)', JOB_FRAME, `${C4}Reading the phone (web)`, '/shell-preview/tech-job/loading', '.r1-skel',
+    ['.apphead', ...CLK, '.apphead .nav', '.nav .mid', '.apphead > .r1-skel', '.body > .card', '.card .r1-skel', '.tabbar']),
   tile('SCR-TEC-04 Job: Offline, saved (DK-110)', JOB_FRAME, `${C4}Offline, saved`, '/shell-preview/tech-job/offline', '.r1p-nosig',
     ['.apphead', ...CLK, '.r1p-clk .ns', '.apphead h1', '.apphead .addr', '.when .tag', '.acts', '.r1p-nosig', '.r1p-nosig b', '.notebox', '.notebox b', '[data-ctl="CTL-TEC-04-08"] .ch h3', '.note', '.note .r1p-wait', '.note .by']),
   tile('SCR-TEC-04 Job: Offline, not saved (DK-110)', JOB_FRAME, `${C4}Offline, not saved`, '/shell-preview/tech-job/not-on-phone', '.r1p-empty',

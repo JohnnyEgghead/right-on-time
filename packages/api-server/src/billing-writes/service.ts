@@ -16,7 +16,7 @@
 import { publishEvent, type Queryable } from '@bw/db';
 import { finishLines } from '@bw/domain';
 import type { Instant } from '@bw/time';
-import { resendCorrected, retryAll, retryNow, sendAgain } from 'bw-worker/billing';
+import { lockItemThenJob, resendCorrected, retryAll, retryNow, sendAgain } from 'bw-worker/billing';
 import { appendJobChange, gatedJobUpdate } from '../office-writes/service.ts';
 
 export type BillingRefusalCode = 'not_waiting_for_person' | 'not_retrying' | 'not_on_billing_list' | 'parts_required' | 'validation_failed';
@@ -95,10 +95,8 @@ export async function correctFinishWrite(
   const lines = finishLines({ parts: input.parts, noPartsUsed: input.noPartsUsed, laborMinutes: input.laborMinutes }, (id) => seeded.has(id));
   if (!lines.ok) throw new BillingRefused(lines.code, `the corrected finish is refused (${lines.problem})`);
 
-  const held = await tx.query<{ state: string; branch_id: string }>(
-    `SELECT bi.state, j.branch_id FROM world.billing_item bi JOIN world.job j USING (job_number)
-      WHERE bi.job_number = $1 FOR UPDATE OF bi, j`, [jobNumber]);
-  const item = held.rows[0];
+  // F-401: the item row, then the job row, before the version-gated job write (the order every billing writer uses).
+  const item = await lockItemThenJob(tx, jobNumber);
   if (!item || item.state !== 'waiting_person') throw new BillingRefused('not_waiting_for_person', `job ${jobNumber} is not waiting for a person`);
 
   await gatedJobUpdate(tx, jobNumber, input.baseVersion, 'labor_minutes = $3, no_parts_used = $4', [lines.lines.laborMinutes, lines.lines.noPartsUsed]);

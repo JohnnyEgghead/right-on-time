@@ -4,8 +4,8 @@
 // its blocks. Every function here runs inside the caller's transaction, after the locks of locks.ts.
 import type { Queryable } from '@bw/db';
 import {
-  dayKind, dayRoom, firstOverlap, isLive, offeredWindows, planDay, previousStop, skillMatch, technicianDayCapacity, technicianHasRoom, windowRoom, worksOn,
-  type DayKind, type DayMode, type TechnicianFacts,
+  dayKind, dayRoom, firstOverlap, isLive, offeredWindows, planDay, previousStop, skillMatch, technicianDayCapacity, technicianHasRoom, technicianRoomLimit, windowRoom, worksOn,
+  type DayKind, type DayMode, type RoomLimit, type TechnicianFacts,
 } from '@bw/domain';
 import { atLocal, Temporal, toWire } from '@bw/time';
 import { routedDrive } from '../../../maps/src/route-source.ts';
@@ -164,11 +164,16 @@ export async function skilledRoomCounter(tx: Queryable, input: { branch: string;
  * being placed, so placing a job where it already is counts the day without it).
  */
 export async function technicianRoom(tx: Queryable, t: Technician, date: string, window: Window, kind: DayKind, excludeJob: number): Promise<boolean> {
+  return (await technicianRoomRefusal(tx, t, date, window, kind, excludeJob)) === null;
+}
+
+/** The same read as technicianRoom, answering the limit that refuses the placement (F-1701), or null when there is room. */
+export async function technicianRoomRefusal(tx: Queryable, t: Technician, date: string, window: Window, kind: DayKind, excludeJob: number): Promise<RoomLimit | null> {
   const r = await tx.query<{ day: string; win: string }>(
     `SELECT count(*) AS day, count(*) FILTER (WHERE window_id = $3) AS win FROM world.job
       WHERE technician_id = $1 AND date = $2::date AND status <> 'canceled' AND job_number <> $4`, [t.id, date, window.id, excludeJob]);
   const row = r.rows[0] ?? { day: '0', win: '0' };
-  return technicianHasRoom({ capacity: technicianDayCapacity(t, kind), jobsThatDay: Number(row.day), jobsInWindow: Number(row.win), windowMode: window.mode });
+  return technicianRoomLimit({ capacity: technicianDayCapacity(t, kind), installer: t.installer, jobsThatDay: Number(row.day), jobsInWindow: Number(row.win), windowMode: window.mode });
 }
 
 /** SD-22's previous stop of the leg to `jobNumber`, read from the technician's day: the last ended job, or null for the depot (F-515). */

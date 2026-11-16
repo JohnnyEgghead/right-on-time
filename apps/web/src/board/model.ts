@@ -276,3 +276,21 @@ export function jobMarkerState(j: BoardJob): 'sched' | 'late' | 'risk' | 'unas' 
   if (j.timing === 'atRisk') return 'risk';
   return j.status === 'on_the_way' ? 'way' : j.status === 'on_site' ? 'site' : j.status === 'scheduled' ? 'sched' : 'closed';
 }
+
+/**
+ * The catalog key and values of a technician_no_room answer (F-1701; UI-SPECIFICATION move refusal texts): it names the limit
+ * that refused the move from the answer's `limit` and `max` (an installer's day, a day or a window); an answer without a limit
+ * is a server fault (the kernel always sends them), so it gets no text here (F-1813). Shared by the board and the job page's Reassign dialog (F-1805).
+ */
+export function noRoomShown(detail: Record<string, unknown>, name: string, window: string): { key: string; values: Record<string, string | number> } | null {
+  const { limit, max } = detail as { limit?: string; max?: number };
+  if (limit === 'installer_day') return { key: 'board.refused.installerDay', values: { name } };
+  if (limit === 'day') return { key: 'board.refused.dayFull', values: { name, max: max ?? 0 } };
+  if (limit === 'window') return { key: 'board.refused.windowFull', values: { name, window, max: max ?? 0 } };
+  return null;
+}
+
+export function noRoomText(t: ClientT, detail: Record<string, unknown>, name: string, window: string): string | null {
+  const shown = noRoomShown(detail, name, window);
+  return shown && t(shown.key as Parameters<ClientT>[0], shown.values);
+}

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { catalogs } from '../../../../packages/i18n/src/catalog.ts';
 import { TEXT_STATUSES } from '../../../../packages/outbox/src/model.ts';
 import {
-  actionsOpen, can, closedKey, CONTROL_CONTRACT, equipmentWord, feedKey, findParts, laborMinutes, linesDiffer, needsParts, editRefusalShown, equipmentSuggestions, equipmentTypeSent, notesOf, refusalShown, rescheduleDone, textCount, textStatusKey,
+  actionsOpen, can, closedKey, CONTROL_CONTRACT, equipmentWord, feedKey, jobFeed,findParts, laborMinutes, linesDiffer, needsParts, editRefusalShown, equipmentSuggestions, equipmentTypeSent, notesOf, refusalShown, rescheduleDone, textCount, textStatusKey,
   type Job, type Lines,
 } from './model.ts';
 
@@ -52,6 +52,14 @@ describe('the job page rules', () => {
   it('says the new service needs a full window in Edit job details, and keeps the other refusals as they are', () => {
     expect(editRefusalShown(refusal('window_full'), span)).toEqual({ key: 'job.refused.windowFullEdit' });
     expect(editRefusalShown(refusal('version_conflict'), span)).toEqual({ key: 'job.refused.conflict' });
+  });
+  // why: F-1805 (the job page Reassign dialog showed Something went wrong on technician_no_room; it names each limit as the board does, with the picked technician and the job's window)
+  it('names the limit of a technician_no_room in the Reassign dialog, the board texts', () => {
+    const who = { name: 'Chris Yoder', window: '12-2 PM' };
+    expect(refusalShown(refusal('technician_no_room', { limit: 'installer_day', max: 1 }), span, who)).toEqual({ key: 'board.refused.installerDay', values: { name: 'Chris Yoder' } });
+    expect(refusalShown(refusal('technician_no_room', { limit: 'day', max: 5 }), span, who)).toEqual({ key: 'board.refused.dayFull', values: { name: 'Chris Yoder', max: 5 } });
+    expect(refusalShown(refusal('technician_no_room', { limit: 'window', max: 2 }), span, who)).toEqual({ key: 'board.refused.windowFull', values: { name: 'Chris Yoder', window: '12-2 PM', max: 2 } });
+    expect(refusalShown(refusal('technician_no_room', {}), span, who)).toEqual({ key: 'job.refused.server' });
   });
   // why: F-565 (Edit job details shows API-27's time_overlap and window_full with their catalog messages)
   it('names the block of a time_overlap and the window of a window_full, and the rule of a rule_refused', () => {
@@ -147,5 +155,27 @@ describe('job page read-failure words', () => {
     expect(en['job.edit.servicesError']).toBe('The services could not load.');
     expect(es['job.actionsError']).toBeTruthy();
     expect(es['job.edit.servicesError']).toBeTruthy();
+  });
+});
+
+describe('the job history feed', () => {
+  // why: F-704 (CTL-OFC-03-17: each text is 1 row and an office text's row names who sent it; the job_change and the outbox_text made 2 rows)
+  it('shows each office text once, with its sender, and keeps the other rows', () => {
+    const tz = '[America/New_York]';
+    const feed = jobFeed({
+      timeline: [
+        { kind: 'created', at: `2026-11-02T08:00:00-05:00${tz}`, by: null, byKind: null, values: {} },
+        { kind: 'office_text', at: `2026-11-02T09:00:00-05:00${tz}`, by: 'Dana', byKind: 'office', values: { textId: 't1', status: 'sending' } },
+        { kind: 'office_text', at: `2026-11-02T09:30:00-05:00${tz}`, by: 'Lee', byKind: 'office', values: { textId: 't2', status: 'sending' } },
+      ],
+      texts: [
+        { id: 't1', kind: 'office', status: 'delivered', at: `2026-11-02T09:00:01-05:00${tz}`, body: 'We are on the way' },
+        { id: 't2', kind: 'office', status: 'sending', at: `2026-11-02T09:30:01-05:00${tz}`, body: 'Running late' },
+        { id: 't3', kind: 'reminder', status: 'delivered', at: `2026-11-02T07:00:00-05:00${tz}`, body: 'Reminder' },
+      ],
+    } as never);
+    expect(feed.map((e) => [e.kind, e.text?.id ?? null, e.textBy])).toEqual([
+      ['text', 't3', null], ['created', null, null], ['text', 't1', 'Dana'], ['text', 't2', 'Lee'],
+    ]);
   });
 });

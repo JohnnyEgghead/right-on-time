@@ -9,7 +9,7 @@ import '../../styles/page-tech-me.css';
 import { clockOfWire, type MessageKey } from '@bw/i18n';
 
 import { useRouter } from 'next/navigation';
-import { useState, type KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { branchById } from '../shell/branches.ts';
 import { CallButton } from '../shell/CallButton.tsx';
 import { Icon } from '../shell/Icon.tsx';
@@ -17,14 +17,15 @@ import { useT } from '../shell/intl.tsx';
 import { LanguageSwitch } from '../shell/LanguageSwitch.tsx';
 import { createReader } from '../shell/reads.ts';
 import { techReads, useTechData, type TechData } from './data.ts';
+import { lastTryOf, TechErrorPanel } from './TechErrorPanel.tsx';
 import type { OutboxState } from './engine.ts';
-import { forgetPerson } from './local.ts';
+import { forgetPerson, savedProfile, type Profile } from './local.ts';
 import { jobsDone, minutesOnClock, startOfDay, TEXT_SIZES } from './model.ts';
 import { endSession, forgetShell } from './session.ts';
 import { WAITING_HREF, NoSignalCard } from './SyncStrip.tsx';
 import { TechAppFrame } from './TechAppFrame.tsx';
 import { ownItems, techOutbox, useOutbox } from './useOutbox.ts';
-import { dateText, durationText, ENDING_KINDS, phoneStart, SIZE_KEY } from './view-model.ts';
+import { dateText, durationText, ENDING_KINDS, mePhase, phoneStart, SIZE_KEY } from './view-model.ts';
 import { APP_VERSION } from './version.ts';
 
 export type SignOutPhase = 'idle' | 'refused' | 'signing';
@@ -35,9 +36,11 @@ export interface TechMeScreenProps {
   /** A preview's sign-out phase and open text-size list. */
   fixedPhase?: SignOutPhase;
   fixedSizeOpen?: boolean;
+  /** The signed-in person's profile, read on the server for the first paint (API-07; app/tech/me/page.tsx, F-1775); null when it was not read. */
+  profile?: Profile | null;
 }
 
-export function TechMeScreen({ fixedData, fixedOutbox, fixedPhase, fixedSizeOpen }: TechMeScreenProps) {
+export function TechMeScreen({ fixedData, fixedOutbox, fixedPhase, fixedSizeOpen, profile = null }: TechMeScreenProps) {
   const t = useT();
   const router = useRouter();
   const data = useTechData(fixedData);
@@ -50,6 +53,17 @@ export function TechMeScreen({ fixedData, fixedOutbox, fixedPhase, fixedSizeOpen
   const day = data.day?.data ?? null;
   const stops = data.route?.data.stops ?? [];
   const offline = !outbox.online || !data.online;
+  // F-1739: with the copy read and no day saved, Me is Loading, Day not loaded or Offline, nothing saved (as Today and Map treat no saved day), never the day's values drawn empty.
+  const dayPhase = mePhase(reading, data.day !== null, offline, data.settled, data.failed);
+  const noDay = dayPhase === 'loading' || dayPhase === 'error' || dayPhase === 'nosaved';
+  const profileReading = reading || noDay;
+  // F-1740: the name, initials and role come from the signed-in session (API-07, kept on the phone), so Reading the phone and the no-day states draw them
+  // while the van, the hours and the branch line are skeletons. F-1775: the page reads API-07 on the server with the person's session cookie, so the first paint
+  // (Reading the phone, before hydration) names the person; that answer is this request's session, so it comes first. A page drawn with no read (the worker's
+  // kept shell, or a failed read) names the person from the profile kept on the phone once hydrated.
+  const [kept, setKept] = useState<Profile | null>(null);
+  useEffect(() => setKept(savedProfile()), []);
+  const who = day ? day.technician : (profile ?? data.profile ?? kept);
   const waiting = outbox.waiting;
   const own = ownItems(waiting, outbox.userId); // F-1033: the person's day is read from the person's own items; the sign-out guard counts every item
 
@@ -60,8 +74,11 @@ export function TechMeScreen({ fixedData, fixedOutbox, fixedPhase, fixedSizeOpen
   const done = jobsDone(stops.map((s) => ({ state: endedHere.has(s.jobNumber) ? ('done' as const) : s.state })));
   const branch = branchById(day?.technician.branch).name;
   const skill = day?.technician.skill;
-  const skillKey = skill ? (`tech.me.skill.${skill}` as MessageKey) : null;
-  const roleLine = skillKey && t(skillKey) !== skillKey ? t('tech.me.role', { skill: t(skillKey) }) : t('tech.me.roleOnly');
+  const roleOf = (sk: string | null | undefined): string => {
+    const key = sk ? (`tech.me.skill.${sk}` as MessageKey) : null;
+    return key && t(key) !== key ? t('tech.me.role', { skill: t(key) }) : t('tech.me.roleOnly');
+  };
+  const roleLine = roleOf(skill);
   const branchLine = day?.technician.employeeNumber ? t('tech.me.branch', { branch, number: day.technician.employeeNumber }) : t('tech.me.branchOnly', { branch });
   const n = waiting.length;
   const fixed = fixedOutbox ? { fixed: fixedOutbox } : {};
@@ -93,6 +110,26 @@ export function TechMeScreen({ fixedData, fixedOutbox, fixedPhase, fixedSizeOpen
     if (!offline && n > 0) void techOutbox().sync();
   };
 
+  const syncCard = (
+            <div className="card">
+              <div className="ch"><h3>{t('tech.me.sync')}</h3></div>
+              <div className="syncrow">
+                <span className="ok"><Icon name={n > 0 ? 'clock' : 'cloud'} sw={2} /></span>
+                <div className="tx" role="link" tabIndex={0} data-ctl="CTL-TEC-10-02"
+                  onClick={() => router.push(WAITING_HREF)} onKeyDown={key(() => router.push(WAITING_HREF))}>
+                  <b className={n > 0 ? 'wait' : undefined}>{n > 0 ? t('tech.sync.waiting', { n }) : (data.now ? t('tech.me.syncedAt', { time: clockOfWire(data.now) }) : t('tech.sync.allSynced'))}</b>
+                  <small>{n > 0 ? t('tech.me.waiting', { n }) : t('tech.me.syncedNothing')}</small>
+                </div>
+                <span className={offline || n === 0 ? 'sbtn dis' : 'sbtn'} role="button" tabIndex={0} {...(offline || n === 0 ? { 'aria-disabled': true } : {})}
+                  data-ctl="CTL-TEC-10-03" onClick={sendNow} onKeyDown={key(sendNow)}>
+                  <Icon name="send" />
+                  {t('tech.me.sendNow')}
+                </span>
+              </div>
+              {offline && n > 0 ? <div className="r1p-why" data-align="end">{t('tech.me.sendNowWhy')}</div> : null}
+            </div>
+  );
+
   return (
     <TechAppFrame
       screen="SCR-TEC-10"
@@ -102,10 +139,10 @@ export function TechMeScreen({ fixedData, fixedOutbox, fixedPhase, fixedSizeOpen
       header={(
         <div className="apphead">
           <div className="prof" data-ctl="CTL-TEC-10-01">
-            <span className="av">{reading ? null : (day?.technician.initials ?? '')}</span>
+            <span className="av">{profileReading ? (who?.initials ?? null) : (day?.technician.initials ?? '')}</span>
             <div>
-              <h1 translate="no">{reading ? skel('bw-skel-70') : (day?.technician.name ?? '')}</h1>
-              <div className="d">{reading ? skel('bw-skel-40') : day ? <>{roleLine}<br />{branchLine}</> : null}</div>
+              <h1 translate="no">{profileReading ? (who ? who.name : skel('bw-skel-70')) : (day?.technician.name ?? '')}</h1>
+              <div className="d">{profileReading ? (who ? <>{roleOf(who.skill)}<br />{skel('bw-skel-40')}</> : skel('bw-skel-40')) : day ? <>{roleLine}<br />{branchLine}</> : null}</div>
             </div>
           </div>
         </div>
@@ -113,67 +150,69 @@ export function TechMeScreen({ fixedData, fixedOutbox, fixedPhase, fixedSizeOpen
     >
       <div className="body">
         {offline ? <NoSignalCard {...fixed} /> : null}
-        <div className="card">
-          <div className="ch"><h3>{t('tech.me.van')}</h3></div>
-          <div className="van" data-ctl="CTL-TEC-10-06">
-            <span className="ico"><Icon name="truck" sw={2} /></span>
-            <div>
-              <b>{reading ? skel('bw-skel-70') : day?.van ? t('tech.me.vanNumber', { number: day.van.number }) : t('tech.me.noVan')}</b>
-              {!reading && day?.van ? <small>{day.van.vehicle}</small> : null}
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="ch"><h3>{offline && data.day ? t('tech.me.hoursSaved', { time: clockOfWire(data.day.at) }) : t('tech.me.hours', { date: day ? dateText(t, day.date) : '' })}</h3></div>
-          <div className="hours" data-ctl="CTL-TEC-10-07" {...(reading ? { 'aria-busy': true } : {})}>
-            {reading ? (
-              <>{skel('bw-skel-70')}{skel('bw-skel-70')}{skel('bw-skel-40')}</>
-            ) : started ? (
-              <>
-                <div><b>{clockOfWire(started)}</b><small>{t('tech.me.started')}</small></div>
-                <div><b>{onClock === null ? '' : durationText(t, onClock)}</b><small>{t('tech.me.onClock')}</small></div>
-              </>
-            ) : (
-              <div><b>{t('tech.me.notStarted')}</b><small>{t('tech.me.started')}</small></div>
-            )}
-            <div><b>{t('tech.me.ofTotal', { done, total: stops.length })}</b><small>{t('tech.me.jobsDone')}</small></div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="ch"><h3>{t('tech.me.sync')}</h3></div>
-          <div className="syncrow">
-            <span className="ok"><Icon name={n > 0 ? 'clock' : 'cloud'} sw={2} /></span>
-            <div className="tx" role="link" tabIndex={0} data-ctl="CTL-TEC-10-02"
-              onClick={() => router.push(WAITING_HREF)} onKeyDown={key(() => router.push(WAITING_HREF))}>
-              {reading ? (
-                <>{skel('bw-skel-70')}{skel('bw-skel-40')}</>
+        {reading || noDay ? (
+          <>
+            {/* Kit 0.12 (57520d6c): each card the kept copy feeds is its title over 2 skeleton lines, never No van assigned, 0 of 0 or All synced.
+                The hours title has no date yet, so it is tech.me.hoursTitle (F-1739), never the dated title cut at its separator. */}
+            {dayPhase === 'error' || dayPhase === 'nosaved' ? (
+              dayPhase === 'error' ? (
+                <TechErrorPanel title={t('tech.me.dayError')} lastTry={lastTryOf(data.failedAt, data.day?.data.zone, t.lang)} onRetry={() => techReads().refresh()} />
               ) : (
-                <>
-                  <b className={n > 0 ? 'wait' : undefined}>{n > 0 ? t('tech.sync.waiting', { n }) : t('tech.me.syncedAt', { time: data.now ? clockOfWire(data.now) : '' })}</b>
-                  <small>{n > 0 ? t('tech.me.waiting', { n }) : t('tech.me.syncedNothing')}</small>
-                </>
-              )}
+                <div className="r1p-empty"><Icon name="signal" /><span>{t('tech.me.noSaved')}</span></div>
+              )
+            ) : (
+              <>
+                <div className="card" aria-busy="true"><div className="ch"><h3>{t('tech.me.van')}</h3></div>{skel('bw-skel-45')}{skel('bw-skel-30')}</div>
+                <div className="card" aria-busy="true"><div className="ch"><h3>{t('tech.me.hoursTitle')}</h3></div>{skel('bw-skel-70')}{skel('bw-skel-50')}</div>
+              </>
+            )}
+            {reading ? <div className="card" aria-busy="true"><div className="ch"><h3>{t('tech.me.sync')}</h3></div>{skel('bw-skel-55')}{skel('bw-skel-75')}</div> : syncCard}
+          </>
+        ) : (
+          <>
+          <div className="card">
+            <div className="ch"><h3>{t('tech.me.van')}</h3></div>
+            <div className="van" data-ctl="CTL-TEC-10-06">
+              <span className="ico"><Icon name="truck" sw={2} /></span>
+              <div>
+                <b>{day?.van ? t('tech.me.vanNumber', { number: day.van.number }) : t('tech.me.noVan')}</b>
+                {day?.van ? <small>{day.van.vehicle}</small> : null}
+              </div>
             </div>
-            <span className={offline || n === 0 ? 'sbtn dis' : 'sbtn'} role="button" tabIndex={0} {...(offline || n === 0 ? { 'aria-disabled': true } : {})}
-              data-ctl="CTL-TEC-10-03" onClick={sendNow} onKeyDown={key(sendNow)}>
-              <Icon name="send" />
-              {t('tech.me.sendNow')}
-            </span>
           </div>
-          {offline && n > 0 ? <div className="r1p-why" data-align="end">{t('tech.me.sendNowWhy')}</div> : null}
-        </div>
+
+          <div className="card">
+            <div className="ch"><h3>{offline && data.day ? t('tech.me.hoursSaved', { time: clockOfWire(data.day.at) }) : t('tech.me.hours', { date: day ? dateText(t, day.date) : '' })}</h3></div>
+            <div className="hours" data-ctl="CTL-TEC-10-07">
+              {started ? (
+                <>
+                  <div><b>{clockOfWire(started)}</b><small>{t('tech.me.started')}</small></div>
+                  <div><b>{onClock === null ? '' : durationText(t, onClock)}</b><small>{t('tech.me.onClock')}</small></div>
+                </>
+              ) : (
+                <div><b>{t('tech.me.notStarted')}</b><small>{t('tech.me.started')}</small></div>
+              )}
+              <div><b>{t('tech.me.ofTotal', { done, total: stops.length })}</b><small>{t('tech.me.jobsDone')}</small></div>
+            </div>
+          </div>
+
+          {syncCard}
+          </>
+        )}
 
         <div className="card rows">
-          <div className="rw">
+          {/* The office number comes from the kept copy, so while the phone is read it is a skeleton (UI-SPECIFICATION 4.5 rule 12), never
+              a call button with no number, which has no name and is under 44 px wide (F-1736). */}
+          {dayPhase === 'error' || dayPhase === 'nosaved' ? null : <div className="rw" {...(reading || noDay ? { 'aria-busy': true } : {})}>
             <Icon name="phone" />
             {t('tech.me.call')}
-            <CallButton name={t('tech.me.call')} fullName={t('tech.me.callAria', { branch })} number={day?.officePhone ?? ''} className="call bw-btn-reset">
-              <Icon name="phone" />
-              {day?.officePhone ?? ''}
-            </CallButton>
-          </div>
+            {reading || noDay ? skel('bw-skel-30') : (
+              <CallButton name={t('tech.me.call')} fullName={t('tech.me.callAria', { branch })} number={day?.officePhone ?? ''} className="call bw-btn-reset">
+                <Icon name="phone" />
+                {day?.officePhone ?? ''}
+              </CallButton>
+            )}
+          </div>}
           <div className="rw">
             <Icon name="bell" />
             {t('tech.me.notifications')}

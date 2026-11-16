@@ -9,7 +9,10 @@
 //   refused (parts_required; an item the server cannot parse) the item stays, its code recorded (rule 10)
 //   no answer for a key in a batch the server answered        the item stays (recorded `unanswered`)
 // Per call: an upload or batch refused as a whole with a 4xx keeps those items (their code recorded) and the send goes
-// on; a network error, a 5xx, a signed-out (401) or forbidden (403) answer stops the send, and every item not yet
+// on, except an upload the proxy refused for its size (413, F-1035): it is sent once more with no bytes, as the web app sends a photo
+// over the cap (F-978), so the server answers it under its key, flagged validation_failed and listed for the dispatcher, and it
+// leaves the phone; its bytes are never sent again. A network error, a 5xx, a signed-out (401) or forbidden (403) answer stops the
+// send, and every item not yet
 // answered stays waiting, recorded so the screen can say "Will try again".
 //
 // Re-run semantics (I3): every durable write here is the store's. An answer lost on the way (the call committed, the
@@ -50,6 +53,10 @@ export interface SendOptions {
   /** The phone's own real time in epoch milliseconds (realNow('device_stamp')): the try and answer stamps. */
   nowMs: () => number;
 }
+
+/** F-1035: the answer of a proxy (nginx) that refused an upload's body for its size, before the server read it. */
+export const BODY_TOO_LARGE = 413;
+const NO_BYTES = new Uint8Array(0);
 
 const isAnswered = (r: string): r is ItemResult['result'] => (ANSWERED_RESULTS as readonly string[]).includes(r);
 
@@ -93,7 +100,9 @@ export async function sendWaiting(store: ItemStore, transport: Transport, opts: 
       await keep([b], { outcome: 'refused', code: 'blob_missing' });
       continue;
     }
-    const r = await transport.uploadBlob(b, bytes);
+    let r = await transport.uploadBlob(b, bytes);
+    // F-1035: refused for its size before the server read it; the no-bytes body has the server answer it (flagged) under the same key.
+    if (!r.ok && r.stop === null && r.status === BODY_TOO_LARGE) r = await transport.uploadBlob(b, NO_BYTES);
     if (r.ok) await answer(b, r.answer);
     else if (await failed(r, [b], [...blobs.slice(n + 1), ...items])) return finish();
   }

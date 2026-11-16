@@ -4,7 +4,7 @@ import { catalogs } from '@bw/i18n';
 import { createIntl } from 'react-intl';
 import { describe, expect, it } from 'vitest';
 import type { ClientT } from '../shell/intl.tsx';
-import { blockDrop, boardSkills, conflictWords, entryLines, filtered, flagValues, hourOf, jobClass, jobDrop, jobMarkerState, place, shortName, shortWindow, spanText, statusKey, stepDate, tabCounts, tabJobs, timeText, vanState, windowText, type BoardBlock, type BoardJob, type Van } from './model.ts';
+import { blockDrop, boardSkills, conflictWords, entryLines, filtered, flagValues, hourOf, jobClass, jobDrop, jobMarkerState, noRoomText, place, shortName, shortWindow, spanText, statusKey, stepDate, tabCounts, tabJobs, timeText, vanState, windowText, type BoardBlock, type BoardJob, type Van } from './model.ts';
 import { sampleBoard } from './preview-fixtures.ts';
 
 const Z = '-04:00[America/New_York]';
@@ -157,5 +157,30 @@ describe('the entry a flagged row shows (CTL-OFC-02-15, F-1139)', () => {
     expect(entryLines({ ...finish, parts: [], noPartsUsed: true, laborMinutes: 30, workDone: [] }, en)).toEqual(['No parts used', 'Labor 30 min']);
     expect(entryLines({ kind: 'note', text: 'Customer wants a quote' }, en)).toEqual(['Note: Customer wants a quote']);
     expect(entryLines(null, en)).toEqual([]);
+  });
+});
+
+describe('the no-room refusal names its limit (F-1701)', () => {
+  const tIn = (locale: 'en' | 'es') => ((key: string, values?: Record<string, string | number>) =>
+    createIntl({ locale, messages: catalogs[locale] as Record<string, string>, onError: () => undefined }).formatMessage({ id: key }, values)) as unknown as ClientT;
+  const text = (locale: 'en' | 'es', detail: Record<string, unknown>) => noRoomText(tIn(locale), detail, 'Chris Yoder', '12-2 PM');
+  // why: F-1701 the owner moved a job to the installer and the refusal did not say why; the installer's 1 job a day is named, in both languages
+  it('names the installer\'s 1 job a day', () => {
+    expect(text('en', { limit: 'installer_day', max: 1 })).toBe('Chris Yoder has the installer\'s limit of 1 job a day, and that day already has one. Pick another technician.');
+    expect(text('es', { limit: 'installer_day', max: 1 })).toBe('Chris Yoder es instalador y toma 1 trabajo al día, y ese día ya tiene uno. Elija otro técnico.');
+  });
+  // why: F-1701 a technician at the day's limit is refused by the day, with that day's number, in both languages
+  it('names the day\'s limit and its number', () => {
+    expect(text('en', { limit: 'day', max: 5 })).toBe('Chris Yoder already has 5 jobs that day, the most 1 day holds. Pick another technician.');
+    expect(text('es', { limit: 'day', max: 5 })).toBe('Chris Yoder ya tiene 5 trabajos ese día, el máximo que cabe en 1 día. Elija otro técnico.');
+  });
+  // why: F-1701 a technician at the window's limit is refused by the window, named as the block shows it, in both languages
+  it('names the window and its limit', () => {
+    expect(text('en', { limit: 'window', max: 2 })).toBe('Chris Yoder already has 2 jobs in that window, 12-2 PM, the most 1 window holds. Pick another technician.');
+    expect(text('es', { limit: 'window', max: 2 })).toBe('Chris Yoder ya tiene 2 trabajos en esa ventana, 12-2 PM, el máximo que cabe en 1 ventana. Elija otro técnico.');
+  });
+  // why: F-1813 the kernel always sends the limit, so an answer without one is a server fault and names no limit
+  it('gives no text when the answer names no limit', () => {
+    expect(noRoomText(((k: string) => k) as never, {}, 'Chris Yoder', '12-2 PM')).toBeNull();
   });
 });

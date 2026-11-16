@@ -22,7 +22,7 @@ export { ensurePasswordFile, passwordFile, PROCESS_LOGINS, provisionLogins, setL
 export { hashPassword, samplePassword, showSamplePassword, verifyPassword } from './passwords.ts';
 // The event bus contract and publish helper (SPECIFICATIONS 4.3, SD-13): the one place the channel and payload are named.
 export {
-  BUS_CHANNEL, decodeNotification, encodeNotification, EVENT_NAMES, publishEvent, type BusEvent, type EventIds, type EventName,
+  alertEventIds, BUS_CHANNEL, decodeNotification, encodeNotification, EVENT_NAMES, publishEvent, type BusEvent, type EventIds, type EventName,
 } from './events.ts';
 // The on-screen email store (SD-29, FR-AUTH-8): messages and one-time links, shared by alerts, invites and resets.
 export { EMAIL_KINDS, EMAIL_LINK_HOURS, hashToken, newToken, openEmailLink, sendEmail, type EmailKind, type NewEmail, type OpenedEmail, type SentEmail } from './email-store.ts';

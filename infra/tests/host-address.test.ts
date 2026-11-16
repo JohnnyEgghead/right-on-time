@@ -14,6 +14,7 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 const bare = { PATH: process.env.PATH ?? '', HOME: dir, BW_OWNER_ENV: path.join(dir, 'none.env'), BW_OWNER_ENV_LOCAL: path.join(dir, 'none-local.env') };
 const SCRIPTS: Array<[string, string[]]> = [
   ['infra/deploy/deploy.sh', []],
+  ['infra/deploy/reset-world.sh', []], // F-1815: hosted mode (no --local) reads BW_HOST; the --local runs are in reset-world.test.ts
   ['infra/backup/hosted-check.sh', ['--log', path.join(dir, 'log.txt')]],
   ['infra/spike/s2/deploy.sh', [dir]],
   ['infra/spike/s3/deploy.sh', [dir, path.join(dir, 'x.pmtiles')]],

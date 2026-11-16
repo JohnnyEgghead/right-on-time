@@ -345,11 +345,15 @@ for p in / /m/probe-token /office/board /api/v1/events; do
   log "https://$DOMAIN$p -> $code, body is the placeholder: $same"
 done
 log "routes $want expected: $([ "$as_want" = 1 ] && echo 'every probe answers so' || echo 'NOT every probe answers so')"
+# F-1808 (F-214's live clause): the live site sends Strict-Transport-Security, read from a real answer, not from the config files.
+hsts=0
+if curl -s -D - -o /dev/null --max-time 10 "https://$DOMAIN/" 2>/dev/null | tr -d '\r' | grep -qi '^strict-transport-security: .*max-age=[1-9]'; then hsts=1; fi
+log "https://$DOMAIN/ sends Strict-Transport-Security: $([ "$hsts" = 1 ] && echo yes || echo 'NO')"
 
 if [ -n "$drill" ]; then
   if [ "$rc" = 3 ] && [ "$hz_code" = 200 ] && [ "$as_want" = 1 ]; then log "DRILL PASS: rolled back, /healthz 200, routes still $want$stage_note"; exit 0; fi
   log "DRILL FAIL (server exit $rc, /healthz $hz_code, routes $want answered: $as_want)$stage_note"; exit 1
 fi
-if [ "$rc" = 0 ] && [ "$hz_code" = 200 ] && [ "$as_want" = 1 ]; then log "DEPLOY OK $deploy_tag, routes $want$stage_note"; exit 0; fi
-log "DEPLOY FAILED (server exit $rc, /healthz $hz_code, routes $want answered: $as_want)$stage_note"
+if [ "$rc" = 0 ] && [ "$hz_code" = 200 ] && [ "$as_want" = 1 ] && [ "$hsts" = 1 ]; then log "DEPLOY OK $deploy_tag, routes $want$stage_note"; exit 0; fi
+log "DEPLOY FAILED (server exit $rc, /healthz $hz_code, routes $want answered: $as_want, HSTS: $hsts)$stage_note"
 exit 1

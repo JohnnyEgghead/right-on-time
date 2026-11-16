@@ -161,3 +161,13 @@ html body.r1 { width: auto; min-width: 0; }
 }
 /* The flagged row names its job (a link) in the frame's bold line: the frame draws no link color or underline there (DK-85 CTL-OFC-02-15). */
 .att .row .tx > a { color: inherit; text-decoration: none; }
+/* F-1063: SCR-OFC-01's Keep me signed in is a native checkbox over the frame's .bx box (as the Customers .ck rows are), so a tap made before the page's script runs ticks it
+   and the box shows what the form sends. Unticked is the frame's box, its color left as the frame's (F-1776);
+   ticked is the kit's .r1-fin-ck .bx.on (same tokens), with the kit's white check. */
+.bw-screen .form .check { position: relative; cursor: pointer; }
+.bw-screen .form .check input.bw-keep-cb { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+.bw-screen .form .check .bx { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.bw-screen .form .check .bx .ic { width: 14px; height: 14px; }
+.bw-screen .form .check input:not(:checked) + .bx .ic { display: none; }
+.bw-screen .form .check input:checked + .bx { background: var(--teal-700); border-color: var(--teal-700); color: var(--white); }
+.bw-screen .form .check input:focus-visible + .bx { outline: 2px solid var(--teal-600); outline-offset: 2px; }

@@ -82,14 +82,34 @@ export const miles = (meters: number | null): string | null => (meters === null 
 
 export const STATE_KEY: Record<Stop['state'], MessageKey> = { done: 'tech.map.state.done', next: 'tech.map.state.next', later: 'tech.map.state.later' };
 
-export type MapPhase = 'loading' | 'route' | 'offline' | 'none' | 'alldone';
+export type MapPhase = 'loading' | 'error' | 'route' | 'offline' | 'none' | 'alldone';
 
-/** Which of the frames' states the Map tab is in (offline shows the saved day; a day with no stops is "none" whatever else is true). */
-export function mapPhase(route: RouteData | null, offline: boolean, settled: boolean): MapPhase {
+/**
+ * Which of the frames' states the Map tab is in (offline shows the saved day; a day with no stops is "none" whatever else is true).
+ * `failed` is a read round that ended in an error: with signal and no saved route that is Route not loaded (SCR-TEC-15; F-1757), never Loading
+ * with no end. This is the native app's own copy of the rule; the web's lives in apps/web/src/tech/view-model.ts.
+ */
+export function mapPhase(route: RouteData | null, offline: boolean, settled: boolean, failed = false): MapPhase {
   if (offline) return route && route.stops.length === 0 ? 'none' : 'offline';
+  if (!route && settled && failed) return 'error';
   if (!settled || !route) return 'loading';
   if (route.stops.length === 0) return 'none';
   return route.next === null ? 'alldone' : 'route';
+}
+
+/** The header's route summary (CTL-TEC-15-08): the stop count only once there is a route to count; Loading and Route not loaded read "Today's route" alone (F-1758). */
+export function mapSummary(t: Say, phase: MapPhase, stops: number, done: number): string {
+  if (phase === 'error' || (phase === 'loading' && stops === 0)) return t('tech.map.title');
+  return phase === 'loading' || phase === 'none' ? t('tech.map.summaryOpen', { stops }) : t('tech.map.summary', { stops, done });
+}
+
+export type MePhase = 'day' | 'loading' | 'error' | 'offlineNone';
+
+/** Which of SCR-TEC-10's rows the Me tab is in: a saved or read day, or, with none saved, Loading, Day not loaded or Offline, nothing saved (F-1747). */
+export function mePhase(hasDay: boolean, offline: boolean, settled: boolean, failed: boolean): MePhase {
+  if (hasDay) return 'day';
+  if (offline) return 'offlineNone';
+  return settled && failed ? 'error' : 'loading';
 }
 
 /** The service line of the Next stop card (CTL-TEC-15-09): "12 min, 5.8 mi - furnace tune-up"; an approximate leg shows no distance. */

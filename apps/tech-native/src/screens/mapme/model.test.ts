@@ -154,3 +154,35 @@ describe('the Map and Directions states', () => {
     expect(native.distText(say as never, 'en', exact, 'service.tuneup')).toBe(webView.distText(say as never, exact, 'service.tuneup'));
   });
 });
+
+describe('the Map tab with no saved route, and the Me tab with no saved day (F-1757, F-1758, F-1747)', () => {
+  const say = ((key: string, values?: Record<string, unknown>) => `${key}${values ? JSON.stringify(values) : ''}`) as never;
+  const day = { stops: [{ state: 'next' }], next: 1, legs: [] } as never;
+
+  // why: F-1757 a failed route read with signal and no saved route ends in Route not loaded, never Loading with no end
+  it('ends the Map tab\'s Loading in Route not loaded when the read failed with no saved route', () => {
+    expect(native.mapPhase(null, false, true, true)).toBe('error');
+    expect(native.mapPhase(null, false, false, false)).toBe('loading'); // not read yet
+    expect(native.mapPhase(null, false, true, false)).toBe('loading');
+    expect(native.mapPhase(null, true, true, true)).toBe('offline'); // no signal is Offline, not an error
+    expect(native.mapPhase(day, false, true, true)).toBe('route'); // a saved route stays on screen when a later read fails
+  });
+
+  // why: F-1758 Map Loading and Route not loaded read Today's route with no stop count, never 0 stops
+  it('shows no stop count while the route is loading or did not load', () => {
+    expect(native.mapSummary(say, 'loading', 0, 0)).toBe('tech.map.title');
+    expect(native.mapSummary(say, 'error', 0, 0)).toBe('tech.map.title');
+    expect(native.mapSummary(say, 'loading', 3, 1)).toContain('tech.map.summaryOpen');
+    expect(native.mapSummary(say, 'route', 5, 1)).toContain('tech.map.summary{');
+    expect(native.mapSummary(say, 'none', 0, 0)).toContain('"stops":0'); // a real day with no jobs
+  });
+
+  // why: F-1747 the Me tab with no saved day is Loading, Day not loaded or Offline nothing saved, never No van assigned
+  it('names the Me tab\'s state when no day is saved', () => {
+    expect(native.mePhase(true, true, true, true)).toBe('day');
+    expect(native.mePhase(false, false, false, false)).toBe('loading');
+    expect(native.mePhase(false, false, true, true)).toBe('error');
+    expect(native.mePhase(false, true, true, true)).toBe('offlineNone');
+    expect(native.mePhase(false, true, false, false)).toBe('offlineNone');
+  });
+});

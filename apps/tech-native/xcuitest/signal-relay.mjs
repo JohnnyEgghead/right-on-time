@@ -31,7 +31,8 @@
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createServer, request } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
 
 const [relayPort, controlPort, upstream, logFile] = process.argv.slice(2);
 if (!relayPort || !controlPort || !upstream || !logFile) {
@@ -39,6 +40,8 @@ if (!relayPort || !controlPort || !upstream || !logFile) {
   process.exit(2);
 }
 const up = new URL(upstream);
+// The upstream is http (the Compose stack) or https (xcuitest/reviewer-hosted.sh: the hosted site).
+const request = up.protocol === 'https:' ? httpsRequest : httpRequest;
 let seq = 0;
 const iso = () => `${++seq} up=${process.uptime().toFixed(3)}`;
 const log = (line) => appendFileSync(logFile, `${line}\n`);
@@ -151,7 +154,7 @@ function forward(req, res, rawBody, mode) {
   const rewrite = mode === 'nextday' || mode === 'dropjob' || mode === 'late' || mode === 'firstdone';
   const headers = { ...req.headers, host: up.host, ...(rewrite ? { 'accept-encoding': 'identity' } : {}), ...(body !== rawBody ? { 'content-length': String(body.length) } : {}) };
   if (mode === 'unauth') delete headers.authorization; // the server's own 401 answer (a signed-out session)
-  const out = request({ hostname: up.hostname, port: up.port, method: req.method, path, headers }, (r) => {
+  const out = request({ hostname: up.hostname, port: up.port || (up.protocol === 'https:' ? 443 : 80), method: req.method, path, headers }, (r) => {
     if (rewrite) {
       // the day read, changed on its way back: another date, one job fewer, or a late text on the next job (the app's New day,
       // day-changed and late states)

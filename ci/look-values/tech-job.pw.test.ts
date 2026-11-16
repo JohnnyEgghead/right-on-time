@@ -63,8 +63,8 @@ describe.each(engines)('technician job screens look on %s', (engine, type) => {
       }));
     }
     await g.context.close();
-    // Kit 0.9 added SCR-TEC-04 Offline, screen not saved and SCR-TEC-09 Refused (F-1144): 31.
-    expect(caps.filter((c) => /^SCR-TEC-0[4-79] /.test(c)).length).toBe(31);
+    // Kit 0.9 added SCR-TEC-04 Offline, screen not saved and SCR-TEC-09 Refused (F-1144): 31. Kit 0.12 added SCR-TEC-04 Reading the phone (web) (57520d6c): 32.
+    expect(caps.filter((c) => /^SCR-TEC-0[4-79] /.test(c)).length).toBe(32);
     expect(uncoveredStates(caps)).toEqual([]);
   }, 120_000);
 

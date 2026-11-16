@@ -161,6 +161,18 @@ aws_tool() {
   esac
 }
 
+# F-1695: ssh -G prints the user and host ssh would really use (the config files, a Host block included) without connecting. A real run
+# refuses a call whose resolved user or host is not the one in the words the guard checked, so a Host block cannot move a drill call.
+resolved_ok() {
+  [ "$mode" = run ] || return 0
+  local want_user="$1" want_host="$2" out u h
+  shift 2
+  out="$("$(cat "$bin/real-ssh")" -G "$@" 2>/dev/null </dev/null)" || refuse "$@"
+  u="$(printf '%s\n' "$out" | awk '$1 == "user" { print $2; exit }')"
+  h="$(printf '%s\n' "$out" | awk '$1 == "hostname" { print tolower($2); exit }')"
+  [ "$u" = "$want_user" ] && [ "$h" = "$(printf '%s' "$want_host" | tr '[:upper:]' '[:lower:]')" ] || refuse "$@"
+}
+
 # hosted_list: the hosted server's READ-ONLY bucket listing, only as the exact argument list of the drill (anything else exit 97).
 # Dry run: bucket-<n>.txt of the fixtures for the n-th listing if there is one (a test plants a change that way), else bucket.txt.
 hosted_list() {
@@ -169,6 +181,7 @@ hosted_list() {
   local j
   local -a got=("$@")
   for ((j = 0; j < ${#want[@]}; j++)); do [ "${want[j]}" = "${got[j]}" ] || refuse "$@"; done
+  resolved_ok "${hosted_host%@*}" "${hosted_host#*@}" "$@"
   note "ssh hosted READ-ONLY $(cat "$bin/hosted-list-cmd")"
   if [ "$mode" = run ]; then exec "$(cat "$bin/real-ssh")" "$@" </dev/null; fi
   dry_say "ssh hosted READ-ONLY: $(cat "$bin/hosted-list-cmd")"
@@ -227,6 +240,7 @@ ssh_tool() {
     if [ -s "$bin/../copy$n/ip" ] && [ "$dest" = "admin@$(cat "$bin/../copy$n/ip")" ]; then label="copy$n"; fi
   done
   [ -n "$label" ] || refuse "$@"
+  resolved_ok "${dest%@*}" "${dest#*@}" "$@"
   note "ssh $label $(printf '%s' "${cmd[*]}" | tr '\n' ' ' | cut -c1-300)"
   if [ "$mode" = run ]; then exec "$(cat "$bin/real-ssh")" "$@"; fi
   dry_say "ssh $label: $(printf '%s' "${cmd[*]}" | tr '\n' ' ')"

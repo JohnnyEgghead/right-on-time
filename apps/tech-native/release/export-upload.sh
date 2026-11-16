@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Exports the archive with manual signing (the Apple Distribution certificate in the login keychain and the "Right On Time App Store"
-# profile, release/ExportOptions-manual.template.plist), and with "upload" also sends it to App Store Connect, TestFlight internal only.
-# Usage: bash apps/tech-native/release/export-upload.sh export|upload [evidence-dir]
+# profile, release/ExportOptions-manual.template.plist), and with "upload" or "store" also sends it to App Store Connect.
+# Usage: bash apps/tech-native/release/export-upload.sh export|upload|store [evidence-dir]
 #   export: signs the archive into apps/tech-native/build/export/ (nothing leaves this Mac).
-#   upload: the same plist with destination upload, so Apple receives the build. It is never submitted for review and
-#           never released: the plist sets testFlightInternalTestingOnly, and no step here touches a version or a review.
+#   upload: the same plist with destination upload, so Apple receives the build for TestFlight internal testing only
+#           (testFlightInternalTestingOnly true: buildAudienceType INTERNAL_ONLY). It is never submitted for review and never released.
+#   store:  destination upload with testFlightInternalTestingOnly false (F-1721), so the build is APP_STORE_ELIGIBLE and can be attached to an
+#           App Store version. An INTERNAL_ONLY build cannot: Apple answers 409 "pre-release build could not be added". Still no step here
+#           touches a version or a review; the owner attaches and submits with release/asc-listing.mjs.
 # F-1621 (owner answer dedc3b70, "Keep them private"): the committed plist is a template with no team id. Each run writes the real one,
 # apps/tech-native/build/ExportOptions-<mode>.plist (ignored by git), with BW_APPLE_TEAM_ID from the environment or the owner's private
 # file (infra/drill/owner-env.sh); without a team id nothing runs (exit 2).
 # The issuer id, the key id and the team id are redacted from all output by release/xcb-asc.sh. Exit: the xcodebuild exit; 2 on usage.
 set -euo pipefail
-mode="${1:?usage: export-upload.sh export|upload [evidence-dir]}"
-case "$mode" in export|upload) ;; *) echo "export-upload: mode must be export or upload" >&2; exit 2 ;; esac
+mode="${1:?usage: export-upload.sh export|upload|store [evidence-dir]}"
+case "$mode" in export|upload|store) ;; *) echo "export-upload: mode must be export, upload or store" >&2; exit 2 ;; esac
 here="$(cd "$(dirname "$0")" && pwd)"
 app="$(cd "$here/.." && pwd)"
 root="$(cd "$app/../.." && pwd)"
@@ -27,8 +30,10 @@ team="${BW_APPLE_TEAM_ID:-}"
 template="$here/ExportOptions-manual.template.plist"
 plist="$app/build/ExportOptions-$mode.plist"
 mkdir -p "$app/build"
-if [ "$mode" = "upload" ]; then dest=upload; else dest=export; fi
-(umask 077 && sed -e "s#<string>BW_APPLE_TEAM_ID</string>#<string>$team</string>#" -e "s#<string>export</string>#<string>$dest</string>#" "$template" >"$plist")
+if [ "$mode" = "export" ]; then dest="export"; else dest="upload"; fi
+if [ "$mode" = "store" ]; then internal='<false/>'; else internal='<true/>'; fi
+(umask 077 && sed -e "s#<string>BW_APPLE_TEAM_ID</string>#<string>$team</string>#" -e "s#<string>export</string>#<string>$dest</string>#" -e "s#<BW_INTERNAL_TESTING_ONLY/>#$internal#" "$template" >"$plist")
+{ grep -q -F "$internal" "$plist" && ! grep -q -F 'BW_INTERNAL_TESTING_ONLY/>' "$plist"; } || { echo "export-upload: the generated plist does not set testFlightInternalTestingOnly" >&2; exit 2; }
 if [ "$(grep -c -F "<string>$team</string>" "$plist")" != 1 ] || grep -q -F '<string>BW_APPLE_TEAM_ID</string>' "$plist"; then
   echo "export-upload: the generated plist does not hold the team id exactly once" >&2; exit 2
 fi

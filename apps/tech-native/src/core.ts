@@ -13,7 +13,7 @@ import {
 } from '@bw/api';
 import { chooseLanguage, type Language } from '@bw/i18n/src/language.ts';
 import {
-  FileItemStore, NotReadyError, TechOutbox, type AnsweredItem, type EntryInput, type FinishPayload, type OutboxState, type QueuedItem, type StoreDir,
+  FileItemStore, NotReadyError, SYNC_CALL_LIMIT_MS, TechOutbox, type AnsweredItem, type EntryInput, type FinishPayload, type OutboxState, type QueuedItem, type StoreDir,
 } from '@bw/outbox/src/items/native.ts';
 import type { Instant } from '@bw/time';
 import { SessionStore, type SecretStore, type Session } from './auth/session-store.ts';
@@ -173,17 +173,23 @@ export class NativeApp {
     this.set({ outbox: { ...IDLE_OUTBOX, ready: true, waiting }, damaged });
   }
 
-  /** `signal`: every request this client makes is cancelled with it (the sign-out's time limit, F-1368). */
-  private client(session: Session | null, signal?: AbortSignal): ApiClient {
+  /**
+   * `signal`: every request this client makes is cancelled with it (the sign-out's time limit, F-1368). `timeoutMs`: each call's own time
+   * limit (F-1746: the engine's sync calls).
+   */
+  private client(session: Session | null, signal?: AbortSignal, timeoutMs?: number): ApiClient {
     const f = this.deps.fetch;
     const send: typeof fetch = signal ? (input, init) => f(input, { ...init, signal }) : f;
-    return createClient({ baseUrl: this.state.server, fetch: answeredOrNetwork(send), ...(session ? { headers: { authorization: `Bearer ${session.token}` } } : {}) });
+    return createClient({
+      baseUrl: this.state.server, fetch: answeredOrNetwork(send), ...(session ? { headers: { authorization: `Bearer ${session.token}` } } : {}), ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+    });
   }
 
   /** Starts the engine and reads the store before anything else (F-984: the header shows no count until outbox.ready). */
   private async startEngine(session: Session): Promise<void> {
     this.engineOff?.();
-    const client = this.client(session);
+    // F-1746: the sync's reads (API-07, API-162, API-10) have a time limit; the items go by background uploads, which have their own.
+    const client = this.client(session, undefined, SYNC_CALL_LIMIT_MS);
     const engine = new TechOutbox({
       store: this.store,
       transport: nativeTransport({ origin: session.origin, token: session.token, blobUri: (k) => this.store.blobUri(k), port: this.deps.upload }),

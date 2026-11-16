@@ -8,14 +8,15 @@
 // phone last saw (the snapshot), and a job added, one that left the day or one with a new window raises 1 notice per read when the Me screen's
 // notifications switch is on. The switch is kept on the phone; no push service is contacted. Results of the technician's own actions are not
 // governed by it (UD-43): they are CMP-10's.
-import { ApiError, createClient, dayRoute, partsList, todayJobs, type ApiClient } from '@bw/api';
+import { ApiError, createClient, dayRoute, partsList, todayJobs, whoAmI, type ApiClient } from '@bw/api';
+import { realNow } from '@bw/time';
 import { useEffect, useSyncExternalStore } from 'react';
 import {
-  forgetCount, noticesOn, savedDay, savedParts, savedRoute, savedRoutes, savedSnapshot, saveDay, saveParts, saveRoute, saveRoutes, saveSnapshot, setNoticesOn, setTextSize, textSize,
-  type KeptRoutes, type Saved,
+  forgetCount, noticesOn, savedDay, savedParts, savedProfile, savedRoute, savedRoutes, savedSnapshot, saveDay, saveParts, saveProfile, saveRoute, saveRoutes, saveSnapshot, setNoticesOn, setTextSize, textSize,
+  type KeptRoutes, type Profile, type Saved,
 } from './local.ts';
 import { routeRead, type RouteRead, type ShownRoute } from './steps.ts';
-import { dayChanges, snapshotOf, type DayChange, type DayData, type Part, type RouteData, type TextSize } from './model.ts';
+import { dayChanges, profileOf, snapshotOf, type DayChange, type DayData, type Part, type RouteData, type TextSize } from './model.ts';
 
 /** GAP-7: technician apps read the day on open, on focus, after each send and every 60 s. This is the only read loop of the day (Today, Me, Map, Directions). */
 export const READ_EVERY_MS = 60_000;
@@ -41,6 +42,8 @@ export interface TechData {
   settled: boolean;
   /** The last read failed (no connection, or a refusal): a saved day, if any, is what the screen shows (CMP-12). */
   failed: boolean;
+  /** When the last failed round ended, the phone's own stamp in ms (F-1777: the panels' Last try time); null before any failure. */
+  failedAt?: number | null;
   /** The last read was refused with 401: the session ended (the idle limit), so the screen opens the sign-in page (UI-SPECIFICATION Session ended). */
   signedOut: boolean;
   /** The demo time the last read answered at (the envelope's demoNow), the clock "On the clock" counts to. */
@@ -48,6 +51,8 @@ export interface TechData {
   notices: Notice[];
   noticesOn: boolean;
   textSize: TextSize;
+  /** The signed-in person's name and skill kept on the phone (API-07): Me's profile on Reading the phone and the no-day states (F-1740). */
+  profile?: Profile | null;
   /** The page was drawn on the server, or is still hydrating: it has not read the phone's copy yet (UI-SPECIFICATION 4.5 rule 12, Reading the phone; F-1434). */
   reading?: true;
 }
@@ -68,7 +73,7 @@ export class TechReads {
   private started = false;
 
   constructor(private readonly client: ApiClient, private readonly isOnline: () => boolean = () => true) {
-    this.s = { ...EMPTY, day: savedDay(), route: savedRoute(), routes: savedRoutes(), parts: savedParts(), noticesOn: noticesOn(), textSize: textSize(), now: savedDay()?.at ?? null };
+    this.s = { ...EMPTY, day: savedDay(), route: savedRoute(), routes: savedRoutes(), profile: savedProfile(), parts: savedParts(), noticesOn: noticesOn(), textSize: textSize(), now: savedDay()?.at ?? null };
   }
 
   get snapshot(): TechData {
@@ -106,6 +111,19 @@ export class TechReads {
     kick();
   }
 
+  /** API-07: the person's name and skill, kept for Me's profile (F-1740). A refused or lost answer leaves the kept profile as it was. */
+  private async readProfile(gen: number): Promise<void> {
+    try {
+      const who = await this.client.call(whoAmI, {});
+      if (gen !== this.epoch()) return;
+      const profile = profileOf(who.data);
+      saveProfile(profile);
+      this.set({ profile });
+    } catch {
+      // the day read is what decides online or failed; the profile is kept as it was
+    }
+  }
+
   /** One read round; a call made while one runs joins it. */
   refresh(): Promise<void> {
     this.running ??= this.round().finally(() => {
@@ -121,6 +139,9 @@ export class TechReads {
     }
     this.rounds += 1;
     const gen = this.epoch();
+    // F-1775: the profile is read beside the day, whatever the day read's outcome, so Loading and Day not loaded name the person on a first open too.
+    // F-1778: the name and skill change only at sign-in, so API-07 is read once, when no profile is kept, never on every round.
+    const profileRead = this.s.profile ? Promise.resolve() : this.readProfile(gen);
     try {
       const day = await this.client.call(todayJobs, {});
       if (gen !== this.epoch()) return;
@@ -151,7 +172,10 @@ export class TechReads {
       this.set({ settled: true });
     } catch (e) {
       // An answer that is a refusal (401, 5xx) is not a lost connection; only a call that never reached the server is.
-      this.set({ online: e instanceof ApiError ? this.s.online : false, settled: true, failed: true, signedOut: e instanceof ApiError && e.status === 401 });
+      this.set({ online: e instanceof ApiError ? this.s.online : false, settled: true, failed: true, failedAt: realNow('device_stamp').epochMilliseconds, signedOut: e instanceof ApiError && e.status === 401 });
+    } finally {
+      // readProfile never throws; the round ends with it, so a joined refresh never leaves it running into the next round.
+      await profileRead;
     }
   }
 
@@ -217,7 +241,7 @@ export class TechReads {
   /** Sign-out: the person's reads are forgotten with the copies on the phone. */
   clear(): void {
     this.signOuts += 1;
-    this.set({ day: null, route: null, routes: null, parts: null, notices: [] });
+    this.set({ day: null, route: null, routes: null, parts: null, profile: null, notices: [] });
   }
 }
 

@@ -82,6 +82,11 @@ export interface TechPreview {
   outbox: OutboxState;
 }
 
+/** Reading the phone (UI-SPECIFICATION 4.5 rule 12; kit 0.12, 57520d6c): what the server draws a page with, the phone's copy not yet read (data.ts UNREAD). */
+const READING: TechData = { ...BASE, day: null, route: null, parts: null, routes: null, settled: false, now: null, reading: true };
+/** The signed-in person's kept profile (API-07): Me's Reading the phone and no-day states draw the name and role from it (F-1740). */
+const PROFILE = { name: 'Maria Santos', initials: 'MS', skill: 'heating_cooling' };
+
 const synced = STATES.synced!;
 const offline = STATES.offline!;
 const at1126 = at('11:06:00');
@@ -92,6 +97,11 @@ export const MAP_PREVIEWS: Record<string, TechPreview> = {
   offline: { data: { ...BASE, online: false }, outbox: { ...offline, waiting: offline.waiting.slice(0, 1) } },
   nojobs: { data: { ...BASE, route: { at: NOW, data: { ...routeOf(0), stops: [], legs: [], next: null } } }, outbox: synced },
   alldone: { data: { ...BASE, route: { at: NOW, data: routeOf(5) } }, outbox: synced },
+  reading: { data: READING, outbox: synced },
+  // Route not loaded (F-1750): signal, no route saved, the route read failed. No frame draws it; the page walkers reach it.
+  error: { data: { ...BASE, route: null, failed: true }, outbox: synced },
+  // Loading with no saved route (F-1758): the route summary names no stop count.
+  loadingempty: { data: { ...BASE, route: null, settled: false }, outbox: synced },
 };
 
 export const PARTS_PREVIEWS: Record<string, TechPreview & { query: string }> = {
@@ -100,6 +110,7 @@ export const PARTS_PREVIEWS: Record<string, TechPreview & { query: string }> = {
   nomatch: { data: BASE, outbox: synced, query: 'capacitr' },
   nocopy: { data: { ...BASE, parts: null }, outbox: synced, query: '' },
   offline: { data: { ...BASE, online: false }, outbox: offline, query: 'CAP' },
+  reading: { data: READING, outbox: synced, query: '' },
 };
 
 export const ME_PREVIEWS: Record<string, TechPreview & { phase?: 'refused' | 'signing'; sizeOpen?: boolean }> = {
@@ -109,34 +120,42 @@ export const ME_PREVIEWS: Record<string, TechPreview & { phase?: 'refused' | 'si
   offline: { data: { ...BASE, online: false, now: at1126 }, outbox: { ...offline } },
   notstarted: { data: { ...BASE, day: { at: NOW, data: { ...DAY, startedAt: null } } }, outbox: synced },
   sizeopen: { data: BASE, outbox: synced, sizeOpen: true },
+  reading: { data: { ...READING, profile: PROFILE }, outbox: synced },
+  // No day saved, the phone's copy read (F-1739; no frame draws these, the page walkers reach them): the day read not answered, failed with signal, or no signal.
+  loading: { data: { ...BASE, day: null, settled: false, now: null, profile: PROFILE }, outbox: synced },
+  error: { data: { ...BASE, day: null, failed: true, now: null, profile: PROFILE }, outbox: synced },
+  nosaved: { data: { ...BASE, day: null, online: false, now: null, profile: PROFILE }, outbox: { ...offline } },
 };
 
 /**
- * The Directions frames' route (mockups/pages/tech-map.html, kit 0.9): Harold Jenkins's job to Linda Miller's, 11 minutes, with the frame's 4 steps
- * (UI-SPECIFICATION SCR-TEC-08 sample words). The step meters add up to the leg's distance, as SD-49 guarantees (483 + 1,931 + 322 + 0).
+ * The Directions frames' route (mockups/pages/tech-map.html, kit 0.12, 57520d6c: owner answer fa9c9833 Drive to this job): opened for Harold
+ * Jenkins's job, the next stop, so the drive from the van by Whitaker's done job to his, About 12 minutes (the leg the Map and Today buttons
+ * show), with the frame's 4 steps. The step meters add up to the leg's distance, as SD-49 guarantees (6,598 + 2,092 + 322 + 0).
  */
-const DIR_TRACK: [number, number][] = [PEOPLE[1].at, { lon: -82.9293, lat: 40.1262 + 0.004 }, { lon: -82.925, lat: 40.1215 + 0.004 }, PEOPLE[2].at].map((p) => [p.lon, p.lat]);
+const DIR_TRACK: [number, number][] = [PEOPLE[0].at, { lon: -82.9405, lat: 40.0931 }, { lon: -82.9405, lat: 40.1262 }, PEOPLE[1].at].map((p) => [p.lon, p.lat]);
 const dirStep = (kind: string, road: string | null, distanceMeters: number, i: number, o: Partial<RouteStep> = {}): RouteStep =>
   ({ kind, direction: null, heading: null, road, exit: null, side: null, at: DIR_TRACK[i]!, distanceMeters, ...o }) as RouteStep;
 const DIR_STEPS: RouteStep[] = [
-  dirStep('depart', 'Cleveland Ave', 483, 0, { heading: 'n' }),
-  dirStep('turn', 'E Schrock Rd', 1931, 1, { direction: 'right' }),
-  dirStep('turn', 'Cobblestone Dr', 322, 2, { direction: 'left' }),
-  dirStep('arrive', 'Cobblestone Dr', 0, 3, { side: 'right' }),
+  dirStep('depart', 'Dublin-Granville Rd', 6598, 0, { heading: 'e' }),
+  dirStep('turn', 'Cleveland Ave', 2092, 1, { direction: 'left' }),
+  dirStep('turn', 'Maple Hollow Ct', 322, 2, { direction: 'right' }),
+  dirStep('arrive', 'Maple Hollow Ct', 0, 3, { side: 'left' }),
 ];
-const DIR_LEG = { toJob: 24833, from: PEOPLE[1].at, to: PEOPLE[2].at, track: DIR_TRACK, minutes: 11, distanceMeters: 2736 };
+const DIR_JOB = PEOPLE[1].jobNumber;
+const DIR_LEG = { toJob: DIR_JOB, from: PEOPLE[0].at, to: PEOPLE[1].at, track: DIR_TRACK, minutes: 12, distanceMeters: 9012 };
 const DIR_ROUTE: ShownRoute = { leg: DIR_LEG, branch: 'columbus', steps: DIR_STEPS, at: NOW };
 const dirRead = (r: ShownRoute): RouteRead => ({ kind: 'leg', ...r });
 
 export const DIR_PREVIEWS: Record<string, TechPreview & { read: RouteRead | null; job: number; updated?: boolean }> = {
-  route: { data: BASE, outbox: synced, read: dirRead(DIR_ROUTE), job: 24833 },
-  loading: { data: BASE, outbox: synced, read: null, job: 24833 },
-  approximate: { data: BASE, outbox: synced, read: dirRead({ ...DIR_ROUTE, leg: { ...DIR_LEG, track: null, distanceMeters: null }, steps: [] }), job: 24833 },
+  route: { data: BASE, outbox: synced, read: dirRead(DIR_ROUTE), job: DIR_JOB },
+  loading: { data: BASE, outbox: synced, read: null, job: DIR_JOB },
+  approximate: { data: BASE, outbox: synced, read: dirRead({ ...DIR_ROUTE, leg: { ...DIR_LEG, track: null, distanceMeters: null }, steps: [] }), job: DIR_JOB },
   // No signal, and the phone keeps the route read at 10:26 AM (rule 11): the kept steps, no Now mark, no Next turn card.
-  offlinesaved: { data: { ...BASE, online: false, routes: { date: '2026-09-15', routes: { '24833': DIR_ROUTE } } }, outbox: offline, read: null, job: 24833 },
-  offline: { data: { ...BASE, online: false }, outbox: offline, read: null, job: 24833 },
-  notloaded: { data: BASE, outbox: synced, read: { kind: 'failed' }, job: 24833 },
-  moved: { data: BASE, outbox: synced, read: { kind: 'moved' }, job: 24833 },
-  updated: { data: BASE, outbox: synced, read: dirRead(DIR_ROUTE), job: 24833, updated: true },
+  offlinesaved: { data: { ...BASE, online: false, routes: { date: '2026-09-15', routes: { [String(DIR_JOB)]: DIR_ROUTE } } }, outbox: offline, read: null, job: DIR_JOB },
+  offline: { data: { ...BASE, online: false }, outbox: offline, read: null, job: DIR_JOB },
+  notloaded: { data: BASE, outbox: synced, read: { kind: 'failed' }, job: DIR_JOB },
+  moved: { data: BASE, outbox: synced, read: { kind: 'moved' }, job: DIR_JOB },
+  updated: { data: BASE, outbox: synced, read: dirRead(DIR_ROUTE), job: DIR_JOB, updated: true },
   nonext: { data: BASE, outbox: synced, read: null, job: 0 },
+  reading: { data: READING, outbox: synced, read: null, job: DIR_JOB },
 };

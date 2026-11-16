@@ -3,8 +3,9 @@
 // row), for the look comparator (ci/look-values/jobs.pw.test.ts) and the page walkers. Every state is fixed; the release route is /office/jobs.
 import { notFound } from 'next/navigation';
 import { JobsView, type JobsViewProps } from '../../../../src/jobs/JobsView.tsx';
-import { JOBS_EMPTY, JOBS_LIVE, JOBS_LIVE_CHANGED, JOBS_NO_RESULTS, JOBS_SERVICE_WORDS, JOBS_SUCCESS } from '../../../../src/jobs/jobs-fixtures.ts';
+import { JOBS_EMPTY, JOBS_LIVE, JOBS_LIVE_CHANGED, JOBS_NO_RESULTS, JOBS_SERVICE_WORDS, JOBS_SUCCESS, JOBS_SUCCESS_ES } from '../../../../src/jobs/jobs-fixtures.ts';
 import { OfficeFrame } from '../../../../src/shell/Frames.tsx';
+import { requestLang } from '../../../../src/shell/i18n-server.ts';
 import { APP_INFO, CLOCK_RUNNING, MANAGER } from '../../../../src/shell/preview-fixtures.ts';
 
 export const dynamic = 'force-dynamic';
@@ -16,10 +17,12 @@ const BASE: JobsViewProps = {
 
 export default async function JobsPreview({ params }: { params: Promise<{ state: string }> }) {
   const { state } = await params;
+  // F-1736: the rows' problem words in the page's language, as the service words are.
+  const base: JobsViewProps = (await requestLang()) === 'es' ? { ...BASE, data: JOBS_SUCCESS_ES } : BASE;
   let view: JobsViewProps;
   switch (state) {
     case 'success':
-      view = BASE;
+      view = base;
       break;
     case 'loading':
       view = { ...BASE, state: 'loading', data: null };
@@ -31,7 +34,7 @@ export default async function JobsPreview({ params }: { params: Promise<{ state:
       view = { ...BASE, query: 'Hendricks', data: JOBS_NO_RESULTS };
       break;
     case 'exporting':
-      view = { ...BASE, exporting: true };
+      view = { ...base, exporting: true };
       break;
     case 'error':
       view = { ...BASE, state: 'error', data: null };

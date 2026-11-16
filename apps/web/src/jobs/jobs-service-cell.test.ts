@@ -4,7 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { BwIntlProvider } from '@bw/i18n';
-import { JOBS_SUCCESS } from './jobs-fixtures.ts';
+import { JOBS_SERVICE_WORDS, JOBS_SUCCESS, JOBS_SUCCESS_ES } from './jobs-fixtures.ts';
 import { JobsView } from './JobsView.tsx';
 
 vi.mock('next/navigation', () => ({
@@ -40,5 +40,25 @@ describe('F-1652 Jobs list service cell', () => {
     const html = render(null);
     expect(html).toContain('Plumbing repair');
     expect(html).not.toContain('bw-jb-svc');
+  });
+});
+
+describe('F-1659 F-1664 Jobs list fixture', () => {
+  // why: F-1659 the fixture's service filter holds service ids (the frame's), not the language keys en and es
+  it('the service filter holds the service ids of the fixture rows', () => {
+    const ids = JOBS_SUCCESS.filters.services;
+    expect(ids).not.toContain('en');
+    for (const r of JOBS_SUCCESS.rows) expect(ids).toContain(r.service);
+  });
+
+  // why: F-1664 every success row carries the page's problem words, so the look case draws the 220 px service cell
+  it('every success row holds problem words', () => {
+    expect(JOBS_SUCCESS.rows.every((r) => typeof r.problem === 'string' && r.problem !== '')).toBe(true);
+  });
+
+  // why: F-1736 the Spanish page's success rows hold the same jobs with the problem words in Spanish, as the service words are (the Spanish walker flags an English catalog value)
+  it('gives the Spanish page the same rows with Spanish problem words', () => {
+    expect(JOBS_SUCCESS_ES.rows.map((r) => ({ ...r, problem: null }))).toEqual(JOBS_SUCCESS.rows.map((r) => ({ ...r, problem: null })));
+    expect(JOBS_SUCCESS_ES.rows.map((r) => r.problem)).toEqual(JOBS_SUCCESS.rows.map((r) => JOBS_SERVICE_WORDS.es[r.service]));
   });
 });

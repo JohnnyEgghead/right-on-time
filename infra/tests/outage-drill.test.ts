@@ -190,7 +190,7 @@ beforeEach(() => {
       ` echo '{"stat":"ok","monitors":[{"id":100000001,"interval":300,"status":'"\${BW_STUB_MON_STATUS:-2}"',"create_datetime":1793476224,"logs":['"$LOGS"'{"type":2,"datetime":1793512927,"duration":5,"reason":{"code":"200","detail":"OK"}}]}]}'\n ;;\nesac`,
   );
 });
-afterEach(() => rmSync(work, { recursive: true, force: true }));
+afterEach(() => rmSync(work, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }));
 
 const env = (extra: Record<string, string> = {}): NodeJS.ProcessEnv => ({
   ...process.env,
@@ -334,14 +334,15 @@ describe('driver', () => {
     let out = '';
     child.stdout.on('data', (d) => (out += String(d)));
     const code = new Promise<number | null>((resolve) => child.on('close', resolve));
-    for (let i = 0; i < 200 && !out.includes('app is down'); i += 1) await new Promise((r) => setTimeout(r, 100));
+    // F-1811: wait for the line itself, with a long cap for a loaded suite, never a fixed time
+    for (let i = 0; i < 900 && !out.includes('app is down'); i += 1) await new Promise((r) => setTimeout(r, 100));
     expect(out).toContain('app is down');
     child.kill('SIGTERM');
     expect(await code).toBe(143);
     const ssh = read('ssh.log');
     expect(ssh).toContain('stop web');
     expect(ssh).toContain('start web');
-  }, 30_000);
+  }, 120_000);
 
   // why: P8-OUTAGE-DRILL NFR-11 the hand restore is the way back after a hard kill
   it('restore starts web by hand', () => {

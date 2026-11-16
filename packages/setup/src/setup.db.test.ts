@@ -92,8 +92,9 @@ describe('a fresh pnpm run setup on an empty PostgreSQL 18 (D-3, OI-57)', () => 
   // why: SD-24, F-557 (a run with no MAPS_DIR says 'maps not checked' before its first step)
   it('completes with exit 0 through all 6 steps in order, with 0 foreign-key errors', () => {
     const states = setupOut.stdout.split('\n').filter((l) => l.startsWith('{')).map((l) => (JSON.parse(l) as { status: string }).status);
-    expect(states).toEqual(['migrated', 'setup started', 'maps not checked', 'reference seed written', 'export generated', 'dry run done', 'import started',
-      'import committed', 'world seed written', 'snapshot written', 'setup done']);
+    // F-1668: with MAPS_DIR set the maps are checked, so 'maps not checked' is absent; the list is named per state.
+    const afterStart = ['reference seed written', 'export generated', 'dry run done', 'import started', 'import committed', 'world seed written', 'snapshot written', 'setup done'];
+    expect(states).toEqual(process.env.MAPS_DIR ? ['migrated', 'setup started', ...afterStart] : ['migrated', 'setup started', 'maps not checked', ...afterStart]);
     expect(setupOut.stderr).not.toMatch(/foreign key|23503/);
   });
 
@@ -586,16 +587,30 @@ describe('the past pilot jobs carry their visit steps, finish, sent bill and som
                      AND NOT EXISTS (SELECT 1 FROM world.job_change c WHERE c.job_number = j.job_number AND c.kind = 'status')`)).toBe(0);
     // Read in the snapshot: the sample day's autopilot test above has since moved demo-week jobs.
     expect(await n(`SELECT count(*) AS n FROM world_snapshot.job_change c JOIN world_snapshot.job j USING (job_number) WHERE NOT j.pilot AND c.kind = 'status'`)).toBe(0);
-    // A technician's On my way never comes before the end of the visit before it that day, unless the fixture's own outcomes overlap
-    // (the visit's arrival is not a minute after the previous end; the SD-25 outcomes are fixed, so those keep the minute before arrival).
-    // A no-one-home visit is at the door at most 20 minutes before its end.
-    expect(await n(`SELECT count(*) AS n FROM (SELECT on_the_way_at, coalesce(arrived_at, ended_at - interval '20 minutes') AS door,
+    // A technician's On my way never comes before the end of the visit before it that day (F-1546: no visit is skipped; the
+    // fitted ends of past-jobs.ts fitPastVisitEnds make room for every one).
+    expect(await n(`SELECT count(*) AS n FROM (SELECT on_the_way_at,
                            lag(ended_at) OVER (PARTITION BY technician_id, date ORDER BY coalesce(arrived_at, ended_at), job_number) AS prev
                       FROM world.job WHERE pilot AND ended_at IS NOT NULL) x
-                     WHERE on_the_way_at < prev AND door > prev + interval '1 minute'`)).toBe(0);
+                     WHERE on_the_way_at < prev`)).toBe(0);
     // Each technician-day of the pilot started at its first On my way (applyStatus: technician_day.started_at).
     expect(await n(`SELECT count(*) AS n FROM (SELECT technician_id, date, min(on_the_way_at) AS first FROM world.job WHERE pilot AND ended_at IS NOT NULL GROUP BY 1, 2) f
                       LEFT JOIN world.technician_day d USING (technician_id, date) WHERE d.started_at IS DISTINCT FROM f.first`)).toBe(0);
+  });
+
+  // why: F-1546 a technician is at 1 visit at a time: over every ended pilot visit, in the order each technician-day ran them (On my
+  // way), none starts its drive or reaches the door before the same technician's previous visit ended, and none ends before it began
+  it("finds 0 pilot visits that overlap the same technician's previous visit, over every ended pilot visit", async () => {
+    const r = (await rows<{ visits: number; overlaps: number; inverted: number }>(`
+      SELECT count(*)::int AS visits,
+             count(*) FILTER (WHERE prev IS NOT NULL AND (on_the_way_at < prev OR coalesce(arrived_at, ended_at) <= prev))::int AS overlaps,
+             count(*) FILTER (WHERE on_the_way_at >= coalesce(arrived_at, ended_at) OR ended_at <= coalesce(arrived_at, on_the_way_at))::int AS inverted
+        FROM (SELECT on_the_way_at, arrived_at, ended_at,
+                     lag(ended_at) OVER (PARTITION BY technician_id, date ORDER BY on_the_way_at, job_number) AS prev
+                FROM world.job WHERE pilot AND status IN ('done', 'no_one_home')) x`))[0]!;
+    const ended = await n(`SELECT count(*) AS n FROM world.job WHERE pilot AND ended_at IS NOT NULL`);
+    expect(r).toEqual({ visits: ended, overlaps: 0, inverted: 0 });
+    expect(r.visits).toBeGreaterThan(600);
   });
 
   // why: F-1541, FR-BILL-3 every done pilot job has a finish the finish validator accepts: parts or No parts used, labor minutes from

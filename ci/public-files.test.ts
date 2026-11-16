@@ -387,6 +387,27 @@ describe('ipv4 (F-1609)', () => {
     expect(r.stderr).toContain('line 2, 3');
   });
 
+  // why: F-1626 plant 1: an address in a URL path after a letter and a slash (ipinfo.io/<address>) fails, while Chrome/<version> still passes
+  it('catches an address after a host or path word and a slash, and still passes a product version', () => {
+    const t = tree('ip-path', (d) => put(d, 'apps/web/src/a.ts', `// SPDX-License-Identifier: AGPL-3.0-or-later\n// https://ipinfo.io/${real}\n// GET /api/${real}\n// Mozilla/5.0 Chrome/${real} Safari/537.36\n`));
+    const r = run(t, 'ipv4');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('line 2, 3');
+    expect(r.stderr).not.toContain('line 2, 3, 4');
+    expect(r.stderr).not.toContain(real);
+  });
+
+  // why: F-1626 plant 2: the dashed form a cloud host name carries fails; a dashed private address passes
+  it('catches the dashed cloud host form', () => {
+    const dashed = real.replaceAll('.', '-');
+    const t = tree('ip-dashed', (d) => put(d, 'apps/web/src/a.ts', `// SPDX-License-Identifier: AGPL-3.0-or-later\n// ec2-${dashed}.us-east-2.compute.amazonaws.com\n// ip-10-0-0-1.ec2.internal\n`));
+    const r = run(t, 'ipv4');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('line 2');
+    expect(r.stderr).not.toContain('line 2, 3');
+    expect(r.stderr).not.toContain(dashed);
+  });
+
   // why: F-1609 a private file is not exported, so an address there is not a leak of the public tree
   it('does not count a private file', () => {
     const t = tree('ip-private', (d) => put(d, 'docs/build/notes.ts', `export const x = '${real}';\n`));

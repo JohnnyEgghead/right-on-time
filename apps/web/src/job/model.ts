@@ -3,6 +3,7 @@
 import type { JobDetailAnswer } from '@bw/api';
 import type { MessageKey } from '@bw/i18n';
 import { analyzeSms } from '@bw/sms';
+import { noRoomShown } from '../board/model.ts';
 
 export type Job = JobDetailAnswer;
 export type JobStatus = Job['job']['status'];
@@ -75,8 +76,10 @@ export function editRefusalShown(r: Refusal, spanText: (start: string, end: stri
   return r.code === 'window_full' ? { key: 'job.refused.windowFullEdit' } : refusalShown(r, spanText);
 }
 
-export function refusalShown(r: Refusal, spanText: (start: string, end: string) => string): Shown {
+export function refusalShown(r: Refusal, spanText: (start: string, end: string) => string, who?: { name: string; window: string }): Shown {
   switch (r.code) {
+    // F-1805: the Reassign dialog (CTL-OFC-18-02) names the limit that refused the pick, the board's texts through the board's function.
+    case 'technician_no_room': return (who && noRoomShown(r.detail, who.name, who.window)) || { key: 'job.refused.server' };
     case 'rule_refused': {
       const key = typeof r.detail['key'] === 'string' && /^rule\.[A-Za-z]+$/.test(r.detail['key']) ? r.detail['key'] : 'job.refused.rule';
       return { key };
@@ -113,6 +116,26 @@ export function feedKey(e: Pick<Job['timeline'][number], 'kind' | 'values'>): Me
   if (e.kind !== 'status') return `job.feed.kind.${e.kind}` as MessageKey;
   const to = e.values['to.status'];
   return to === 'on_the_way' || to === 'on_site' || to === 'done' || to === 'no_one_home' ? `job.feed.kind.status.${to}` : 'job.feed.kind.status';
+}
+
+export type FeedEntry = {
+  key: string; at: string; kind: string; by: string | null; words: MessageKey | null;
+  text: Job['texts'][number] | null; /** the office text's sender, from its own job_change row (F-704) */ textBy: string | null;
+};
+
+/**
+ * CTL-OFC-03-17: the timeline entries and the texts in 1 list, in time order. Each text is 1 row (F-704): an office text writes a
+ * job_change of kind office_text (its values carry textId) and an outbox_text row, so the change folds into the text row, which names who sent it.
+ */
+export function jobFeed(j: Pick<Job, 'timeline' | 'texts'>): FeedEntry[] {
+  const byId = new Map(j.texts.map((x) => [x.id, x]));
+  const sender = new Map<string, string | null>();
+  for (const e of j.timeline) if (e.kind === 'office_text' && typeof e.values['textId'] === 'string' && byId.has(e.values['textId'])) sender.set(e.values['textId'], e.by);
+  return [
+    ...j.timeline.filter((e) => !(e.kind === 'office_text' && typeof e.values['textId'] === 'string' && byId.has(e.values['textId'])))
+      .map((e, i) => ({ key: `${e.kind}-${i}`, at: e.at, kind: e.kind, by: e.by, words: feedKey(e), text: null, textBy: null })),
+    ...j.texts.map((x) => ({ key: x.id, at: x.at, kind: 'text', by: null, words: null, text: x, textBy: sender.get(x.id) ?? null })),
+  ].sort((a, b) => Date.parse(a.at.replace(/\[.*\]$/, '')) - Date.parse(b.at.replace(/\[.*\]$/, '')));
 }
 
 /** The seeded and imported equipment.type codes; a type someone typed in SCR-OFC-37 has no code and shows as typed. */

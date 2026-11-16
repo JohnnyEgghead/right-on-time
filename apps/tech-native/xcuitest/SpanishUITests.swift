@@ -71,13 +71,24 @@ final class SpanishUITests: XCTestCase {
     XCTAssertTrue(el(id).waitForExistence(timeout: s), "\(id) not shown")
   }
 
+  /// iOS offers to save the password after a sign-in: Not Now. F-1820 (the F-1202 shape, TodayUITests.dismissSavePrompt): the sheet is in the
+  /// accessibility tree about 0.2 s before its first frame and fades in for about 0.45 s, and a tap made in that entrance is dropped. So the tap
+  /// waits out the entrance, the sheet must be gone after it, one still there is tapped once more, and one that outlasts that fails by name.
   private func dismissSavePrompt() {
-    let prompt = app.staticTexts["Save Password?"].exists ? app.staticTexts["Save Password?"] : app.staticTexts["¿Guardar contraseña?"]
-    if prompt.waitForExistence(timeout: 2) {
+    // F-1825: either label, waited for together (the sheet is in the device's language, and not yet in the tree at the first look)
+    let sheet = app.staticTexts.matching(NSPredicate(format: "label IN %@", ["Save Password?", "¿Guardar contraseña?"])).firstMatch
+    guard sheet.waitForExistence(timeout: 10) else { return } // the late-sheet wait TodayUITests uses
+    Thread.sleep(forTimeInterval: 1)
+    for _ in 1...2 {
       let notNow = app.buttons["Not Now"].exists ? app.buttons["Not Now"] : app.buttons["Ahora no"]
       if notNow.exists { notNow.tap() } else { app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 121, dy: 525)).tap() }
-      Thread.sleep(forTimeInterval: 1)
+      let left = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: sheet)
+      if XCTWaiter().wait(for: [left], timeout: 5) == .completed {
+        Thread.sleep(forTimeInterval: 1)
+        return
+      }
     }
+    XCTFail("the Save Password sheet stays over the app after 2 taps on Not Now")
   }
 
   /// Every text of the screen now drawn, from 1 snapshot of the app's accessibility tree, printed for ci/native/spanish-walk.ts.

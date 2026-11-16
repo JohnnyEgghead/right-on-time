@@ -57,7 +57,8 @@ export function ReassignJobDialog(p: Common) {
     send: (version) => p.api.assign(j.job.jobNumber, state.step === 'choosing' ? state.pick ?? null : null, version),
     onSent: () => p.onDone({ key: 'job.reassign.done' }),
     onRefused: (r) => {
-      const shown = refusalShown(r, windowText);
+      const name = state.step === 'choosing' ? state.list.find((x) => x.id === state.pick)?.name ?? '' : '';
+      const shown = refusalShown(r, windowText, { name, window: windowText(j.job.window.start, j.job.window.end) });
       setState((s) => (s.step === 'choosing' ? { ...s, message: t(shown.key as MessageKey, shown.values) } : s));
     },
   });

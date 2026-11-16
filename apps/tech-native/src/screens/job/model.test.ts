@@ -98,8 +98,18 @@ describe('SD-32 on the native phone', () => {
 
   // why: F-69, F-931 a photo the phone cannot encode is kept as picked and marked, so it leaves the phone flagged instead of waiting forever
   it('keeps a photo the encoder cannot read as picked, marked unreadable', async () => {
-    const enc: Encoder = { jpeg: async () => null, original: async () => new Uint8Array([1, 2, 3]) };
-    expect(await compressPhoto({ uri: 'file:///x.dng', width: 6000, height: 4000 }, enc)).toEqual({ ok: false, reason: 'unreadable', bytes: new Uint8Array([1, 2, 3]) });
+    const picked = new Uint8Array([0xff, 0xd8, 0xff, 0xda, 0x00, 0x03, 0x00, 0x09, 0xff, 0xd9]); // a JPEG with no location data: sent as it is (F-1717)
+    const enc: Encoder = { jpeg: async () => null, original: async () => picked };
+    expect(await compressPhoto({ uri: 'file:///x.jpg', width: 6000, height: 4000 }, enc)).toEqual({ ok: false, reason: 'unreadable', bytes: picked });
+  });
+
+  // why: F-1781, F-931, F-978 a DNG the encoder cannot convert is marked unreadable with bytes the store accepts, not an empty file
+  it('marks a DNG the encoder cannot read with non-empty bytes', async () => {
+    const dng = new Uint8Array([0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0x47, 0x50, 0x53]);
+    const enc: Encoder = { jpeg: async () => null, original: async () => dng };
+    const c = await compressPhoto({ uri: 'file:///x.dng', width: 6000, height: 4000 }, enc);
+    expect(c.ok).toBe(false);
+    expect(c.bytes.length).toBeGreaterThan(0);
   });
 
   // why: FR-TECH-14 the signature is a PNG of at most 1200 x 400 px within the 512 KB cap, with the strokes drawn where the finger went

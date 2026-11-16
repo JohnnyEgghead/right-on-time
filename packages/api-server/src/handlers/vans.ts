@@ -4,6 +4,9 @@
 // stored and the board and the live map draw 1 position. The leg of a van on the way comes back with its track from SD-49's route
 // source (baked, else live), so the map draws the road, and with null while the routing service gives no route (FR-MAP-3). No position
 // is ever written (FR-DEMO-8); the only write this read can make is the route source's live van_track row for a leg it routed.
+// F-817: each route carries the key of its line (routeKey), and a route whose key the board names in `have` answers track null, so a
+// leg that does not change between the 10 s reads travels once.
+import { createHash } from 'node:crypto';
 import type { vanPositions } from '@bw/api';
 import { previousStop, worksOn } from '@bw/domain';
 import { localDateOf } from '@bw/time';
@@ -25,6 +28,9 @@ const stopOf = (j: JobRow) => ({
   jobNumber: j.job_number, status: j.status, point: { lon: j.lon, lat: j.lat }, onTheWayAt: ms(j.on_the_way_at), endedAt: ms(j.ended_at),
 });
 
+/** F-817 (SPECIFICATIONS 7.4 API-21): a route line's key, the first 16 lowercase hex characters of the SHA-256 of its encoded polyline. */
+export const routeKey = (polyline: string): string => createHash('sha256').update(polyline).digest('hex').slice(0, 16);
+
 /** The tracks of the legs wanted from the route source (SD-49), by {@link legKey}; a leg it answers approximate is absent. */
 async function legTracks(tx: Tx, branch: string, legs: readonly { from: LegStop; to: LegStop & { job: number } }[]): Promise<Map<string, LegTrack>> {
   const out = new Map<string, LegTrack>();
@@ -38,6 +44,7 @@ async function legTracks(tx: Tx, branch: string, legs: readonly { from: LegStop;
 
 export const vanPositionsHandler: Handler<Answer> = async (req, tx) => {
   const p = req.params as In;
+  const have = new Set(p.have ? p.have.split(',') : []);
   const branch = await branchOf(tx, p.branch);
   if (!branch) return { ok: false, status: 404, code: 'not_found' };
   const now = req.demoNow.epochMilliseconds;
@@ -76,7 +83,8 @@ export const vanPositionsHandler: Handler<Answer> = async (req, tx) => {
     if (onWay) {
       const prev = previousStop(stops, onWay.jobNumber);
       const leg = tracks.get(legKey(prev?.jobNumber ?? null, onWay.jobNumber));
-      route = { from: prev?.point ?? depot, to: onWay.point, track: leg ? decodePolyline(leg.polyline) : null };
+      const key = leg ? routeKey(leg.polyline) : null;
+      route = { from: prev?.point ?? depot, to: onWay.point, key, track: leg && key !== null && !have.has(key) ? decodePolyline(leg.polyline) : null };
     }
     vans.push({
       technicianId: t.id, name: t.name, initials: initialsOf(t.name), van: f.van,

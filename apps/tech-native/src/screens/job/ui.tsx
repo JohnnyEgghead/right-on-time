@@ -139,12 +139,13 @@ export function NButton(props: { id: string; icon?: NativeIcon; iconStroke?: num
 }
 
 /** The error box (.errbox), with an optional link line under its words (CTL-TEC-06-06 Open Settings). */
-export function ErrBox(props: { id: string; text: string; link?: { id: string; label: string; onPress: () => void } }) {
+export function ErrBox(props: { id: string; text: string; lastTry?: string | undefined; link?: { id: string; label: string; onPress: () => void } }) {
   return (
     <View {...lk(props.id, s.err)} accessibilityRole="alert">
       <Icon id={`${props.id}.icon`} name="alert" size={18} color={color.badText} marginTop={1} />
       <View style={s.errCol}>
         <Text {...lk(`${props.id}.text`, s.errText)}>{props.text}</Text>
+        {props.lastTry ? <Text {...lk(`${props.id}.lastTry`, s.errText)}>{props.lastTry}</Text> : null}
         {props.link ? <Text {...lk(props.link.id, s.errLink)} onPress={props.link.onPress} accessibilityRole="link">{props.link.label}</Text> : null}
       </View>
     </View>

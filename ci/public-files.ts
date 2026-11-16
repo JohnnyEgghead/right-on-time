@@ -301,7 +301,11 @@ export function checkPrivateRefs(root: string): Problem[] {
  * 192.168/16), an RFC 5737 documentation range, a well-known public resolver the egress probes use, or version-shaped
  * (stuck to a word, a dot or "Name/" before it, or more digits after it, as in Chrome/120.0.0.0). Everything else is a real address and fails the export.
  */
-const IPV4 = /(?<![\w.]|[A-Za-z]\/)(?:\d{1,3}\.){3}\d{1,3}(?!\d|\.\d|\w)/g;
+// F-1626: a letter-slash prefix is version-shaped only after a product token (Chrome/120.0.0.0): a word that starts after a space, a quote or the line start.
+// The last word of a host or a path (ipinfo.io/<address>, api/<address>) is preceded by a dot or a slash, so it no longer passes.
+const IPV4 = /(?<![\w.]|(?<![\w./-])[A-Za-z][A-Za-z0-9_-]*\/)(?:\d{1,3}\.){3}\d{1,3}(?!\d|\.\d|\w)/g;
+/** F-1626: the dashed form a cloud host name carries (ec2-a-b-c-d.region.compute.amazonaws.com, ip-a-b-c-d.ec2.internal). */
+const IPV4_DASHED = /(?<![\w-])(?:ec2|ip)-(\d{1,3})-(\d{1,3})-(\d{1,3})-(\d{1,3})(?![\w-])/g;
 const IPV4_RESOLVERS: readonly string[] = ['1.1.1.1', '8.8.8.8', '8.8.4.4'];
 export function isAllowedIpv4(ip: string): boolean {
   const p = ip.split('.').map(Number) as [number, number, number, number];
@@ -318,7 +322,8 @@ export function isAllowedIpv4(ip: string): boolean {
 export function publicIpv4Lines(text: string): number[] {
   const lines: number[] = [];
   text.split('\n').forEach((line, i) => {
-    if ((line.match(IPV4) ?? []).some((ip) => !isAllowedIpv4(ip))) lines.push(i + 1);
+    const dashed = [...line.matchAll(IPV4_DASHED)].map((m) => m.slice(1, 5).join('.'));
+    if ([...(line.match(IPV4) ?? []), ...dashed].some((ip) => !isAllowedIpv4(ip))) lines.push(i + 1);
   });
   return lines;
 }

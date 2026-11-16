@@ -5,7 +5,7 @@
 // resolve each open alert whose condition cleared. The bell and email switches act at creation: an alert is always
 // written and listed; with the type's managers' email switch on, each active manager gets 1 alert email in the
 // on-screen store with 1 one-time link, shown to that manager on the alert (FR-AUTH-8 note, alert_email_link).
-import { EMAIL_LINK_HOURS, hashToken, newToken, publishEvent, sendEmail, type Queryable } from '@bw/db';
+import { alertEventIds, EMAIL_LINK_HOURS, hashToken, newToken, publishEvent, sendEmail, type Queryable } from '@bw/db';
 import { ALERT_FACTS, ALERT_TYPES, type AlertType } from '@bw/domain';
 import type { Clock, Instant } from '@bw/time';
 import { alertEmailWords, type CopyLanguage } from './copy.ts';
@@ -163,11 +163,13 @@ export async function runAlertChecks(tx: Queryable, env: CheckEnv): Promise<Chec
       }
       const gone = [...haveSet].filter((s) => !wantSet.has(s));
       if (gone.length > 0) {
-        const r = await tx.query<{ id: string }>(
-          `UPDATE world.alert SET state = 'resolved', resolved_at = $3 WHERE type = $1 AND state = 'open' AND subject = ANY($2::text[]) RETURNING id`,
+        const r = await tx.query<{ id: string; branch_id: string | null }>(
+          `UPDATE world.alert SET state = 'resolved', resolved_at = $3 WHERE type = $1 AND state = 'open' AND subject = ANY($2::text[]) RETURNING id, branch_id`,
           [type, gone, env.now.toString()],
         );
         report.resolved.push(...r.rows.map((x) => x.id));
+        // SD-30, F-1156: a close publishes alert.dismissed in this transaction, as an opening publishes alert.created.
+        for (const x of r.rows) await publishEvent(tx, 'alert.dismissed', alertEventIds(x.id, x.branch_id));
       }
     }
     const infoRule = INFO_RULES[type];

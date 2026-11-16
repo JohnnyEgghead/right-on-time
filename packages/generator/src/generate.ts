@@ -964,7 +964,10 @@ class Generator {
           partsCount: noOne ? 0 : rng.int(4),
         };
       })
-      // A story job's visit as the page tells it at 10:28 AM (F-292), over the drawn row, so the draws stay as they were.
+      // A story job's visit as the page tells it at 10:28 AM (F-292), laid over the drawn row: a pinned row still takes its
+      // draws, so the pins move no other row's numbers. The filter above does move them (F-1742): a job it drops takes no
+      // draw (Maria's sample-day jobs from 10 AM, and the week's jobs with no technician, 3 of them), so every later row
+      // reads the stream from a different point than it would with those jobs drawn.
       .map((row) => {
         const pinScript = storyScripts.get(row.jobNumber);
         return pinScript ? { ...row, ...pinScript, outcome: 'finished' } : row;

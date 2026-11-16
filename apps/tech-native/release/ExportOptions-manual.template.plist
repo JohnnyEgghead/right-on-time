@@ -22,7 +22,8 @@
 	<true/>
 	<key>manageAppVersionAndBuildNumber</key>
 	<false/>
+	<!-- F-1721: release/export-upload.sh writes <true/> here for export and upload (TestFlight internal only) and <false/> for store (the build can be attached to an App Store version). -->
 	<key>testFlightInternalTestingOnly</key>
-	<true/>
+	<BW_INTERNAL_TESTING_ONLY/>
 </dict>
 </plist>

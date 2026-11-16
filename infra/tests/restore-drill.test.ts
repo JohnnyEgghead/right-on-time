@@ -49,9 +49,10 @@ const LIST_CMD = "sudo env AWS_PAGER= aws s3api list-objects-v2 --bucket brightw
 
 // why: P8-RESTORE-DRILL owner ruling 7b6bf018 the 1 command loads, backs up, restores on a second copy and smokes; every AWS write is on a drill copy and the hosted server and bucket are only read
 describe('the dry run', () => {
-  // why: F-1686 the dry run swaps in its stand-in host before the BW_HOST check, so it needs no real host
+  // F-1768 (not a test why): the run is real work (about 12 s idle, the temp-server.sh calls), so it is made once here like r below, bounded by dry()'s own 120 s spawn timeout, not by the 60 s test clock
+  const noHost = dry(undefined, { BW_HOST: '' });
+  // why: F-1686 the dry run swaps in its stand-in host before the BW_HOST check, so it needs no real host; F-1768 the run is real work with no wait on a host (12 s idle), bounded by the spawn timeout
   it('runs with no BW_HOST at all', () => {
-    const noHost = dry(undefined, { BW_HOST: '' });
     expect(noHost.status, noHost.out.slice(-1500)).toBe(0);
     expect(noHost.out).not.toContain('no hosted ssh target');
   });
@@ -286,14 +287,23 @@ describe('the guard', () => {
   writeFileSync(path.join(bin, 'hosted-list-cmd'), `${LIST_CMD}\n`);
   writeFileSync(path.join(bin, 'fixtures'), path.join(root, 'infra/drill/dry-run'));
   const reached = path.join(state, 'reached');
-  writeFileSync(path.join(state, 'recorder'), `#!/usr/bin/env bash\necho "$*" >> "${reached}"\n`);
+  // F-1695: ssh -G (the guard's resolution check) is answered from the destination word, or from RES_HOST and RES_USER when a test sets them (a Host block); it is not a call that reached.
+  writeFileSync(path.join(state, 'recorder'), `#!/usr/bin/env bash
+if [ "$1" = -G ]; then
+  for w in "$@"; do case "$w" in *@*) d="$w" ;; esac; done
+  printf 'user %s\\nhostname %s\\n' "\${RES_USER:-\${d%@*}}" "\${RES_HOST:-\${d#*@}}"
+  exit 0
+fi
+echo "$*" >> "${reached}"
+`);
   chmodSync(path.join(state, 'recorder'), 0o755);
   writeFileSync(path.join(bin, 'real-aws'), path.join(state, 'recorder'));
   writeFileSync(path.join(bin, 'real-ssh'), path.join(state, 'recorder'));
   writeFileSync(path.join(state, 'copy1', 'ip'), '203.0.113.5\n');
-  const g = (...args: string[]) => {
+  const g = (...args: string[]) => gEnv({}, ...args);
+  const gEnv = (env: Record<string, string>, ...args: string[]) => {
     rmSync(reached, { force: true });
-    const r = spawnSync('bash', [path.join(bin, 'guard.sh'), ...args], { encoding: 'utf8' });
+    const r = spawnSync('bash', [path.join(bin, 'guard.sh'), ...args], { encoding: 'utf8', env: { ...process.env, ...env } });
     return { status: r.status, reached: existsSync(reached), stderr: r.stderr };
   };
   const aws = (...a: string[]) => g('aws', '--profile', 'brightwater', '--region', 'us-east-1', ...a);
@@ -397,6 +407,18 @@ describe('the guard', () => {
     expect(other.reached).toBe(false);
     expect(other.stderr).not.toMatch(IPV4);
     expect(readFileSync(path.join(state, 'calls.log'), 'utf8')).not.toMatch(IPV4);
+  });
+  // why: F-1695 a Host block in the ssh config could remap an address the words name: ssh -G shows the resolved host and user, and the guard refuses a mismatch
+  it('refuses an ssh call whose resolved host or user is not the one the words name', () => {
+    expect(gEnv({}, 'ssh', '-i', 'k', 'admin@203.0.113.5', 'true').reached).toBe(true);
+    for (const env of [{ RES_HOST: '203.0.113.99' }, { RES_USER: 'root' }]) {
+      const r = gEnv(env, 'ssh', '-i', 'k', 'admin@203.0.113.5', 'true');
+      expect(r.status, JSON.stringify(env)).toBe(97);
+      expect(r.reached).toBe(false);
+    }
+    const hosted = gEnv({ RES_HOST: '203.0.113.99' }, 'ssh', '-n', '-i', '/keys/hosted.pem', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', hostedHost, LIST_CMD);
+    expect(hosted.status).toBe(97);
+    expect(hosted.reached).toBe(false);
   });
   const listing = ['-n', '-i', '/keys/hosted.pem', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', hostedHost, LIST_CMD];
   it('lets ssh reach the hosted server for the exact READ-ONLY bucket listing only', () => {

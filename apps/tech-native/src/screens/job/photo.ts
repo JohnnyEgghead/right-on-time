@@ -3,10 +3,11 @@
 // quality 0.8, before it is stored, so the photo that reaches API-103 fits the server's 10 MB cap and its type. iOS decodes every
 // photo type the camera and the library make (HEIC, RAW/DNG, PNG), so the encoder is the platform's (expo-image-manipulator, through
 // the Encoder port; photo-expo.ts on the phone). A JPEG still over the cap is encoded again at a lower quality, then smaller, as the
-// web app does (apps/web/src/tech/job/photo.ts). A photo the phone could not encode at all is kept as picked, marked unreadable. The
+// web app does (apps/web/src/tech/job/photo.ts). A photo the phone could not encode at all is kept as picked, without its location data (F-1717), marked unreadable. The
 // native transport still sends the picked file's bytes under that mark (net/transport.ts; see F-1035), and the server flags the photo for the
 // office (F-931); the web app, which holds no file, sends no bytes. Never a refusal that keeps it on the phone.
 import { PHOTO_MAX_BYTES } from '@bw/api';
+import { stripLocation, UNREADABLE_PHOTO } from './location-strip.ts';
 
 export const LONGEST_SIDE = 2048;
 export const QUALITY = 0.8;
@@ -49,5 +50,6 @@ export async function compressPhoto(picked: { uri: string; width: number; height
     if (!out || !isJpeg(out.bytes)) break;
     if (out.bytes.byteLength <= PHOTO_MAX_BYTES) return { ok: true, type: 'image/jpeg', ...out };
   }
-  return { ok: false, reason: 'unreadable', bytes: await enc.original(picked.uri).catch(() => new Uint8Array(0)) };
+  // F-1717: the original goes without its location data (location-strip.ts), never as the file holds it.
+  return { ok: false, reason: 'unreadable', bytes: stripLocation(await enc.original(picked.uri).catch(() => UNREADABLE_PHOTO)) };
 }

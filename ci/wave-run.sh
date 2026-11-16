@@ -255,7 +255,7 @@ MAC_OVERRUN_S=0
 CONTAINER_END_EPOCH=0
 mac_half_start() {
   local mode="$1" sha="$2"
-  rm -f "$OUT/mac-half.rc" "$OUT/mac-half.ended"
+  rm -f "$OUT/mac-half.rc" "$OUT/mac-half.ended" "$OUT/mac-half.stopping"
   MAC_START_EPOCH=$(date +%s)
   (
     MAC_HALF_S=0
@@ -264,7 +264,8 @@ mac_half_start() {
     echo "$mac_rc $MAC_HALF_S" >"$OUT/mac-half.rc"
     : >"$OUT/mac-half.ended"
     # F-1374: the hold-lifted line is printed here, at the moment the mac half ends, whatever the Spectre half or the host-side setup is doing.
-    echo "MAC HALF ENDED (rc $mac_rc, ${MAC_HALF_S}s): commits on main may resume; the run's verdict still waits for the Spectre half"
+    # F-1819: kill_tree stops the children before the subshell, so a stop in flight can reach here first; the marker says it was a stop, not an end.
+    [ -e "$OUT/mac-half.stopping" ] || echo "MAC HALF ENDED (rc $mac_rc, ${MAC_HALF_S}s): commits on main may resume; the run's verdict still waits for the Spectre half"
   ) &
   MAC_PID=$!
   echo "MAC HALF STARTED (pid $MAC_PID, beside the Spectre half): hold commits on main until the line 'MAC HALF ENDED'; log $OUT/mac-half.log"
@@ -297,7 +298,7 @@ mac_half_finish() {
 mac_half_stop() {
   [ -n "$MAC_PID" ] || return 0
   local was_running=0
-  kill -0 "$MAC_PID" 2>/dev/null && { was_running=1; echo "stopping the mac half (pid $MAC_PID)" >&2; kill_tree "$MAC_PID" TERM; }
+  kill -0 "$MAC_PID" 2>/dev/null && { was_running=1; : >"$OUT/mac-half.stopping"; echo "stopping the mac half (pid $MAC_PID)" >&2; kill_tree "$MAC_PID" TERM; }
   wait "$MAC_PID" 2>/dev/null
   MAC_PID=""
   # F-1374: a stopped mac half prints no ENDED line; this is its hold-lifted line.

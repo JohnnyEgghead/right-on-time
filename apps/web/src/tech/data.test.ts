@@ -39,6 +39,7 @@ function world() {
     if (s.down) throw new TypeError('fetch failed');
     if (path.endsWith('/tech/day')) return json(200, { data: dayOf(s.jobs), meta: meta('API-100') });
     if (path.endsWith('/tech/day-route')) return json(200, { data: { date: '2026-09-15', branch: 'columbus', stops: [], legs: [], next: null }, meta: meta('API-163') });
+    if (path.endsWith('/me')) return json(200, { data: { userId: 'u1', name: 'Maria Santos', role: 'technician', skill: 'heating_cooling', branch: 'columbus', employeeNumber: '40712', language: 'en', slashShortcut: 'on', permissions: [] }, meta: meta('API-07') });
     if (path.endsWith('/parts')) return json(200, { data: { parts: [{ partId: 'p1', name: 'Run capacitor', code: 'CAP-455', priceCents: 3800 }] }, meta: meta('API-107') });
     return json(404, { type: 'https://bw.j7l.io/errors/not_found', title: 'x', status: 404, code: 'not_found' });
   };
@@ -157,6 +158,39 @@ describe('the reads of the day', () => {
 });
 
 describe('the saved day belongs to the person', () => {
+  // why: F-1740 the person's name and skill are kept from the who-am-I answer, so Me draws them before the day is read, and Sign out forgets them
+  it('keeps the profile from the session answer and forgets it at sign-out', async () => {
+    const { reads } = world();
+    await reads.refresh();
+    expect(reads.snapshot.profile).toEqual({ name: 'Maria Santos', initials: 'MS', skill: 'heating_cooling' });
+    const again = new TechReads(createClient({ baseUrl: 'http://phone.test', fetch: async () => { throw new TypeError('fetch failed'); } }), () => true);
+    expect(again.snapshot.profile?.name).toBe('Maria Santos');
+    forgetPerson();
+    expect(window.localStorage.getItem(KEYS.profile)).toBeNull();
+  });
+
+  // why: F-1778 the name and skill change only at sign-in, so API-07 is read once and a later round does not ask again
+  it('reads the who-am-I answer once, not on every round', async () => {
+    const { s, reads } = world();
+    await reads.refresh();
+    await reads.refresh();
+    expect(s.calls.filter((c) => c.endsWith('/me'))).toHaveLength(1);
+  });
+
+  // why: F-1775 the profile read does not wait on the day read: a first open whose day read fails (Day not loaded) still keeps the person's name and skill
+  it('keeps the profile when the day read fails', async () => {
+    const client = createClient({ baseUrl: 'http://phone.test', fetch: async (input) => {
+      const path = new URL(String(input)).pathname;
+      if (path.endsWith('/tech/day')) return json(503, { type: 'https://bw.j7l.io/errors/unavailable', title: 'x', status: 503, code: 'unavailable' });
+      if (path.endsWith('/me')) return json(200, { data: { userId: 'u1', name: 'Maria Santos', role: 'technician', skill: 'heating_cooling', branch: 'columbus', employeeNumber: '40712', language: 'en', slashShortcut: 'on', permissions: [] }, meta: meta('API-07') });
+      return json(404, {});
+    } });
+    const failing = new TechReads(client, () => true);
+    await failing.refresh();
+    expect(failing.snapshot).toMatchObject({ failed: true, day: null, profile: { name: 'Maria Santos', initials: 'MS', skill: 'heating_cooling' } });
+    expect(JSON.parse(window.localStorage.getItem(KEYS.profile)!).name).toBe('Maria Santos');
+  });
+
   // why: F-1017 the day saved on the phone holds customer names, addresses, phones and notes, so Sign out forgets it (and the old Today copy)
   it('forgets the saved day, with its names and notes, at sign-out', async () => {
     const { reads } = world();

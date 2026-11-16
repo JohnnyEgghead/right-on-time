@@ -29,13 +29,13 @@ The app talks to one server and nothing else. By default that is the sample site
 - Job status changes, notes, work-done lines, signatures and clock in or out, when you make them.
 - The language you pick, when you change it while signed in. It is saved to your profile so the app and the site show that language.
 - Photos you choose or take for a job. The app asks for the camera or photo library only when you tap to add a photo. The app re-encodes each photo as a JPEG before it is sent, and it does not ask the picker for the photo's location data.
-- A photo the phone cannot convert to a JPEG is sent as it was picked, marked so the office can see it. That file is sent unchanged, so it still holds any details stored inside the file itself, which can include where the photo was taken.
+- A photo the phone cannot convert to a JPEG is sent as it was picked, marked so the office can see it. Before it is sent, the app removes the places a photo file stores where it was taken: the Exif and XMP details of a JPEG, and the Exif chunk and XMP text of a PNG. A photo of any other type that the phone cannot convert (for example HEIC or RAW) is sent marked as unreadable, with no picture in it and no place: the app sends a few words of text in place of the file.
 
 The app has no analytics, advertising or crash-reporting library, and it sends nothing to any other company. The map files come from the same server.
 
 ## Location
 
-The app does not ask for your location and does not read it. The only way a place can reach the server is inside a photo file the phone could not convert, as described above. The map shows the service area; it does not show where you are.
+The app does not ask for your location and does not read it. No place is sent in a photo either: the app removes it from a file it cannot convert, as described above. The map shows the service area; it does not show where you are.
 
 ## What the sample site keeps
 

@@ -28,7 +28,8 @@ import { createReader } from '../shell/reads.ts';
 import type { Me } from '../shell/OfficeTopBar.tsx';
 import { ErrorPanel, LiveIndicator, type LiveState } from '../shell/Panels.tsx';
 import { boardApi, conflictOf, overlapOf, type BoardApi, type Refusal } from './api.ts';
-import { postDelaySamples } from './delay-samples.ts';
+import { delaySampler } from './delay-samples.ts';
+import { routeLines } from './route-lines.ts';
 import { weekParamMonday } from '../week/week-model.ts';
 import { fileSrc, thumbSrc } from '../job/PhotoViewer.tsx';
 import './css.ts';
@@ -38,7 +39,7 @@ import {
   type BlockErrors, type BlockForm, type BlockView, type ConflictSubject, type ReassignState,
 } from './Dialogs.tsx';
 import {
-  blockDrop, boardHref, dateParts, draggable, entryLines, filtered, flagValues, hhmm, hourOf, isDate, jobDrop, shortName, shortWindow, spanText, stepDate, timeText,
+  blockDrop, boardHref, dateParts, draggable, entryLines, filtered, flagValues, hhmm, hourOf, isDate, jobDrop, noRoomText, shortName, shortWindow, spanText, stepDate, timeText, windowText,
   type Board, type BoardBlock, type BoardJob, type Conflict, type JobTab, type MapShows, type Target, type Van,
 } from './model.ts';
 import { Timeline, type Drag, type DragPreview } from './Timeline.tsx';
@@ -214,15 +215,20 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
   };
   // Only the newest read's answer lands: a slow answer of the branch just left must not stand as this branch's vans.
   const vanRead = useRef(0);
+  // F-817: the route lines of the last answer, named as `have` on the next read so an unchanged leg travels once.
+  const lines = useRef(routeLines());
   const readVans = useCallback(async () => {
     if (fixed || !branch) return;
     const mine = ++vanRead.current;
-    const r = await api.vans(branch);
-    if (mine === vanRead.current) setVans(r.ok ? r.data.vans : 'failed');
+    const r = await api.vans(branch, lines.current.have());
+    if (mine !== vanRead.current) return;
+    if (!r.ok) lines.current.reset();
+    setVans(r.ok ? lines.current.take(r.data.vans, r.data.worldEpoch) : 'failed');
   }, [api, branch, fixed]);
   useEffect(() => {
     if (fixed || !branch || mapHidden) return;
     setVans(null); // unknown until this read answers: the panel prints no number for it
+    lines.current.reset(); // a first read (this branch, or the panel shown again) names no lines
     void readVans();
     const h = window.setInterval(() => void readVans(), VAN_READ_MS);
     return () => {
@@ -241,7 +247,9 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
     // F-1085: the first read can start before this board's stream is open (event-stream.ts calls onReconnect only on a re-open), and nothing
     // replays (D1), so a change committed in between would wait for some later event: the first time the stream answers, read once more.
     let firstLive = true;
-    // Every seq the batch held: the 1 re-read posts 1 sample per seq (API-172, F-606), so SD-43's slowest is not under-reported in a burst.
+    // Every seq the batch held: the 1 re-read holds 1 sample per seq (API-172, F-606), so SD-43's slowest is not under-reported in a
+    // burst; the held samples leave in batches (F-885).
+    const samples = delaySampler((batch, keepalive) => onLive.current.api.delaySamples(batch, keepalive));
     let pending: number[] = [];
     let timer: number | null = null;
     const flush = async () => {
@@ -249,7 +257,7 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
       const seqs = pending;
       pending = [];
       const b = await onLive.current.read();
-      if (b) await postDelaySamples(seqs, (seq) => onLive.current.api.delaySample(seq));
+      if (b && open) samples.hold(seqs);
     };
     const h = subscribeEvents({
       branch,
@@ -272,6 +280,7 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
       open = false;
       h.close();
       if (timer !== null) window.clearTimeout(timer);
+      samples.close();
     };
   }, [branch, fixed]);
 
@@ -294,7 +303,7 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
   const nowHour = nowWire ? hourOf(nowWire) : null;
 
   // --- refusals ------------------------------------------------------------------------------------------------------
-  const refusalText = (r: Refusal, technician: string | null): string => {
+  const refusalText = (r: Refusal, technician: string | null, window = ''): string => {
     const o = overlapOf(r);
     if (o && board) {
       const job = findJob(board, o.job.jobNumber);
@@ -302,14 +311,17 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
         ? t('board.refused.overBlock', { technician: technician ?? '', label: o.block.label, span: spanText(o.block.start, o.block.end) })
         : t('board.refused.overJob', { technician: technician ?? '', customer: job?.customerName ?? String(o.job.jobNumber), span: spanText(o.job.plannedArrival, o.job.plannedEnd) });
     }
-    if (r.code === 'technician_no_room') return t('board.refused.noRoom', { name: technician ?? '' });
+    if (r.code === 'technician_no_room') {
+      const text = noRoomText(t, r.detail, technician ?? '', window);
+      if (text) return text;
+    }
     if (r.code === 'rule_refused') return t('board.refused.rule');
     return t('board.refused.other');
   };
   /** A job move's overlap names the block it would overlap; a block move's names the job. */
-  const jobOverlapText = (r: Refusal, technician: string | null) => {
+  const jobOverlapText = (r: Refusal, technician: string | null, window: string) => {
     const o = overlapOf(r);
-    return o ? t('board.refused.overBlock', { technician: technician ?? '', label: o.block.label, span: spanText(o.block.start, o.block.end) }) : refusalText(r, technician);
+    return o ? t('board.refused.overBlock', { technician: technician ?? '', label: o.block.label, span: spanText(o.block.start, o.block.end) }) : refusalText(r, technician, window);
   };
   const blockOverlapText = (r: Refusal, technician: string | null) => {
     const o = overlapOf(r);
@@ -332,7 +344,8 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
       const written = (r.data as { job: { plannedArrival: string | null } }).job;
       await read();
       done();
-      setModal(null);
+      // F-1787: a drop has no dialog of its own; one opened while its read was in flight is left open (see moveBlockTo).
+      if (from !== 'drop') setModal(null);
       if (to === null) announce(t('board.toast.toUnassigned', { job: job.jobNumber }));
       else if (from === 'dialog') announce(t('board.toast.reassigned', { job: job.jobNumber, name: toName }));
       else announce(t('board.toast.moved', { name: toName, time: written.plannedArrival ? timeText(written.plannedArrival) : '' }));
@@ -350,7 +363,7 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
       void read();
       return;
     }
-    const text = jobOverlapText(r, to === null ? null : techName(to));
+    const text = jobOverlapText(r, to === null ? null : techName(to), windowText(job.window.start, job.window.end));
     if (from === 'dialog') setModal((m) => (m?.kind === 'reassign' && m.state.step === 'choosing' ? { ...m, state: { ...m.state, saving: false, message: text } } : m));
     else {
       setModal(null);
@@ -370,6 +383,10 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
 
   // --- block moves ---------------------------------------------------------------------------------------------------
   const moveBlockTo = async (block: BoardBlock, technicianId: string, start: string, end: string, baseVersion: number, from: 'drop' | 'dialog' | 'conflict') => {
+    // F-1787: the answer closes only what was open when the move started. The block stays pressable while its move reads the
+    // board, and a popover opened then (or its Delete dialog) is the person's next step: SCR-OFC-32 closes only by Close or
+    // Escape, and a drop has no dialog of its own. Closing whatever was open when the read settled shut both on board-stack.
+    const popAtStart = pop;
     if (from === 'drop') setMovingBlocks((m) => new Map(m).set(block.blockId, { technicianId, start: retime(block.start, start), end: retime(block.end, end) }));
     const r = await api.moveBlock({ blockId: block.blockId, technicianId, start, end, baseVersion });
     const done = () => setMovingBlocks((m) => {
@@ -381,8 +398,8 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
       const b = (r.data as { block: BoardBlock }).block;
       await read();
       done();
-      setModal(null);
-      setPop(null);
+      if (from !== 'drop') setModal(null);
+      setPop((p) => (p === popAtStart ? null : p));
       announce(t('board.toast.blockMoved', { label: b.label, name: techName(technicianId) ?? '', span: spanText(b.start, b.end) }));
       return;
     }
@@ -511,12 +528,18 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
   };
 
   // --- Mark handled (API-39) -----------------------------------------------------------------------------------------
+  // F-1734: each item's own press is held by a ref, not by the render's marking. The press publishes board.refresh, and that event's re-read
+  // can draw the board without this row while this press's read is still in flight; the next row's button is then on screen and enabled,
+  // and a guard on the render's marking (still this row's id) dropped its press with nothing shown.
+  const markingNow = useRef(new Set<string>());
   const markHandled = async (conflictId: string) => {
-    if (marking) return;
+    if (markingNow.current.has(conflictId)) return;
+    markingNow.current.add(conflictId);
     setMarking(conflictId);
     const r = await api.markHandled(conflictId);
     await read();
-    setMarking(null);
+    markingNow.current.delete(conflictId);
+    setMarking((m) => (m === conflictId ? null : m));
     if (r.ok) announce(t('board.toast.handled'));
     else if (r.code === 'already_handled') {
       const at = typeof r.detail.at === 'string' ? timeText(r.detail.at) : '';
@@ -692,7 +715,9 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
           onChange={(form) => setModal({ ...modal, form, overlap: null })} onSave={() => void saveBlock()} onClose={() => setModal(null)} />
       ) : null}
       {modal?.kind === 'delete' && board ? (
-        <DeleteBlockDialog block={blockView({ block: modal.block, technician: techName(modal.technicianId) ?? '' }) as BlockView} deleting={modal.deleting}
+        // F-1787: like the popover, the message reads the block as the board has it now (a move that lands while it is open
+        // changes the time it frees); the copy taken at Delete stands in only once the block is gone from the board.
+        <DeleteBlockDialog block={blockView(findBlock(board, modal.block.blockId) ?? { block: modal.block, technician: techName(modal.technicianId) ?? '' }) as BlockView} deleting={modal.deleting}
           onConfirm={() => void confirmDelete()} onClose={() => setModal(null)} />
       ) : null}
       {fixed?.extra ?? null}

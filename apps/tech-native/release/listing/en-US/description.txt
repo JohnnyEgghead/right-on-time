@@ -1,0 +1,22 @@
+Right On Time is a finished, open-source iPhone app for field technicians. It is the technician's side of Brightwater's scheduling software, for the Brightwater sample company, a fictional home-services business.
+
+Start the day with your jobs in order, the next one first. See the customer, the address, the work to do and an estimate of when you will arrive. Tap Directions for the drive to the door, worked out from your route.
+
+On the job
+- Tell the office you are on your way, then that you have arrived.
+- Add notes and photos to the job.
+- Finish the job with the parts you used, the labor and the customer's signature.
+- Clock in and out.
+
+When the signal drops
+Notes, photos and status changes are kept on your phone and sent when the signal returns. A Waiting list shows what has not been sent yet, so nothing is lost on a basement job.
+
+More
+- English and Spanish.
+- A map of the service area that works without a signal.
+- Large text sizes and VoiceOver are supported.
+
+Open source
+The source code for the app and the Brightwater server is public under an open-source license. The sample company, its customers and its jobs are made up.
+
+The app signs in to a Brightwater server. Your sign-in comes from the company that runs it.

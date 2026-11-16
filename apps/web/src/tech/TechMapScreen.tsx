@@ -13,13 +13,14 @@ import { MapView } from '../map/MapView.tsx';
 import { isBranchId } from '../map/map-model.ts';
 import { Icon } from '../shell/Icon.tsx';
 import { useT } from '../shell/intl.tsx';
-import { useTechData, type TechData } from './data.ts';
+import { techReads, useTechData, type TechData } from './data.ts';
+import { lastTryOf, TechErrorPanel } from './TechErrorPanel.tsx';
 import type { OutboxState } from './engine.ts';
 import { legTo, type RouteData, type Stop } from './model.ts';
 import { NoSignalCard, WaitingCount } from './SyncStrip.tsx';
 import { TechAppFrame } from './TechAppFrame.tsx';
 import { useOutbox } from './useOutbox.ts';
-import { distText, mapLayers, mapPhase, STATE_KEY } from './view-model.ts';
+import { distText, mapLayers, mapPhase, mapSummary, STATE_KEY } from './view-model.ts';
 
 function StopRow({ s }: { s: Stop }) {
   const t = useT();
@@ -100,13 +101,15 @@ export function TechMapScreen({ fixedData, fixedOutbox }: TechMapScreenProps) {
   const data = useTechData(fixedData);
   const outbox = useOutbox(fixedOutbox);
   const route = data.route?.data ?? null;
-  const phase = mapPhase(route, !outbox.online || !data.online, data.settled);
+  const phase = mapPhase(route, !outbox.online || !data.online, data.settled, data.failed);
+  // Reading the phone (rule 12, F-1434; kit 0.12 57520d6c): until the page has read the kept copy, a skeleton for the day line and the stops,
+  // never a count of 0, and no waiting count (the waiting items are in the copy too).
+  const reading = data.reading === true;
   const [fitKey, setFitKey] = useState(0);
   const list = useRef<HTMLDivElement>(null);
   const fixed = fixedOutbox ? { fixed: fixedOutbox } : {};
   const stops = route?.stops ?? [];
-  const done = stops.filter((s) => s.state === 'done').length;
-  const summary = phase === 'loading' || phase === 'none' ? t('tech.map.summaryOpen', { stops: stops.length }) : t('tech.map.summary', { stops: stops.length, done });
+  const summary = mapSummary(t, phase, route);
   const nextStop = route && route.next !== null ? stops.find((s) => s.jobNumber === route.next) : undefined;
   const layers = route ? mapLayers(t, route) : null;
   const branch = route && isBranchId(route.branch) ? route.branch : 'columbus';
@@ -130,9 +133,9 @@ export function TechMapScreen({ fixedData, fixedOutbox }: TechMapScreenProps) {
           <div className="r">
             <div>
               <h1>{t('tech.tab.map')}</h1>
-              <div className="d" data-ctl="CTL-TEC-15-08">{summary}</div>
+              {reading ? <div className="d"><span className="r1-skel bw-skel-150" /></div> : <div className="d" data-ctl="CTL-TEC-15-08">{summary}</div>}
             </div>
-            <WaitingCount variant="today" {...fixed} />
+            {reading ? null : <WaitingCount variant="today" {...fixed} />}
           </div>
         </div>
       )}
@@ -159,13 +162,18 @@ export function TechMapScreen({ fixedData, fixedOutbox }: TechMapScreenProps) {
             <MapView branch={branch} markers={layers.markers} routes={[]} fit variant="card" />
           </div>
         ) : null}
+        {phase === 'error' ? (
+          <div className="bw-tech-pad10">
+            <TechErrorPanel title={t('tech.map.error')} btn="btn try" lastTry={lastTryOf(data.failedAt, data.day?.data.zone, t.lang)} onRetry={() => techReads().refresh()} />
+          </div>
+        ) : null}
         {phase === 'loading' ? <div className="tmap" role="application" aria-label={t('tech.map.label')} data-ctl="CTL-TEC-15-01"><span className="skel" /></div> : null}
         {phase === 'offline' ? (
           <div className="tmap" role="application" aria-label={t('tech.map.label')} data-ctl="CTL-TEC-15-01">
             <div className="need"><Icon name="signal" /><span>{t('tech.map.needSignal')}</span></div>
           </div>
         ) : null}
-        <div className="below" ref={list}>
+        {phase === 'error' ? null : <div className="below" ref={list}>
           {phase === 'none' ? (
             <div className="r1p-empty"><Icon name="map" /><span>{t('tech.map.noJobs')}</span></div>
           ) : (
@@ -175,10 +183,14 @@ export function TechMapScreen({ fixedData, fixedOutbox }: TechMapScreenProps) {
                 <div className="r1p-empty"><Icon name="check" /><span>{t('tech.map.allDone')}</span></div>
               ) : route ? (
                 <div data-ctl="CTL-TEC-15-02">{stops.map((s) => <StopRow key={s.jobNumber} s={s} />)}</div>
+              ) : reading ? (
+                <div data-ctl="CTL-TEC-15-02" aria-busy="true">
+                  {[1, 2, 3, 4].map((k) => <div className="stop" key={k}><span className="num" /><div className="tx"><span className="r1-skel bw-skel-55" /><span className="r1-skel bw-skel-80" /></div></div>)}
+                </div>
               ) : null}
             </>
           )}
-        </div>
+        </div>}
       </div>
     </TechAppFrame>
   );

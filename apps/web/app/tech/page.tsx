@@ -6,7 +6,7 @@
 // with no signal, and the screen then shows the day saved on the phone (src/tech/today/TodayScreen.tsx).
 import type { TodayAnswer } from '@bw/api';
 import { headers } from 'next/headers';
-import { SHELL_QUERY } from '../../src/tech/server-state.ts';
+import { shellVariant } from '../../src/tech/server-state.ts';
 import { TodayScreen } from '../../src/tech/today/TodayScreen.tsx';
 
 export const dynamic = 'force-dynamic';
@@ -25,5 +25,5 @@ async function readToday(): Promise<TodayAnswer | null> {
 
 export default async function TechTodayPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const q = await searchParams;
-  return <TodayScreen initial={q[SHELL_QUERY] === '1' ? null : await readToday()} />;
+  return <TodayScreen initial={shellVariant(q) ? null : await readToday()} />;
 }

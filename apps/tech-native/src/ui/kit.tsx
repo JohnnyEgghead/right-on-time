@@ -112,7 +112,7 @@ function Spinner(props: { id: string }) {
  * DK-56 message boxes: the green Connected box (.okmsg) and the red error box (.errbox). A link is the last line of the text; with `own`
  * it is its own control under the words (a button iOS reaches by itself, F-1105: a link nested in a line of text is no accessibility element).
  */
-export function Message(props: { id: string; tone: 'ok' | 'bad'; icon: NativeIcon; text: string; link?: { label: string; onPress: () => void; own?: boolean } }) {
+export function Message(props: { id: string; tone: 'ok' | 'bad'; icon: NativeIcon; text: string; lastTry?: string | undefined; link?: { label: string; onPress: () => void; own?: boolean } }) {
   const ok = props.tone === 'ok';
   if (props.link?.own) {
     return (
@@ -120,6 +120,7 @@ export function Message(props: { id: string; tone: 'ok' | 'bad'; icon: NativeIco
         <Icon id={`${props.id}.icon`} name={props.icon} size={18} color={ok ? color.okText : color.badText} strokeWidth={ok ? 2.6 : 1.9} marginTop={1} />
         <View style={s.msgText}>
           <Text {...lk(`${props.id}.text`, ok ? s.okText : s.badText)} accessibilityRole="alert">{props.text}</Text>
+          {props.lastTry ? <Text {...lk(`${props.id}.lastTry`, ok ? s.okText : s.badText)}>{props.lastTry}</Text> : null}
           <Pressable {...lk(`${props.id}.link`, s.msgOwnLink)} onPress={props.link.onPress} accessibilityRole="link" accessibilityLabel={props.link.label}>
             <Text style={s.msgLink}>{props.link.label}</Text>
           </Pressable>

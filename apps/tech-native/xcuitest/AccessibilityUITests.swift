@@ -70,13 +70,23 @@ final class AccessibilityUITests: XCTestCase {
     XCTAssertTrue(reach(id, s), "\(id) not shown")
   }
 
+  /// iOS offers to save the password after a sign-in: Not Now. F-1820 (the F-1202 shape, TodayUITests.dismissSavePrompt): the sheet is in the
+  /// accessibility tree about 0.2 s before its first frame and fades in for about 0.45 s, and a tap made in that entrance is dropped. So the tap
+  /// waits out the entrance, the sheet must be gone after it, one still there is tapped once more, and one that outlasts that fails by name.
   private func dismissSavePrompt() {
-    let prompt = app.staticTexts["Save Password?"]
-    if prompt.waitForExistence(timeout: 2) {
+    let sheet = app.staticTexts["Save Password?"]
+    guard sheet.waitForExistence(timeout: 2) else { return }
+    Thread.sleep(forTimeInterval: 1)
+    for _ in 1...2 {
       let notNow = app.buttons["Not Now"]
       if notNow.exists { notNow.tap() } else { app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 121, dy: 525)).tap() }
-      Thread.sleep(forTimeInterval: 1)
+      let left = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: sheet)
+      if XCTWaiter().wait(for: [left], timeout: 5) == .completed {
+        Thread.sleep(forTimeInterval: 1)
+        return
+      }
     }
+    XCTFail("the Save Password sheet stays over the app after 2 taps on Not Now")
   }
 
   // ---- the one skip rule (owner ruling df67d7bd "Accept as iOS", row F-1642) ---------------------------------------------------------

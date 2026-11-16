@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
 import { Icon } from '../../ui/Icon.tsx';
 import { useT } from '../../ui/intl.tsx';
+import { useLastTry } from '../../ui/last-try.ts';
 import { lk, useLookDump } from '../../ui/look.ts';
 import { color, type } from '../../ui/tokens.ts';
 import { ErrBox, InfoBox } from '../job/ui.tsx';
@@ -77,6 +78,7 @@ export function DirectionsScreen() {
 
   const kept = reads?.keptRoute(jobNumber) ?? null;
   const phase = stepsPhase(read, offline, kept !== null, jobNumber > 0);
+  const lastTry = useLastTry(phase === 'failed', tries);
   // What the screen draws: the live read with signal, the kept read of this destination with none.
   const route: ShownRoute | null = phase === 'offlineSaved' ? kept : read?.kind === 'leg' ? read : null;
   const live = phase === 'route' || phase === 'approximate';
@@ -140,7 +142,7 @@ export function DirectionsScreen() {
           <Scroll id="dir.scroll">
             {offline ? <NoSignal /> : null}
             {phase === 'failed' ? (
-              <ErrBox id="dir.failed" text={`${t('tech.dir.notLoaded')} ${t('tech.dir.notLoadedBody')}`}
+              <ErrBox id="dir.failed" text={`${t('tech.dir.notLoaded')} ${t('tech.dir.notLoadedBody')}`} lastTry={lastTry && t('shell.error.lastTry', { time: lastTry })}
                 link={{ id: 'dir.retry', label: t('shell.error.tryAgain'), onPress: () => setTries((n) => n + 1) }} />
             ) : null}
             {phase === 'moved' ? (

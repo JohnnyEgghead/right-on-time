@@ -45,7 +45,7 @@ build_cap="${BW_NATIVE_BUILD_CAP_S:-600}"
 test_cap_of() {
   case "$1" in
     ShellUITests) echo 240 ;; MapMeUITests) echo 1350 ;; JobUITests) echo 1000 ;; TodayUITests) echo 1800 ;;
-    SpanishUITests) echo 360 ;; WaitingUITests) echo 480 ;; StepsUITests) echo 900 ;; AccessibilityUITests) echo 600 ;;
+    SpanishUITests) echo 360 ;; WaitingUITests) echo 480 ;; StepsUITests) echo 900 ;; AccessibilityUITests) echo 600 ;; ReviewerUITests) echo 240 ;; ScreenshotsUITests) echo 300 ;;
   esac
 }
 only=""
@@ -58,13 +58,25 @@ if [ -n "${BW_A11Y_METHOD:-}" ]; then
   [ "$tests" = "AccessibilityUITests" ] || { echo "run: BW_A11Y_METHOD belongs to AccessibilityUITests alone" >&2; exit 2; }
   only="-only-testing:RightOnTimeUITests/AccessibilityUITests/$BW_A11Y_METHOD"
 fi
-for t in ${tests//,/ }; do [[ "$t" =~ ^(ShellUITests|MapMeUITests|JobUITests|TodayUITests|SpanishUITests|WaitingUITests|StepsUITests|AccessibilityUITests)$ ]] || { echo "run: test class '$t' is refused" >&2; exit 2; }; done
+for t in ${tests//,/ }; do [[ "$t" =~ ^(ShellUITests|MapMeUITests|JobUITests|TodayUITests|SpanishUITests|WaitingUITests|StepsUITests|AccessibilityUITests|ReviewerUITests|ScreenshotsUITests)$ ]] || { echo "run: test class '$t' is refused" >&2; exit 2; }; done
 test_cap=0
 for t in ${tests//,/ }; do test_cap=$((test_cap + $(test_cap_of "$t"))); done
 test_cap="${BW_NATIVE_TEST_CAP_S:-$test_cap}"
 runs() { [[ ",$tests," == *",$1,"* ]]; } # this run's classes include $1
 # The stack's commit: the phase 5 tag CP5 was accepted against, or this checkout for StepsUITests (its API-104 steps came after the tag).
 if runs StepsUITests; then stack_ref="${BW_STACK_REF:-HEAD}"; else stack_ref="${BW_STACK_REF:-p5-checkpoint}"; fi
+# F-1706 (P8-APPSTORE): BW_STACK_PROFILE=demo starts the stack with the demo profile's settings (the stack's own infra/profiles/demo.env:
+# demo mode and the access code on), less its 2 public-address lines (APP_ORIGIN and TEXT_LINK_HOST stay local), with an access code, a
+# cookie key and the sample-password seed made for this run (never printed). It runs ReviewerUITests alone, on this checkout's server by
+# default, and first shows the code is on: API-15 asked with no access cookie answers 403 access_code_required (stack-profile.txt).
+profile="${BW_STACK_PROFILE:-}"
+case "$profile" in
+  '') ;;
+  demo)
+    [ "$tests" = "ReviewerUITests" ] || { echo "run: BW_STACK_PROFILE=demo runs ReviewerUITests alone" >&2; exit 2; }
+    stack_ref="${BW_STACK_REF:-HEAD}" ;;
+  *) echo "run: stack profile '$profile' is refused (demo, or unset for the default settings)" >&2; exit 2 ;;
+esac
 if runs TodayUITests && [ "$tests" != "TodayUITests" ]; then echo "run: TodayUITests runs alone (its ledger check counts every item)" >&2; exit 2; fi
 build="$app/build"
 mkdir -p "$ev" "$build"
@@ -161,23 +173,48 @@ echo "sim-lock: waited $sim_lock_waited s for the simulator ($sim_lock)" | tee -
 node ci/data-assets.ts ensure
 stack_sha="$(git -C "$root" rev-parse --verify "$stack_ref^{commit}")" || { step "FAIL the stack ref $stack_ref is not in this clone (fetch its tag)"; exit 1; }
 mkdir -p "$stack"
-git -C "$root" archive "$stack_sha" | tar -x -C "$stack"
+stack_tar="$(mktemp "${TMPDIR:-/tmp}/stack-archive.XXXXXX")"   # a file, not a pipe (F-1823: SIGPIPE 141 under load)
+git -C "$root" archive -o "$stack_tar" "$stack_sha" || { rm -f "$stack_tar"; exit 1; }
+tar -xf "$stack_tar" -C "$stack" || { rm -f "$stack_tar"; exit 1; }
+rm -f "$stack_tar"
 # F-1362: the stack's setup checks the map files against ITS OWN manifest (map_hash_mismatch otherwise), so the files it serves are the ones
 # its ref pins: the stack's manifest, ensured into a folder named by that commit. A stack built from this checkout uses the usual folder.
 if [ "$stack_sha" = "$(git -C "$root" rev-parse HEAD)" ]; then maps_dir="$root/.build/data/maps"; else maps_dir="$root/.build/data/maps-${stack_sha:0:12}"; fi
 node ci/data-assets.ts ensure --manifest "$stack/packages/maps/MANIFEST.json" --dir "$maps_dir"
 echo "stack built from $stack_ref = $stack_sha (git archive of that commit); the app and the suite from $(git -C "$root" rev-parse HEAD)" | tee "$ev/stack.txt"
 step "project $project on context $DOCKER_CONTEXT, image $image"
+seed="$(node -e 'console.log(require("node:crypto").randomBytes(24).toString("base64url"))')"
+if [ "$profile" = demo ]; then
+  # the demo profile's KEY=VALUE lines go to compose's environment (its ${KEY:-default} entries), so every service gets them
+  while IFS='=' read -r k v; do
+    case "$k" in '' | '#'* | APP_ORIGIN | TEXT_LINK_HOST) continue ;; esac
+    [[ "$k" =~ ^[A-Z][A-Z0-9_]*$ ]] || { step "FAIL the demo profile line '$k' is not a setting"; exit 1; }
+    export "$k=$v"
+  done <"$stack/infra/profiles/demo.env"
+  ACCESS_CODE="code-$(node -e 'console.log(require("node:crypto").randomBytes(9).toString("base64url"))')"
+  ACCESS_COOKIE_KEY="$(node -e 'console.log(require("node:crypto").randomBytes(32).toString("base64url"))')"
+  SAMPLE_PASSWORD_SEED="$seed" # demo mode on: the web process needs the seed API-15 derives from, so it starts with it
+  export ACCESS_CODE ACCESS_COOKIE_KEY SAMPLE_PASSWORD_SEED
+  step "demo profile: DEMO_MODE=$DEMO_MODE ACCESS_CODE_ON=$ACCESS_CODE_ON RESET_PROTECTION=$RESET_PROTECTION NIGHTLY_RESET=$NIGHTLY_RESET (from $stack_ref's infra/profiles/demo.env; an access code made for this run)"
+fi
 compose build web >/dev/null
 compose up -d --no-build --wait --wait-timeout 240 proxy web worker pbs db
-seed="$(node -e 'console.log(require("node:crypto").randomBytes(24).toString("base64url"))')"
 reviewer_pw="rv-$(node -e 'console.log(require("node:crypto").randomBytes(12).toString("base64url"))')"
 SAMPLE_PASSWORD_SEED="$seed" REVIEWER_PASSWORD="$reviewer_pw" compose --profile setup run --rm --no-deps setup >"$tmp/setup.log" 2>&1 || { tail -5 "$tmp/setup.log" >&2; exit 1; }
 for s in db pbs proxy web worker; do compose ps --status running --services | grep -qw "$s" || { step "FAIL service $s is not running"; exit 1; }; done
 pgv="$(compose exec -T db psql -U brightwater -d brightwater -tAc 'show server_version')"
-node ci/wave/stack-settings.ts "$project" >/dev/null || { step "FAIL the stack is not at its default settings"; exit 1; }
 base="http://127.0.0.1:$port"
-curl -fsS --retry 30 --retry-connrefused --retry-delay 1 -o /dev/null "$base/healthz"
+if [ -z "$profile" ]; then
+  BW_STACK_COMPOSE="$stack/infra/compose.yaml" node ci/wave/stack-settings.ts "$project" >/dev/null || { step "FAIL the stack is not at its default settings"; exit 1; }
+  curl -fsS --retry 30 --retry-connrefused --retry-delay 1 -o /dev/null "$base/healthz"
+else
+  curl -fsS --retry 30 --retry-connrefused --retry-delay 1 -o /dev/null "$base/healthz"
+  web_env="$(compose exec -T web printenv DEMO_MODE ACCESS_CODE_ON | tr '\n' ' ')"
+  [ "$web_env" = "on on " ] || { step "FAIL the web service is not on the demo profile (DEMO_MODE ACCESS_CODE_ON: $web_env)"; exit 1; }
+  gate="$(curl -sS -o "$tmp/gate.json" -w '%{http_code}' "$base/api/v1/demo/people?app=tech")"
+  if [ "$gate" != "403" ] || ! grep -q 'access_code_required' "$tmp/gate.json"; then step "FAIL the access code is not on: API-15 with no access cookie answered $gate"; exit 1; fi
+  echo "stack profile demo: web DEMO_MODE and ACCESS_CODE_ON on; API-15 with no access cookie answered $gate access_code_required" | tee "$ev/stack-profile.txt"
+fi
 step "stack up at $base (PostgreSQL $pgv), set up by the setup service"
 psql() { compose exec -T db psql -U brightwater -d brightwater -tAc "$1"; }
 job="$(psql "SELECT j.job_number FROM world.job j JOIN world.technician t ON t.id = j.technician_id WHERE t.name = 'Maria Santos' AND j.job_number = 24830")"

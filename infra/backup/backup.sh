@@ -14,14 +14,13 @@
 # A failure anywhere rolls the transaction back, removes what this run uploaded, writes a backup_record row with
 # result failed, logs the event backup_failed and exits 1, so the unit fails; the SD-30 alert rule "the last
 # backup failed" reads that row (the alert checks of P3-ALERTS open the backup_failed alert from it).
-# With BACKUP_TARGET=none (an own copy) it does nothing and exits 0.
+# With BACKUP_TARGET=none (an own copy), or before setup has finished (F-1697), it does nothing and exits 0.
 set -euo pipefail
 BW_PROCESS=backup
 # shellcheck source=infra/backup/lib.sh
 . "$(dirname "$0")/lib.sh"
 check_settings
 if [ "$BACKUP_TARGET" = none ]; then log not_set_up "BACKUP_TARGET is none: no backup"; exit 0; fi
-take_lock
 
 # F-390: declared empty first so the exit trap can run (and log backup_failed) when the db container is missing.
 DB=""
@@ -30,13 +29,14 @@ STAMP=""
 STARTED=""
 UPLOADED=()
 COMMITTED=0
-PG_PID=""
+# F-1773: not PG_PID: bash names the coproc PG and sets PG_PID itself, then unsets it when the session ends, and set -u made the next read fatal.
+SESSION_PID=""
 
 # Defined before the trap: finish calls it, and finish can run before the snapshot session exists (F-390).
 # close_session: end psql's input; with no COMMIT sent, the transaction rolls back.
 close_session() {
   if [ -n "${PG[1]:-}" ]; then eval "exec ${PG[1]}>&-"; fi
-  if [ -n "$PG_PID" ]; then wait "$PG_PID" 2>/dev/null || true; PG_PID=""; fi
+  if [ -n "$SESSION_PID" ]; then wait "$SESSION_PID" 2>/dev/null || true; SESSION_PID=""; fi
 }
 
 finish() {
@@ -63,11 +63,23 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 DB="$(db_container)"
+# F-1697: before setup there is no world to back up; nothing is uploaded or recorded. F-1771: a database that does not
+# answer exits inside world_set_up, so finish writes the failed record; only a real "not set up" reaches this branch.
+if ! world_set_up; then
+  log not_set_up "no world is set up yet (no system.day_snapshot row): no backup"
+  COMMITTED=1  # nothing to roll back or record: finish skips the failed row
+  exit 0
+fi
+# F-492: after the trap, so a lock wait that times out writes its failed backup_record row. Nothing of the lock
+# holder's is touched: this run has uploaded nothing and has no work folder yet.
+# F-1774: the failed row of a lock wait that times out has this start time, not its own finish time.
+STARTED="$(date -u '+%Y-%m-%d %H:%M:%S.%6N+00')"
+take_lock
 WORK="$(new_workdir backup)"
 
 # The snapshot session: psql reads statements from this script and answers each with its rows, then a marker.
 coproc PG { docker exec -i "$DB" psql -X -q -A -t -v ON_ERROR_STOP=1 -U "$BW_DB_USER" -d "$BW_DB_NAME" 2>"$WORK/psql.err"; }
-PG_PID=$!
+SESSION_PID=$!
 sql() {
   printf '%s\n\\echo __BW_END__\n' "$1" >&"${PG[1]}"
   local line out=""

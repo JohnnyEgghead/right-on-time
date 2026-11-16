@@ -151,7 +151,7 @@ export function sampleVans(b: Board): Van[] {
     return {
       technicianId: x.id, name: x.name, initials: x.initials, van: x.van, skills: x.skills, phone: x.id === 'santos' ? '(614) 555-0112' : '(614) 555-0130', position,
       status: site ? 'on_site' as const : way ? 'on_the_way' as const : 'between_jobs' as const, jobNumber: current?.jobNumber ?? null, eta: current?.eta ?? null,
-      route: way ? { from, to: way.position, track: null } : null,
+      route: way ? { from, to: way.position, key: null, track: null } : null,
     };
   });
 }

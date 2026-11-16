@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { describe, expect, it } from 'vitest';
-import { embedsServerState, SERVER_STATE_HEADER } from './server-state.ts';
+import { embedsServerState, SERVER_STATE_HEADER, shellVariant } from './server-state.ts';
 import { TECH_MANIFEST, TECH_MANIFEST_PATH, TECH_SW_PATH, techShellAsset, workerSource } from './shell-assets.ts';
 
 const ORIGIN = 'https://bw.example';
@@ -380,6 +380,12 @@ describe('the build stamp and the server-state mark (F-979, F-980)', () => {
     expect(embedsServerState('SCR-TEC-02', '/tech?x=1')).toBe(true);
     expect(embedsServerState('SCR-TEC-02', '/tech?bw-shell=1')).toBe(false);
     expect(embedsServerState('SCR-TEC-01', '/tech/sign-in')).toBe(false);
+    // F-1783: a repeated parameter reads the same from the URL and from a page's searchParams record
+    expect(embedsServerState('SCR-TEC-02', '/tech?bw-shell=1&bw-shell=2')).toBe(false);
+    expect(shellVariant('/tech?bw-shell=2&bw-shell=1')).toBe(true);
+    expect(shellVariant({ 'bw-shell': ['1', '2'] })).toBe(true);
+    expect(shellVariant({ 'bw-shell': ['2'] })).toBe(false);
+    expect(shellVariant({})).toBe(false);
     expect(SERVER_STATE_HEADER).toBe('x-bw-server-state');
   });
 });

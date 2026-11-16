@@ -56,10 +56,12 @@ export function buildLegs(fixture: WorldFixture, streets: readonly StreetListRow
   for (const j of [...fixture.pilotJobs, ...fixture.demoWeekJobs]) {
     if (!covered.has(j.date)) continue;
     const c = customer.get(j.customer);
-    const s = c && street.get(`${c.street}|${c.city}|${c.zip}`);
-    const branch = j.technician === null ? s?.branch : branchOf.get(j.technician);
-    if (!c || !branch) throw new Error(`job ${j.jobNumber}: customer ${j.customer} or technician ${j.technician} is not in the fixture or roster`);
+    if (!c) throw new Error(`job ${j.jobNumber}: customer ${j.customer} or technician ${j.technician} is not in the fixture or roster`);
+    const s = street.get(`${c.street}|${c.city}|${c.zip}`);
+    // F-1691: the street is tested before the branch, so an Unassigned job (no technician) with a missing street gets the street message.
     if (!s) throw new Error(`job ${j.jobNumber}: street ${c.street}, ${c.city} ${c.zip} is not in the street list`);
+    const branch = j.technician === null ? s.branch : branchOf.get(j.technician);
+    if (!branch) throw new Error(`job ${j.jobNumber}: customer ${j.customer} or technician ${j.technician} is not in the fixture or roster`);
     if (s.branch !== branch) throw new Error(`job ${j.jobNumber}: the street is in branch ${s.branch}, the technician in ${branch}`);
     const p = s.points[(c.houseNumber - 1) % s.points.length] as [number, number];
     stops.push({ ref: String(j.jobNumber), branch, point: p, tech: j.technician, day: j.date, start: j.windowStart });

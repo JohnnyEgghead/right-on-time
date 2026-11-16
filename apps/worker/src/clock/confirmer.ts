@@ -9,7 +9,7 @@
 // Bound: after RESET_CONFIRM_ALERT_AFTER failed calls in a row (about 60 real seconds) the step opens the alert
 // billing_reset_waiting (SD-30) and keeps calling; the clock stays paused until pbs answers, the honest state while
 // the billing system is down. pbs applies a reset once per epoch, so a repeated call after a lost answer is harmless.
-import { inTransaction, publishEvent, readClockAt, type createPool } from '@bw/db';
+import { alertEventIds, inTransaction, publishEvent, readClockAt, type createPool } from '@bw/db';
 import { Temporal, type Clock } from '@bw/time';
 import { openAlert } from '../alerts/check.ts';
 import type { BillingClient } from '../billing/client.ts';
@@ -74,8 +74,10 @@ export async function confirmStep(d: ConfirmerDeps): Promise<ConfirmStep> {
       `INSERT INTO system.clock_move (world_epoch, at_real, from_demo, to_demo, kind, by_name) VALUES ($1, $2, $3, $3, 'resume', $4)`,
       [epoch, real, c.demoNow, mover.rows[0]?.by_name ?? ''],
     );
-    await tx.query(
-      `UPDATE world.alert SET state = 'resolved', resolved_at = $1 WHERE type = 'billing_reset_waiting' AND state = 'open'`, [c.demoNow]);
+    const closed = await tx.query<{ id: string; branch_id: string | null }>(
+      `UPDATE world.alert SET state = 'resolved', resolved_at = $1 WHERE type = 'billing_reset_waiting' AND state = 'open' RETURNING id, branch_id`, [c.demoNow]);
+    // SD-30, F-1156: the close reaches every open bell and System health page.
+    for (const x of closed.rows) await publishEvent(tx, 'alert.dismissed', alertEventIds(x.id, x.branch_id));
     await publishEvent(tx, 'world.reset', { worldEpoch: epoch });
     return true;
   });

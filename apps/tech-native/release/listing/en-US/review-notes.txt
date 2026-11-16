@@ -1,0 +1,11 @@
+Right On Time is a finished, open-source iPhone client for technicians of a small field-service company. It signs in to a public sample site, https://bw.j7l.io, run for a fictional company named Brightwater.
+
+Sample data: everything on the site is made-up sample data. The customers, addresses, jobs, technicians and phone numbers are fictional. The site goes back to the same starting data every night at 3:00 AM Eastern time.
+
+Server clock: the app shows the sample company's time, which comes from the server, not from the phone. After each nightly reset the sample day is Tuesday, September 15, starting at 7:00 AM, and the server's clock runs on from there. So the date and times in the app are the sample company's, not today's.
+
+Sign-in: use the account in the sign-in fields above. It needs no access code. That account is set up for App Review and has no jobs, so the Today screen says "You have no jobs today." That is expected.
+
+The site is shared: other visitors can change the sample day (for example move a job along) until the nightly reset.
+
+This app is intended for Unlisted App Distribution. We have filed an Unlisted App Distribution request for it.

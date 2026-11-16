@@ -2,7 +2,7 @@
 'use client';
 // SCR-OFC-28 Office alerts (frame mockups/pages/office-board.html, "SCR-OFC-28 Office alerts: ..."; UI-SPECIFICATION 2.3) and the bell's
 // count (CTL-CMP-07-06; FR-DISP-12): the list the notification bell opens, today's alerts of the types whose bell switch is on, newest
-// first (API-43). `useBell` keeps the count current from EVT-04 alert.created and the alert_settings notice of EVT-09, and announces a
+// first (API-43). `useBell` keeps the count current from EVT-04 alert.created and alert.dismissed and the alert_settings notice of EVT-09, and announces a
 // new alert. The panel is the top bar's: every office page has it.
 import './css/alerts.ts';
 import { subscribeEvents } from '@bw/api';
@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { clockText } from '../billing/format.ts';
 import { openAlertEmail } from './alert-email.ts';
 import { alertOpenLabel, alertText } from './alert-words.ts';
+import { createBellSeen } from './bell-seen.ts';
 import { useAnnounce } from './Announcer.tsx';
 import { useT } from './intl.tsx';
 import type { Reader } from './reads.ts';
@@ -127,25 +128,27 @@ export function useBell({ enabled, branch, reader }: { enabled: boolean; branch:
   const [fresh, setFresh] = useState<string | undefined>(undefined);
   const words = useRef({ t, announce });
   words.current = { t, announce };
-  const known = useRef<Set<string> | null>(null);
+  const seen = useRef(createBellSeen<BellAlert>());
 
   const load = useCallback(
     async (announceNew: boolean) => {
+      // F-1809: the announcement is owed while an alert.created read is out, and whichever read lands with the new alert pays it.
+      const land = seen.current.begin(announceNew);
       const r = await reader().read<{ alerts: BellAlert[] }>('API-43', { branch });
       if (!r.ok) {
+        land(null);
         setFailed(true);
         return;
       }
-      setFailed(false);
       const next = r.data.alerts;
-      const seen = known.current;
-      known.current = new Set(next.map((a) => a.id));
-      const added = seen === null ? [] : next.filter((a) => !seen.has(a.id));
-      if (added.length > 0) {
-        setFresh(added[0]!.id);
-        if (announceNew) {
+      const { added, announce: say, stale } = land(next);
+      if (stale) return; // F-1812: an answer for another world, or older than the list drawn, draws nothing
+      setFailed(false);
+      if (added) {
+        setFresh(added.id);
+        if (say) {
           const w = words.current;
-          w.announce(w.t('bell.new' as MessageKey, { text: alertText(w.t, added[0]!) }), 'alert');
+          w.announce(w.t('bell.new' as MessageKey, { text: alertText(w.t, added) }), 'alert');
         }
       }
       setAlerts(next);
@@ -157,14 +160,15 @@ export function useBell({ enabled, branch, reader }: { enabled: boolean; branch:
 
   useEffect(() => {
     if (!enabled) return;
-    known.current = null;
+    seen.current.reset();
     setAlerts(null);
     void loadRef.current(false);
     const handle = subscribeEvents({
       branch,
       onEvent: (e) => {
         const settings = e.name === 'settings.changed' && e.ids['kind'] === 'alert_settings';
-        if (e.name === 'alert.created' || settings) void loadRef.current(e.name === 'alert.created');
+        // F-1156: alert.dismissed (any close, SD-30) re-reads too, so an alert closed in another tab shows Resolved here; no announcement.
+        if (e.name === 'alert.created' || e.name === 'alert.dismissed' || settings) void loadRef.current(e.name === 'alert.created');
       },
       onReconnect: () => void loadRef.current(false),
     });

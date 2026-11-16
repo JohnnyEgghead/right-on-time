@@ -36,6 +36,16 @@
 .bw-tech .r1-skel.bw-skel-line { width: 80%; opacity: .5; }
 .bw-tech .r1-skel.bw-skel-40 { width: 40%; }
 .bw-tech .r1-skel.bw-skel-70 { width: 70%; }
+/* Kit 0.12 (57520d6c, F-1560): the Reading the phone (web) skeletons of Map, Directions, Me and Parts, at the widths the frames write inline. */
+.bw-tech .r1-skel.bw-skel-30 { width: 30%; }
+.bw-tech .r1-skel.bw-skel-35 { width: 35%; }
+.bw-tech .r1-skel.bw-skel-45 { width: 45%; }
+.bw-tech .r1-skel.bw-skel-50 { width: 50%; }
+.bw-tech .r1-skel.bw-skel-55 { width: 55%; }
+.bw-tech .r1-skel.bw-skel-75 { width: 75%; }
+.bw-tech .r1-skel.bw-skel-80 { width: 80%; }
+.bw-tech .r1-skel.bw-skel-150 { width: 150px; opacity: .5; }
+.bw-tech .dest .r1-skel.bw-skel-name { width: 55%; height: 20px; }
 /* DK-110's equipment tile tints, which the frame writes inline (the CSP allows no inline style). */
 .bw-tech .eq .ico.bw-eq-warm { background: var(--orange-100); color: var(--orange-600); }
 .bw-tech .eq .ico.bw-eq-cool { background: var(--teal-50); color: var(--teal-700); }
@@ -164,10 +174,11 @@
 .bw-tech .srch .clr { cursor: pointer; }
 .bw-tech .list16 > .emp { margin: 12px 12px 0; }
 .bw-tech .list16 > .srch + .emp { margin: 8px 12px 0; }
-/* Me: the waiting count in the Sync row, the reason under Send now, the Call button's wrapper and the open Text size list. */
+/* Me: the waiting count in the Sync row, the reason under Send now, the Call button's wrapper (and its skeleton while the phone is read) and
+   the open Text size list. */
 .bw-tech .syncrow b.wait { color: var(--st-risk-ink); }
 .bw-tech .r1p-why[data-align="end"] { text-align: right; margin-top: 4px; }
-.bw-tech .rows .rw .bw-call { margin-left: auto; }
+.bw-tech .rows .rw .bw-call, .bw-tech .rows .rw > .r1-skel { margin-left: auto; }
 .bw-tech .rows .r1-menu.in { position: static; margin: 4px 0 6px auto; min-width: 0; width: 220px; }
 .bw-tech .rows .rw .sel, .bw-tech .rows .rw .sbtn, .bw-tech .out { cursor: pointer; }
 /* Text size (CTL-TEC-10-09): the app's px-sized text follows the size by zoom; the tab bar keeps its size. */

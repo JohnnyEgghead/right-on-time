@@ -23,6 +23,8 @@ export const KEYS = {
   snapshot: `${PREFIX}snapshot`,
   /** The user id the person's copies belong to (API-03, API-05, API-07). */
   person: `${PREFIX}person`,
+  /** The person's name and skill from the who-am-I answer (API-07), so Me draws the profile before the day is read (F-1740). */
+  profile: `${PREFIX}profile`,
 } as const;
 
 /** The key P5-TWA-TODAY's own saved day used before there was one saved day (F-1018); forgotten like the rest, never read. */
@@ -64,6 +66,10 @@ export const savedRoutes = (): KeptRoutes | null => read<KeptRoutes>(KEYS.routes
 export const saveRoutes = (v: KeptRoutes | null): void => (v === null ? forgetKey(KEYS.routes) : write(KEYS.routes, v));
 export const savedParts = (): Saved<Part[]> | null => read<Saved<Part[]>>(KEYS.parts);
 export const saveParts = (v: Saved<Part[]>): void => write(KEYS.parts, v);
+/** The signed-in person's profile as Me draws it: from the session, not the saved day (F-1740; plan section 11 item 29, option b). */
+export interface Profile { name: string; initials: string; skill: string | null }
+export const savedProfile = (): Profile | null => read<Profile>(KEYS.profile);
+export const saveProfile = (v: Profile): void => write(KEYS.profile, v);
 export const savedSnapshot = (): DaySnapshot | null => read<DaySnapshot>(KEYS.snapshot);
 export const saveSnapshot = (v: DaySnapshot): void => write(KEYS.snapshot, v);
 
@@ -98,7 +104,7 @@ export const forgetCount = (): number => forgets;
  */
 export async function forgetPerson(): Promise<void> {
   forgets += 1; // before any await: a read round that started earlier sees a different count and never saves what it read (F-1006)
-  for (const k of [KEYS.parts, KEYS.day, KEYS.route, KEYS.routes, KEYS.snapshot, KEYS.person, LEGACY_DAY_KEY]) {
+  for (const k of [KEYS.parts, KEYS.day, KEYS.route, KEYS.routes, KEYS.snapshot, KEYS.person, KEYS.profile, LEGACY_DAY_KEY]) {
     try {
       window.localStorage.removeItem(k);
     } catch {

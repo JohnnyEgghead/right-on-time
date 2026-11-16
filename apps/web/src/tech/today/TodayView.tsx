@@ -12,6 +12,7 @@ import { PhoneFoot } from '../../inbox/PhoneParts.tsx';
 import { Icon } from '../../shell/Icon.tsx';
 import type { IconName } from '../../shell/icon-paths.ts';
 import { useT, type ClientT } from '../../shell/intl.tsx';
+import { lastTryOf, TechErrorPanel } from '../TechErrorPanel.tsx';
 import { NoSignalCard, OldItemsBanner, WaitingCount } from '../SyncStrip.tsx';
 import type { OutboxState } from '../engine.ts';
 import { canStartWay, ENDED, firstName, nextJob, progress, surname, type LocalJob } from './model.ts';
@@ -32,6 +33,8 @@ export interface TodayViewProps {
   savedAt: string | null;
   /** A read failed: CMP-12 above the saved list, or alone when the phone has signal and nothing is saved (F-1019). */
   failed: boolean;
+  /** When the failed read ended (the phone's stamp, ms): the panel's Last try time (F-1777). */
+  failedAt?: number | null;
   notice: string | null;
   fixed?: OutboxState;
   clock?: ClockAnswer | null;
@@ -234,7 +237,7 @@ function Empty({ icon, children }: { icon: IconName; children: ReactNode }) {
 }
 
 /** The list under the header, for every state SCR-TEC-02 shows. */
-export function TodayList({ day, jobs, loading, online, savedAt, failed, notice, fixed, info, driveMinutes, newDay, onRefresh, onOpen }: TodayViewProps) {
+export function TodayList({ day, jobs, loading, online, savedAt, failed, failedAt, notice, fixed, info, driveMinutes, newDay, onRefresh, onOpen }: TodayViewProps) {
   const t = useT();
   const f = fixed ? { fixed } : {};
   if (loading) {
@@ -267,11 +270,8 @@ export function TodayList({ day, jobs, loading, online, savedAt, failed, notice,
       <OldItemsBanner {...f} />
       {notice ? <div className="r1p-notice" role="status" aria-live="polite"><Icon name="bell" /><span>{notice}</span></div> : null}
       {failed ? (
-        <div className="r1-errpanel" role="alert" data-ctl="CTL-CMP-12-01">
-          <Icon name="alert" />
-          <div><b>{t('tech.today.error')}</b>{savedAt ? t('tech.today.errorSaved', { time: timeOf(savedAt, zone, t.lang) }) : null}<br />
-            <button type="button" className="btn sm" data-ctl="CTL-CMP-12-02" onClick={onRefresh}>{t('shell.error.tryAgain')}</button></div>
-        </div>
+        <TechErrorPanel title={t('tech.today.error')} hint={savedAt ? t('tech.today.errorSaved', { time: timeOf(savedAt, zone, t.lang) }) : null} cmp={false}
+          lastTry={lastTryOf(failedAt, zone, t.lang)} onRetry={() => onRefresh?.()} />
       ) : null}
       {!day && !failed ? <Empty icon="signal">{t('tech.today.noSaved')}</Empty> : null}
       {day && jobs.length === 0 ? <Empty icon="calendar">{t('tech.today.none')}</Empty> : null}

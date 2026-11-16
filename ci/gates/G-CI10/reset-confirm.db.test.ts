@@ -6,8 +6,8 @@
 // clock runs and the alert resolves. Real PostgreSQL 18, the real pbs server (apps/pbs) over HTTP, the worker's login
 // bw_worker and pbs's bw_pbs. Run by ci/gates/G-CI10.sh step 2.
 import { createServer } from 'node:net';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createPool, inTransaction, resetWorld } from '../../../packages/db/src/index.ts';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { BUS_CHANNEL, createClient, createPool, decodeNotification, inTransaction, resetWorld } from '../../../packages/db/src/index.ts';
 import { useMigratedDatabase } from '../../../packages/db/src/testing/fixture.ts';
 import { createLogger } from '../../../packages/log/src/index.ts';
 import { Temporal } from '../../../packages/time/src/index.ts';
@@ -61,7 +61,7 @@ const openAlerts = async () =>
   (await db.admin().query(`SELECT state FROM world.alert WHERE type = 'billing_reset_waiting' ORDER BY at`)).rows.map((r) => (r as { state: string }).state);
 
 describe('G-CI10 epoch case: a reset is confirmed by the billing service before the clock runs (SD-12)', () => {
-  // why: FR-DEMO-6, SD-12
+  // why: FR-DEMO-6, SD-12, F-1156 (the close publishes alert.dismissed)
   it('with pbs stopped the clock stays paused, billing_reset_waiting opens after 12 calls, and resolves when pbs answers', async () => {
     // A reset (the idle watcher's maker, as the worker runs it): epoch 2, unconfirmed.
     const r = await inTransaction(worker, (tx) => resetWorld(tx, { byName: 'idle', real: REAL }));
@@ -85,7 +85,23 @@ describe('G-CI10 epoch case: a reset is confirmed by the billing service before 
 
     // pbs comes back on its port: the next call applies epoch 2 once, the clock runs and the alert resolves.
     pbs = await startPbs({ pool: pbsPool, log: createLogger({ process: 'pbs', write: () => undefined }), host: '127.0.0.1', port });
-    expect(await step(RESET_CONFIRM_ALERT_AFTER + 2)).toBe('confirmed');
+    // F-1156, SD-30: the confirmer's close of the alert publishes alert.dismissed (a copy-wide alert: no branch) in its transaction.
+    const alertId = (await db.admin().query<{ id: string }>(`SELECT id FROM world.alert WHERE type = 'billing_reset_waiting' AND state = 'open'`)).rows[0]!.id;
+    const listener = createClient({ connectionString: db.url() });
+    await listener.connect();
+    const dismissed: unknown[] = [];
+    listener.on('notification', (m) => {
+      const d = m.channel === BUS_CHANNEL ? decodeNotification(m.payload) : null;
+      if (d?.name === 'alert.dismissed') dismissed.push(d.ids);
+    });
+    await listener.query(`LISTEN ${BUS_CHANNEL}`);
+    try {
+      expect(await step(RESET_CONFIRM_ALERT_AFTER + 2)).toBe('confirmed');
+      await vi.waitFor(() => expect(dismissed).toEqual([{ alertId }]), { timeout: 5_000, interval: 20 });
+    } finally {
+      listener.removeAllListeners('notification');
+      await listener.end();
+    }
     expect(await clockRow()).toMatchObject({ world_epoch: 2, pbs_epoch: 2, paused: false, demo_anchor: new Date('2026-09-15T11:00:00Z') });
     expect(await openAlerts()).toEqual(['resolved']);
     const mode = await db.admin().query<{ epoch: number }>('SELECT epoch FROM pbs.mode');

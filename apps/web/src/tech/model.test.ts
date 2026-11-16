@@ -9,7 +9,7 @@ import {
 } from './model.ts';
 import { ownItems } from './useOutbox.ts';
 import { clearSignOutOwed, endSession, forgetShell, signOutOwed } from './session.ts';
-import { distText, durationText, mapLayers, mapPhase, partsPhase, phoneStart } from './view-model.ts';
+import { distText, durationText, mapLayers, mapPhase, mapSummary, mePhase, partsPhase, phoneStart } from './view-model.ts';
 
 const PARTS: Part[] = [
   { partId: '1', name: 'Run capacitor 45/5 MFD', code: 'CAP-455', priceCents: 3800 },
@@ -42,6 +42,7 @@ const TEXT: Record<string, string> = {
   'tech.map.stopWords': 'Stop {n}, {state}: {customer}, {area}',
   'tech.map.state.next': 'Next', 'tech.map.state.done': 'Done', 'tech.map.state.later': 'Later',
   'tech.me.hm': '{h} hr {m} min', 'tech.me.m': '{m} min',
+  'tech.map.title': "Today's route", 'tech.map.summaryOpen': "Today's route - {stops} stops", 'tech.map.summary': "Today's route - {stops} stops - {done} done",
 };
 const t = Object.assign(
   (key: string, values: Record<string, string | number> = {}) => (TEXT[key] ?? key).replace(/\{(\w+)\}/g, (_, k: string) => String(values[k])),
@@ -99,6 +100,37 @@ describe('Map tab (SCR-TEC-15)', () => {
     expect(mapPhase({ ...ROUTE, stops: ROUTE.stops.map((s) => ({ ...s, state: 'done' as const })), next: null }, false, true)).toBe('alldone');
     expect(mapPhase(ROUTE, false, true)).toBe('route');
     expect(jobsDone(ROUTE.stops)).toBe(1);
+  });
+
+  // why: F-1750 with signal, no route saved and the route read failed, the Map is Route not loaded, not Loading with no end
+  it('ends Loading with Route not loaded when the read failed and no route is saved', () => {
+    expect(mapPhase(null, false, true, true)).toBe('error');
+    expect(mapPhase(null, false, true)).toBe('loading');
+    expect(mapPhase(null, false, false, true)).toBe('loading');
+    expect(mapPhase(null, true, true, true)).toBe('offline');
+    expect(mapPhase(ROUTE, false, true, true)).toBe('route');
+  });
+
+  // why: F-1758 Loading with no saved route, and Route not loaded, read Today's route with no stop count, never 0 stops
+  it('shows no stop count in the route summary until a route is held', () => {
+    expect(mapSummary(t, 'loading', null)).toBe("Today's route");
+    expect(mapSummary(t, 'error', null)).toBe("Today's route");
+    expect(mapSummary(t, 'loading', ROUTE)).toBe("Today's route - 3 stops");
+    expect(mapSummary(t, 'route', ROUTE)).toBe("Today's route - 3 stops - 1 done");
+  });
+});
+
+describe('Me day states (SCR-TEC-10)', () => {
+  // why: F-1739 with the phone's copy read and no day saved, Me is Loading (or Day not loaded, or Offline nothing saved), never the day's values drawn empty
+  it('picks Loading, Day not loaded or Offline nothing saved when no day is saved', () => {
+    expect(mePhase(true, false, false, false, false)).toBe('reading');
+    expect(mePhase(false, false, false, false, false)).toBe('loading');
+    expect(mePhase(false, false, false, true, false)).toBe('loading');
+    expect(mePhase(false, false, false, true, true)).toBe('error');
+    expect(mePhase(false, false, true, true, true)).toBe('nosaved');
+    expect(mePhase(false, false, true, false, false)).toBe('nosaved');
+    expect(mePhase(false, true, false, true, true)).toBe('day');
+    expect(mePhase(false, true, true, true, false)).toBe('day');
   });
 });
 

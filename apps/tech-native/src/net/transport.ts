@@ -77,9 +77,11 @@ export function nativeTransport(opts: NativeTransportOptions): Transport {
         return failureOf(e);
       }
     },
-    async uploadBlob(i) {
+    async uploadBlob(i, bytes) {
       // The bytes the loop read are the same file's; the upload reads the file, so a large photo never crosses into JavaScript twice.
-      const uri = opts.blobUri(i.key);
+      // F-1035: no bytes (the send loop's second try of an upload the proxy refused for its size) goes as an empty body file of its own.
+      const empty = bytes.byteLength === 0 ? opts.port.bodyFile('') : null;
+      const uri = empty?.uri ?? opts.blobUri(i.key);
       if (uri === null) return { ok: false, stop: null, status: 0, code: 'blob_missing' };
       const q = new URLSearchParams(blobQuery(i));
       const url = `${opts.origin}${fillPath(servedPath(uploadBlob), { key: i.key })}?${q.toString()}`;
@@ -88,6 +90,8 @@ export function nativeTransport(opts: NativeTransportOptions): Transport {
         r = await opts.port.upload(uri, url, { method: 'PUT', headers: { ...auth, accept: ACCEPT, 'content-type': blobContentType(i) } });
       } catch {
         return { ok: false, stop: 'network' };
+      } finally {
+        empty?.done();
       }
       return uploadAnswer(r.status, jsonOrNull(r.body));
     },

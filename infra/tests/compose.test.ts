@@ -48,25 +48,41 @@ function loadsConfig(reader: string): boolean {
   return !entry || readFileSync(path.join(root, entry), 'utf8').includes('@bw/config');
 }
 
-// The rows of SPECIFICATIONS 11.1 whose own-copy cell is 1 literal value ("same" repeats it in the hosted cell). `demo` is
-// the hosted value when that cell is a literal; `hostedServer` marks a hosted cell that says the value is a setting of the
-// hosted server itself (hosted.env), not of the demo profile. `config` is false for a row read only by processes that never
-// load @bw/config (section 11.1's rule: read at start-up by @bw/config), which Compose sets on that process alone.
+// The rows of SPECIFICATIONS 11.1 whose own-copy cell is 1 literal value, backticked or quoted ("same" repeats it in the hosted
+// cell). A name cell may list several names (F-1696: the 4 DATA_LOCATION_* settings share 1 row); a hosted cell then either
+// gives 1 literal for all of them or quoted values each "for" the names it lists by their last word ("for the app, texts and
+// maps" is DATA_LOCATION_APP, _TEXTS and _MAPS). `demo` is the hosted value when that cell gives one; `hostedServer` marks a
+// hosted cell that says the value is a setting of the hosted server itself (hosted.env), not of the demo profile. `config` is
+// false for a row read only by processes that never load @bw/config (section 11.1's rule: read at start-up by @bw/config),
+// which Compose sets on that process alone.
 type Row = { own: string; demo: string | undefined; hostedServer: boolean; readers: string[]; config: boolean };
+const LITERAL = /^(?:`([^`]+)`|"([^"]+)")(?: \([^)]*\))?$/;
+function literal(cell: string | undefined): string | undefined {
+  const m = LITERAL.exec(cell ?? '');
+  return m ? (m[1] ?? m[2]) : undefined;
+}
+// The hosted value of `name` from a cell of quoted values each followed by "for <names>", or undefined.
+function hostedFor(cell: string, name: string): string | undefined {
+  for (const m of cell.matchAll(/"([^"]+)" for (?:the )?([a-z]+(?:(?:, | and )[a-z]+)*)/g)) {
+    if (m[2]!.split(/, | and /).some((w) => name.endsWith(`_${w.toUpperCase()}`))) return m[1];
+  }
+  return undefined;
+}
 function specSettings(): Map<string, Row> {
   const lines = readFileSync(path.join(root, 'docs/SPECIFICATIONS.md'), 'utf8').split('\n');
   const start = lines.indexOf('### 11.1 Settings');
   const out = new Map<string, Row>();
-  const literal = /^`([^`]+)`(?: \([^)]*\))?$/;
   for (const line of lines.slice(start, start + 60)) {
     if (line.startsWith('### 11.2')) break;
     const cells = line.split('|').slice(1, -1).map((c) => c.trim());
-    const name = /^`([A-Z_]+)`$/.exec(cells[0] ?? '')?.[1];
-    const own = literal.exec(cells[1] ?? '')?.[1];
-    const demo = cells[2] === 'same' ? own : literal.exec(cells[2] ?? '')?.[1];
+    const names = /^`[A-Z_]+`(?:, `[A-Z_]+`)*$/.test(cells[0] ?? '') ? [...cells[0]!.matchAll(/`([A-Z_]+)`/g)].map((m) => m[1]!) : [];
+    const own = literal(cells[1]);
     const hostedServer = /\bhosted server\b/.test(cells[2] ?? '');
     const readers = (cells[3] ?? '').replace(/\([^)]*\)/g, '').split(',').map((r) => r.trim()).filter(Boolean);
-    if (name && own !== undefined && (demo !== undefined || hostedServer)) out.set(name, { own, demo, hostedServer, readers, config: readers.some(loadsConfig) });
+    for (const name of names) {
+      const demo = cells[2] === 'same' ? own : (literal(cells[2]) ?? hostedFor(cells[2] ?? '', name));
+      if (own !== undefined && (demo !== undefined || hostedServer)) out.set(name, { own, demo, hostedServer, readers, config: readers.some(loadsConfig) });
+    }
   }
   return out;
 }

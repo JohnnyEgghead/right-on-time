@@ -21,18 +21,26 @@ export const health: Handler<{ status: 'ok' }> = async (_req, tx, ctx) => {
 export const DELAY_SAMPLE_KEEP_HOURS = 24;
 
 /**
- * API-172: store ms = receive time minus the seq's emit time (the bus keeps each seq's emit time 60 s). It includes the
- * board's re-read, so it slightly over-counts. A seq the process no longer holds (another process's, or past 60 s) is
- * answered 204 and stores nothing. Each post also prunes the samples older than 24 real hours.
+ * API-172 (SD-43, F-885): the samples of 1 request, each stored as ms = receive time minus the seq's emit time (the bus keeps each
+ * seq's emit time 60 s) minus the sample's heldMs, floored at 0. It includes the board's re-read, so it slightly over-counts. A seq
+ * the process no longer holds (another process's, or past 60 s) stores nothing; the answer is 204 either way. Every sample goes in
+ * 1 insert, and the request prunes the samples older than 24 real hours once. The old body, seq alone, is 1 sample held 0 ms; a
+ * body with both stores both (the contract refuses a body with neither).
  */
 export const boardDelaySampleHandler: Handler<Record<string, never>> = async (req, tx, ctx) => {
-  const { seq } = req.params as { seq: number };
-  const emitted = ctx.events?.emitTime(seq);
+  const p = req.params as { samples?: readonly { seq: number; heldMs: number }[]; seq?: number };
+  const samples = [...(p.samples ?? []), ...(p.seq !== undefined ? [{ seq: p.seq, heldMs: 0 }] : [])];
   const received = ctx.clock.realNow('board_delay_window');
-  if (emitted !== undefined) {
+  const rows: { seq: number; emitted: number; ms: number }[] = [];
+  for (const s of samples) {
+    const emitted = ctx.events?.emitTime(s.seq);
+    if (emitted !== undefined) rows.push({ seq: s.seq, emitted, ms: Math.max(0, Math.round(received.epochMilliseconds - emitted - s.heldMs)) });
+  }
+  if (rows.length > 0) {
     await tx.query(
-      `INSERT INTO system.delay_sample (seq, emitted_real, acked_real, ms) VALUES ($1, to_timestamp($2 / 1000.0), $3, $4)`,
-      [seq, emitted, received.toString(), Math.max(0, Math.round(received.epochMilliseconds - emitted))],
+      `INSERT INTO system.delay_sample (seq, emitted_real, acked_real, ms)
+       SELECT s, to_timestamp(e / 1000.0), $4::timestamptz, m FROM unnest($1::bigint[], $2::double precision[], $3::integer[]) AS u(s, e, m)`,
+      [rows.map((r) => r.seq), rows.map((r) => r.emitted), rows.map((r) => r.ms), received.toString()],
     );
   }
   await tx.query(`DELETE FROM system.delay_sample WHERE acked_real < $1::timestamptz - make_interval(hours => $2)`, [received.toString(), DELAY_SAMPLE_KEEP_HOURS]);

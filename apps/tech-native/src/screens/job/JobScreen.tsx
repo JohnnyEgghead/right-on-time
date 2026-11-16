@@ -11,6 +11,7 @@ import { T as Text, useBigText } from '../../ui/text-size.tsx';
 import type { MessageKey } from '@bw/i18n/src/catalog.ts';
 import { Icon } from '../../ui/Icon.tsx';
 import { useT, type T } from '../../ui/intl.tsx';
+import { useLastTry } from '../../ui/last-try.ts';
 import { Hint, Message } from '../../ui/kit.tsx';
 import { lk, useLookDump } from '../../ui/look.ts';
 import { color, type } from '../../ui/tokens.ts';
@@ -68,6 +69,8 @@ export function JobScreen() {
     scroll.current?.scrollTo({ y: at, animated: false });
   };
   const { view, me, reload } = useJob(jobNumber, state);
+  const [loadTries, setLoadTries] = useState(0);
+  const lastTry = useLastTry(view.kind === 'load_failed', loadTries);
   const demoNow = useDemoNow(state);
   // CTL-TEC-04-13 is enabled as CTL-TEC-02-04 is: no other job is On the way or On site (F-1091 f). The day read (API-100) names the other jobs;
   // with no day on the phone nothing says another job is under way, so the button stays.
@@ -102,7 +105,7 @@ export function JobScreen() {
       <View style={s.screen}>
         {plainBar(t('tech.job.number', { job: jobNumber }))}
         <Scroll id="job.scroll">
-          <Message id="job.state" tone="bad" icon="alert" text={t('job.loadError')} link={{ label: t('shell.error.tryAgain'), onPress: reload, own: true }} />
+          <Message id="job.state" tone="bad" icon="alert" text={t('job.loadError')} lastTry={lastTry && t('shell.error.lastTry', { time: lastTry })} link={{ label: t('shell.error.tryAgain'), onPress: () => { setLoadTries((n) => n + 1); reload(); }, own: true }} />
         </Scroll>
       </View>
     );

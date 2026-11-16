@@ -4,12 +4,16 @@
 // up by the setup service (the seeded world, the clock at Tue, Sep 15, 7:00 AM), through its proxy, every page opened
 // through the outside-origin guard. The people are ci/board-stack/fixture.sql's sessions. Run by ci/board-stack.sh.
 // The suite shares 1 world and 1 clock: each engine picks its own jobs and makes its own blocks, and the clock only moves
-// forward: 7:00 AM for the board on both engines, then 10:00 AM and 10:30 AM for the map panel (P4-BOARD-MAP), then 2:00 PM
-// for the late and at-risk words and the drop preview of a late job, then 5:55 PM and 6:05 PM for the vans past the shift end.
+// forward: 7:00 AM for the board on both engines, then 9:45 AM and 10:30 AM for the map panel (P4-BOARD-MAP), then 2:00 PM
+// for the late and at-risk words and the drop preview of a late job, then 5:45 PM and 6:05 PM for the vans past the shift end.
+// F-1745: the checks that need a moving van run first at 9:45 AM, each engine's right after its own jump there, so the second
+// engine's start is late only by the first engine's moving-van checks, never by its whole 9:45 AM block.
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import type { Browser, BrowserContextOptions, Page } from 'playwright';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { planDay, trackedDriveMinutes } from '../../packages/domain/src/planner.ts';
+import { decodePolyline, encodePolyline } from '../../packages/maps/src/tracks.ts';
 import { chainCensusSql } from '../../packages/setup/src/testing/census.ts';
 import { guardedContext, type GuardedContext } from '../page-walkers/origin-guard.ts';
 import { engines } from '../pw-engines.ts';
@@ -211,7 +215,22 @@ async function droppedWrite(browser: Browser, pressed: string, path: (p: Page) =
   }
 }
 
-const TEN = '2026-09-15T10:00:00-04:00[America/New_York]';
+/**
+ * The map panel's first time: 2 vans on the way and moving (Marcus Bell to 24791 until about 9:51, Jamal Carter to 24814 until about
+ * 9:58). Since the Jobs page story (dcc50303, F-1651) the only van out at 10:00 AM is Jamal's, parked at his track's end until his late
+ * arrival at 10:18, so no van moves then (F-1733).
+ */
+const NINE_45 = '2026-09-15T09:45:00-04:00[America/New_York]';
+/**
+ * F-1745: an engine's moving-van check starts by this demo time, so Marcus's van still moves for about a minute and Jamal's for
+ * about 8: a check that starts later found its van only by the other engine's luck.
+ */
+const MOVING_BY = '2026-09-15T09:50:00-04:00[America/New_York]';
+const demoNow = async (): Promise<string> => (await api('dana', 'GET', '/clock')).body.data.demoNow as string;
+/** F-1745: how many of the other 9:45 AM tests (either engine's) have run; a moving-van check runs before all of them. */
+let otherNineFortyFiveRan = 0;
+/** F-817: a route line's key, as SPECIFICATIONS 7.4 API-21 defines it. */
+const lineKey = (polyline: string) => createHash('sha256').update(polyline).digest('hex').slice(0, 16);
 const TEN_THIRTY ='2026-09-15T10:30:00-04:00[America/New_York]';
 const vans = async (): Promise<Json[]> => (await api('keisha', 'GET', '/vans?branch=columbus')).body.data.vans;
 /** The board, with its map's first frame and its van read in. */
@@ -268,9 +287,9 @@ async function holdsFocusAcrossReads(p: Page, focused: string, van: Json): Promi
 
 // The seeded world as setup wrote it, on the real baked tracks: nothing has moved yet (the suite's first tests).
 describe('the chained sample week on the baked tracks (owner answer 36d87aec)', () => {
-  // why: SD-21, FR-DEMO-8 F-513: 0 pairs out of order in the world setup wrote (139 and 67 of 332 before)
+  // why: SD-21, FR-DEMO-8 F-513: 0 pairs out of order in the world setup wrote (139 and 67 of 332 before; F-292 dcc50303: 329 with the 3 unassigned Jobs page jobs)
   it('has every technician leave after the visit before ends, and never be on site at 2 jobs', () => {
-    expect(psql(`SELECT row_to_json(c) FROM (${chainCensusSql()}) c`)).toBe('{"pairs":332,"left_during_visit":0,"on_site_at_two":0}');
+    expect(psql(`SELECT row_to_json(c) FROM (${chainCensusSql()}) c`)).toBe('{"pairs":329,"left_during_visit":0,"on_site_at_two":0}');
   });
 
   // why: SD-15 F-356: SD-15's day plan recomputed for each seeded technician-day leaves every seeded planned arrival unchanged
@@ -511,7 +530,10 @@ describe.each(engines)('the day board on the Compose stack, %s', (engine, type) 
       await expect.poll(async () => watch.page.locator(`[data-row="${winnerTech.id}"] button[data-job="${job.jobNumber}"]`).count(), {
         timeout: 15_000, message: `the onlooker's board, live state ${await watch.page.locator('.r1-live').textContent()}`,
       }).toBe(1);
-      expect(JSON.parse((await sample).postData() ?? '{}').seq).toBeGreaterThan(0);
+      // F-885: the board posts its held samples as 1 batch, each with its seq and held time
+      const posted = JSON.parse((await sample).postData() ?? '{}') as { samples?: { seq: number; heldMs: number }[] };
+      expect(posted.samples?.[0]?.seq).toBeGreaterThan(0);
+      expect(posted.samples?.[0]?.heldMs).toBeGreaterThanOrEqual(0);
       await loser.page.locator(`${dialog} [data-ctl="CTL-OFC-19-03"]`).first().click();
       await loser.page.waitForSelector(`[data-row="${winnerTech.id}"] button[data-job="${job.jobNumber}"]`, { timeout: 15_000 });
     } finally {
@@ -575,6 +597,55 @@ describe.each(engines)('the day board on the Compose stack, %s', (engine, type) 
       expect(await moved()).toBeUndefined();
     } finally {
       await Promise.all([close(a), close(c)]);
+    }
+  });
+
+  // why: FR-DISP-16, FR-DISP-34 (F-1787) a block's popover and its Delete dialog, opened while the block's own move still reads the board, stay open when that read lands (SCR-OFC-32 closes only by Close or Escape)
+  it('keeps a block popover and its Delete dialog open when the block\'s own move reads the board after they open', async () => {
+    const { tech, h } = blockRow(await board());
+    const created = await api('keisha', 'POST', '/time-blocks', { technicianId: tech.id, date: '2026-09-15', label: 'Supply run', place: 'Supply house', start: hhmm(h), end: hhmm(h + 0.5) });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const made = created.body.data.block;
+    const o = await open(browser, 'keisha', 'en');
+    // The page's board reads (API-20) wait while `held` is set, so the move's own read lands after the popover and the dialog open:
+    // the order a loaded host gave the Supply run case above by chance (its click beat the dropping page's read).
+    let held: Promise<void> | null = null;
+    let release: () => void = () => undefined;
+    try {
+      await ready(o.page);
+      await o.page.route((u) => u.pathname === '/api/v1/board', async (r) => {
+        if (held) await held;
+        return r.fallback();
+      });
+      const block = o.page.locator(`button[data-block="${made.blockId}"]`);
+      const box = (await block.boundingBox())!;
+      const target = await laneAt(o.page, tech.id, h + 1);
+      await dragOver(o.page, `button[data-block="${made.blockId}"]`, { x: target.x + box.width / 2 + 0.5, y: target.y });
+      held = new Promise((r) => { release = r; });
+      await o.page.mouse.up();
+      const moved = async () => (await board()).technicians.find((t: Json) => t.id === tech.id).blocks.find((x: Json) => x.blockId === made.blockId);
+      await expect.poll(async () => (await moved()).version, { timeout: 15_000 }).toBe(2);
+      const m = await moved();
+      const span = spanOf(m.start, m.end);
+      // The move is written and its read is held: the block still says Moving..., opens its popover, and Delete opens its dialog.
+      await expect(block.getAttribute('aria-busy')).resolves.toBe('true');
+      await block.click();
+      await o.page.locator('[data-ctl="CTL-OFC-32-03"]').click();
+      const del = o.page.locator('[data-screen="SCR-OFC-33"]');
+      await del.waitFor({ timeout: 15_000 });
+      held = null;
+      release();
+      // The read lands (the board says the block moved, in the same draw), and what the person opened is still open.
+      await o.page.waitForSelector('[data-ctl="CTL-CMP-11-01"]:has-text("Supply run moved to")', { timeout: 15_000 });
+      expect(await o.page.locator('.r1-pop [data-ctl="CTL-OFC-32-01"]').count(), 'the block popover').toBe(1);
+      expect(await del.count(), 'the Delete dialog').toBe(1);
+      await expect(del.locator('[data-ctl="CTL-OFC-33-01"]').textContent()).resolves.toContain(span);
+      await del.locator('[data-ctl="CTL-OFC-33-02"]').click();
+      await expect.poll(moved, { timeout: 15_000 }).toBeUndefined();
+    } finally {
+      release();
+      await close(o);
+      await api('keisha', 'DELETE', `/time-blocks/${made.blockId}`);
     }
   });
 
@@ -805,6 +876,51 @@ describe.each(engines)('the day board on the Compose stack, %s', (engine, type) 
     }
   });
 
+  // why: F-1743 (F-1734, 1deca594) a second Mark handled press is not dropped while the first press's re-read is still in flight: the board reads after the first press are held (600 ms, then 3 s), the second row is pressed the moment the first leaves, and the press is written
+  it('writes a second Mark handled press made while the board re-read of the first press is still held', async () => {
+    const jobs = allJobs(await board()).filter((j) => j.technicianId).slice(0, 2);
+    const tech = jobs[0].technicianId;
+    const ids = jobs.map((j) => psql(`WITH i AS (INSERT INTO world.tech_item (key, technician_id, job_number, kind, base_version, world_epoch, device_time_real, offset_saved_real,
+        demo_time, since_save_ms, received_at, result) VALUES (gen_random_uuid(), '${tech}', ${j.jobNumber}, 'finished', 1,
+        (SELECT world_epoch FROM system.demo_clock), now(), now(), now(), 0, now(), 'flagged') RETURNING key)
+      INSERT INTO world.offline_conflict (job_number, item_key, branch_id, message_key, message_values, offline_at, sent_at)
+      SELECT ${j.jobNumber}, key, 'columbus', 'offline.flag.canceled', '{"tech":"Maria","action":"finished","job":${j.jobNumber},"by":"Keisha T.","at":"10:40 AM"}'::jsonb, now(), now() FROM i RETURNING id`));
+    const o = await open(browser, 'keisha');
+    // Once armed, the page's board reads (API-20) wait: the first 600 ms, every later one 3 s, the rig that proved F-1734 red then green.
+    let armed = false;
+    let held = 0;
+    let inFlight = 0; // F-1806: the held reads that have not ended
+    try {
+      await ready(o.page);
+      for (const id of ids) await o.page.waitForSelector(`[data-conflict="${id}"]`);
+      await o.page.route((u) => u.pathname === '/api/v1/board', async (r) => {
+        if (armed) {
+          const wait = held === 0 ? 600 : 3_000;
+          held += 1;
+          inFlight += 1;
+          await new Promise((done) => setTimeout(done, wait));
+          inFlight -= 1;
+        }
+        return r.fallback();
+      });
+      armed = true;
+      await o.page.locator(`[data-conflict="${ids[0]}"] [data-ctl="CTL-OFC-02-16"]`).click();
+      // The first row leaves when the event's re-read (600 ms) draws the board; the press's own read (3 s) is still in flight.
+      await o.page.waitForSelector(`[data-conflict="${ids[0]}"]`, { state: 'detached', timeout: 15_000 });
+      // F-1806: the case is red on the old code only while the press's own read is still held here, so the overlap is asserted, not assumed.
+      expect(inFlight, 'the press read is still in flight at the second click').toBeGreaterThanOrEqual(1);
+      await o.page.locator(`[data-conflict="${ids[1]}"] [data-ctl="CTL-OFC-02-16"]`).click();
+      // The second press is written, not dropped: its row is handled in the database well before the 3 s read ends and the page shows the board again.
+      await expect.poll(() => psql(`SELECT handled_at IS NOT NULL FROM world.offline_conflict WHERE id = '${ids[1]}'`), { timeout: 8_000, interval: 250 }).toBe('t');
+      await o.page.waitForSelector(`[data-conflict="${ids[1]}"]`, { state: 'detached', timeout: 15_000 });
+      expect(held, 'the held reads ran: at least the first press read and the event read').toBeGreaterThanOrEqual(2);
+    } finally {
+      armed = false;
+      await close(o);
+      for (const id of ids) await api('keisha', 'POST', `/offline-conflicts/${id}/handled`, {});
+    }
+  });
+
   // why: F-1168 (owner ruling 21ce2f73, "Keep them too"): a refused photo or signature kept by the server shows in the dispatcher's flagged row as a link to the image (API-175)
   it('shows a kept refused photo and signature under their flagged rows as links to the image', async () => {
     const j = allJobs(await board()).filter((x) => x.technicianId)[0];
@@ -829,24 +945,27 @@ describe.each(engines)('the day board on the Compose stack, %s', (engine, type) 
   });
 });
 
-// The clock's first move: every test above ran at 7:00 AM on both engines.
-describe.each(engines)('the map panel at 10:00 AM on the Compose stack, %s', (engine, type) => {
+// The clock's first move: every test above ran at 7:00 AM on both engines. F-1745: the 2 checks that need a moving van run here,
+// each engine's right after its own jump to 9:45 AM, before either engine's other 9:45 AM tests.
+describe.each(engines)('the moving van at 9:45 AM on the Compose stack, %s', (engine, type) => {
   let browser: Browser;
   beforeAll(async () => {
     browser = await type.launch({ headless: true });
-    await clockAt(TEN);
+    await clockAt(NINE_45);
   }, 180_000);
   afterAll(async () => {
     await browser?.close();
   });
 
-  // why: NFR-06, UI-SPECIFICATION 14 item 1, F-813 a keyboard user stays on a van marker while the 10 s reads move it, pressing it keeps focus through its change of look, and a marker that leaves hands focus to the map
+  // why: NFR-06, UI-SPECIFICATION 14 item 1, F-813, F-1745 a keyboard user stays on a van marker while the 10 s reads move it, pressing it keeps focus through its change of look, and a marker that leaves hands focus to the map
   it('keeps focus on a van marker across 2 reads, through Enter, and on the map when the marker leaves', async () => {
     const o = await open(browser, 'keisha');
     try {
       await mapReady(o.page);
+      expect(otherNineFortyFiveRan, 'no other 9:45 AM test spent demo minutes before this moving-van check').toBe(0);
+      expect(minutes(await demoNow()), 'this engine\'s moving-van check starts by 9:50 AM').toBeLessThanOrEqual(minutes(MOVING_BY));
       const van = await movingVan();
-      expect(van, 'a van moving at 10:00 AM').toBeDefined();
+      expect(van, 'a van moving at 9:45 AM').toBeDefined();
       const id = `van-${van.technicianId}`;
       await holdsFocusAcrossReads(o.page, id, van);
       await o.page.keyboard.press('Enter');
@@ -862,13 +981,15 @@ describe.each(engines)('the map panel at 10:00 AM on the Compose stack, %s', (en
     }
   });
 
-  // why: NFR-06, UI-SPECIFICATION 14 item 1, F-813 the same under Both: a job marker keeps focus while a van's reads redraw the map
+  // why: NFR-06, UI-SPECIFICATION 14 item 1, F-813, F-1745 the same under Both: a job marker keeps focus while a van's reads redraw the map
   it('keeps focus on a job marker under Both across 2 reads', async () => {
     const o = await open(browser, 'keisha');
     try {
       await mapReady(o.page);
+      expect(otherNineFortyFiveRan, 'no other 9:45 AM test spent demo minutes before this moving-van check').toBe(0);
+      expect(minutes(await demoNow()), 'this engine\'s moving-van check starts by 9:50 AM').toBeLessThanOrEqual(minutes(MOVING_BY));
       const van = await movingVan();
-      expect(van, 'a van moving at 10:00 AM').toBeDefined();
+      expect(van, 'a van moving at 9:45 AM').toBeDefined();
       await o.page.locator('[data-ctl="CTL-OFC-02-24"] [role="radio"]', { hasText: 'Both' }).click();
       await o.page.waitForSelector('[data-marker-kind="job"]', { state: 'attached' });
       const id = (await o.page.locator('[data-marker-kind="job"]').first().getAttribute('data-marker-id'))!;
@@ -876,6 +997,20 @@ describe.each(engines)('the map panel at 10:00 AM on the Compose stack, %s', (en
     } finally {
       await close(o);
     }
+  });
+});
+
+describe.each(engines)('the map panel at 9:45 AM on the Compose stack, %s', (engine, type) => {
+  let browser: Browser;
+  beforeAll(async () => {
+    browser = await type.launch({ headless: true });
+    await clockAt(NINE_45);
+  }, 180_000);
+  afterEach(() => {
+    otherNineFortyFiveRan += 1;
+  });
+  afterAll(async () => {
+    await browser?.close();
   });
 
   // why: NFR-06, UI-SPECIFICATION 14 item 1, F-813 under Jobs no van moves, so it is a job's own change that redraws: a real reassignment changes the focused marker's look, and focus stays on its id
@@ -919,13 +1054,13 @@ describe.each(engines)('the map panel at 10:00 AM on the Compose stack, %s', (en
     }
   });
 
-  // why: FR-DISP-3, FR-DISP-22 at 10:00 AM the autopilot's van is on the way, and each tab's count equals an API count
+  // why: FR-DISP-3, FR-DISP-22 at 9:45 AM the autopilot's van is on the way, and each tab's count equals an API count
   it('shows the autopilot\'s van on the way and the tab counts equal an API count', async () => {
     const o = await open(browser, 'keisha');
     try {
       await mapReady(o.page);
       const way = (await vans()).find((v) => v.status === 'on_the_way');
-      expect(way, 'a van on the way at 10:00 AM').toBeDefined();
+      expect(way, 'a van on the way at 9:45 AM').toBeDefined();
       await expect.poll(() => o.page.locator(`[data-marker-id="van-${way.technicianId}"]`).getAttribute('aria-label')).toMatch(/^Van, .*(on the way|late) to /);
       const b = await board();
       const jobs = allJobs(b);
@@ -964,6 +1099,60 @@ describe.each(engines)('the map panel at 10:00 AM on the Compose stack, %s', (en
       const live = (await vans()).filter((v) => v.position !== null).length;
       await expect.poll(() => o.page.locator('[data-marker-kind="van"]').count()).toBe(live);
     } finally {
+      await close(o);
+    }
+  });
+
+  // why: F-817 (SPECIFICATIONS 7.4 API-21) the board sends a van's route line once: its first read names no line and gets the track, the next names the key and gets track null, and a changed line comes back whole under its new key
+  it('sends a van\'s route line once, not again while it is unchanged, and again when it changes', async () => {
+    const reads: { have: string | null; vans: Json[] }[] = [];
+    const o = await open(browser, 'keisha', 'en', '/office/board?branch=columbus&date=today', async (p) => {
+      p.on('response', async (r) => {
+        if (!/\/api\/v1\/vans\?/.test(r.url()) || r.status() !== 200) return;
+        try {
+          reads.push({ have: new URL(r.url()).searchParams.get('have'), vans: ((await r.json()) as Json).data.vans });
+        } catch {
+          // the page closed under the read
+        }
+      });
+    });
+    let restore: (() => void) | null = null;
+    try {
+      await mapReady(o.page);
+      await expect.poll(() => reads.length, { timeout: 30_000 }).toBeGreaterThanOrEqual(2);
+      expect(reads[0]!.have, 'the first read names no line').toBeNull();
+      const van = reads[0]!.vans.find((v) => v.route?.key);
+      expect(van, 'a van on the way on a road at 9:45 AM').toBeDefined();
+      const key = van.route.key as string;
+      expect(van.route.track.length).toBeGreaterThan(1);
+      const lineOf = (r: { vans: Json[] }) => r.vans.find((v) => v.technicianId === van.technicianId)?.route;
+      // Unchanged: the next read names the key and the answer leaves the track out.
+      expect(reads[1]!.have?.split(',')).toContain(key);
+      expect(lineOf(reads[1]!)).toEqual({ ...van.route, track: null });
+      // Changed: the leg's stored track gets a new first point (1 m north), so its line and its key change.
+      const rows: Json[] = JSON.parse(psql(`SELECT json_agg(json_build_object('from', from_ref, 'polyline', polyline)) FROM world.van_track WHERE branch_id = 'columbus' AND to_ref = '${van.jobNumber}'`));
+      const row = rows.find((r) => lineKey(r.polyline) === key);
+      expect(row, 'the van_track row of the line').toBeDefined();
+      const coords = decodePolyline(row.polyline);
+      coords[0] = [coords[0]![0], Math.round((coords[0]![1] + 0.00001) * 1e5) / 1e5];
+      const moved = encodePolyline(coords);
+      expect(lineKey(moved)).not.toBe(key);
+      const where = `branch_id = 'columbus' AND from_ref = '${row.from}' AND to_ref = '${van.jobNumber}'`;
+      const n = reads.length;
+      psql(`UPDATE world.van_track SET polyline = '${moved}' WHERE ${where}`);
+      restore = () => psql(`UPDATE world.van_track SET polyline = '${row.polyline}' WHERE ${where}`);
+      const changedAt = () => reads.findIndex((r, i) => i >= n && lineOf(r)?.key === lineKey(moved));
+      await expect.poll(changedAt, { timeout: 30_000 }).toBeGreaterThanOrEqual(0);
+      const m = changedAt();
+      expect(reads[m]!.have?.split(','), 'the board still named the old line').toContain(key);
+      expect(lineOf(reads[m]!).track).toEqual(decodePolyline(moved));
+      // The new line is held in turn: the read after names its key, not the old one, and gets track null.
+      await expect.poll(() => reads.length, { timeout: 30_000 }).toBeGreaterThan(m + 1);
+      expect(reads[m + 1]!.have?.split(',')).toContain(lineKey(moved));
+      expect(reads[m + 1]!.have?.split(',')).not.toContain(key);
+      expect(lineOf(reads[m + 1]!)).toEqual({ ...lineOf(reads[m]!), track: null });
+    } finally {
+      restore?.();
       await close(o);
     }
   });
@@ -1450,19 +1639,21 @@ describe.each(engines)('the day board at 2:00 PM on the Compose stack, %s', (eng
 });
 
 // The clock's last moves: past the shift end (5:30 PM on Columbus, 6:00 PM on the latest), where the chained week still has vans out.
+// Since the Jobs page story (dcc50303, F-1733) that is Luis Ortega's last visit, 24839: on the way from 5:40 PM, past Columbus's shift
+// end, and on site from 5:55 PM to 7:19 PM, past every shift; the jobs that were out at 5:55 and 6:05 PM before (24840 to 24843) are
+// the page's Unassigned jobs or now end before 5:30 PM. So 5:45 PM reads a van on the way and 6:05 PM a van on site.
 // The clock only moves forward and 2 engines read 1 clock, so each time is 1 case that opens both engines.
 describe('the vans past the shift end on the Compose stack', () => {
-  // why: FR-DEMO-8, FR-DISP-3, FR-DISP-19, F-811 at 5:55 PM and 6:05 PM every van at work has a position, API-21 and API-135 answer 1 point, the board draws it, and the panel counts it
+  // why: FR-DEMO-8, FR-DISP-3, FR-DISP-19, F-811 at 5:45 PM and 6:05 PM every van at work has a position, API-21 and API-135 answer 1 point, the board draws it, and the panel counts it
   it.each([
-    ['5:55 PM', '2026-09-15T17:55:00-04:00[America/New_York]', false],
-    ['6:05 PM', '2026-09-15T18:05:00-04:00[America/New_York]', true],
-  ])('at %s the board and the on-the-way panel read 1 van', async (label, when, pastEveryShift) => {
+    ['5:45 PM', '2026-09-15T17:45:00-04:00[America/New_York]', 'on_the_way', false],
+    ['6:05 PM', '2026-09-15T18:05:00-04:00[America/New_York]', 'on_site', true],
+  ])('at %s the board and the on-the-way panel read 1 van', async (label, when, outStatus, pastEveryShift) => {
     await clockAt(when);
     const b = await board();
     const atWork = allJobs(b).filter((j) => j.status === 'on_the_way' || j.status === 'on_site');
-    const onWay = atWork.filter((j) => j.status === 'on_the_way');
-    expect(onWay.length, 'a job on the way').toBeGreaterThan(0);
-    process.stdout.write(`board-stack: ${label}: on the way ${onWay.map((j) => j.jobNumber).join(' ')}; on site ${atWork.filter((j) => j.status === 'on_site').map((j) => j.jobNumber).join(' ')}; vans with a position ${(await vans()).filter((v) => v.position !== null).length}\n`);
+    expect(atWork.filter((j) => j.status === outStatus).length, `a job ${outStatus}`).toBeGreaterThan(0);
+    process.stdout.write(`board-stack: ${label}: on the way ${atWork.filter((j) => j.status === 'on_the_way').map((j) => j.jobNumber).join(' ')}; on site ${atWork.filter((j) => j.status === 'on_site').map((j) => j.jobNumber).join(' ')}; vans with a position ${(await vans()).filter((v) => v.position !== null).length}\n`);
     for (const j of atWork) {
       const v = (await vans()).find((x) => x.jobNumber === j.jobNumber);
       expect(v, `the van of job ${j.jobNumber}`).toBeDefined();

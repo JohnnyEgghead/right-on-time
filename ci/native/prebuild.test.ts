@@ -196,6 +196,7 @@ describe('suite.sh stops when the building class did not build (F-1207)', () => 
     '#!/usr/bin/env bash',
     'mkdir -p "$BW_NATIVE_EVIDENCE"',
     'echo "$BW_NATIVE_TESTS $*" >>"$CALLS"',
+    'echo "$BW_NATIVE_TESTS|${BW_A11Y_METHOD:-}|${BW_A11Y_REDUCE:-}" >>"$(dirname "$CALLS")/methods.log"',
     'if [ "${1:-}" != "--no-build" ]; then',
     '  if [ "${BUILD_RC:-0}" = 0 ]; then echo "build-for-testing: exit 0, 1 s (cap 600 s)" >>"$BW_NATIVE_EVIDENCE/times.txt"',
     '  else echo "run: FAIL the iOS project was not generated: xcuitest/prebuild.sh --if-stale exited 1"; exit 1; fi',
@@ -233,7 +234,23 @@ describe('suite.sh stops when the building class did not build (F-1207)', () => 
       'WaitingUITests --no-build',
       'SpanishUITests --no-build',
       'StepsUITests --no-build',
+      // F-1475: the accessibility class runs as 5 passes (test1, test2, test3, test4 reduce on and off), each on its own stack
+      'AccessibilityUITests --no-build',
+      'AccessibilityUITests --no-build',
+      'AccessibilityUITests --no-build',
+      'AccessibilityUITests --no-build',
+      'AccessibilityUITests --no-build',
     ]);
+    // F-1825: the 5 passes are pinned by method and Reduce Motion value, and testPlants never runs
+    const methods = readFileSync(path.join(root, 'methods.log'), 'utf8').split('\n').filter((l) => l.startsWith('AccessibilityUITests|'));
+    expect(methods).toEqual([
+      'AccessibilityUITests|test1AccessibilityAuditOfEveryNativeScreen|',
+      'AccessibilityUITests|test2Structure|',
+      'AccessibilityUITests|test3LargestTextSize|',
+      'AccessibilityUITests|test4ReduceMotion|on',
+      'AccessibilityUITests|test4ReduceMotion|off',
+    ]);
+    expect(readFileSync(path.join(root, 'methods.log'), 'utf8')).not.toContain('testPlants');
     expect(r.summary).toContain('native-no-demo: exit 0');
     expect(r.summary).toContain('suite: FAIL');
     expect(suite({}).status).toBe(0);

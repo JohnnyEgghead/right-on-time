@@ -47,6 +47,7 @@ rm -rf "$RIG/captured"; cp -R "$src" "$RIG/captured"
 `,
   curl: `#!/usr/bin/env bash
 url="\${!#}"
+case " $* " in *" -D "*) printf 'HTTP/2 200\\r\\nstrict-transport-security: max-age=31536000\\r\\n\\r\\n'; exit 0 ;; esac
 case " $* " in *" -w "*) case "$url" in */healthz) echo 200 ;; *) cat "$RIG/code" 2>/dev/null || echo 200 ;; esac; exit 0 ;; esac
 case "$url" in */healthz) echo ok ;; *) if [ -f "$RIG/open" ]; then echo '<!doctype html><title>Right On Time</title>'; else cat "$RIG/repo/infra/placeholder/index.html"; fi ;; esac
 `,
@@ -285,7 +286,7 @@ describe('deploy.sh sets ROUTES from the deploy mode (F-1645) and probes for it 
     const bad = shut.run(['--release', 'v1.0.0', '--profile', 'demo']);
     expect(bad.status, bad.out).toBe(1);
     expect(bad.out).toContain('routes open expected: NOT every probe answers so');
-    expect(bad.out).toContain('DEPLOY FAILED (server exit 0, /healthz 200, routes open answered: 0)');
+    expect(bad.out).toContain('DEPLOY FAILED (server exit 0, /healthz 200, routes open answered: 0, HSTS: 1)');
     // and an open site that answers a 5xx on a probed path is not open
     const five = rig();
     published(five);

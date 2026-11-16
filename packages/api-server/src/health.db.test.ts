@@ -88,4 +88,23 @@ describe('POST /board-delay-samples (API-172, SD-43)', () => {
       await pool.end();
     }
   });
+
+  // why: F-885 (SD-43) 1 request of held samples stores each of them, ms less each sample's heldMs and floored at 0, skips a seq the
+  // process no longer holds, and a body with both samples and seq stores both
+  it('stores each sample of 1 batch with its held time taken out', async () => {
+    const pool = createPool({ connectionString: asLogin(db.url(), 'bw_web'), max: 2 });
+    try {
+      await db.admin().query('DELETE FROM system.delay_sample');
+      const emit = Temporal.Instant.from('2026-11-01T12:00:00.000Z').epochMilliseconds;
+      const bus = { emitTime: (seq: number) => (seq >= 200 && seq < 210 ? emit + (seq - 200) * 100 : undefined) };
+      const batch = { samples: [{ seq: 200, heldMs: 0 }, { seq: 201, heldMs: 1000 }, { seq: 202, heldMs: 9000 }, { seq: 299, heldMs: 0 }], seq: 203 };
+      const r = await inTransaction(pool, (tx) => boardDelaySampleHandler({ contract: 'API-172', params: batch, body: batch } as unknown as ApiRequest, tx, ctx(bus, '2026-11-01T12:00:05Z')));
+      expect(r).toMatchObject({ ok: true, status: 204 });
+      const rows = await db.admin().query<{ seq: string; ms: number }>('SELECT seq, ms FROM system.delay_sample ORDER BY seq');
+      // 200: 5000; 201: 4900 - 1000; 202: 4800 - 9000 floored at 0; 203 (the old body): 4700; 299: not held, nothing stored.
+      expect(rows.rows).toEqual([{ seq: '200', ms: 5000 }, { seq: '201', ms: 3900 }, { seq: '202', ms: 0 }, { seq: '203', ms: 4700 }]);
+    } finally {
+      await pool.end();
+    }
+  });
 });

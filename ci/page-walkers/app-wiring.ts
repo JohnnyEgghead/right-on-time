@@ -159,10 +159,10 @@ export const APP_WIRING: Readonly<Record<string, Wiring>> = {
   // P5-TWA-MAP-ME. The release routes sit behind a technician session and read the API, which the harness app has no database for; the preview routes
   // show each screen on its frames' data (Maria Santos, Tue, Sep 15, 10:26 AM): the Map tab and Directions draw CMP-05 (so the map files), the
   // walk keeps to the states that differ in what they draw (the look cases hold every state).
-  'SCR-TEC-15': { path: '/shell-preview/tech-map/route', status: 200, maps: true, also: ['loading', 'offline', 'nojobs', 'alldone'].map((n) => ({ path: `/shell-preview/tech-map/${n}`, status: 200 })) },
-  'SCR-TEC-08': { path: '/shell-preview/tech-dir/route', status: 200, maps: true, also: ['loading', 'approximate', 'offlinesaved', 'offline', 'notloaded', 'moved', 'updated', 'nonext'].map((n) => ({ path: `/shell-preview/tech-dir/${n}`, status: 200 })) },
-  'SCR-TEC-10': { path: '/shell-preview/tech-me/success', status: 200, also: ['refused', 'signing', 'offline', 'notstarted', 'sizeopen'].map((n) => ({ path: `/shell-preview/tech-me/${n}`, status: 200 })) },
-  'SCR-TEC-16': { path: '/shell-preview/tech-parts/results', status: 200, also: ['empty', 'nomatch', 'nocopy', 'offline'].map((n) => ({ path: `/shell-preview/tech-parts/${n}`, status: 200 })) },
+  'SCR-TEC-15': { path: '/shell-preview/tech-map/route', status: 200, maps: true, also: ['loading', 'offline', 'nojobs', 'alldone', 'reading', 'error', 'loadingempty'].map((n) => ({ path: `/shell-preview/tech-map/${n}`, status: 200 })) },
+  'SCR-TEC-08': { path: '/shell-preview/tech-dir/route', status: 200, maps: true, also: ['loading', 'approximate', 'offlinesaved', 'offline', 'notloaded', 'moved', 'updated', 'nonext', 'reading'].map((n) => ({ path: `/shell-preview/tech-dir/${n}`, status: 200 })) },
+  'SCR-TEC-10': { path: '/shell-preview/tech-me/success', status: 200, also: ['refused', 'signing', 'offline', 'notstarted', 'sizeopen', 'reading', 'loading', 'error', 'nosaved'].map((n) => ({ path: `/shell-preview/tech-me/${n}`, status: 200 })) },
+  'SCR-TEC-16': { path: '/shell-preview/tech-parts/results', status: 200, also: ['empty', 'nomatch', 'nocopy', 'offline', 'reading'].map((n) => ({ path: `/shell-preview/tech-parts/${n}`, status: 200 })) },
   'SCR-TEC-11': { path: '/shell-preview/tech-install/iphone', status: 200, also: ['android-prompt', 'android', 'other'].map((n) => ({ path: `/shell-preview/tech-install/${n}`, status: 200 })) },
 };
 

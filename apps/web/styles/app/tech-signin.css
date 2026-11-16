@@ -20,3 +20,10 @@
 .bw-tech-signin .show[role] { cursor: pointer; }
 /* The hero's language switch sits in the corner of the window's content column, as the frame's sits in the device's corner. */
 .bw-tech-signin .hero .hlang { right: max(12px, calc((100% - 520px) / 2 + 12px)); }
+/* F-1063: Stay signed in is a native checkbox over the frame's .box (as the Customers .ck rows are), so a tap made before the page's script runs ticks it and the box shows
+   what the form sends. Ticked is the frame's .box; unticked is the frame's .stay .box.off (same values). */
+.bw-tech-signin .stay { position: relative; }
+.bw-tech-signin .stay input.bw-stay-cb { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+.bw-tech-signin .stay input:not(:checked) + .box { background: var(--white); border: 1.5px solid var(--ink-400); }
+.bw-tech-signin .stay input:not(:checked) + .box .ic { display: none; }
+.bw-tech-signin .stay input:focus-visible + .box { outline: 3px solid var(--teal-500); outline-offset: 2px; }

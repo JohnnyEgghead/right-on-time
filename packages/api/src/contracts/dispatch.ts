@@ -65,6 +65,9 @@ export const versionConflictDetail = z.object({
   currentVersion: version,
 });
 
+/** technician_no_room's members (F-1701, F-1803): the limit that refused the placement and that limit's number (UI-SPECIFICATION section 4.3). */
+export const noRoomDetail = z.object({ limit: z.enum(['installer_day', 'day', 'window']), max: z.number().int().nonnegative() });
+
 /** time_overlap's members (FR-DISP-34; OI-41): the block and the job whose planned time would overlap it. */
 export const overlapDetail = z.object({
   block: z.object({ blockId: z.string(), label: z.string(), place: z.string().nullable(), start: wireTime, end: wireTime }),
@@ -115,7 +118,7 @@ export const assignJob = defineContract({
   request: z.object({ jobNumber: jobNumberParam, technicianId: z.uuid().nullable(), baseVersion: version }),
   response: z.object({ job: writtenJob }),
   errors: ['version_conflict', 'time_overlap', 'technician_no_room', 'rule_refused'],
-  errorDetails: { version_conflict: versionConflictDetail, time_overlap: overlapDetail, rule_refused: ruleRefusedDetail },
+  errorDetails: { version_conflict: versionConflictDetail, time_overlap: overlapDetail, technician_no_room: noRoomDetail, rule_refused: ruleRefusedDetail },
   labels: [],
   examples: [{ name: 'signed out', input: { jobNumber: SAMPLE_JOB, technicianId: null, baseVersion: 1 }, expectStatus: 401 }],
 });
@@ -217,7 +220,7 @@ export const createJob = defineContract({
   }),
   successStatus: [201],
   errors: ['window_full', 'technician_no_room', 'time_overlap', 'rule_refused', 'day_closed', 'day_past'],
-  errorDetails: { time_overlap: overlapDetail, rule_refused: ruleRefusedDetail },
+  errorDetails: { time_overlap: overlapDetail, technician_no_room: noRoomDetail, rule_refused: ruleRefusedDetail },
   labels: [],
   examples: [{
     name: 'signed out',
@@ -390,6 +393,10 @@ export const boardDay = defineContract({
 /** A van's map state (FR-DISP-3): the status of its current job, else between jobs (SPECIFICATIONS rightNow's words). */
 export const vanStatus = z.enum(['on_the_way', 'on_site', 'between_jobs']);
 const lonLat = z.object({ lon: z.number(), lat: z.number() });
+/** F-817 (SPECIFICATIONS 7.4 API-21): a route line's key, the first 16 lowercase hex characters of the SHA-256 of its encoded polyline. */
+export const ROUTE_KEY = /^[0-9a-f]{16}$/;
+/** F-817: the board names at most this many held route lines in `have`. */
+export const ROUTE_HAVE_MAX = 50;
 
 /** P4-BOARD-MAP: the van positions of the demo clock's today (UI-SPECIFICATION 12.2 API-21; SD-22). Computed on read, never stored. */
 export const vanPositions = defineContract({
@@ -397,7 +404,11 @@ export const vanPositions = defineContract({
   name: 'Van positions',
   method: 'GET',
   path: '/vans',
-  request: z.object({ branch: z.string().min(1).max(40) }),
+  request: z.object({
+    branch: z.string().min(1).max(40),
+    /** F-817: the keys of the route lines the board holds, comma separated, at most {@link ROUTE_HAVE_MAX}; a route so named answers track null. */
+    have: z.string().regex(new RegExp(`^[0-9a-f]{16}(,[0-9a-f]{16}){0,${ROUTE_HAVE_MAX - 1}}$`)).optional(),
+  }),
   response: z.object({
     vans: z.array(z.object({
       technicianId: z.string(),
@@ -414,8 +425,13 @@ export const vanPositions = defineContract({
       jobNumber: z.number().int().nullable(),
       /** SD-15's ETA of that job (the arrival time once on site). */
       eta: wireTime.nullable(),
-      /** The leg of a van on the way, so the map draws the road, or a labeled straight line where no track was baked (FR-MAP-3). */
-      route: z.object({ from: lonLat, to: lonLat, track: z.array(z.tuple([z.number(), z.number()])).nullable() }).nullable(),
+      /**
+       * The leg of a van on the way, so the map draws the road, or a labeled straight line where no track was baked (FR-MAP-3). `key`
+       * names the road (null for a straight line); `track` is null too when the request's `have` named the key (F-817).
+       */
+      route: z.object({
+        from: lonLat, to: lonLat, key: z.string().regex(ROUTE_KEY).nullable(), track: z.array(z.tuple([z.number(), z.number()])).nullable(),
+      }).nullable(),
     })),
   }),
   errors: [],

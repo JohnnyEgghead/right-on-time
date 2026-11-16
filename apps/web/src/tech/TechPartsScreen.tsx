@@ -68,9 +68,7 @@ export function TechPartsScreen({ fixedData, fixedOutbox, fixedQuery }: TechPart
     >
       <div className="list16">
         {!outbox.online ? <div className="bw-tech-pad"><NoSignalCard {...fixed} /></div> : null}
-        {reading ? (
-          <div className="bw-tech-pad" aria-busy="true"><span className="r1-skel" /><span className="r1-skel bw-skel-70" /><span className="r1-skel bw-skel-40" /></div>
-        ) : phase === 'nocopy' ? (
+        {phase === 'nocopy' && !reading ? (
           <div className="emp" data-ctl="CTL-TEC-16-01">
             <Icon name="cloud" />
             <span>{t('tech.parts.noCopy')}</span>
@@ -78,7 +76,7 @@ export function TechPartsScreen({ fixedData, fixedOutbox, fixedQuery }: TechPart
         ) : (
           <>
             <label className="lbl16" htmlFor={id}>{t('tech.parts.find')}</label>
-            <div className={phase === 'empty' ? 'srch idle' : 'srch'} data-ctl="CTL-TEC-16-01">
+            <div className={(reading ? query === '' : phase === 'empty') ? 'srch idle' : 'srch'} data-ctl="CTL-TEC-16-01">
               <Icon name="search" />
               <input
                 id={id}
@@ -101,13 +99,19 @@ export function TechPartsScreen({ fixedData, fixedOutbox, fixedQuery }: TechPart
                 </a>
               ) : null}
             </div>
-            {phase === 'empty' ? (
+            {/* Kit 0.12 (57520d6c): the search field, and skeleton rows in place of the count hint and the list (the list is in the kept copy). */}
+            {reading ? (
+              <div className="res bw-mt8" data-ctl="CTL-TEC-16-02" aria-busy="true">
+                {[1, 2, 3].map((k) => <div className="pr" key={k}><span className="tx"><span className="r1-skel bw-skel-70" /><span className="r1-skel bw-skel-35" /></span></div>)}
+              </div>
+            ) : null}
+            {!reading && phase === 'empty' ? (
               <div className="emp"><Icon name="box" /><span>{t('tech.parts.empty', { total: parts?.length ?? 0 })}</span></div>
             ) : null}
-            {phase === 'nomatch' ? (
+            {!reading && phase === 'nomatch' ? (
               <div className="emp" data-ctl="CTL-TEC-16-02"><Icon name="search" /><span>{t('tech.parts.noMatch', { q: query.trim() })}</span></div>
             ) : null}
-            {phase === 'results' ? (
+            {!reading && phase === 'results' ? (
               <>
                 <div className="cnt">{t('tech.parts.count', { shown: found.matched, total: parts?.length ?? 0 })}</div>
                 <div className="res" data-ctl="CTL-TEC-16-02">
