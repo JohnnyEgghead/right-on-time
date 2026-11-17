@@ -26,6 +26,7 @@ import { ConfigError, configOrExit, databasePassword, exitWithMessage } from '@b
 import { createLogger, type Logger } from '@bw/log';
 import { configureRouting, ROUTING_SERVICE_URL } from '../../../packages/maps/src/route-source.ts';
 import { MAP_ASSET_PREFIX, mapAsset, readMapAsset } from './map/map-assets.ts';
+import { logProcessErrorsAndKeepServing } from './process-errors.ts';
 import { PAGE_VERDICT_HEADER } from './shell/page-verdict.ts';
 import { embedsServerState, SERVER_STATE_HEADER } from './tech/server-state.ts';
 import { techShellAsset } from './tech/shell-assets.ts';
@@ -261,6 +262,9 @@ if (import.meta.main) {
     exitWithMessage(`${e.name}: ${e.message}`, 78);
   }
   const log = createLogger({ process: 'web', level: settings.LOG_LEVEL });
+  // F-1845, F-1871, F-1870: a rejection or exception no code handled is 1 error line with its cause code and the process keeps serving,
+  // as Next.js is built to (the message and stack Next's own listeners print are dropped once Next has started; afterNext below).
+  const processErrors = logProcessErrorsAndKeepServing(log);
   // SD-49: a leg no stored track covers is asked of the routing service on the Compose network (P6-LIVE-ROUTING).
   configureRouting({ url: ROUTING_SERVICE_URL, log });
   let kernel: WebKernel;
@@ -273,6 +277,7 @@ if (import.meta.main) {
   const pages = await loadNext(harness).catch((e: unknown) => {
     return exitWithMessage((e as Error).message, 1);
   });
+  processErrors.afterNext();
   const server = start(Number(process.env.PORT ?? 3000), { router: kernel.router, pageVerdict: kernel.pageVerdict, next: pages.handler, log, harness }, process.env.BW_WEB_LISTEN_HOST || undefined);
   server.once('listening', () => log.info({ status: 'listening' }));
   const stop = () => {

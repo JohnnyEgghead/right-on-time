@@ -9,7 +9,7 @@
 //      so the outside-origin guard is not opt-in at the import. The EXEMPT tools (not tests or gates; each entry names what it loads) are
 //      skipped by path. A test must close the context, not only the browser, for the guard to assert.
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const tracked = (): string[] => {
@@ -94,7 +94,7 @@ describe('browser test population', () => {
     expect(unguarded([bad, good, page])).toEqual(['ci/x/a.pw.test.ts', 'ci/x/c.ts']);
   });
 
-  it('known-bad: .mjs, .js, a dynamic import, a non-browser receiver and an unlisted tool are reported', () => {
+  it('known-bad: .mjs, .js, a dynamic import, a non-browser receiver and an unlisted tool are reported', (ctx) => {
     // reason: F-48; the scan covers every JS/TS extension, both import forms, and any newPage not on a context
     const mjs = { path: 'ci/x/d.mjs', src: "import { chromium } from 'playwright';\nconst p = await b.newPage();" };
     const dyn = { path: 'ci/x/e.js', src: "const { chromium } = await import('playwright');\nconst p = await (await chromium.launch()).newPage();" };
@@ -102,6 +102,10 @@ describe('browser test population', () => {
     const ok = { path: 'ci/x/g.mjs', src: "import { webkit } from 'playwright';\nconst p = await g.context.newPage();\nconst q = await ctx.newPage();" };
     const exempt = { path: 'mockups/tools/build.mjs', src: "import { chromium } from 'playwright';\nconst p = await browser.newPage();" };
     expect(unguarded([mjs, dyn, tsx, ok, exempt])).toEqual(['ci/x/d.mjs', 'ci/x/e.js', 'ci/x/f.tsx']);
+    // F-1852: mockups/ and docs/design/ are private paths (scripts/private-paths.txt), so a public copy has 2 of the exempt files; the
+    // plants above still run there, and the every-exempt-file-exists half skips with a note naming the missing ones.
+    const missing = Object.keys(EXEMPT).filter((p) => /^(mockups|docs\/design)\//.test(p) && !existsSync(p));
+    if (missing.length > 0) ctx.skip(`${missing.join(' and ')} not in this copy (private paths the public export leaves out)`);
     expect(Object.keys(EXEMPT).every((p) => files.includes(p))).toBe(true);
   });
 });

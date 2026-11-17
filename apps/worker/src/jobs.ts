@@ -19,13 +19,13 @@ import type { Logger } from '@bw/log';
 import { catalogs } from '@bw/i18n/src/catalog.ts';
 import { TEXT_REMINDER, TEXT_TRY, textGatewayFrom } from '@bw/outbox';
 import type { Clock } from '@bw/time';
-import { alertCheckHandler, ALERT_CHECK, startAlertJobs } from './alerts/index.ts';
+import { alertCheckHandler, ALERT_CHECK, giveUpAlertCheck, startAlertJobs } from './alerts/index.ts';
 import { billingLaneFor, startBillingHealer } from './billing/link.ts';
 import { startClockJobs } from './clock/index.ts';
 import { startImportJob } from './import/index.ts';
-import { startDispatcher, type Dispatcher, type EventHandler, type EventHandlers, type GiveUps, type ParallelLane } from './dispatcher.ts';
+import { startDispatcher, type Dispatcher, type EventHandler, type EventHandlers, type GiveUp, type GiveUps, type ParallelLane } from './dispatcher.ts';
 import { AUTOPILOT_STEP, autopilotStepHandler } from './outbox/autopilot.ts';
-import { ETA_SWEEP, etaSweepHandler } from './outbox/eta-sweep.ts';
+import { ETA_SWEEP, etaSweepHandler, giveUpEtaSweep } from './outbox/eta-sweep.ts';
 import { reminderHandler } from './outbox/reminder.ts';
 import { giveUpTextHandler, tryTextHandler } from './outbox/tryText.ts';
 
@@ -62,12 +62,24 @@ export function handlersFor(deps: WorkerDeps): EventHandlers {
   return Object.fromEntries(eventHandlers.map(([kind, make]) => [kind, make(deps)]));
 }
 
+/** F-1844: the end of an event that holds no record of its own past this event: it is skipped as handler_failed. */
+const giveUpSkipped: GiveUp = async () => ({ state: 'skipped', result: 'handler_failed' });
+
 /**
- * Per kind, what the dispatcher does after MAX_HANDLER_FAILURES failed runs of one event (F-368): the kind's end record.
- * A kind with no line keeps retrying (billing is healed by its own healer; a rule that throws is undone alone inside its run, which still finishes and writes the next event (F-449)).
+ * Per kind, what the dispatcher does after MAX_HANDLER_FAILURES failed runs of one event (F-368): the kind's end record,
+ * logged as 'event gave up' (F-1844). Every serial-lane kind has one (eventHandlers; jobs.test.ts holds the 2 lists
+ * equal): text.try gives the text up (call list entry and text_gave_up alert, as after its 5th failed try); alert.check
+ * and eta.sweep end the event and still write their next event, so the chain goes on; text.reminder and autopilot.step
+ * end the event. The billing lane's kinds are not here: they run in the parallel lane, where the healer owns their end.
  */
 export function giveUpsFor(deps: WorkerDeps): GiveUps {
-  return { [TEXT_TRY]: giveUpTextHandler({ clock: deps.clock }) };
+  return {
+    [TEXT_TRY]: giveUpTextHandler({ clock: deps.clock }),
+    [ALERT_CHECK]: giveUpAlertCheck,
+    [TEXT_REMINDER]: giveUpSkipped,
+    [ETA_SWEEP]: giveUpEtaSweep,
+    [AUTOPILOT_STEP]: giveUpSkipped,
+  };
 }
 
 /** The dispatcher's parallel claim lanes, each with its kinds (never also in eventHandlers). */

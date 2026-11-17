@@ -286,9 +286,15 @@ describe('the 2 Mac-only skips the zone check accepts by name (F-1422, owner rul
   });
 });
 
+// F-1852: docs/SPECIFICATIONS.md is a private path (scripts/private-paths.txt), so in a public copy this case skips with a note
+// naming it; the private checkout has it and the case runs.
+const noSpec = existsSync(path.resolve(import.meta.dirname, '..', '..', '..', 'docs', 'SPECIFICATIONS.md'))
+  ? '' : 'docs/SPECIFICATIONS.md is not in this copy (a private path the public export leaves out)';
+
 describe('the use tags', () => {
   // why: FR-DEMO-2
-  it('are exactly the named real-time uses of SPECIFICATIONS section 11.3, and its section 4.2 union', () => {
+  it('are exactly the named real-time uses of SPECIFICATIONS section 11.3, and its section 4.2 union', (ctx) => {
+    if (noSpec) ctx.skip(noSpec);
     expect([...REAL_TIME_USES]).toEqual(specUseTags());
     expect([...REAL_TIME_USES]).toEqual(specUnionTags());
   });

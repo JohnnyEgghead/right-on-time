@@ -25,7 +25,7 @@
 // strength that write holds (FOR NO KEY UPDATE), since raising it to FOR UPDATE queues behind a link's tx 2 already
 // waiting on that row: a deadlock with no item row in it.
 import { publishEvent, type Queryable } from '@bw/db';
-import { BILLING_EVENT_KINDS, storedFinishHasLines, type BillingEventKind, type BillingState } from '@bw/domain';
+import { BILLING_EVENT_KINDS, BILLING_RETRYING_LONG_MINUTES, storedFinishHasLines, type BillingEventKind, type BillingState } from '@bw/domain';
 import type { Instant } from '@bw/time';
 
 /** The event bus seam's publish (SPECIFICATIONS section 4.3): in the writing transaction, ids only. */
@@ -208,15 +208,40 @@ export interface LeftItem {
 }
 
 /**
+ * The 1 "listed" rule (FR-BILL-2): an item is on the office billing list when it has not left (`sending`, `retrying` or
+ * `waiting_person`) and it failed at least once (tries > 0). F-1844: also an item still `sending` with 0 tries once its
+ * send has been due for BILLING_RETRYING_LONG_MINUTES (60) demo minutes (its billing event, due since then, has not run
+ * to an outcome: a send that keeps throwing never writes a try, and the healer leaves it alone while that event is due),
+ * the limit the billing_retrying_long alert uses. Before the 60 minutes it is a send in progress and is not listed.
+ *
+ * F-1865: billingList lists by this rule and Mark fixed (fixed.ts) accepts by it, so a row the office sees is always
+ * one it can mark fixed (FR-BILL-11). It is a SQL boolean over `bi` (world.billing_item) at demo `now`; its 3
+ * parameters are numbered from `$first`, and the caller appends `params` to its own.
+ */
+export function listedRule(now: Instant, first: number): { sql: string; params: [string, readonly string[], number] } {
+  const [nowP, kindsP, minutesP] = [first, first + 1, first + 2];
+  return {
+    sql: `(bi.state IN ('sending', 'retrying', 'waiting_person')
+        AND (bi.tries > 0
+          OR (bi.state = 'sending' AND EXISTS (
+                SELECT 1 FROM world.scheduled_event e
+                 WHERE e.kind = ANY($${kindsP}::text[]) AND e.subject = bi.job_number::text AND e.state = 'due'
+                   AND e.due_at <= $${nowP}::timestamptz - make_interval(mins => $${minutesP})))))`,
+    params: [iso(now), BILLING_EVENT_KINDS, BILLING_RETRYING_LONG_MINUTES],
+  };
+}
+
+/**
  * What the office billing list shows for a branch (API-60's waiting list and leftLast7Days; FR-BILL-2, FR-BILL-12):
- * every item that failed at least once and has not left, and the items that left within the last 7 demo days.
+ * every item the listedRule lists, and the items that left within the last 7 demo days.
  */
 export async function billingList(q: Queryable, input: { branchId: string; now: Instant }): Promise<{ waiting: ListedItem[]; leftLast7Days: LeftItem[] }> {
+  const listed = listedRule(input.now, 2);
   const w = await q.query<{ job_number: number; state: ListedItem['state']; reason_key: string | null; tries: number; last_try_at: Date | null; next_try_at: Date | null; send_cause: ListedItem['sendCause'] }>(
     `SELECT bi.job_number, bi.state, bi.reason_key, bi.tries, bi.last_try_at, bi.next_try_at, bi.send_cause
        FROM world.billing_item bi JOIN world.job j USING (job_number)
-      WHERE j.branch_id = $1 AND bi.state IN ('sending', 'retrying', 'waiting_person') AND bi.tries > 0
-      ORDER BY bi.last_try_at, bi.job_number`, [input.branchId]);
+      WHERE j.branch_id = $1 AND ${listed.sql}
+      ORDER BY bi.last_try_at, bi.job_number`, [input.branchId, ...listed.params]);
   const l = await q.query<{ job_number: number; left_at: Date; left_how: LeftItem['leftHow']; left_by: string | null; left_reason: string | null; tries: number }>(
     `SELECT bi.job_number, bi.left_at, bi.left_how, bi.left_by, bi.left_reason, bi.tries
        FROM world.billing_item bi JOIN world.job j USING (job_number)

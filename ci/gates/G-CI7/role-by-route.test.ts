@@ -5,7 +5,9 @@
 // phase before the one under certification, and each row of that phase whose building task is merged, read from the same
 // source the page walkers read (ci/page-walkers/inventory.ts: BW_PHASE or the merged CP<n> trailers, BW_MERGED_TASKS for
 // tests), so a page built in phase 4 is checked from its merge, and CP4 checks every phase 4 row.
-import { describe, expect, it } from 'vitest';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { allContracts } from '../../../packages/api/src/index.ts';
 import { handlers } from '../../../packages/api-server/src/handlers/index.ts';
 import { pageGate } from '../../../packages/api-server/src/kernel/pages.ts';
@@ -17,14 +19,21 @@ import {
   registryProblems, routeClass, signInScreens,
 } from './lib.ts';
 
+// F-1852: docs/UI-SPECIFICATION.md and docs/BUILD_PLAN.md are private paths (scripts/private-paths.txt), so a public copy has neither
+// and every test here skips with a note naming them; the private checkout has both and every test runs.
+const noDocs = ['docs/UI-SPECIFICATION.md', 'docs/BUILD_PLAN.md'].every((rel) => existsSync(path.resolve(import.meta.dirname, '..', '..', '..', rel)))
+  ? '' : 'docs/UI-SPECIFICATION.md and docs/BUILD_PLAN.md are not in this copy (private paths the public export leaves out)';
+beforeEach((ctx) => {
+  if (noDocs) ctx.skip(noDocs);
+});
 const readMerged = mergedFromEnv(process.env.BW_MERGED_TASKS, readMergedTasks);
 /** The phase under certification (F-585: never a hand-set number). */
-export const PHASE = currentPhase(process.env.BW_PHASE, readMerged);
-const merged = new Set(readMerged());
+export const PHASE = noDocs ? 0 : currentPhase(process.env.BW_PHASE, readMerged);
+const merged = new Set(noDocs ? [] : readMerged());
 export const covers = (row: { phase: number; task: string }): boolean => row.phase < PHASE || (row.phase === PHASE && merged.has(row.task));
 
 const inv = readInventory();
-const spec = readUiSpec();
+const spec = noDocs ? '' : readUiSpec();
 const pages = pageGate(policyTable);
 
 describe('G-CI7 role-by-route', () => {

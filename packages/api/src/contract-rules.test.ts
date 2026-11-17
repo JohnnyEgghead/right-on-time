@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The contract rules of UI-SPECIFICATION 12.1 and the map-file exception of SPECIFICATIONS 7.1, encoded in @bw/api so a
 // lane that copies its 12.2 row faithfully passes contract-tests without editing this package (finding F-130).
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -11,7 +11,11 @@ import {
 import { allContracts } from './contracts/index.ts';
 
 const repo = path.resolve(import.meta.dirname, '..', '..', '..');
-const uiSpec = readFileSync(path.join(repo, 'docs', 'UI-SPECIFICATION.md'), 'utf8');
+// F-1852: docs/UI-SPECIFICATION.md is a private path (scripts/private-paths.txt), so in a public copy the tests that read its
+// section 12.2 skip with a note naming it; the private checkout has it and they run.
+const UI_SPEC = path.join(repo, 'docs', 'UI-SPECIFICATION.md');
+const noUiSpec = existsSync(UI_SPEC) ? '' : 'docs/UI-SPECIFICATION.md is not in this copy (a private path the public export leaves out)';
+const uiSpec = noUiSpec ? '' : readFileSync(UI_SPEC, 'utf8');
 
 const row = (id: `API-${number}`, method: ContractRow['method'], p: string, request: z.ZodType = z.object({})): ContractRow =>
   defineContract({ id, name: id, method, path: p, request, response: z.object({}), errors: [], labels: [], examples: [] });
@@ -47,7 +51,8 @@ describe('12.1 item 7: the codes every row may answer', () => {
   });
 
   // why: F-130, SD-4
-  it('finds every link-token row of 12.2 by its token path parameter', () => {
+  it('finds every link-token row of 12.2 by its token path parameter', (ctx) => {
+    if (noUiSpec) ctx.skip(noUiSpec);
     const rows = specRows();
     const tokenRows = rows.filter((r) => /\{\w*Token\}/.test(r.path)).map((r) => r.id);
     expect(tokenRows).toEqual(['API-114', 'API-120', 'API-121', 'API-166', 'API-167', 'API-168']);
@@ -108,7 +113,8 @@ describe('SPECIFICATIONS 7.1 base path and the 2 page-numbered lists', () => {
   });
 
   // why: F-130, SD-4
-  it('names the list key of API-133 (rows) and API-149 (users), as 12.2 prints them', () => {
+  it('names the list key of API-133 (rows) and API-149 (users), as 12.2 prints them', (ctx) => {
+    if (noUiSpec) ctx.skip(noUiSpec);
     const lines = uiSpec.split('\n');
     const cell = (id: string) => (lines.find((l) => l.startsWith(`| ${id} |`)) ?? '').split('|')[5] ?? '';
     for (const [id, key] of Object.entries(NUMBERED_LIST_KEYS)) {

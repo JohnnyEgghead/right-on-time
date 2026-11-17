@@ -107,11 +107,19 @@ dc ps -a --format '  {{.Service}} {{.Image}} {{.Status}}'
 # notice would show and the items would be flagged); step 4b raises the epochs to this number. No answer (no world yet) leaves setup's epoch 1.
 old_epoch="$(dc exec -T db psql -U brightwater -d brightwater -tAc 'SELECT greatest(world_epoch, pbs_epoch) FROM system.demo_clock WHERE id = 1' 2>/dev/null || true)"
 old_epoch="$(printf '%s' "$old_epoch" | tr -d '[:space:]')"
+old_epoch_live="$old_epoch"
 # F-1824: step 2 replaces the old database, so a re-run after a failed step 3, 4 or 5 would read the NEW world's epoch (1, or the raised one) here.
 # The old epoch is kept in a file beside the log, written before step 1 and removed only when the reset ends OK; a re-run takes it from there.
 epoch_file="$log_dir/reset-old-epoch-$mode-$project"
 if [ -s "$epoch_file" ] && [[ "$(tr -d '[:space:]' <"$epoch_file")" =~ ^[0-9]+$ ]]; then
-  old_epoch="$(tr -d '[:space:]' <"$epoch_file")"; log "a re-run: the old world's epoch $old_epoch is taken from $epoch_file"
+  # F-1828: the saved number can be stale (the world came back another way and later resets raised it), so it never goes below the live one.
+  saved_epoch="$(tr -d '[:space:]' <"$epoch_file")"
+  if [[ "$old_epoch" =~ ^[0-9]+$ ]] && [ "$old_epoch" -gt "$saved_epoch" ]; then
+    log "a re-run: the live world's epoch $old_epoch is above the saved $saved_epoch in $epoch_file; the live epoch is used"
+    printf '%s\n' "$old_epoch" >"$epoch_file"
+  else
+    old_epoch="$saved_epoch"; log "a re-run: the old world's epoch $old_epoch is taken from $epoch_file (the live epoch is ${old_epoch_live:-none}, not above it)"
+  fi
 elif [[ "$old_epoch" =~ ^[0-9]+$ ]]; then printf '%s\n' "$old_epoch" >"$epoch_file"; fi
 new_epoch=1
 if [[ "$old_epoch" =~ ^[0-9]+$ ]]; then new_epoch=$((old_epoch + 1)); fi

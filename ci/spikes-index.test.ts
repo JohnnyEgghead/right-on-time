@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: tooling (checks ci/spikes-index.sh, BUILD_PLAN D-13; no product requirement)
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -103,7 +103,9 @@ describe('ci/spikes-index.sh', () => {
   });
 
   // why: F-118 the committed records pass the 2 rules: all 8 of A3 section 4's spikes are indexed and S1 is under 5 s
-  it('--check passes on the repository records', () => {
+  it('--check passes on the repository records', (ctx) => {
+    // F-1852: docs/build/ is a private path (scripts/private-paths.txt), so a public copy skips this with a note naming the records folder.
+    if (!existsSync(path.resolve(__dirname, '..', 'docs', 'build', 'spikes'))) ctx.skip('docs/build/spikes/ is not in this copy (a private path the public export leaves out)');
     const r = spawnSync('bash', [script, '--check'], { env: { ...process.env, SPIKES_DIR: undefined, SPIKES_OUT: undefined, SPIKES_REQUIRED: undefined, SPIKES_S1_ID: undefined } as unknown as NodeJS.ProcessEnv, encoding: 'utf8' });
     expect(r.stderr).toBe('');
     expect(r.status).toBe(0);

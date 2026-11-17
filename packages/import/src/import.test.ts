@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // @bw/import without a database: the parse stage's fixed layout, the validate stage's reasons and examples, and the
 // match stage on the real generator output (seed 20260915) against the committed planted-truth file.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { foldStreetName } from '@bw/db';
@@ -192,11 +192,15 @@ describe('match: exact and likely pairs (FR-IMP-3, F-205)', () => {
   }, FULL_WORLD_TIMEOUT_MS);
 
   // why: OQ-19
-  it('matches likely duplicates within blocking keys only, and the measured time is recorded per D-13', () => {
+  it('matches likely duplicates within blocking keys only, and the measured time is recorded per D-13', (ctx) => {
     // 428 scored comparisons on 18,400 customers, where all pairs would be 169,270,800 (C13)
     expect(m.customers.length).toBe(18_400);
     expect(m.comparisons).toBe(428);
-    const record = readFileSync(path.resolve(import.meta.dirname, '..', '..', '..', 'docs', 'build', 'spikes', 'P2-IMPORT.md'), 'utf8');
+    // F-1852: docs/build/ is a private path (scripts/private-paths.txt), so a public copy checks the counts above and skips the record
+    // half with a note naming it; the private checkout has it and the whole test runs.
+    const RECORD = path.resolve(import.meta.dirname, '..', '..', '..', 'docs', 'build', 'spikes', 'P2-IMPORT.md');
+    if (!existsSync(RECORD)) ctx.skip('docs/build/spikes/P2-IMPORT.md is not in this copy (a private path the public export leaves out)');
+    const record = readFileSync(RECORD, 'utf8');
     expect(record).toMatch(/^Verdict: PASS /m);
     expect(record).toMatch(/^Measured: match stage median [\d.]+ ms .* on 18,400 customers; 428 scored comparisons in blocks/m);
   }, FULL_WORLD_TIMEOUT_MS);

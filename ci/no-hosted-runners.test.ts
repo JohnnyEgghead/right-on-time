@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { checkDir, checkRunnerList, checkWorkflow, classifyRunsOn } from './no-hosted-runners.ts';
 
 const repoWorkflows = path.resolve(__dirname, '..', '.github', 'workflows');
+// F-1852: .github/workflows/ is a private path (scripts/private-paths.txt), so in a public copy the tests on the real workflows skip
+// with a note naming it; the private checkout has it and they run. The planted cases need no file.
+const noWf = existsSync(repoWorkflows) ? '' : '.github/workflows/ is not in this copy (a private path the public export leaves out)';
 const script = path.resolve(__dirname, 'no-hosted-runners.ts');
 
 const wf = (jobs: string) => `name: t\non: push\njobs:\n${jobs}`;
@@ -33,7 +36,8 @@ describe('no-hosted-runners: the 2 planted bad workflows fail', () => {
 
 describe('no-hosted-runners: the real workflows pass', () => {
   // why: SD-38
-  it('finds the workflows and 0 violations', () => {
+  it('finds the workflows and 0 violations', (ctx) => {
+    if (noWf) ctx.skip(noWf);
     const { files, violations } = checkDir(repoWorkflows);
     expect(files.length).toBeGreaterThanOrEqual(1);
     expect(violations).toEqual([]);
@@ -150,7 +154,8 @@ describe('no-hosted-runners: the registered runner set (F-12)', () => {
 
 describe('no-hosted-runners: command line', () => {
   // why: SD-38
-  it('exits 1 on a planted bad workflow and 0 on the real workflows', () => {
+  it('exits 1 on a planted bad workflow and 0 on the real workflows', (ctx) => {
+    if (noWf) ctx.skip(noWf);
     const dir = mkdtempSync(path.join(tmpdir(), 'nhr-'));
     try {
       writeFileSync(path.join(dir, 'plant.yml'), PLANT_HOSTED);

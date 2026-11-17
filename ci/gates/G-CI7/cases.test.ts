@@ -2,6 +2,8 @@
 // Gate G-CI7's committed known-bad cases (W-38: they run on every gate run and in the merge set). Each instrument of
 // the role-by-route test must fail its plant: a route with no policy entry (a contract row, an app page file, an
 // inventory page), an entry whose access disagrees with the specification, and mount given a handler with no entry.
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { allContracts, defineContract, reports, z } from '../../../packages/api/src/index.ts';
 import { handlers, tokenChecks } from '../../../packages/api-server/src/handlers/index.ts';
@@ -16,8 +18,14 @@ import { harness } from './harness.ts';
 import { guardedFetch, outsideHost } from './outside-fetch-guard.ts';
 import { apiExpectations, apiProblems, appRoutes, pageProblems, phaseFloor, readBuildPlan, readInventory, readUiSpec, registryProblems, sameAccess, splitCells, tokenKindOfPath } from './lib.ts';
 
+// F-1852: docs/UI-SPECIFICATION.md and docs/BUILD_PLAN.md are private paths (scripts/private-paths.txt), so in a public copy the
+// cases that read them skip with a note naming the path; the private checkout has both and every case runs.
+const absent = (rel: string): string =>
+  existsSync(path.resolve(import.meta.dirname, '..', '..', '..', rel)) ? '' : `${rel} is not in this copy (a private path the public export leaves out)`;
+const noUiSpec = absent('docs/UI-SPECIFICATION.md');
+const noPlan = absent('docs/BUILD_PLAN.md');
 const inv = readInventory();
-const spec = readUiSpec();
+const spec = noUiSpec ? '' : readUiSpec();
 
 /** The plant: a probe row shaped like SPECIFICATIONS 7.4's board-delay sample (API-172, now real), entered in the shared contract with no policy entry. */
 const planted = defineContract({
@@ -35,7 +43,8 @@ describe('G-CI7 must-fail cases', () => {
   });
 
   // why: FR-AUTH-1, F-4, F-605 (the F-585 mechanism: the covered set follows the derived phase, so a merged phase 4 screen with no entry is caught; a pin to phase 3 hid it)
-  it('fails a merged phase 4 screen (SCR-OFC-34) whose policy entry is missing, with the phase derived from the merged tasks', async () => {
+  it('fails a merged phase 4 screen (SCR-OFC-34) whose policy entry is missing, with the phase derived from the merged tasks', async (ctx) => {
+    if (noUiSpec) ctx.skip(noUiSpec);
     const phase = currentPhase(undefined, () => ['CP1', 'CP2', 'CP3', 'P4-WEEK']);
     expect(phase).toBe(4);
     const covers = (r: { phase: number; task: string }): boolean => r.phase < phase || (r.phase === phase && r.task === 'P4-WEEK');
@@ -51,7 +60,8 @@ describe('G-CI7 must-fail cases', () => {
   });
 
   // why: FR-AUTH-1, F-639 (the floor: a phase pinned below the plan's done checkpoints is a plant the gate must fail)
-  it('puts the phase floor at 1 plus the highest DONE checkpoint, so a pin to phase 3 fails once CP3 is DONE', () => {
+  it('puts the phase floor at 1 plus the highest DONE checkpoint, so a pin to phase 3 fails once CP3 is DONE', (ctx) => {
+    if (noPlan) ctx.skip(noPlan);
     const plan = '#### CP2 — Phase 2 checkpoint\nStatus: DONE\n\n#### CP3 — Phase 3 checkpoint\nStatus: DONE\n\n#### CP4 — Phase 4 checkpoint\nStatus: NEW\n';
     expect(phaseFloor(plan, doneCheckpoints)).toBe(4);
     expect(3 >= phaseFloor(plan, doneCheckpoints)).toBe(false);
@@ -74,7 +84,8 @@ describe('G-CI7 must-fail cases', () => {
   });
 
   // why: FR-AUTH-1, F-4
-  it('fails a covered inventory page with no entry, an entry with the wrong access, and an entry outside the inventory', async () => {
+  it('fails a covered inventory page with no entry, an entry with the wrong access, and an entry outside the inventory', async (ctx) => {
+    if (noUiSpec) ctx.skip(noUiSpec);
     const h = await harness(policyTable, { ...handlers });
     const without = policyTable.filter((e) => !(e.kind === 'page' && e.path === '/sign-in'));
     const r1 = await pageProblems(without, pageGate(without), inv, spec, (r) => r.phase <= 2, h.principal);
@@ -88,7 +99,8 @@ describe('G-CI7 must-fail cases', () => {
   });
 
   // why: FR-AUTH-1, NFR-11
-  it('fails an API entry whose access disagrees with the spec, through the router', async () => {
+  it('fails an API entry whose access disagrees with the spec, through the router', async (ctx) => {
+    if (noUiSpec) ctx.skip(noUiSpec);
     const health = allContracts.find((r) => r.id === 'API-171')!;
     const locked = policyTable.map((e): PolicyEntry => (e.kind === 'api' && e.contract === 'API-171' ? api(health, roles('manager')) : e));
     const h = await harness(locked, { ...handlers });
@@ -102,7 +114,8 @@ describe('G-CI7 must-fail cases', () => {
   });
 
   // why: FR-AUTH-1, FR-AUTH-2 (F-213: the oracle reads an escaped pipe, names the rows no caller settles, and compares token kinds)
-  it('reads API-04 past its escaped pipe, names API-09 and API-106, and compares access by token kind', () => {
+  it('reads API-04 past its escaped pipe, names API-09 and API-106, and compares access by token kind', (ctx) => {
+    if (noUiSpec) ctx.skip(noUiSpec);
     expect(splitCells('| API-04 | Sample people | GET `/demo/people?app=office\\|tech` | — | people | x | CTL-OFC-01-05 | FR-AUTH-5 |')[3]).toBe('GET `/demo/people?app=office|tech`');
     const wants = apiExpectations(spec);
     expect(wants.get('API-04')).toEqual({ kind: 'public' });

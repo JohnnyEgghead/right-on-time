@@ -4,16 +4,30 @@ What runs the app, on the hosted server `bw.j7l.io` and on an own copy. The sect
 
 | Path | What it is |
 |---|---|
-| `compose.yaml` | The 1 Compose file: `proxy`, `web`, `worker`, `pbs`, `db`, and `certbot` (hosted only, one-shot) |
+| `compose.yaml` | The 1 Compose file and its 9 services (the table below) |
 | `image/Dockerfile` | The 1 app image (web, worker and pbs are 3 entry points of it); `plant` is the rollback drill's target |
 | `nginx/` | `http.conf` (log format, upstream), site files `hosted.conf`, `local.conf`, `bootstrap.conf`, and `routes-locked.conf` / `routes-open.conf` |
-| `placeholder/index.html` | The locked page, served by nginx while locked and by the skeleton web process |
+| `placeholder/index.html` | The locked page, served by nginx while the site is locked |
 | `profiles/demo.env` | The `demo` profile: the hosted demo's settings (SPECIFICATIONS 11.1) |
 | `hosted/` | Hosted server only: `hosted.env` (site, lock, ports), `setup.sh`, `certbot-renew.sh` and its systemd timer, `bucket-check.sh` |
 | `deploy/deploy.sh` | The deploy, started by hand from this Mac or Spectre |
 | `deploy/server-deploy.sh` | Its server half (install, start, health wait, rollback) |
 | `load/` | The load day on a temporary copy of the hosted plan (P4-LOAD, P7-LOAD): `temp-server.sh`, `run-day.sh`, the generated-world `fixture.sql` and `sessions.sql`; the script itself is `packages/testkit/src/load/`. `hosted-day.sh` (owner answer f3d84787) runs 1 day on the hosted server beside its stopped locked stack and restores it (`hosted-day.sh --help`), with `steal-watchdog.py` and `hosted-ports.py` |
 | `ci-runner/`, `spike/`, `data/` | The CI runner image; throwaway spike stacks; spike S8 data notes |
+
+## The 9 services of `compose.yaml`
+
+| Service | What it does |
+|---|---|
+| `proxy` | nginx: the 1 public port, TLS on the hosted server, the locked page while locked |
+| `migrate` | One-shot on every start and deploy: applies the pending migrations, then sets each process login's password; `web`, `worker` and `pbs` start only after it succeeds |
+| `setup` | One-shot (the `setup` profile): writes the sample world once, on a fresh database |
+| `web` | The web app and the API (the app image's web entry point) |
+| `worker` | The background worker: text sending (the outbox), the import job, alerts, replays and billing calls, and its heartbeat |
+| `pbs` | The pretend billing service |
+| `db` | PostgreSQL 18 |
+| `routing` | The routing service (OSRM) over the routing files `pnpm run setup:maps` downloads; with none yet, it waits for them |
+| `certbot` | One-shot (the `certbot` profile, hosted only): the first certificate and its renewals |
 
 ## Deploy
 
@@ -99,10 +113,9 @@ API-80 (dry run) and API-84 (real run) only request a run; the worker's import j
 
 Not needed today; the live server was set up by spike S5. On a new one: copy `compose.yaml`, `nginx/`, `placeholder/` and the `hosted/` files to `/opt/brightwater`, run `sudo bash setup.sh` there (Docker, the postgres password, the first certificate, the renewal timer), then run `bash infra/deploy/deploy.sh` from here. This path has not been re-run since P1-DEPLOY changed `setup.sh`.
 
-## Known limits of the skeleton
+## Notes on the running app
 
 - `/healthz` answers 200 while the database answers and the worker heartbeat (`system.worker_heartbeat`, written every 10 s by the worker, P3-ALERTS) is under 60 s old; otherwise it answers 503, including when the database does not answer, never 500.
-- `worker` and `pbs` only start and wait. Their real code replaces them.
 - The event stream route `/api/v1/events` (API-09) is built: `packages/api-server/src/events` (the bus and the stream handler), served by the web process through the kernel (a contract row with a policy entry, F-344), configured in `routes-open.conf` (from spike S1).
 - Finding F-61 (a browser sends `Accept-Encoding`, and compression can buffer a stream): the app side is met. The stream is answered by the kernel path, which never passes through Next.js (so Next's gzip never applies), with `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`; nginx has gzip off (the image default, and `gzip off` on the events location). The load run with browser headers stays with F-61's testkit deferral.
 - SPECIFICATIONS 11.1 names `/opt/brightwater/.env` for the hosted secrets, matching the live server's S5 layout (`/opt/brightwater`, `/etc/brightwater/db.env`). P8-UNLOCK places its secrets.

@@ -4,7 +4,7 @@
 // schemas pbs and pbs_snapshot only). It creates its 1 mode row when absent, then serves until SIGTERM.
 import { ConfigError, configOrExit, databasePassword, exitWithMessage } from '@bw/config';
 import { createPool } from '@bw/db';
-import { createLogger } from '@bw/log';
+import { createLogger, exitOnUncaughtException, exitOnUnhandledRejection } from '@bw/log';
 import { startPbs } from './server.ts';
 import { ensureModeRow } from './store.ts';
 
@@ -23,6 +23,10 @@ if (import.meta.main) {
   if (!settings.DATABASE_URL) exitWithMessage('ConfigError: invalid setting DATABASE_URL: the pbs process needs a database', 78);
   // Lines go through @bw/log (log-allowlist, F-234), so each carries the real-time stamp (NFR-05, F-190).
   const log = createLogger({ process: 'pbs', level: settings.LOG_LEVEL });
+  // F-1845: a rejection no code handled is an error line with its cause code, then exit 1 (Compose restarts the process).
+  exitOnUnhandledRejection(log);
+  // F-1870: the same for an exception no code caught, so Node's default (the message and stack on stderr) never prints.
+  exitOnUncaughtException(log);
   // The password goes into the in-memory URL: pg lets the URL's (absent) password override a separate field.
   const url = new URL(settings.DATABASE_URL);
   if (password !== undefined) url.password = encodeURIComponent(password);

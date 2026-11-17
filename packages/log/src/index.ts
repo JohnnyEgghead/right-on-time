@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // @bw/log (SPECIFICATIONS section 11.4, SD-42; invariant 6's code half; NFR-05): every process logs JSON lines to
 // stdout through this package, whose typed allowlist admits only real and demo time, level, process, contract ID, route
-// template, status, duration, error code, user id and job number. A call that passes any other field fails type
+// template, status, duration, error code, user id, job number, failures, event kind and event id. A call that passes any other field fails type
 // checking, for an object literal and for a variable alike (Exact below). At run time any other key a cast or a
 // plain-JavaScript caller slips in is dropped, so it never reaches a line either.
 import { realNow, type Clock } from '@bw/time';
@@ -29,6 +29,17 @@ export const PROCESS_STATES = [
   'import source ok', 'import source refused',
   // The live route client's signal (P6-ROUTE-SIGNAL, F-1306): live routing failed; errorCode names the cause class, failures the count.
   'live route failed',
+  // P9-AUDIT-SERVER (F-1844): 1 run of a scheduled event failed (eventKind, eventId; errorCode is the safe cause code), its
+  // kind gave it up after MAX_HANDLER_FAILURES runs, the failure count could not be written, or the give-up itself threw.
+  'event failed', 'event gave up', 'event failure not counted', 'event give-up failed',
+  // F-1846: a background loop that keeps failing repeats its line every 10 real minutes and logs once when it recovers.
+  'dispatcher pass failed', 'dispatcher pass recovered',
+  'clock replay failed', 'clock replay recovered', 'reset confirmer failed', 'reset confirmer recovered',
+  'auto reset failed', 'auto reset recovered', 'cleanup failed', 'cleanup recovered',
+  // F-1848: the access code sync answered again after a failure. F-1845: a promise rejection no code handled.
+  'access code sync recovered', 'unhandled rejection',
+  // F-1870: an exception no code caught, in a process that hooks it.
+  'uncaught exception',
 ] as const;
 export type ProcessState = (typeof PROCESS_STATES)[number];
 
@@ -46,9 +57,70 @@ export interface LogFields {
   jobNumber?: number;
   /** A count of failures since the last line of the same kind (P6-ROUTE-SIGNAL): a number, never a subject. */
   failures?: number;
+  /** A scheduled_event kind (`text.try`, F-1844): dotted lower-case words, never a subject or payload. */
+  eventKind?: string;
+  /** A scheduled_event id (F-1844): a UUID, never a subject. */
+  eventId?: string;
 }
 
-export const LOG_FIELDS = ['demoTime', 'contract', 'route', 'status', 'durationMs', 'errorCode', 'userId', 'jobNumber', 'failures'] as const satisfies readonly (keyof LogFields)[];
+export const LOG_FIELDS = ['demoTime', 'contract', 'route', 'status', 'durationMs', 'errorCode', 'userId', 'jobNumber', 'failures', 'eventKind', 'eventId'] as const satisfies readonly (keyof LogFields)[];
+
+/** The run-time shape of eventKind and eventId: a value of any other shape is dropped, so free text never reaches a line. */
+export const EVENT_KIND_SHAPE = /^[a-z][a-z_]{0,30}(\.[a-z][a-z_]{0,30}){1,3}$/;
+export const EVENT_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The shape a cause code must have (as the import runner's failureCode and F-561's errorCodeOf check it). */
+const CAUSE_SHAPE = /^[A-Za-z0-9_]{2,40}$/;
+
+/**
+ * The safe cause code of a thrown value (F-1844, F-1845; made from apps/worker/src/alerts/check.ts failureOf, which now
+ * calls it): its `code` (a PostgreSQL SQLSTATE such as 40P01, a Node code such as ECONNREFUSED), else its class name
+ * (TypeError), else `Error`. Both are shape-checked, and the message is never read: a message can quote a record's text.
+ */
+export function causeCodeOf(e: unknown): string {
+  const err = e as { code?: unknown; name?: unknown } | null | undefined;
+  if (typeof err?.code === 'string' && CAUSE_SHAPE.test(err.code)) return err.code;
+  if (typeof err?.name === 'string' && CAUSE_SHAPE.test(err.name)) return err.name;
+  return 'Error';
+}
+
+/** The process seam of exitOnUnhandledRejection (a test passes a fake). */
+export interface RejectionProcess {
+  on(event: 'unhandledRejection' | 'uncaughtException', listener: (reason: unknown) => void): unknown;
+  exit(code: number): never | void;
+  stdout: { write(chunk: string, cb: () => void): boolean };
+}
+
+/**
+ * F-1845: a promise rejection no code handled is logged at error level with its safe cause code, then the process exits 1,
+ * as Node's own default would, so Compose's restart policy still restarts it. Node's default would also print the message
+ * and stack to stderr, which can quote a record's text; this line never does. The exit waits for stdout to flush the line.
+ */
+export function exitOnUnhandledRejection(log: Logger, proc: RejectionProcess = process as unknown as RejectionProcess): void {
+  let exiting = false;
+  proc.on('unhandledRejection', (reason) => {
+    log.error({ status: 'unhandled rejection', errorCode: causeCodeOf(reason) });
+    if (exiting) return;
+    exiting = true;
+    proc.stdout.write('', () => proc.exit(1));
+  });
+}
+
+/**
+ * F-1870: an exception no code caught is logged at error level with its safe cause code, then the process exits 1 (as Node's own
+ * default does, so Compose's restart policy still restarts it). Node's default would print the message and stack to stderr
+ * before it exits, which can quote a record's text; with this listener installed nothing else prints them. The exit waits for
+ * stdout to flush the line.
+ */
+export function exitOnUncaughtException(log: Logger, proc: RejectionProcess = process as unknown as RejectionProcess): void {
+  let exiting = false;
+  proc.on('uncaughtException', (error) => {
+    log.error({ status: 'uncaught exception', errorCode: causeCodeOf(error) });
+    if (exiting) return;
+    exiting = true;
+    proc.stdout.write('', () => proc.exit(1));
+  });
+}
 
 /** The type a field outside the allowlist must have: nothing can be one, and the compiler's message names the field. */
 export interface NotInLogAllowlist<K> {
@@ -89,6 +161,10 @@ export function allowlisted(fields: Record<string, unknown>): Record<string, str
       if (typeof v === 'number' || (typeof v === 'string' && STATES.has(v))) out[k] = v;
     } else if (k === 'durationMs' || k === 'jobNumber' || k === 'failures') {
       if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    } else if (k === 'eventKind') {
+      if (typeof v === 'string' && EVENT_KIND_SHAPE.test(v)) out[k] = v;
+    } else if (k === 'eventId') {
+      if (typeof v === 'string' && EVENT_ID_SHAPE.test(v)) out[k] = v;
     } else if (typeof v === 'string') {
       out[k] = v;
     }

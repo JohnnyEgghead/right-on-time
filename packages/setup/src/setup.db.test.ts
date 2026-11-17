@@ -400,7 +400,7 @@ describe('a fresh pnpm run setup on an empty PostgreSQL 18 (D-3, OI-57)', () => 
       // A replay from the start of the week to 9:00 AM EDT on Tue, Sep 15: the demo clock sits before every event, so each runs at its own due time.
       const through = Temporal.Instant.from('2026-09-15T13:00:00Z');
       const report = await drainDue(worker, { 'autopilot.step': autopilotStepHandler(textContext), 'eta.sweep': etaSweepHandler(textContext) },
-        { through, demoNow: Temporal.Instant.from('2026-09-01T00:00:00Z'), epoch: (await worker.query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1')).rows[0]!.world_epoch });
+        { through, demoNow: Temporal.Instant.from('2026-09-01T00:00:00Z'), log: createLogger({ process: 'worker', write: () => undefined }), epoch: (await worker.query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1')).rows[0]!.world_epoch });
       expect(report.failed).toEqual([]);
       // Every seeded job stands where its last due step leaves it: no due step, still scheduled.
       const NEXT: Record<string, string> = { on_my_way: 'on_the_way', arrived: 'on_site', finished: 'done', no_one_home: 'no_one_home' };

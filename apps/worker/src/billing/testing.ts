@@ -9,7 +9,7 @@
 import { afterAll, beforeAll } from 'vitest';
 import { createPool, inTransaction, type Queryable } from '@bw/db';
 import { finishLines, type FinishLinesCode, type PbsModeName } from '@bw/domain';
-import { createLogger } from '@bw/log';
+import { createLogger, type Logger } from '@bw/log';
 import { DbClock, Temporal } from '@bw/time';
 import type pg from 'pg';
 import { startPbs, type PbsServer } from '../../../pbs/src/server.ts';
@@ -49,8 +49,13 @@ export interface BillingLink {
   stop(): Promise<void>;
 }
 
-export function billingLinkOver(pool: pg.Pool, clock: DbClock, lane: ParallelLane<PreparedSend, SendOutcome>): BillingLink {
-  const runner = new LaneRunner(pool, lane);
+export function billingLinkOver(
+  pool: pg.Pool,
+  clock: DbClock,
+  lane: ParallelLane<PreparedSend, SendOutcome>,
+  log: Logger = createLogger({ process: 'worker', write: () => undefined }),
+): BillingLink {
+  const runner = new LaneRunner(pool, lane, log);
   return {
     runner,
     async handle(event, now) {

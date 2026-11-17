@@ -15,7 +15,7 @@ import { sendLate, type TextContext } from '@bw/outbox';
 import { atLocal, Temporal, type Instant } from '@bw/time';
 import { routedDrive } from '../../../../packages/maps/src/route-source.ts';
 import { chainSuccessorDue } from '../clock/chain.ts';
-import type { EventHandler } from '../dispatcher.ts';
+import type { EventHandler, GiveUp } from '../dispatcher.ts';
 
 export const ETA_SWEEP = 'eta.sweep';
 
@@ -125,16 +125,30 @@ export async function runEtaSweep(tx: Queryable, ctx: TextContext, now: Instant,
   return report;
 }
 
+/** The next eta.sweep, 5 demo minutes on, only when no other eta.sweep is due (the alert.check chain's rule, F-444). */
+async function writeEtaSweepSuccessor(tx: Queryable, event: { id: string }, now: Instant, replayTarget: Instant | undefined): Promise<void> {
+  await tx.query('SELECT pg_advisory_xact_lock($1)', [CHAIN_LOCK]);
+  await tx.query(
+    `INSERT INTO world.scheduled_event (due_at, kind, subject, payload, state)
+     SELECT $1, $2, 'eta', '{}'::jsonb, 'due'
+      WHERE NOT EXISTS (SELECT 1 FROM world.scheduled_event WHERE kind = $2 AND state = 'due' AND id <> $3)`,
+    [chainSuccessorDue(now, ETA_SWEEP_EVERY_MINUTES, replayTarget).toString(), ETA_SWEEP, event.id]);
+}
+
+/**
+ * F-1844: an eta.sweep that failed MAX_HANDLER_FAILURES runs is ended (skipped, handler_failed), and the next one is
+ * written as a run would write it, so late jobs keep being swept after 1 event that cannot run.
+ */
+export const giveUpEtaSweep: GiveUp = async (event, { tx, now, replayTarget }) => {
+  await writeEtaSweepSuccessor(tx, event, now, replayTarget);
+  return { state: 'skipped', result: 'handler_failed' };
+};
+
 /** The eta.sweep event handler: one sweep at the event's time, then the next event 5 demo minutes on. */
 export function etaSweepHandler(ctx: TextContext, log?: Logger): EventHandler {
   return async (event, { tx, now, replayTarget }) => {
     const report = await runEtaSweep(tx, ctx, now, log);
-    await tx.query('SELECT pg_advisory_xact_lock($1)', [CHAIN_LOCK]);
-    await tx.query(
-      `INSERT INTO world.scheduled_event (due_at, kind, subject, payload, state)
-       SELECT $1, $2, 'eta', '{}'::jsonb, 'due'
-        WHERE NOT EXISTS (SELECT 1 FROM world.scheduled_event WHERE kind = $2 AND state = 'due' AND id <> $3)`,
-      [chainSuccessorDue(now, ETA_SWEEP_EVERY_MINUTES, replayTarget).toString(), ETA_SWEEP, event.id]);
+    await writeEtaSweepSuccessor(tx, event, now, replayTarget);
     return { state: 'done', result: `open ${report.open}, late ${report.late}, at risk ${report.atRisk}, late texts ${report.lateTexts}, skipped ${report.skipped}` };
   };
 }

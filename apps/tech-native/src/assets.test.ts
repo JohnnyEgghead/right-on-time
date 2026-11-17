@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The native app's entry and its kit assets: the Intl polyfills install before the first render (F-141); the icons are the web app's
 // own DK-70 paths; the Inter faces are the kit's font at the weights the styles name, each found by app.json's font plugin.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ICON_PATHS } from '../../web/src/shell/icon-paths.ts';
@@ -10,6 +10,9 @@ import { NATIVE_ICON_PATHS } from './ui/icon-paths.ts';
 import { STEP_ICON_PATHS } from './ui/icon-paths-steps.ts';
 
 const APP = path.resolve(import.meta.dirname, '..');
+// F-1852: mockups/ is a private path (scripts/private-paths.txt), so in a public copy the test that reads the kit frame skips with a
+// note naming it; the private checkout has it and the test runs.
+const noFrame = existsSync(path.join(APP, '../../mockups/pages/r1-ios-b.html')) ? '' : 'mockups/pages/r1-ios-b.html is not in this copy (a private path the public export leaves out)';
 
 /** A TrueType file's OS/2 weight class and its name records 6 (PostScript) and 16 (typographic family), read from the tables. */
 function face(file: string): { weight: number; postScript: string; family: string } {
@@ -49,7 +52,8 @@ describe('the native kit assets', () => {
   });
 
   // why: FR-TECH-5 the Steps list's turn arrows are DK-117's own (kit 0.9, F-1233): each path is the kit frame's string, drawn the same way
-  it('draws each turn arrow with the kit frame\'s own path', () => {
+  it('draws each turn arrow with the kit frame\'s own path', (ctx) => {
+    if (noFrame) ctx.skip(noFrame);
     const frame = readFileSync(path.join(APP, '../../mockups/pages/r1-ios-b.html'), 'utf8');
     for (const [name, d] of Object.entries(STEP_ICON_PATHS)) expect(frame, name).toContain(`${name}: '${d}'`);
     expect(Object.keys(NATIVE_ICON_PATHS).filter((n) => n in STEP_ICON_PATHS)).toEqual([]);

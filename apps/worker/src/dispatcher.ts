@@ -11,7 +11,9 @@
 //   - Concurrent dispatchers (2 workers, or the replay of P3-REPLAY beside the normal loop) never run 1 event twice:
 //     SKIP LOCKED hands a locked row to no one else, and a row marked done is never claimed again.
 //   - A handler that throws is left due and excluded for the rest of that pass, so 1 bad row never blocks the rows
-//     behind it; the next pass (1 s later) tries it again, logged with no data (section 11.4).
+//     behind it; the next pass (1 s later) tries it again. Each failed run is 1 error line with the event's kind, id and
+//     cause code, never its subject, payload or message (section 11.4, F-1844); a kind with a give-up ends the event
+//     after MAX_HANDLER_FAILURES failed runs (noteHandlerFailure).
 //   - Only kinds with a handler here are claimed. A kind no handler serves yet (a lane that has not joined) stays due,
 //     untouched, never marked done or skipped by a dispatcher that cannot run it.
 //
@@ -27,8 +29,9 @@
 // either commits before the claim's epoch read (the read sees the new epoch) or waits for the claim to commit (the claim
 // ran an event of its own world).
 import { inTransaction, type createPool, type Queryable } from '@bw/db';
-import type { Logger } from '@bw/log';
+import { causeCodeOf, type Logger } from '@bw/log';
 import { Temporal, toWire, type Clock, type Instant } from '@bw/time';
+import { failingStep } from './failing.ts';
 
 type Pool = ReturnType<typeof createPool>;
 
@@ -74,26 +77,62 @@ export type GiveUps = Readonly<Record<string, GiveUp>>;
 export const MAX_HANDLER_FAILURES = 5;
 
 /**
- * Count a failed run on the event's payload (`failures`, committed on its own: the failed run's transaction rolled back),
- * and at MAX_HANDLER_FAILURES run the kind's give-up and mark the event. A give-up that itself throws changes nothing, and
- * the event is tried again next pass. Returns true when the event was given up.
+ * F-1844: the line of 1 event (its kind and id, never its subject or payload), at the demo time it ran at. The cause, when
+ * the line has one, is @bw/log causeCodeOf: the error's code or class name, never its message.
  */
-export async function noteHandlerFailure(pool: Pool, event: DueEvent, now: Instant, giveUps: GiveUps): Promise<boolean> {
+const eventLine = (event: Pick<DueEvent, 'id' | 'kind'>, now: Instant) => ({ eventKind: event.kind, eventId: event.id, demoTime: toWire(now, 'UTC') });
+
+/**
+ * 1 failed run of a serial-lane event (its transaction rolled back, the event is still due): count it on the event's
+ * payload (`failures`, committed on its own), and at MAX_HANDLER_FAILURES run the kind's give-up and mark the event.
+ * Every step is logged at error level (F-1844): the failed run ('event failed', with the count once written), a count
+ * that could not be written ('event failure not counted': the run is still failed, the next pass tries again), the
+ * give-up ('event gave up'), and a give-up that itself threw ('event give-up failed': it changes nothing, and the event
+ * is tried again next pass). A kind with no give-up is not counted. Returns true when the event was given up.
+ *
+ * Re-run semantics: the count is 1 committed UPDATE per failed run, guarded by `state = 'due'`, so it only grows and
+ * stops when the event leaves due. The give-up, its end record and the mark commit in 1 transaction that holds the row
+ * (SKIP LOCKED: a second dispatcher that reaches the limit at the same time finds no row and gives nothing up twice).
+ */
+export async function noteHandlerFailure(
+  pool: Pool, event: DueEvent, ctx: { now: Instant; replayTarget?: Instant }, giveUps: GiveUps, log: Logger, cause: unknown,
+): Promise<boolean> {
+  const line = eventLine(event, ctx.now);
+  const errorCode = causeCodeOf(cause);
   const giveUp = giveUps[event.kind];
-  if (!giveUp) return false;
-  const counted = await pool.query<{ failures: number }>(
-    `UPDATE world.scheduled_event SET payload = jsonb_set(payload, '{failures}', to_jsonb(coalesce((payload->>'failures')::int, 0) + 1))
-      WHERE id = $1 AND state = 'due' RETURNING (payload->>'failures')::int AS failures`,
-    [event.id],
-  );
-  if ((counted.rows[0]?.failures ?? 0) < MAX_HANDLER_FAILURES) return false;
-  return inTransaction(pool, async (tx) => {
-    const lock = await tx.query(`SELECT 1 FROM world.scheduled_event WHERE id = $1 AND state = 'due' FOR UPDATE SKIP LOCKED`, [event.id]);
-    if (lock.rows.length === 0) return false;
-    const outcome = await giveUp(event, { tx, now });
-    await markEvent(tx, event.id, now, outcome);
-    return true;
-  });
+  if (!giveUp) {
+    log.error({ status: 'event failed', ...line, errorCode });
+    return false;
+  }
+  let failures: number;
+  try {
+    const counted = await pool.query<{ failures: number }>(
+      `UPDATE world.scheduled_event SET payload = jsonb_set(payload, '{failures}', to_jsonb(coalesce((payload->>'failures')::int, 0) + 1))
+        WHERE id = $1 AND state = 'due' RETURNING (payload->>'failures')::int AS failures`,
+      [event.id],
+    );
+    failures = counted.rows[0]?.failures ?? 0;
+  } catch (e) {
+    log.error({ status: 'event failed', ...line, errorCode });
+    log.error({ status: 'event failure not counted', ...line, errorCode: causeCodeOf(e) });
+    return false;
+  }
+  log.error({ status: 'event failed', ...line, errorCode, failures });
+  if (failures < MAX_HANDLER_FAILURES) return false;
+  try {
+    const gaveUp = await inTransaction(pool, async (tx) => {
+      const lock = await tx.query(`SELECT 1 FROM world.scheduled_event WHERE id = $1 AND state = 'due' FOR UPDATE SKIP LOCKED`, [event.id]);
+      if (lock.rows.length === 0) return false;
+      const outcome = await giveUp(event, ctx.replayTarget ? { tx, now: ctx.now, replayTarget: ctx.replayTarget } : { tx, now: ctx.now });
+      await markEvent(tx, event.id, ctx.now, outcome);
+      return true;
+    });
+    if (gaveUp) log.error({ status: 'event gave up', ...line, errorCode, failures });
+    return gaveUp;
+  } catch (e) {
+    log.error({ status: 'event give-up failed', ...line, errorCode: causeCodeOf(e), failures });
+    return false;
+  }
 }
 
 export interface DrainReport {
@@ -131,7 +170,7 @@ async function sameWorld(tx: Queryable, epoch: number | undefined): Promise<bool
 export async function runNextDue(
   pool: Pool,
   handlers: EventHandlers,
-  opts: { through: Instant; demoNow: Instant; exclude?: readonly string[]; giveUps?: GiveUps; replayTarget?: Instant; epoch?: number },
+  opts: { through: Instant; demoNow: Instant; exclude?: readonly string[]; giveUps?: GiveUps; replayTarget?: Instant; epoch?: number; log: Logger },
 ): Promise<null | { id: string; outcome: EventOutcome } | { id: string; failed: unknown }> {
   const kinds = Object.keys(handlers);
   if (kinds.length === 0) return null;
@@ -167,7 +206,10 @@ export async function runNextDue(
   } catch (e) {
     if (claimed) {
       // F-368: count the failure; the 5th gives the event up (the kind's end record), and a pass does not report it failed.
-      const gaveUp = await noteHandlerFailure(pool, claimed, later(claimed.dueAt, opts.demoNow), opts.giveUps ?? {}).catch(() => false);
+      // F-1844: every step is logged there, and it never throws (a count it cannot write is logged, never swallowed).
+      const now = later(claimed.dueAt, opts.demoNow);
+      const ctx = opts.replayTarget ? { now, replayTarget: opts.replayTarget } : { now };
+      const gaveUp = await noteHandlerFailure(pool, claimed, ctx, opts.giveUps ?? {}, opts.log, e);
       return gaveUp ? { id: claimed.id, outcome: { state: 'skipped', result: 'handler_failed' } } : { id: claimed.id, failed: e };
     }
     throw e;
@@ -182,7 +224,7 @@ export async function runNextDue(
 export async function drainDue(
   pool: Pool,
   handlers: EventHandlers,
-  opts: { through: Instant; demoNow: Instant; giveUps?: GiveUps; replayTarget?: Instant; epoch: number },
+  opts: { through: Instant; demoNow: Instant; giveUps?: GiveUps; replayTarget?: Instant; epoch: number; log: Logger },
 ): Promise<DrainReport> {
   const report: DrainReport = { ran: 0, skipped: 0, failed: [] };
   for (;;) {
@@ -257,10 +299,27 @@ export class LaneRunner<P = unknown, R = unknown> {
   readonly lane: ParallelLane<P, R>;
   readonly #pool: Pool;
   readonly #inFlight = new Map<string, Promise<LaneRun>>();
+  readonly #log: Logger;
 
-  constructor(pool: Pool, lane: ParallelLane<P, R>) {
+  constructor(pool: Pool, lane: ParallelLane<P, R>, log: Logger) {
     this.#pool = pool;
     this.lane = lane;
+    this.#log = log;
+  }
+
+  /** F-1844: 1 failed run of the lane (its handler threw, or its key could not be read), logged with its kind, id and cause. */
+  #failed(event: DueEvent, now: Instant, e: unknown): LaneRun {
+    this.#log.error({ status: 'event failed', ...eventLine(event, now), errorCode: causeCodeOf(e) });
+    return { id: event.id, failed: e };
+  }
+
+  /** F-1847: the event's key, or the failed run of that event when keyOf throws (a payload with no job number). */
+  #keyOf(event: DueEvent, demoNow: Instant): { key: string } | { run: LaneRun } {
+    try {
+      return { key: this.lane.keyOf(event) };
+    } catch (e) {
+      return { run: this.#failed(event, later(event.dueAt, demoNow), e) };
+    }
   }
 
   get inFlight(): number {
@@ -274,7 +333,9 @@ export class LaneRunner<P = unknown, R = unknown> {
 
   /** Run 1 event of the lane now (tx 1, the call, tx 2). `demoNow` gives the run time max(due_at, demo now). */
   run(event: DueEvent, demoNow: Instant, replayTarget?: Instant, epoch?: number): Promise<LaneRun> {
-    const key = this.lane.keyOf(event);
+    const k = this.#keyOf(event, demoNow);
+    if ('run' in k) return Promise.resolve(k.run);
+    const { key } = k;
     if (this.#inFlight.has(key)) return Promise.resolve({ id: event.id, busy: true });
     const p = this.#runOnce(event, later(event.dueAt, demoNow), replayTarget, epoch).finally(() => this.#inFlight.delete(key));
     this.#inFlight.set(key, p);
@@ -307,7 +368,7 @@ export class LaneRunner<P = unknown, R = unknown> {
       });
       return outcome ? { id: event.id, outcome } : { id: event.id, gone: true };
     } catch (e) {
-      return { id: event.id, failed: e };
+      return this.#failed(event, now, e);
     }
   }
 
@@ -330,7 +391,14 @@ export class LaneRunner<P = unknown, R = unknown> {
     for (const row of rows) {
       if (this.#inFlight.size >= this.lane.concurrency) break;
       const event = toDueEvent(row);
-      const key = this.lane.keyOf(event);
+      // F-1847: an event whose key cannot be read is 1 failed run of that event (logged, and excluded for the rest of a
+      // drain), never a throw that would end the pass before the serial lane's drain runs.
+      const k = this.#keyOf(event, opts.demoNow);
+      if ('run' in k) {
+        started.push(Promise.resolve(k.run));
+        continue;
+      }
+      const { key } = k;
       // Per key in (due_at, id) order: a key's later event never starts before its earlier one.
       if (seen.has(key) || this.#inFlight.has(key)) {
         seen.add(key);
@@ -372,6 +440,9 @@ export class LaneRunner<P = unknown, R = unknown> {
       for (const p of started) void p.then(tally);
       if (this.#inFlight.size === 0) {
         if (started.length === 0) return report;
+        // Every run started is already settled (a key that could not be read, F-1847): let their tallies land first, so
+        // the next fill excludes them.
+        await Promise.all(started);
         continue;
       }
       await Promise.race(this.#inFlight.values());
@@ -423,6 +494,8 @@ export function startDispatcher(opts: {
   lanes?: readonly ParallelLane[];
   log: Logger;
   intervalMs?: number;
+  /** The real-time source of the failing pass's repeat (F-1846); default performance.now. */
+  realMs?: () => number;
 }): Dispatcher {
   const { pool, clock, handlers, log } = opts;
   const giveUps = opts.giveUps ?? {};
@@ -430,32 +503,21 @@ export function startDispatcher(opts: {
   const runners = (opts.lanes ?? []).map((lane) => {
     const overlap = lane.kinds.filter((k) => k in handlers);
     if (overlap.length > 0) throw new Error(`event kinds ${overlap.join(', ')} are in both the serial and the ${lane.name} lane`);
-    return new LaneRunner(pool, lane);
+    return new LaneRunner(pool, lane, log);
   });
   let chain: Promise<unknown> = Promise.resolve();
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let failing = false;
+  const passes = failingStep(log, { failed: 'dispatcher pass failed', recovered: 'dispatcher pass recovered' }, opts.realMs);
 
-  const logFailed = (report: DrainReport, now: Instant) => {
-    if (report.failed.length > 0) log.error({ status: 'unhandled error', errorCode: 'event_handler_failed', demoTime: toWire(now, 'UTC') });
-  };
   // A timer tick: the serial lane runs its pass (serialized with the other passes) while each parallel lane only tops up
-  // its free slots, so a call held 30 s never holds up the serial lane's next pass.
+  // its free slots, so a call held 30 s never holds up the serial lane's next pass. Each failed run of an event is logged
+  // where it failed (noteHandlerFailure, LaneRunner), with its kind and id (F-1844).
   const pass = async (): Promise<DrainReport> => {
     const epoch = await clock.worldEpoch();
     const now = await clock.demoNow();
-    for (const r of runners) {
-      const started = await r.fill({ through: now, demoNow: now, epoch });
-      for (const p of started) {
-        void p.then((run) => {
-          if ('failed' in run) log.error({ status: 'unhandled error', errorCode: 'event_handler_failed', demoTime: toWire(now, 'UTC') });
-        });
-      }
-    }
-    const report = await drainDue(pool, handlers, { through: now, demoNow: now, giveUps, epoch });
-    logFailed(report, now);
-    return report;
+    for (const r of runners) await r.fill({ through: now, demoNow: now, epoch });
+    return drainDue(pool, handlers, { through: now, demoNow: now, giveUps, epoch, log });
   };
   const serialize = <T>(f: () => Promise<T>): Promise<T> => {
     const p = chain.then(f);
@@ -468,27 +530,21 @@ export function startDispatcher(opts: {
   const drainBoth = async (o: { through: Instant; demoNow: Instant; replayTarget?: Instant; epoch: number }): Promise<DrainReport> => {
     let total: DrainReport = { ran: 0, skipped: 0, failed: [] };
     for (;;) {
-      const [serial, ...parallel] = await Promise.all([serialize(() => drainDue(pool, handlers, { ...o, giveUps })), ...runners.map((r) => r.drain(o))]);
+      const [serial, ...parallel] = await Promise.all([serialize(() => drainDue(pool, handlers, { ...o, giveUps, log })), ...runners.map((r) => r.drain(o))]);
       const round = parallel.reduce(merge, serial);
       total = merge(total, round);
       if (round.ran + round.skipped === 0) return total;
     }
   };
-  const drainThrough = async (o: { through: Instant; demoNow: Instant; replayTarget?: Instant; epoch: number }): Promise<DrainReport> => {
-    const report = await drainBoth(o);
-    logFailed(report, o.demoNow);
-    return report;
-  };
+  const drainThrough = (o: { through: Instant; demoNow: Instant; replayTarget?: Instant; epoch: number }): Promise<DrainReport> => drainBoth(o);
   const loop = (): void => {
     if (stopped) return;
     serialize(pass)
-      .then(() => {
-        failing = false;
-      })
-      .catch(() => {
-        // A pass that cannot start (no database yet, no clock row before setup): logged once until a pass succeeds.
-        if (!failing) log.error({ status: 'unhandled error', errorCode: 'dispatcher_pass_failed' });
-        failing = true;
+      .then(() => passes.ok())
+      .catch((e: unknown) => {
+        // A pass that cannot start (no database yet, no clock row before setup), F-1846: logged with its cause at once,
+        // again every 10 real minutes while passes keep failing, and once when a pass succeeds again.
+        passes.failed(e);
       })
       .finally(() => {
         if (!stopped) timer = setTimeout(loop, intervalMs);

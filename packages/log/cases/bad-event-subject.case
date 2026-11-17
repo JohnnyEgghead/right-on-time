@@ -1,0 +1,7 @@
+// Planted case (must fail type checking, F-1844): an event line with its new fields and a field outside the new list,
+// the event's subject, which can name a job or a customer.
+import { createLogger } from '../src/index.ts';
+import { FixedClock } from '@bw/time';
+
+const log = createLogger({ process: 'worker', clock: new FixedClock({ demo: '2026-09-15T14:00:00Z' }) });
+log.error({ status: 'event failed', eventKind: 'text.try', eventId: '0192f0a4-1111-4222-8333-944455556666', errorCode: '40P01', subject: '2481' });

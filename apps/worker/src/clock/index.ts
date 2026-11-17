@@ -7,12 +7,14 @@
 //   - Cleanup after each confirmed reset and hourly (./cleanup.ts).
 // One loop keeps the resets off a running replay and the confirmer off a reset it has not seen commit; the event
 // dispatcher still runs its own 1 s passes beside it (the replay drains through the dispatcher's drainThrough).
-// A step that throws (no database, no clock row before setup) is logged once until a step succeeds, and the loop goes on.
+// A step that throws (no database, no clock row before setup) is logged with its cause, again every 10 real minutes while
+// it keeps throwing, and once when it succeeds again (F-1846), and the loop goes on.
 import type { createPool } from '@bw/db';
 import type { Logger } from '@bw/log';
 import type { Clock } from '@bw/time';
 import { HttpBillingClient, type BillingClient } from '../billing/client.ts';
 import type { Dispatcher } from '../dispatcher.ts';
+import { failingStep, type FailingStep } from '../failing.ts';
 import { cleanup, CLEANUP_EVERY_MS } from './cleanup.ts';
 import { confirmStep, ConfirmerState, RESET_CONFIRM_EVERY_MS } from './confirmer.ts';
 import { replayStep, ReplayState } from './replay.ts';
@@ -34,7 +36,11 @@ export interface ClockJobDeps {
   dispatcher: Pick<Dispatcher, 'drainThrough' | 'kinds'>;
   /** The billing service (default: the HTTP client to PBS_URL). */
   billing?: Pick<BillingClient, 'reset'>;
+  /** The real-time source of a failing step's repeat (F-1846); default performance.now. */
+  realMs?: () => number;
 }
+
+type StepName = 'clock_replay' | 'reset_confirmer' | 'auto_reset' | 'cleanup';
 
 const date = (i: { epochMilliseconds: number }): Date => new Date(i.epochMilliseconds);
 
@@ -49,14 +55,20 @@ export function startClockJobs(d: ClockJobDeps): { readonly name: string; stop()
   let nextConfirm = 0;
   let nextIdle = 0;
   let nextCleanup = 0;
-  const failing = new Set<string>();
-  const guarded = async (name: string, f: () => Promise<void>): Promise<void> => {
+  // F-1846: each step's failure is logged with its cause at once, again every 10 real minutes while it keeps failing,
+  // and once when the step succeeds again (./failing.ts).
+  const steps: Record<StepName, FailingStep> = {
+    clock_replay: failingStep(d.log, { failed: 'clock replay failed', recovered: 'clock replay recovered' }, d.realMs),
+    reset_confirmer: failingStep(d.log, { failed: 'reset confirmer failed', recovered: 'reset confirmer recovered' }, d.realMs),
+    auto_reset: failingStep(d.log, { failed: 'auto reset failed', recovered: 'auto reset recovered' }, d.realMs),
+    cleanup: failingStep(d.log, { failed: 'cleanup failed', recovered: 'cleanup recovered' }, d.realMs),
+  };
+  const guarded = async (name: StepName, f: () => Promise<void>): Promise<void> => {
     try {
       await f();
-      failing.delete(name);
-    } catch {
-      if (!failing.has(name)) d.log.error({ status: 'unhandled error', errorCode: `${name}_failed` });
-      failing.add(name);
+      steps[name].ok();
+    } catch (e) {
+      steps[name].failed(e);
     }
   };
   const runCleanup = () =>

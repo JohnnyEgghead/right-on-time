@@ -177,6 +177,8 @@ docker exec "$HARNESS" sh -c "mkdir -p /h && cd /h && npm init -y >/dev/null && 
 docker cp "$here/smoke.mjs" "$HARNESS:/h/smoke.mjs"
 # smoke.mjs opens its context through the outside-origin guard every Playwright file uses (F-40), copied from this checkout beside it.
 docker cp "$here/../page-walkers/origin-guard.ts" "$HARNESS:/h/origin-guard.ts"
+# F-1880: and its whole import closure (browser-log.ts); smoke.test.ts fails when a copied file imports one that is not copied.
+docker cp "$here/../page-walkers/browser-log.ts" "$HARNESS:/h/browser-log.ts"
 eng tar -C /work/copy/packages/db/src -cf - passwords.ts | docker cp - "$HARNESS:/h"
 
 # 5. Outside hosts blocked: no new connection leaves the engine's networks (replies to the harness stay).

@@ -7,6 +7,7 @@
 // on-screen store with 1 one-time link, shown to that manager on the alert (FR-AUTH-8 note, alert_email_link).
 import { alertEventIds, EMAIL_LINK_HOURS, hashToken, newToken, publishEvent, sendEmail, type Queryable } from '@bw/db';
 import { ALERT_FACTS, ALERT_TYPES, type AlertType } from '@bw/domain';
+import { causeCodeOf } from '@bw/log';
 import type { Clock, Instant } from '@bw/time';
 import { alertEmailWords, type CopyLanguage } from './copy.ts';
 import { INFO_RULES, RULES, type RuleEnv, type Wanted } from './rules.ts';
@@ -29,11 +30,13 @@ export interface RuleFailure {
   constraint: string | null;
 }
 
-/** The safe description of a thrown error: the code and constraint a log line and the result line may carry. */
+/**
+ * The safe description of a thrown error: the code and constraint a log line and the result line may carry. The code is
+ * @bw/log causeCodeOf (F-1844: made from this function, and now the 1 helper every failure line of every process uses).
+ */
 export function failureOf(type: AlertType, e: unknown): RuleFailure {
-  const err = e as { code?: unknown; constraint?: unknown; name?: unknown };
-  const code = typeof err?.code === 'string' && err.code !== '' ? err.code : typeof err?.name === 'string' && err.name !== '' ? err.name : 'Error';
-  return { type, code, constraint: typeof err?.constraint === 'string' ? err.constraint : null };
+  const err = e as { constraint?: unknown } | null | undefined;
+  return { type, code: causeCodeOf(e), constraint: typeof err?.constraint === 'string' ? err.constraint : null };
 }
 
 export interface CheckEnv {

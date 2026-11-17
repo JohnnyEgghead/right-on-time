@@ -30,7 +30,7 @@ You need Docker (or Podman or Colima, see below) with Compose, plus Node 26.12.1
    cp .env.example .env
    ```
 
-2. Download the map files and the street list from their GitHub releases, and check them:
+2. Download the map files and the street list from their GitHub releases, and check them. This is about 2.8 GB, so allow time and disk space: 2.7 GB of it is the routing service's files, which `pnpm run setup:maps` fetches.
 
    ```sh
    node ci/data-assets.ts ensure
@@ -55,7 +55,7 @@ Every setting is an environment variable with an own-copy default. These 2 sit s
 | Setting | Own copy default | Hosted demo | What it does |
 |---|---|---|---|
 | `DEMO_MODE` | `off` | `on` | Demo mode: the web sign-in page offers a "Sign in as" list of the sample people, with an on-screen marker. |
-| `RESET_PROTECTION` | `off` | `on` | Reset protection: with it `on`, Forgot password answers "not sent" for every address. With demo mode on, a sample person is refused whatever this setting says, so the password the start page lists keeps working. With it `off` (your copy), a staff member who forgot a password resets it from the on-screen email inbox. |
+| `RESET_PROTECTION` | `off` | `on` | Reset protection: with it `on`, Forgot password answers "not sent" for every address. With demo mode on, a sample person is refused whatever this setting says, so the password the start page lists keeps working. With it `off` (your copy), a staff member who forgot a password resets it from the on-screen email inbox. So with it `off`, anyone who can reach the sign-in page can reset any staff password, a manager's included: keep a copy with it `off` on a network only you use. |
 
 The hosted demo turns reset protection on so that a visitor cannot lock the sample people out. Your own copy leaves it off.
 
@@ -75,10 +75,13 @@ You need Node 26.12.1 (`.node-version`), pnpm 12.14.0 (the `packageManager` fiel
 
 ```sh
 pnpm install --frozen-lockfile
+node ci/data-assets.ts ensure
 pnpm run lint
 pnpm run typecheck
 pnpm run test
 ```
+
+The `ensure` line fetches the street list (setup step 2) once: some tests read it.
 
 `pnpm run setup` writes the sample world into a database. It needs `DATABASE_URL` (the schema owner) and `SAMPLE_PASSWORD_SEED` set in your shell. Bare `pnpm setup` is pnpm's own command, so type `pnpm run setup`.
 
@@ -91,4 +94,4 @@ pnpm run test
 | `infra/` | Compose file, nginx, the image, deploy scripts |
 | `ci/` | The checks that run before a change merges |
 
-Some comments and test notes in the code name paths under `docs/build/` and `.build/evidence/`. Those are the maintainer's private build records. They are not part of this repository, so those paths do not exist here and need no action from you.
+Some comments and test notes in the code name paths under `docs/build/`, `.build/evidence/`, `mockups/` and `docs/UI-SPECIFICATION.md`. Those are the maintainer's private build records and design files. They are not part of this repository, so those paths do not exist here and need no action from you. A test that reads one of them skips here, and its skip note names the missing path.

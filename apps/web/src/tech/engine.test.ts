@@ -8,7 +8,7 @@ import { createClient, PROBLEM_TYPE_PREFIX } from '@bw/api';
 import { DexieItemStore, type QueuedItem } from '@bw/outbox/src/items/index.ts';
 import { Temporal } from '@bw/time';
 import { describe, expect, it } from 'vitest';
-import { NotReadyError, TechOutbox } from './engine.ts';
+import { NotReadyError, TechOutbox, type EngineDeps } from './engine.ts';
 import { webTransport, wireItem } from './transport.ts';
 
 const ORIGIN = 'http://phone.test';
@@ -30,7 +30,7 @@ interface Server {
   items: Map<string, unknown>;
 }
 
-function world(start = Temporal.Instant.from('2026-11-08T15:00:00Z'), joinLimitMs?: number, callLimitMs?: number) {
+function world(start = Temporal.Instant.from('2026-11-08T15:00:00Z'), joinLimitMs?: number, callLimitMs?: number, lock?: EngineDeps['lock']) {
   const server: Server = { calls: [], down: false, hang: false, hangOnce: new Set(), proxyCapBytes: null, uploads: [], status: {}, items: new Map() };
   const fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = new URL(String(input));
@@ -87,7 +87,7 @@ function world(start = Temporal.Instant.from('2026-11-08T15:00:00Z'), joinLimitM
   const engine = new TechOutbox({
     store, client, transport: webTransport(client, { baseUrl: ORIGIN, fetch, ...(callLimitMs !== undefined ? { limitMs: () => callLimitMs } : {}) }),
     deviceNow: () => now, bannerNow: () => now.epochMilliseconds, isOnline: () => online, device: 'Web app',
-    ...(joinLimitMs !== undefined ? { joinLimitMs } : {}),
+    ...(joinLimitMs !== undefined ? { joinLimitMs } : {}), ...(lock ? { lock } : {}),
   });
   return {
     server, store, engine,
@@ -295,3 +295,55 @@ describe('the 24-hour banner (FR-TECH-7, CTL-CMP-10-03)', () => {
     expect([w.engine.snapshot.oldCount, (w.engine.snapshot.waiting as QueuedItem[]).length]).toEqual([1, 1]);
   });
 });
+
+describe('a sync never rejects (F-1849)', () => {
+  const quota = () => new DOMException('the store is full', 'QuotaExceededError');
+  const states = (w: ReturnType<typeof world>) => {
+    const seen: boolean[] = [];
+    w.engine.subscribe((s) => { seen.push(s.sending); });
+    return seen;
+  };
+
+  // why: F-1849: a store that threw inside a sync rejected the sync, so the page's void sync() was an unhandled rejection and Sending could stay on.
+  it('resolves null when the store throws mid-send, leaves Sending, keeps the item waiting, and sends it once on the next sync', async () => {
+    const w = world();
+    await w.engine.sync();
+    w.setOnline(false);
+    const a = await w.engine.enter({ jobNumber: 24830, baseVersion: 3, body: { kind: 'arrived' } });
+    w.setOnline(true);
+    const markAnswered = w.store.markAnswered.bind(w.store);
+    const waiting = w.store.waiting.bind(w.store);
+    let failWaiting = 0;
+    w.store.markAnswered = async () => { failWaiting = 1; throw quota(); };
+    w.store.waiting = async () => { if (failWaiting > 0 && --failWaiting === 0) throw quota(); return waiting(); };
+    const seen = states(w);
+    await expect(w.engine.sync()).resolves.toBeNull();
+    expect(w.engine.snapshot.sending).toBe(false);
+    expect(seen.at(-1)).toBe(false);
+    expect((await waiting()).map((i) => i.key)).toEqual([a.key]);
+    w.store.markAnswered = markAnswered;
+    await w.engine.sync();
+    expect([w.engine.snapshot.waiting.length, [...w.server.items.keys()].filter((k) => k === a.key)]).toEqual([0, [a.key]]);
+  });
+
+  // why: F-1849: a lock or a user read that threw rejected the sync; it now ends like a sync with no signal, with no new screen state.
+  it('resolves null when the user write or the cross-tab lock throws, keeps the item waiting, and sends it on the next sync', async () => {
+    const w = world();
+    await w.engine.sync();
+    w.setOnline(false);
+    const a = await w.engine.enter({ jobNumber: 24830, baseVersion: 3, body: { kind: 'on_my_way' } });
+    w.setOnline(true);
+    const saveUser = w.store.saveUser.bind(w.store);
+    w.store.saveUser = async () => { throw quota(); };
+    await expect(w.engine.sync()).resolves.toBeNull();
+    expect([w.engine.snapshot.sending, w.engine.snapshot.waiting.map((i) => i.key)]).toEqual([false, [a.key]]);
+    w.store.saveUser = saveUser;
+    await w.engine.sync();
+    expect(w.engine.snapshot.waiting).toHaveLength(0);
+    expect([...w.server.items.keys()].filter((k) => k === a.key)).toEqual([a.key]);
+    const locked = world(undefined, undefined, undefined, async () => { throw new DOMException('aborted', 'AbortError'); });
+    await expect(locked.engine.sync()).resolves.toBeNull();
+    expect([locked.engine.snapshot.sending, locked.server.calls]).toEqual([false, []]);
+  });
+});
+

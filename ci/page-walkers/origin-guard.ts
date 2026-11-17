@@ -6,8 +6,11 @@
 // Covered: ordinary requests (context.route), requests a service worker makes (context 'request' event; service
 // workers are blocked unless the caller opts in with serviceWorkers: 'allow'), and WebSockets (routeWebSocket).
 // Closing the context first lets its pages' route callbacks finish, so none runs on after its test (F-1421), without unrouting the pages (F-1429).
+// F-1130: every guarded context also has a browser log (ci/page-walkers/browser-log.ts): its pages' console messages, page errors and failed
+// requests, kept in a file only when a case fails.
 // The ci/browser-test-guard.test.ts merge-set check fails a Playwright file that opens a context another way.
 import type { Browser, BrowserContext, BrowserContextOptions, BrowserType, Page } from 'playwright';
+import { recordContext } from './browser-log.ts';
 
 // file: is a local page load (a mockup frame page); its origin is the string null, so it is allowed by scheme.
 const LOCAL_SCHEMES = ['data:', 'blob:', 'about:', 'file:'];
@@ -38,7 +41,7 @@ export async function guardedContext(
   guard: GuardOptions = {},
 ): Promise<GuardedContext> {
   // route() does not see requests a service worker handles, so workers are blocked unless a test opts in.
-  return installGuard(await browser.newContext({ serviceWorkers: 'block', ...options }), allowedOrigins, guard);
+  return installGuard(await browser.newContext({ serviceWorkers: 'block', ...options }), allowedOrigins, guard, browser.browserType().name());
 }
 
 /**
@@ -52,10 +55,11 @@ export async function guardedPersistentContext(
   options: BrowserContextOptions = {},
   guard: GuardOptions = {},
 ): Promise<GuardedContext> {
-  return installGuard(await type.launchPersistentContext(userDataDir, { headless: true, serviceWorkers: 'block', ...options }), allowedOrigins, guard);
+  return installGuard(await type.launchPersistentContext(userDataDir, { headless: true, serviceWorkers: 'block', ...options }), allowedOrigins, guard, `${type.name()} persistent`);
 }
 
-async function installGuard(context: BrowserContext, allowedOrigins: string[], guard: GuardOptions): Promise<GuardedContext> {
+async function installGuard(context: BrowserContext, allowedOrigins: string[], guard: GuardOptions, engine: string): Promise<GuardedContext> {
+  recordContext(context, engine);
   const outside: string[] = [];
   const record = (url: string) => {
     if (!outside.includes(url)) outside.push(url);

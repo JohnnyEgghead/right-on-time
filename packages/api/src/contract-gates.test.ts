@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: SD-4, SD-5, FR-CONTRACT-4 (@bw/api: mounting, versioning, paging, envelope and labels, error catalog, contract-diff, typed client)
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -32,8 +32,13 @@ const sample = defineContract({
 });
 const goodBody = { data: { id: 'x', home: '1 Main St', rate: 0.5 }, meta: { ...META, contract: 'API-900', labels: ['simulated_pilot_data', 'fictional_addresses'] } };
 
+// F-1852: docs/UI-SPECIFICATION.md is a private path (scripts/private-paths.txt), so in a public copy this test skips with a note
+// naming it; the private checkout has it and the test runs.
+const noUiSpec = existsSync(path.join(repo, 'docs', 'UI-SPECIFICATION.md')) ? '' : 'docs/UI-SPECIFICATION.md is not in this copy (a private path the public export leaves out)';
+
 describe('error catalog', () => {
-  it('has exactly the codes of UI-SPECIFICATION 4.3 (plus nothing, and offline stays client only)', () => {
+  it('has exactly the codes of UI-SPECIFICATION 4.3 (plus nothing, and offline stays client only)', (ctx) => {
+    if (noUiSpec) ctx.skip(noUiSpec);
     // why: FR-CONTRACT-4 the catalog in code must not drift from the table the UI maps messages from
     const doc = readFileSync(path.join(repo, 'docs', 'UI-SPECIFICATION.md'), 'utf8');
     const section = doc.slice(doc.indexOf('### 4.3 Error catalog'), doc.indexOf('### 4.4 Live updates'));

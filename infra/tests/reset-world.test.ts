@@ -121,6 +121,17 @@ describe('infra/deploy/reset-world.sh --local (F-1801)', () => {
     expect(third.out).toContain('the new world starts at epoch 4');
   });
 
+  // why: F-1828 a saved old epoch below the live world's epoch (the world came back another way, later resets raised it) must not win: the live one is used and the log says so
+  it('uses the live epoch when it is above the saved one, and says which it used', () => {
+    const first = run('stale', { epoch: 7, epochAfter: 1, migrateFail: true });
+    expect(first.status).toBe(1);
+    const second = run('stale', { epoch: 9, epochAfter: 1 });
+    expect(second.status, second.out).toBe(0);
+    expect(second.out).toContain("the live world's epoch 9 is above the saved 7");
+    expect(second.out).toContain('the new world starts at epoch 10');
+    expect(second.calls.map(([c]) => sub(c)).some((c) => /SET world_epoch = 10, pbs_epoch = 9/.test(c))).toBe(true);
+  });
+
   // why: F-1817 a world at epoch 1 (or none) needs no raise: setup's own epoch 1 is already above nothing, and the new world is not below the old
   it('leaves setup at epoch 1 when the old world was at epoch 0 or gave no answer', () => {
     for (const epoch of [0]) {

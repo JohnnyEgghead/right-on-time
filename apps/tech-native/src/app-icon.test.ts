@@ -3,9 +3,13 @@
 // The iPhone app's icon file and how it is drawn (scripts/app-icon.mts): 1024 x 1024 with no alpha channel, the kit frame's own mark on a
 // white tile at the .appicon proportion, and the app still named Right On Time. The pixel-for-pixel match with a fresh rsvg-convert draw
 // runs on the owner's Mac (`node apps/tech-native/scripts/app-icon.mts --check`; rsvg-convert is not on the CI runners).
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { APP_JSON, decodePng, encodeRgbPng, FRAME, ICON, MARK_SHARE, markSvg, pngInfo, SIZE, tileSvg } from '../scripts/app-icon.mts';
+
+// F-1852: mockups/ is a private path (scripts/private-paths.txt), so in a public copy the test that reads the kit frame skips with a
+// note naming it; the private checkout has it and the test runs.
+const noFrame = existsSync(FRAME) ? '' : 'mockups/pages/r1-ios-b.html is not in this copy (a private path the public export leaves out)';
 
 describe('the iPhone app icon (F-1264)', () => {
   // why: FR-IOS-1 App Store Connect takes a 1024 px icon with no alpha channel; the file is 8-bit RGB, every pixel opaque
@@ -20,7 +24,8 @@ describe('the iPhone app icon (F-1264)', () => {
   });
 
   // why: FR-IOS-1 F-1264 the icon is the DK-117 .appicon mark itself, read from the kit frame, on a white tile at 42/66 of its side
-  it('draws the kit frame\'s own mark at the .appicon proportion', () => {
+  it('draws the kit frame\'s own mark at the .appicon proportion', (ctx) => {
+    if (noFrame) ctx.skip(noFrame);
     const frame = readFileSync(FRAME, 'utf8');
     const mark = markSvg(frame);
     expect(mark).toContain('url(#bwDrop)');

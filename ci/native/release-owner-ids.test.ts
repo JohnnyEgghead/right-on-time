@@ -114,11 +114,18 @@ describe('release/export-upload.sh plist from the template (F-1621)', () => {
     copy('infra/drill/owner-env.sh');
     mkdirSync(path.join(tmp, 'apps/tech-native/ios'), { recursive: true });
     mkdirSync(path.join(tmp, 'apps/tech-native/build/RightOnTime.xcarchive'), { recursive: true });
+    put('apps/tech-native/build/RightOnTime.xcarchive/Info.plist', '<plist/>');
+    put('apps/tech-native/app.json', JSON.stringify({ expo: { version: '1.2.3', ios: { buildNumber: '45' } } }));
+    put('plistbuddy.sh', '#!/usr/bin/env bash\ncase "$2" in\n  *Properties:CFBundleShortVersionString) echo "$FAKE_ARCH_VERSION" ;;\n  *Properties:CFBundleVersion) echo "$FAKE_ARCH_BUILD" ;;\n  *) exit 1 ;;\nesac\n', 0o755);
     // The fake signer logs its arguments and keeps a copy of the plist it was given.
     put(`${rel}/xcb-asc.sh`, '#!/usr/bin/env bash\necho "xcb-asc $*" >>"$CALLS"\nwhile [ $# -gt 0 ]; do [ "$1" != -exportOptionsPlist ] || cp "$2" "$CALLS.plist"; shift; done\necho "** EXPORT SUCCEEDED **"\n', 0o755);
   });
+  // F-1832: a fake PlistBuddy answers the archive's 2 values from FAKE_ARCH_VERSION / FAKE_ARCH_BUILD (the real one exists only on macOS).
   const run = (mode: string, extra: Record<string, string | undefined>) =>
-    spawnSync('bash', [path.join(tmp, rel, 'export-upload.sh'), mode, path.join(tmp, 'ev')], { encoding: 'utf8', env: envWith(extra) });
+    spawnSync('bash', [path.join(tmp, rel, 'export-upload.sh'), mode, path.join(tmp, 'ev')], {
+      encoding: 'utf8',
+      env: envWith({ BW_PLISTBUDDY: path.join(tmp, 'plistbuddy.sh'), FAKE_ARCH_VERSION: '1.2.3', FAKE_ARCH_BUILD: '45', ...extra }),
+    });
 
   // why: F-1621 the committed template holds a placeholder, never a team id: each run writes the plist with the owner's team id once
   // why: F-1721 export and upload stay TestFlight internal only (true); store is the App Store eligible upload (false)
@@ -135,6 +142,22 @@ describe('release/export-upload.sh plist from the template (F-1621)', () => {
     expect(readFileSync(path.join(tmp, 'calls.log.plist'), 'utf8')).toBe(plist);
     expect(calls()).toHaveLength(1);
     expect(r.stdout).toContain(`export-upload: ${mode} exit 0`);
+  });
+
+  // why: F-1832 an upload of an archive whose version or build number differs from app.json is refused before the signer (and so any network call) runs
+  it.each([['upload'], ['store']])('%s refuses an archive that does not match app.json, naming both values', (mode) => {
+    for (const extra of [{ FAKE_ARCH_BUILD: '6' }, { FAKE_ARCH_VERSION: '0.1.0' }]) {
+      const r = run(mode, { BW_APPLE_TEAM_ID: TEAM, ...extra });
+      expect(r.status).toBe(2);
+      expect(r.stderr).toMatch(/the archive is version \S+ build \S+ but app\.json says version 1\.2\.3 build 45; nothing uploaded/);
+      expect(calls()).toEqual([]);
+    }
+  });
+
+  // why: F-1832 export sends nothing to Apple, so a stale archive does not stop it
+  it('export does not check the archive version', () => {
+    const r = run('export', { BW_APPLE_TEAM_ID: TEAM, FAKE_ARCH_BUILD: '6' });
+    expect(r.status, r.stderr).toBe(0);
   });
 
   // why: F-1621 the committed template holds the placeholder in the team id's place (ci/public-files.ts owner-ids checks no id is there)

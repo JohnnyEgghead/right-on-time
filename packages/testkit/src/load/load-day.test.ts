@@ -209,8 +209,9 @@ function checkSet(record: string, prefix: string, { out, mem }: { out: Out; mem:
 
 describe('the P7-LOAD record', () => {
   // why: NFR-02, NFR-03, NFR-13 the record's figures are the output files' own, whatever the verdict; a record without its files fails
-  it('holds the page p95, the error and lost-update counts and the peak host memory of the output files', () => {
-    if (!existsSync(RECORD)) return; // the lane writes the record after its run
+  // why: F-1863 a public copy skips this with a note naming docs/build/spikes/P7-LOAD.md, never passes it green with no proof run
+  it('holds the page p95, the error and lost-update counts and the peak host memory of the output files', (ctx) => {
+    if (!existsSync(RECORD)) ctx.skip('docs/build/spikes/P7-LOAD.md is not in this copy (a private path the public export leaves out)');
     const record = readFileSync(RECORD, 'utf8');
     const day1 = setOf('');
     expect(day1, 'the record exists but docs/build/spikes/P7-LOAD.summary.json and .memory.json are missing').not.toBeNull();
@@ -231,8 +232,9 @@ describe('the P7-LOAD record', () => {
   });
 
   // why: F-1498 the routing-stopped arm is its own set beside the verdict's, never its pass line: its summary names the arm and its memory file holds no routing service
-  it('keeps the routing-stopped arm beside the verdict, with its own host peak', () => {
-    if (!existsSync(RECORD)) return;
+  // why: F-1863 the same skip note when the record is absent
+  it('keeps the routing-stopped arm beside the verdict, with its own host peak', (ctx) => {
+    if (!existsSync(RECORD)) ctx.skip('docs/build/spikes/P7-LOAD.md is not in this copy (a private path the public export leaves out)');
     const arm = setOf('.norouting');
     if (!arm) return; // the arm is measured by the rerun
     const record = readFileSync(RECORD, 'utf8');

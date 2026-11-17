@@ -4,7 +4,7 @@
 // stops them on SIGTERM. A job joins in jobs.ts, never here (F-269).
 import { configOrExit, ConfigError, databasePassword, exitWithMessage } from '@bw/config';
 import { createPool } from '@bw/db';
-import { createLogger } from '@bw/log';
+import { createLogger, exitOnUncaughtException, exitOnUnhandledRejection } from '@bw/log';
 import { DbClock } from '@bw/time';
 import { configureRouting, ROUTING_SERVICE_URL } from '../../../packages/maps/src/route-source.ts';
 import { WORKER_POOL_MAX } from './billing/link.ts';
@@ -25,6 +25,10 @@ if (password !== undefined) url.password = encodeURIComponent(password);
 
 // Lines go through @bw/log (log-allowlist, F-234), so each carries the real-time stamp (NFR-05, F-190).
 const log = createLogger({ process: 'worker', level: settings.LOG_LEVEL });
+// F-1845: a rejection no code handled is an error line with its cause code, then exit 1 (Compose restarts the process).
+exitOnUnhandledRejection(log);
+// F-1870: the same for an exception no code caught, so Node's default (the message and stack on stderr) never prints.
+exitOnUncaughtException(log);
 const pool = createPool({ connectionString: url.toString(), application_name: 'bw-worker', max: WORKER_POOL_MAX, connectionTimeoutMillis: 5_000, idleTimeoutMillis: 30_000 });
 pool.on('error', () => log.error({ status: 'unhandled error', errorCode: 'server_error' }));
 const clock = new DbClock(pool);

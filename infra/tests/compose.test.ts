@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Static checks of infra/compose.yaml and the demo profile against SPECIFICATIONS SD-3 and 11.1.
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -36,7 +36,12 @@ function capMib(service: string, env: Record<string, string> = {}): number {
 
 // The routing record's instrument file (docs/build/spikes/P6-ROUTING-MEMORY.md): the hosted figures a test counts come from it only.
 type MacCloseMode = { tag: string; passes: boolean; perRun: { burst: { legs: number; routed: number; legsSha256: string | null; ms: { p95: number | null } } }[]; setting: string };
-const routingSummary = JSON.parse(readFileSync(path.join(root, 'docs/build/spikes/P6-ROUTING-MEMORY.summary.json'), 'utf8')) as {
+// F-1852: docs/build/ and docs/SPECIFICATIONS.md are private paths (scripts/private-paths.txt), so in a public copy the tests that
+// read them skip with a note naming the path; the private checkout has both and they run.
+const absent = (rel: string): string => (existsSync(path.join(root, rel)) ? '' : `${rel} is not in this copy (a private path the public export leaves out)`);
+const noRoutingSummary = absent('docs/build/spikes/P6-ROUTING-MEMORY.summary.json');
+const noSpec = absent('docs/SPECIFICATIONS.md');
+const routingSummary = (noRoutingSummary ? {} : JSON.parse(readFileSync(path.join(root, 'docs/build/spikes/P6-ROUTING-MEMORY.summary.json'), 'utf8'))) as {
   serverCap: { instancePlan: string; routingCap: number; routingAnonMaxMiB: { max: number }; hostUsedPercentOfPlan: number; burstRouted: string[]; burstP95Ms: { max: number }; sd49LimitMs: number };
   macClose: { passLine: string; localCap: { uncappedPeakMiB: number; capMiB: number; marginMiB: number }; modes: MacCloseMode[] };
 };
@@ -112,7 +117,8 @@ describe('infra/compose.yaml', () => {
   });
 
   // why: F-295 setup's cap is measured, and the caps of what runs beside setup fit the hosted plan; F-1291 routing counted at its cap
-  it("caps setup above its measured peak, and the running stack plus setup inside the hosted plan's memory", () => {
+  it("caps setup above its measured peak, and the running stack plus setup inside the hosted plan's memory", (ctx) => {
+    if (noRoutingSummary) ctx.skip(noRoutingSummary);
     // The hosted server's caps: compose.yaml's, with infra/hosted/hosted.env's routing cap (D-21: 320m on every Lightsail copy).
     const mib = (s: string): number => capMib(s, envFile('infra/hosted/hosted.env'));
     // docs/build/spikes/P2-SETUP.md (F-282): setup's cgroup memory.peak on small_3_0 with the stack up, at most 624 MiB;
@@ -139,7 +145,8 @@ describe('infra/compose.yaml', () => {
   });
 
   // why: F-1322 routing's cap is the one measured for each kind of copy: 320m on every Lightsail copy, the Mac rig's measured cap locally
-  it('caps routing at 320m on every Lightsail copy and at the measured local cap elsewhere', () => {
+  it('caps routing at 320m on every Lightsail copy and at the measured local cap elsewhere', (ctx) => {
+    if (noRoutingSummary) ctx.skip(noRoutingSummary);
     const c = routingSummary.serverCap;
     // the Lightsail cap: measured on small_3_0, every leg routed within SD-49, and NFR-13 within 60% by host used memory (D-21)
     expect(c.instancePlan).toBe('small_3_0');
@@ -290,7 +297,8 @@ describe('infra/compose.yaml', () => {
   });
 
   // why: SD-3
-  it('defaults every 11.1 setting to the own-copy value, and the demo profile holds the hosted values', () => {
+  it('defaults every 11.1 setting to the own-copy value, and the demo profile holds the hosted values', (ctx) => {
+    if (noSpec) ctx.skip(noSpec);
     const spec = specSettings();
     expect(spec.size).toBeGreaterThanOrEqual(10);
     const demo = envFile('infra/profiles/demo.env');

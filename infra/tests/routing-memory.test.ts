@@ -2,12 +2,19 @@
 // P6-ROUTING-MEMORY (OQ-42): the record's verdict and figures follow from the instrument's output file, and the routing cap follows the
 // verdict. docs/build/spikes/P6-ROUTING-MEMORY.summary.json is made by infra/load/routing-memory-summary.mjs (the Mac-shaped rig) and
 // infra/load/routing-memory-server-summary.mjs (the temporary small_3_0 copy) from the raw files only.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const read = (rel: string): string => readFileSync(path.join(root, rel), 'utf8');
+// F-1852: docs/build/ is a private path (scripts/private-paths.txt), so a public copy has neither record file and every test here
+// skips with a note naming them; the private checkout has both and every test runs.
+const noRecord = ['docs/build/spikes/P6-ROUTING-MEMORY.summary.json', 'docs/build/spikes/P6-ROUTING-MEMORY.md'].every((rel) => existsSync(path.join(root, rel)))
+  ? '' : 'docs/build/spikes/P6-ROUTING-MEMORY.summary.json and .md are not in this copy (a private path the public export leaves out)';
+beforeEach((ctx) => {
+  if (noRecord) ctx.skip(noRecord);
+});
 type Spread = { min: number; max: number };
 type Mode = { tag: string; mode: string; runs: number; peakMiB: Record<string, { peakMiB: number }>; stackPeakPercentOfPlan: number; burstP95Ms: Spread; disk: { bytes: number } };
 type Server = {
@@ -32,14 +39,14 @@ type CloseMode = {
   state: Record<string, string>; perRun: { burst: Burst; load: { p95Ms: number } | null; otherProjects: string[] | null }[];
 };
 type LegsCheck = { ok: boolean; listSha256: string; listFileSha256: string | null; listKeys: number; bursts: { file: string; routed: number; setEqual: boolean; legsSha256: string | null; shaMatches: boolean | null }[] };
-const summary = JSON.parse(read('docs/build/spikes/P6-ROUTING-MEMORY.summary.json')) as {
+const summary = (noRecord ? {} : JSON.parse(read('docs/build/spikes/P6-ROUTING-MEMORY.summary.json'))) as {
   head: string; mac: { modes: Mode[] }; server: Server & { perRun: { dockerStats: { stackMaxMiB: number } }[]; vmstat: { idleAvg: Spread; stealAvg: Spread } };
   serverCap: Capped; capBasis: CapBasis;
   macClose: { head: string; appHead: string; passLine: string; modes: CloseMode[]; localCap: { uncappedPeakMiB: number; capMiB: number; marginMiB: number };
     unroutedReads: { pass: boolean; reads: number; unroutedMs: number[]; bakedMs: number[]; ownTimeMs: number; limitMs: number; pair: { fromJob: number; toJob: number } } };
   legsCheck: { server: LegsCheck; mac: LegsCheck };
 };
-const record = read('docs/build/spikes/P6-ROUTING-MEMORY.md');
+const record = noRecord ? '' : read('docs/build/spikes/P6-ROUTING-MEMORY.md');
 const s = summary.server;
 const c = summary.serverCap;
 const basis = summary.capBasis;
@@ -49,9 +56,9 @@ const SERVICES = ['proxy', 'web', 'worker', 'pbs', 'db', 'routing'];
 const routes = (r: string): boolean => { const [a, b] = r.split('/').map(Number); return a! * 10 >= b! * 9; };
 const allRouted = (r: string): boolean => { const [a, b] = r.split('/').map(Number); return a === b; };
 // NFR-13's count is host used memory (BUILD_PLAN section 3 D-21; owner answer 8936427c); the cgroup sum and docker stats sit beside it.
-const fits = s.stopped === null && s.burstRouted.every(routes) && s.burstP95Ms.max <= s.sd49LimitMs && s.hostUsedPercentOfPlan <= 60;
+const fits = !noRecord && s.stopped === null && s.burstRouted.every(routes) && s.burstP95Ms.max <= s.sd49LimitMs && s.hostUsedPercentOfPlan <= 60;
 // The capped verdict (W36-ROUTING-CAP): all 5 runs, every leg routed, route p95 within SD-49, 0 kills or restarts, host used within 60%.
-const capFits = c.stopped === null && c.runs === 5 && c.burstRouted.every(allRouted) && c.burstP95Ms.max <= c.sd49LimitMs
+const capFits = !noRecord && c.stopped === null && c.runs === 5 && c.burstRouted.every(allRouted) && c.burstP95Ms.max <= c.sd49LimitMs
   && SERVICES.every((svc) => c.events[svc]?.oom_kill === 0 && / restarts=0 /.test(c.state[svc] ?? ''))
   && c.hostUsedPercentOfPlan <= 60;
 const verdictLine = /^Verdict: .*$/m.exec(record)?.[0] ?? '';

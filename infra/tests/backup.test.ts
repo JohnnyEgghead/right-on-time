@@ -3,13 +3,18 @@
 // and the FR-IMP-6 numbers the restore test compares. The scripts' behavior is proved on a real stack by
 // infra/backup/tests/backup.stack.test.ts; these keep a later edit from unwiring them.
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseTargets } from '../../ci/gates/import-target-counts/targets.ts';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const read = (p: string) => readFileSync(path.join(root, p), 'utf8');
+// F-1852: docs/build/ and docs/REQUIREMENTS.md are private paths (scripts/private-paths.txt), so in a public copy the tests that
+// read them skip with a note naming the path; the private checkout has both and they run.
+const absent = (p: string): string => (existsSync(path.join(root, p)) ? '' : `${p} is not in this copy (a private path the public export leaves out)`);
+const noHostRecord = absent('docs/build/spikes/G-S5-HOST.md');
+const noRequirements = absent('docs/REQUIREMENTS.md');
 const unit = (name: string) => {
   const out: Record<string, string> = {};
   for (const l of read(`infra/hosted/systemd/${name}`).split('\n')) {
@@ -84,7 +89,8 @@ describe('the deploy ships the backup (infra/deploy)', () => {
 
 describe('the hosted settings (sections 4.8 and 11.1)', () => {
   // why: NFR-10, OQ-12
-  it('turns backups on to the S5 Lightsail bucket in the server Region, a US Region, with no key', () => {
+  it('turns backups on to the S5 Lightsail bucket in the server Region, a US Region, with no key', (ctx) => {
+    if (noHostRecord) ctx.skip(noHostRecord);
     const hosted = envFile('infra/hosted/hosted.env');
     expect(hosted).toMatchObject({ BACKUP_TARGET: 'lightsail', BACKUP_BUCKET: 'brightwater-backup-use1', BACKUP_REGION: 'us-east-1' });
     expect(read('docs/build/spikes/G-S5-HOST.md')).toMatch(/\| Bucket \| brightwater-backup-use1 .*\| us-east-1 \|/);
@@ -95,7 +101,8 @@ describe('the hosted settings (sections 4.8 and 11.1)', () => {
 
 describe('the restore test compares the FR-IMP-6 targets (section 11.7)', () => {
   // why: NFR-07, FR-IMP-6
-  it('import-check.sql holds exactly the numbers of the REQUIREMENTS import target table', () => {
+  it('import-check.sql holds exactly the numbers of the REQUIREMENTS import target table', (ctx) => {
+    if (noRequirements) ctx.skip(noRequirements);
     const t = parseTargets(read('docs/REQUIREMENTS.md'));
     const rows = Object.fromEntries([...read('infra/backup/import-check.sql').matchAll(/\('([^']+)', (\d+), /g)].map((m) => [m[1], Number(m[2])]));
     expect(rows).toEqual({

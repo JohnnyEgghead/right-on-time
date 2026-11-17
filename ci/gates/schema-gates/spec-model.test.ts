@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: SD-40 (schema-doc-parity reads its expected schema from SPECIFICATIONS section 3; this pins how)
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { expectedForeignKeys, parseSpec, SpecParseError } from './spec-model.ts';
 
-const doc = readFileSync(path.resolve(import.meta.dirname, '..', '..', '..', 'docs', 'SPECIFICATIONS.md'), 'utf8');
-const spec = parseSpec(doc);
+// F-1852: docs/SPECIFICATIONS.md is a private path (scripts/private-paths.txt), so in a public copy the tests on the real document
+// skip with a note naming it; the private checkout has it and they run. The planted-row tests below need no file.
+const DOC = path.resolve(import.meta.dirname, '..', '..', '..', 'docs', 'SPECIFICATIONS.md');
+const noDoc = existsSync(DOC) ? '' : 'docs/SPECIFICATIONS.md is not in this copy (a private path the public export leaves out)';
+const spec = noDoc ? (undefined as unknown as ReturnType<typeof parseSpec>) : parseSpec(readFileSync(DOC, 'utf8'));
 const col = (t: string, c: string) => spec.tables.get(t)?.columns.get(c);
 
 /** A minimal section 3 for the parser's error cases. */
@@ -14,14 +17,16 @@ const mini = (rows: string, heading = '#### `thing` (store: world)') =>
   `## 3. Canonical Data Model\n\n${heading}\n\n| Field | Type | Notes |\n|---|---|---|\n${rows}\n\n## 4. Next\n`;
 
 describe('parseSpec on the real SPECIFICATIONS', () => {
-  it('reads every entity table of section 3, its schemas and its view', () => {
+  it('reads every entity table of section 3, its schemas and its view', (ctx) => {
+    if (noDoc) ctx.skip(noDoc);
     expect(spec.tables.size).toBe(62);
     expect(spec.schemas).toEqual(['pbs', 'pbs_snapshot', 'system', 'world', 'world_snapshot']);
     expect(spec.views).toEqual(['world.report_visit']);
     expect([...spec.tables.keys()].filter((k) => k.startsWith('pbs.')).sort()).toEqual(['pbs.call', 'pbs.invoice', 'pbs.invoice_line', 'pbs.mode']);
   });
 
-  it('reads types, null and unique per column, pairing multi-name rows with their types', () => {
+  it('reads types, null and unique per column, pairing multi-name rows with their types', (ctx) => {
+    if (noDoc) ctx.skip(noDoc);
     expect(col('world.job', 'technician_id')).toMatchObject({ type: 'uuid', nullable: true }); // invariant 3
     expect(col('world.job', 'version')).toMatchObject({ type: 'integer', nullable: false }); // D15
     expect(col('world.equipment', 'year')).toMatchObject({ type: 'integer', nullable: true });
@@ -35,7 +40,8 @@ describe('parseSpec on the real SPECIFICATIONS', () => {
     expect(col('world.user_change', 'by')).toMatchObject({ type: 'uuid', nullable: true });
   });
 
-  it('reads each primary-key phrasing as the document means it', () => {
+  it('reads each primary-key phrasing as the document means it', (ctx) => {
+    if (noDoc) ctx.skip(noDoc);
     const pk = (t: string) => spec.tables.get(t)?.primaryKey;
     expect(pk('world.tech_item')).toEqual(['key']); // invariant 1
     expect(pk('pbs.invoice')).toEqual(['job_number']); // invariant 10, "Primary key: 1 invoice per job ever"
@@ -48,7 +54,8 @@ describe('parseSpec on the real SPECIFICATIONS', () => {
     expect(pk('world.text_simulator')).toEqual([]); // 1 row, no key stated
   });
 
-  it('derives the foreign keys of "Nullability and keys", none from the 5 cross-store columns', () => {
+  it('derives the foreign keys of "Nullability and keys", none from the 5 cross-store columns', (ctx) => {
+    if (noDoc) ctx.skip(noDoc);
     const fk = expectedForeignKeys(spec);
     expect(fk.get('world.job.customer_id')).toBe('world.customer.id'); // OI-57
     expect(fk.get('world.job.service_id')).toBe('world.service_type.id'); // explicit note

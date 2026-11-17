@@ -93,9 +93,10 @@ fi
 if [ "$profile" = demo ] && [ -z "$drill" ] && [ -z "$release" ]; then
   echo "--profile demo needs --release <tag>: the open demo runs only the published release image (F-1611)" >&2; exit 2
 fi
-mkdir -p .build/deploy
+log_dir="${BW_DEPLOY_LOG_DIR:-$root/.build/deploy}"
+mkdir -p "$log_dir"
 mode=deploy; [ -z "$drill" ] || mode="drill-$drill"; [ "$host_files" = 0 ] || mode=host-files
-log_file=".build/deploy/$(date -u +%Y%m%dT%H%M%SZ)-$mode.log"
+log_file="$log_dir/$(date -u +%Y%m%dT%H%M%SZ)-$mode.log"
 exec > >(tee "$log_file") 2>&1
 ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 log() { echo "[$(ts)] $*"; }

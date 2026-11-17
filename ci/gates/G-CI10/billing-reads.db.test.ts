@@ -312,3 +312,51 @@ describe('Pretend billing reads (API-65, API-66, API-67)', () => {
     expect(office.id).toBeTruthy();
   });
 });
+
+describe('a send that never reaches a try is listed after 60 demo minutes (API-60, F-1844)', () => {
+  // why: F-1844, FR-BILL-2: an item whose send kept throwing stayed sending with 0 tries, off the list, and no person saw it.
+  it('lists an item still sending with 0 tries once its send has been due 60 demo minutes, and not at 59', async () => {
+    const t0 = Temporal.Instant.from('2026-09-28T14:00:00Z');
+    await w.setDemo(t0.toString());
+    const job = await w.newJob();
+    await w.finish(job, { noPartsUsed: true });
+    // The link never runs the send (a send that keeps throwing writes no try): the item and its due event are as it leaves them.
+    const item = await w.admin().query<{ state: string; tries: number }>('SELECT state, tries FROM world.billing_item WHERE job_number = $1', [job]);
+    expect(item.rows).toEqual([{ state: 'sending', tries: 0 }]);
+    const listed = async () => (await queue()).items.find((i: { jobNumber: number }) => i.jobNumber === job);
+    await w.setDemo(t0.add({ minutes: 59 }).toString());
+    expect(await listed()).toBeUndefined();
+    await w.setDemo(t0.add({ minutes: 60 }).toString());
+    expect(await listed()).toMatchObject({ jobNumber: job, state: 'sending', tries: 0, lastTry: null });
+    // The export carries the same row (FR-BILL-12: the export equals the on-screen rows).
+    const csv = await get('/billing/queue/export?branch=columbus&lang=en');
+    expect(csv.status).toBe(200);
+    expect(rowsOf(csv.text).some((r) => r[0] === String(job))).toBe(true);
+  });
+
+  // why: F-1865, FR-BILL-11: that row was listed but Mark fixed refused it (not_on_billing_list), so the office could not clear it.
+  it('marks fixed the 60-minute sending row with 0 tries through API-158, and its due billing.send is superseded', async () => {
+    const t0 = Temporal.Instant.from('2026-09-29T14:00:00Z');
+    await w.setDemo(t0.toString());
+    const job = await w.newJob();
+    await w.finish(job, { noPartsUsed: true });
+    const events = () => w.rows<{ kind: string; state: string; result: string | null }>(
+      `SELECT kind, state, result FROM world.scheduled_event WHERE subject = $1 AND kind LIKE 'billing.%' ORDER BY kind`, [String(job)]);
+    expect(await events()).toEqual([{ kind: 'billing.send', state: 'due', result: null }]);
+    await w.setDemo(t0.add({ minutes: 60 }).toString());
+    expect((await queue()).items.find((i: { jobNumber: number }) => i.jobNumber === job)).toMatchObject({ state: 'sending', tries: 0 });
+
+    expect((await post(`/billing/queue/${job}/fixed`, { reason: TYPED })).status).toBe(200);
+    const item = await w.rows<{ state: string; left_how: string | null; left_reason: string | null }>(
+      'SELECT state, left_how, left_reason FROM world.billing_item WHERE job_number = $1', [job]);
+    expect(item).toEqual([{ state: 'marked_fixed', left_how: 'marked_fixed', left_reason: TYPED }]);
+    expect(await events()).toEqual([{ kind: 'billing.send', state: 'skipped', result: 'marked_fixed' }]);
+    const after = await queue();
+    expect(after.items.map((i: { jobNumber: number }) => i.jobNumber)).not.toContain(job);
+    expect(after.leftLast7Days.find((l: { jobNumber: number }) => l.jobNumber === job)).toMatchObject({ how: 'marked_fixed', tries: 0, markedReason: TYPED });
+    // The superseded send never runs: no try, and pbs holds the 1 entered-by-hand record.
+    await w.link().runDue();
+    expect(await w.rows('SELECT 1 FROM world.billing_attempt WHERE job_number = $1', [job])).toEqual([]);
+    expect(await w.rows('SELECT how FROM pbs.invoice WHERE job_number = $1', [job])).toEqual([{ how: 'entered_by_hand' }]);
+  });
+});

@@ -246,10 +246,14 @@ describe('runs made in chunks (F-883)', () => {
 
 const RECORD = new URL('../../../../docs/build/spikes/P4-LOAD.md', import.meta.url);
 const OUTPUT = new URL('../../../../docs/build/spikes/P4-LOAD.summary.json', import.meta.url);
+// F-1852: docs/build/ is a private path (scripts/private-paths.txt), so in a public copy the record test skips with a note naming it.
+// In the private checkout the record is there, and a missing output file beside it still fails (F-901).
+const noRecord = existsSync(RECORD) ? '' : 'docs/build/spikes/P4-LOAD.md is not in this copy (a private path the public export leaves out)';
 
 describe('the record', () => {
   // why: NFR-01
-  it('holds the p95 of the script output file: under 5 s over the required runs, on the hosted plan, with its run date', () => {
+  it('holds the p95 of the script output file: under 5 s over the required runs, on the hosted plan, with its run date', (ctx) => {
+    if (noRecord) ctx.skip(noRecord);
     // F-901: a record that claims a measurement while its output file is gone fails; it never passes by skipping
     if (!existsSync(OUTPUT)) {
       expect(readFileSync(RECORD, 'utf8'), 'the record has a Measured line but docs/build/spikes/P4-LOAD.summary.json is missing').not.toMatch(/^Measured: p95/m);

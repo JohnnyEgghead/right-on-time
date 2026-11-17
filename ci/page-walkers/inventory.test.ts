@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: tooling
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -9,6 +9,11 @@ import { ALL_ENGINE_NAMES, resolveEngines } from '../pw-engines.ts';
 import { forbiddenRuns, literalRuns } from './walkers.ts';
 import { countByType, currentPhase, doneCheckpoints, emptyWalkWhy, loadInventory, phaseFromMergedTasks, planTaskIds, planWalk, readMergedTasks, selectMerged, selectRows, walkClass } from './inventory.ts';
 import { forbiddenEnglish } from './walkers.ts';
+
+// F-1852: docs/BUILD_PLAN.md is a private path (scripts/private-paths.txt), so in a public copy the tests that read the plan (the
+// merged tasks on the integration branch, run-inventory's task list) skip with a note naming it; the private checkout has it and
+// they run.
+const noPlan = existsSync(join(import.meta.dirname, '..', '..', 'docs', 'BUILD_PLAN.md')) ? '' : 'docs/BUILD_PLAN.md is not in this copy (a private path the public export leaves out)';
 
 describe('page-walkers inventory selection', () => {
   const rows = loadInventory('acceptance/page-inventory.json');
@@ -76,13 +81,15 @@ describe('current phase (D-9)', () => {
     expect(phaseFromMergedTasks(['P1-REPO', ...doneCheckpoints(plan)])).toBe(2);
     expect(doneCheckpoints('#### CP1 \u2014 x\nStatus: NEW\n')).toEqual([]);
   });
-  it('reads the live merged tasks on the integration branch', () => {
+  it('reads the live merged tasks on the integration branch', (ctx) => {
+    if (noPlan) ctx.skip(noPlan);
     // reason: F-47; the source exists today and gives a phase from 1 to 9
     const n = currentPhase(undefined, readMergedTasks);
     expect(n).toBeGreaterThanOrEqual(1);
     expect(n).toBeLessThanOrEqual(9);
   });
-  it('run-inventory exits 2 on an unreadable BW_PHASE and 0 on an empty selection', () => {
+  it('run-inventory exits 2 on an unreadable BW_PHASE and 0 on an empty selection', (ctx) => {
+    if (noPlan) ctx.skip(noPlan);
     // reason: F-39; fail closed
     const run = (phase: string) =>
       spawnSync('node', ['ci/page-walkers/run-inventory.ts'], { env: { ...process.env, BW_PHASE: phase }, encoding: 'utf8' });
@@ -111,7 +118,8 @@ describe('select a row once its task is merged (F-154)', () => {
     expect(after.selected.map((r) => r.screen)).toEqual(['SCR-X-01']);
     expect(after.waiting).toEqual([]);
   });
-  it('says why a named walk reaches 0 screens: the task holds no row, or the set gives too early a phase', () => {
+  it('says why a named walk reaches 0 screens: the task holds no row, or the set gives too early a phase', (ctx) => {
+    if (noPlan) ctx.skip(noPlan);
     // why: F-834; BW_MERGED_TASKS=P4-BOARD-MAP walked 0 screens and the only word was "No test found", because a row names the task that built its page
     const late = { ...row, phase: 4, task: 'P4-BOARD' };
     const noRow = emptyWalkWhy([late], 1, new Set(['P4-BOARD-MAP']));
@@ -139,7 +147,8 @@ describe('select a row once its task is merged (F-154)', () => {
     expect(selectMerged([row], 2, new Set(), known).problems).toEqual([]);
     expect(planTaskIds('#### P2-AUTH — Sign-in\n#### CP1 - x\ntext #### P9-NO — y\n')).toEqual(new Set(['P2-AUTH', 'CP1']));
   });
-  it('keeps a merged task with no app wiring red (exit 2), and the real repo state green with the 6 rows named', () => {
+  it('keeps a merged task with no app wiring red (exit 2), and the real repo state green with the 6 rows named', (ctx) => {
+    if (noPlan) ctx.skip(noPlan);
     // why: F-154; safeguard c: merging the task without wiring the page must not pass
     // F-645: the unwired task is synthetic (a fixture plan and inventory), never a real plan task, so this case does not
     // change when a real task merges and wires its pages.

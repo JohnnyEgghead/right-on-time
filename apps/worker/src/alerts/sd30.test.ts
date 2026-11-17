@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The alert types of SPECIFICATIONS SD-30 held to the document: the type list and the default switches in code equal the
 // table in docs/SPECIFICATIONS.md, so a drift in either fails here. Pure: no database.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { ALERT_FACTS, ALERT_TYPES } from '@bw/domain';
 
-const spec = readFileSync(path.resolve(import.meta.dirname, '..', '..', '..', '..', 'docs', 'SPECIFICATIONS.md'), 'utf8');
+// F-1852: docs/SPECIFICATIONS.md is a private path (scripts/private-paths.txt), so a public copy has none and every test here skips
+// with a note naming it; the private checkout has it and every test runs.
+const SPEC = path.resolve(import.meta.dirname, '..', '..', '..', '..', 'docs', 'SPECIFICATIONS.md');
+const noSpec = existsSync(SPEC) ? '' : 'docs/SPECIFICATIONS.md is not in this copy (a private path the public export leaves out)';
+const spec = noSpec ? '' : readFileSync(SPEC, 'utf8');
+beforeEach((ctx) => {
+  if (noSpec) ctx.skip(noSpec);
+});
 
 function sd30Rows(): { type: string; cells: string[] }[] {
   const start = spec.indexOf('**SD-30. Alert types.**');

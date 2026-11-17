@@ -9,11 +9,11 @@ import path from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { FixedClock } from '@bw/time';
-import { allowlisted, createLogger, LOG_FIELDS } from './index.ts';
+import { allowlisted, causeCodeOf, createLogger, exitOnUncaughtException, exitOnUnhandledRejection, LOG_FIELDS } from './index.ts';
 
 const cases = path.resolve(import.meta.dirname, '..', 'cases');
 
-const CASE_FILES = ['bad-literal.ts', 'bad-variable.ts', 'bad-free-text.ts', 'good.ts'];
+const CASE_FILES = ['bad-literal.ts', 'bad-variable.ts', 'bad-free-text.ts', 'bad-event-subject.ts', 'good.ts'];
 let compiled: ts.Program | undefined;
 
 /**
@@ -63,6 +63,14 @@ describe('@bw/log allowlist, type half', () => {
     expect(diagnostics('bad-free-text.ts').join('\n')).toMatch(/^bad-free-text\.ts: .*texted 614-555-0100/m);
   });
 
+  // why: F-1844, NFR-05: the 2 new event fields widen the list by exactly 2, so the event's subject still fails to compile.
+  it('fails type checking for a field outside the new list on an event line', () => {
+    const d = diagnostics('bad-event-subject.ts');
+    expect(d.length).toBeGreaterThan(0);
+    expect(d.join('\n')).toMatch(/bad-event-subject\.ts: [\s\S]*NotInLogAllowlist<"subject">/);
+    expect(d.join('\n')).not.toMatch(/eventKind|eventId/);
+  });
+
   // why: NFR-05, SD-42
   it('compiles a call with every allowlisted field, as a literal and as a variable', () => {
     expect(diagnostics('good.ts')).toEqual([]);
@@ -94,6 +102,98 @@ describe('@bw/log lines', () => {
     (log.error as (f: Record<string, unknown>) => void)({ level: 'debug', process: 'pbs', realTime: 'x', status: 500 });
     expect(lines.map((l) => JSON.parse(l))).toEqual([{ realTime: '2026-11-01T12:00:00Z', level: 'error', process: 'worker', status: 500 }]);
     expect(Object.keys(allowlisted({ demoTime: 'a', userId: 'u' }))).toEqual(['demoTime', 'userId']);
-    expect(LOG_FIELDS).toEqual(['demoTime', 'contract', 'route', 'status', 'durationMs', 'errorCode', 'userId', 'jobNumber', 'failures']);
+    expect(LOG_FIELDS).toEqual(['demoTime', 'contract', 'route', 'status', 'durationMs', 'errorCode', 'userId', 'jobNumber', 'failures', 'eventKind', 'eventId']);
+  });
+
+  // why: F-1844, NFR-05: the run-time half of the 2 new fields keeps only a dotted kind and a UUID, so a cast can never carry text.
+  it('keeps an event kind and an event id only in their shapes', () => {
+    const id = '0192f0a4-1111-4222-8333-944455556666';
+    expect(allowlisted({ eventKind: 'text.try', eventId: id })).toEqual({ eventKind: 'text.try', eventId: id });
+    expect(allowlisted({ eventKind: 'billing.retry', eventId: id.toUpperCase() })).toEqual({ eventKind: 'billing.retry', eventId: id.toUpperCase() });
+    for (const bad of ['texted 6145550100', 'text', 'Text.Try', 'text.try ', '1 Main St.x', 'a.b.c.d.e', 42]) {
+      expect(allowlisted({ eventKind: bad })).toEqual({});
+    }
+    for (const bad of ['2481', 'job 2481', `${id} 6145550100`, id.replace(/-/g, ''), 7]) {
+      expect(allowlisted({ eventId: bad })).toEqual({});
+    }
+  });
+});
+
+describe('@bw/log causeCodeOf', () => {
+  // why: F-1844, F-1845, NFR-05: a cause code is the error's code or class name, never its message.
+  it('answers the code, else the class name, else Error, and never the message', () => {
+    const pg = Object.assign(new Error('duplicate key value (phone)=(6145550100)'), { code: '23505' });
+    expect(causeCodeOf(pg)).toBe('23505');
+    expect(causeCodeOf(Object.assign(new Error('connect 10.0.0.1'), { code: 'ECONNREFUSED' }))).toBe('ECONNREFUSED');
+    expect(causeCodeOf(new TypeError('1 Main St is not a function'))).toBe('TypeError');
+    class RouteDown extends Error { override name = 'RouteDown'; }
+    expect(causeCodeOf(new RouteDown('x'))).toBe('RouteDown');
+    // A code or name that is not identifier-shaped (it could be text) falls through; a thrown string or nothing is Error.
+    expect(causeCodeOf(Object.assign(new Error('m'), { code: 'call 614-555-0100' }))).toBe('Error');
+    expect(causeCodeOf(Object.assign(new Error('m'), { code: '', name: 'texted 6145550100' }))).toBe('Error');
+    expect(causeCodeOf('6145550100')).toBe('Error');
+    expect(causeCodeOf(null)).toBe('Error');
+    expect(causeCodeOf(undefined)).toBe('Error');
+    expect(causeCodeOf({ code: 42, name: 'AbortError' })).toBe('AbortError');
+  });
+});
+
+describe('@bw/log exitOnUnhandledRejection', () => {
+  const clock = new FixedClock({ demo: '2026-09-15T14:00:00Z', real: '2026-11-01T12:00:00Z' });
+
+  // why: F-1845: an unhandled rejection is an error-level line with its cause code, then exit 1 once the line is flushed.
+  it('logs the cause code at error level and exits 1 after stdout flushed, once', () => {
+    const lines: string[] = [];
+    const exits: number[] = [];
+    let listener: ((reason: unknown) => void) | undefined;
+    const flushes: (() => void)[] = [];
+    const proc = {
+      on: (_: 'unhandledRejection', l: (reason: unknown) => void) => { listener = l; },
+      exit: (code: number) => { exits.push(code); },
+      stdout: { write: (_: string, cb: () => void) => { flushes.push(cb); return true; } },
+    };
+    exitOnUnhandledRejection(createLogger({ process: 'worker', clock, write: (l) => lines.push(l) }), proc);
+    listener!(new TypeError('customer 6145550100 at 1 Main St'));
+    listener!(Object.assign(new Error('second'), { code: 'ECONNRESET' }));
+    expect(exits).toEqual([]);
+    expect(flushes).toHaveLength(1);
+    flushes[0]!();
+    expect(exits).toEqual([1]);
+    expect(lines.map((l) => JSON.parse(l))).toEqual([
+      { realTime: '2026-11-01T12:00:00Z', level: 'error', process: 'worker', status: 'unhandled rejection', errorCode: 'TypeError' },
+      { realTime: '2026-11-01T12:00:00Z', level: 'error', process: 'worker', status: 'unhandled rejection', errorCode: 'ECONNRESET' },
+    ]);
+    expect(lines.join('')).not.toMatch(/6145550100|Main St|second/);
+  });
+});
+
+describe('@bw/log exitOnUncaughtException', () => {
+  const clock = new FixedClock({ demo: '2026-09-15T14:00:00Z', real: '2026-11-01T12:00:00Z' });
+
+  // why: F-1870: an uncaught exception is an error-level line with its cause code and no message, then exit 1 once the line is flushed.
+  it('logs the cause code at error level and exits 1 after stdout flushed, once', () => {
+    const lines: string[] = [];
+    const exits: number[] = [];
+    const events: string[] = [];
+    let listener: ((reason: unknown) => void) | undefined;
+    const flushes: (() => void)[] = [];
+    const proc = {
+      on: (event: 'unhandledRejection' | 'uncaughtException', l: (reason: unknown) => void) => { events.push(event); listener = l; },
+      exit: (code: number) => { exits.push(code); },
+      stdout: { write: (_: string, cb: () => void) => { flushes.push(cb); return true; } },
+    };
+    exitOnUncaughtException(createLogger({ process: 'pbs', clock, write: (l) => lines.push(l) }), proc);
+    expect(events).toEqual(['uncaughtException']);
+    listener!(new RangeError('customer 6145550100 at 1 Main St'));
+    listener!(Object.assign(new Error('second'), { code: 'EPIPE' }));
+    expect(exits).toEqual([]);
+    expect(flushes).toHaveLength(1);
+    flushes[0]!();
+    expect(exits).toEqual([1]);
+    expect(lines.map((l) => JSON.parse(l))).toEqual([
+      { realTime: '2026-11-01T12:00:00Z', level: 'error', process: 'pbs', status: 'uncaught exception', errorCode: 'RangeError' },
+      { realTime: '2026-11-01T12:00:00Z', level: 'error', process: 'pbs', status: 'uncaught exception', errorCode: 'EPIPE' },
+    ]);
+    expect(lines.join('')).not.toMatch(/6145550100|Main St|second/);
   });
 });

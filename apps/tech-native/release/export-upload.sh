@@ -39,6 +39,20 @@ if [ "$(grep -c -F "<string>$team</string>" "$plist")" != 1 ] || grep -q -F '<st
 fi
 grep -q "<string>$dest</string>" "$plist" || { echo "export-upload: the generated plist has no $dest destination" >&2; exit 2; }
 [ -d "$app/build/RightOnTime.xcarchive" ] || { echo "export-upload: no archive; run release/archive.sh first" >&2; exit 2; }
+# F-1832: a build that reaches App Store Connect cannot be deleted, so before any upload the archive on disk must be the one app.json names.
+# BW_PLISTBUDDY is a seam for the tests (PlistBuddy exists only on macOS).
+if [ "$mode" != export ]; then
+  pb="${BW_PLISTBUDDY:-/usr/libexec/PlistBuddy}"
+  arch_plist="$app/build/RightOnTime.xcarchive/Info.plist"
+  [ -f "$arch_plist" ] || { echo "export-upload: the archive has no Info.plist; nothing uploaded; run release/archive.sh first" >&2; exit 2; }
+  arch_ver="$("$pb" -c 'Print :ApplicationProperties:CFBundleShortVersionString' "$arch_plist" 2>/dev/null || true)"
+  arch_build="$("$pb" -c 'Print :ApplicationProperties:CFBundleVersion' "$arch_plist" 2>/dev/null || true)"
+  want_ver="$(node -p "require('$app/app.json').expo.version")"
+  want_build="$(node -p "require('$app/app.json').expo.ios.buildNumber")"
+  if [ -z "$arch_ver" ] || [ -z "$arch_build" ] || [ "$arch_ver" != "$want_ver" ] || [ "$arch_build" != "$want_build" ]; then
+    echo "export-upload: the archive is version ${arch_ver:-unknown} build ${arch_build:-unknown} but app.json says version $want_ver build $want_build; nothing uploaded; run release/archive.sh first" >&2; exit 2
+  fi
+fi
 rm -rf "$app/build/export"
 cd "$app/ios"
 set +e

@@ -14,29 +14,30 @@ import type { Instant } from '@bw/time';
 import type pg from 'pg';
 import { BillingUnavailableError, type BillingClient } from './client.ts';
 import { composeFromJob, type Composed } from './compose.ts';
-import { busPublish, supersedeDueBillingEvents, type Publish } from './queue.ts';
+import { busPublish, listedRule, supersedeDueBillingEvents, type Publish } from './queue.ts';
 
 export type MarkFixedResult =
   /** `again`: the item had already been marked fixed (a second press); the world is unchanged and the web route answers not_on_billing_list. */
   | { ok: true; again?: true }
   | { ok: false; code: 'validation_failed' | 'not_found' | 'not_listed' | 'billing_unavailable' | 'world_reset' };
 
-/** Listed (FR-BILL-2): it failed at least once and has not left. */
-const isListed = (state: BillingState, tries: number) =>
-  (state === 'retrying' || state === 'waiting_person' || state === 'sending') && tries > 0;
-
 type Before =
   | { kind: 'refuse'; code: 'not_found' | 'not_listed' }
   | { kind: 'done' }
   | { kind: 'go'; epoch: number; composed: Composed };
 
-/** Phase 1: is the item markable, and what pbs will record for it. */
-async function readBefore(tx: Queryable, jobNumber: number): Promise<Before> {
-  const r = await tx.query<{ state: BillingState; tries: number }>('SELECT state, tries FROM world.billing_item WHERE job_number = $1', [jobNumber]);
+/**
+ * Phase 1: is the item markable, and what pbs will record for it. Markable is listed, by the same listedRule the
+ * billing list reads at the same demo now (F-1865): every row the office sees can be marked fixed, and no other.
+ */
+async function readBefore(tx: Queryable, jobNumber: number, now: Instant): Promise<Before> {
+  const listed = listedRule(now, 2);
+  const r = await tx.query<{ state: BillingState; listed: boolean }>(
+    `SELECT bi.state, ${listed.sql} AS listed FROM world.billing_item bi WHERE bi.job_number = $1`, [jobNumber, ...listed.params]);
   const item = r.rows[0];
   if (!item) return { kind: 'refuse', code: 'not_found' };
   if (item.state === 'marked_fixed') return { kind: 'done' };
-  if (!isListed(item.state, item.tries)) return { kind: 'refuse', code: 'not_listed' };
+  if (!item.listed) return { kind: 'refuse', code: 'not_listed' };
   const epoch = (await tx.query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1')).rows[0]!.world_epoch;
   return { kind: 'go', epoch, composed: await composeFromJob(tx, jobNumber) };
 }
@@ -94,7 +95,7 @@ export async function markFixed(deps: { pool: pg.Pool; client: BillingClient; pu
   if (reason === null) return { ok: false, code: 'validation_failed' };
   const clean = { ...input, reason };
   const publish = deps.publish ?? busPublish;
-  const before = await inTransaction(deps.pool, (tx) => readBefore(tx, input.jobNumber));
+  const before = await inTransaction(deps.pool, (tx) => readBefore(tx, input.jobNumber, input.at));
   if (before.kind === 'done') return { ok: true, again: true };
   if (before.kind === 'refuse') return { ok: false, code: before.code };
   const failed = await enterAtPbs(deps.client, clean, before.epoch, before.composed);
@@ -113,7 +114,7 @@ export async function markFixedInTx(tx: Queryable, deps: { client: BillingClient
   const reason = cleanReason(input.reason);
   if (reason === null) return { ok: false, code: 'validation_failed' };
   const clean = { ...input, reason };
-  const before = await readBefore(tx, input.jobNumber);
+  const before = await readBefore(tx, input.jobNumber, input.at);
   if (before.kind === 'done') return { ok: true, again: true };
   if (before.kind === 'refuse') return { ok: false, code: before.code };
   const failed = await enterAtPbs(deps.client, clean, before.epoch, before.composed);

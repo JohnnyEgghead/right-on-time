@@ -25,6 +25,8 @@ describe('start-up of the access surface', () => {
   });
 });
 
+const quiet = createLogger({ process: 'web', write: () => undefined });
+
 describe('a database that does not answer within the start-up window (F-316)', () => {
   const inner: Router = {
     routes: [{ contract: 'API-171', method: 'GET', path: '/healthz' }],
@@ -42,7 +44,7 @@ describe('a database that does not answer within the start-up window (F-316)', (
       run: async () => { tries++; if (down) throw new Error('db down'); },
       codeOn: true, delaysMs: [1, 1], recoverEveryMs: 5, onFail: () => { logged++; },
     });
-    const guarded = syncGuard(inner, sync);
+    const guarded = syncGuard(inner, sync, quiet);
     const r = await guarded.handle(new Request('http://x/healthz'), { address: '127.0.0.1' } as never);
     expect(r.status).toBe(503);
     expect(r.headers.get('content-type')).toBe('application/problem+json');
@@ -74,7 +76,7 @@ describe('a database that does not answer within the start-up window (F-316)', (
       handle: async () => new Response('ok', { status: 200 }),
     };
     const sync = startSync({ run: async () => { throw new Error('db down'); }, codeOn: true, delaysMs: [1], recoverEveryMs: 1_000, onFail: () => undefined });
-    const guarded = syncGuard(wide, sync);
+    const guarded = syncGuard(wide, sync, quiet);
     const label = async (method: string, path: string) =>
       ((await (await guarded.handle(new Request(`http://x${path}`, { method }), { address: '127.0.0.1' } as never)).json()) as { meta: { contract: string } }).meta.contract;
     expect(await label('GET', '/api/v1/jobs/42')).toBe('API-90');
@@ -91,4 +93,85 @@ describe('a database that does not answer within the start-up window (F-316)', (
     expect(sync.failed()).toBe(false);
     sync.stop();
   });
+});
+
+describe('a failed access code sync is logged with its cause (F-1848)', () => {
+  const PRIVATE = 'Harold Jenkins 6145550100 at 12 Oak St';
+  const capture = () => {
+    const lines: Record<string, unknown>[] = [];
+    return { lines, log: createLogger({ process: 'web', write: (l) => lines.push(JSON.parse(l) as Record<string, unknown>) }) };
+  };
+  const inner: Router = {
+    routes: [{ contract: 'API-90', method: 'GET', path: '/api/v1/jobs/{id}' }],
+    owns: (p) => p.startsWith('/api/'),
+    handle: async () => new Response('ok', { status: 200 }),
+  };
+
+  // why: F-1848: onFail got no error, each guarded 503 logged nothing, and a healed sync was never said to have healed.
+  it('passes the error to onFail, logs each guarded 503 with the cause code, and logs the recovery once', async () => {
+    const { lines, log } = capture();
+    let down = true;
+    const failure = Object.assign(new Error(PRIVATE), { code: '57P03' });
+    const seen: unknown[] = [];
+    let recovered = 0;
+    const sync = startSync({
+      run: async () => { if (down) throw failure; },
+      codeOn: true, delaysMs: [1], recoverEveryMs: 5,
+      onFail: (e) => { seen.push(e); }, onRecover: () => { recovered++; },
+    });
+    const guarded = syncGuard(inner, sync, log);
+    for (let i = 0; i < 2; i++) expect((await guarded.handle(new Request('http://x/api/v1/jobs/42'))).status).toBe(503);
+    expect(seen).toEqual([failure]);
+    expect(sync.cause()).toBe('57P03');
+    expect(lines.map((l) => [l.level, l.contract, l.route, l.status, l.errorCode])).toEqual([
+      ['error', 'API-90', '/api/v1/jobs/{id}', 503, '57P03'], ['error', 'API-90', '/api/v1/jobs/{id}', 503, '57P03'],
+    ]);
+    down = false;
+    for (let i = 0; i < 200 && sync.failed(); i++) await new Promise((r) => setTimeout(r, 5));
+    expect((await guarded.handle(new Request('http://x/api/v1/jobs/42'))).status).toBe(200);
+    await new Promise((r) => setTimeout(r, 30));
+    expect(recovered).toBe(1);
+    expect(lines).toHaveLength(2);
+    expect(JSON.stringify(lines)).not.toMatch(/Harold|6145550100|Oak/);
+    sync.stop();
+  });
+
+  // why: F-1848: the web process's own wiring names the cause: a database that refuses the connection logs ECONNREFUSED, not server_error.
+  it('logs the web kernel\'s failed sync and its guarded 503 with the connection error\'s code', async () => {
+    const { lines, log } = capture();
+    const settings = loadConfig({ DATABASE_URL: 'postgres://web@127.0.0.1:1/none', ACCESS_CODE_ON: 'on', ACCESS_CODE: 'a-test-access-code', ACCESS_COOKIE_KEY: 'k'.repeat(43) });
+    const kernel = createWebKernel({ settings, log });
+    try {
+      const r = await kernel.router.handle(new Request('http://x/healthz'), { address: '127.0.0.1' } as never);
+      expect(r.status).toBe(503);
+      const failed = lines.filter((l) => l.status === 'access code sync failed');
+      expect(failed.map((l) => [l.level, l.errorCode])).toEqual([['error', 'ECONNREFUSED']]);
+      expect(lines.filter((l) => l.status === 503).map((l) => [l.level, l.contract, l.errorCode])).toEqual([['error', 'API-171', 'ECONNREFUSED']]);
+    } finally {
+      await kernel.close();
+    }
+  }, 30_000);
+
+  // why: F-1872: the recovery line at web.ts onRecover was never asserted, so deleting its wiring passed every test; this drives the kernel's own sync to a recovery.
+  it('logs the web kernel\'s recovery once, as an info line with no field but the status', async () => {
+    const { lines, log } = capture();
+    let down = true;
+    const settings = loadConfig({ DATABASE_URL: 'postgres://web@127.0.0.1:1/none', ACCESS_CODE_ON: 'on', ACCESS_CODE: 'a-test-access-code', ACCESS_COOKIE_KEY: 'k'.repeat(43) });
+    const kernel = createWebKernel({
+      settings, log,
+      syncSeam: { run: async () => { if (down) throw Object.assign(new Error(PRIVATE), { code: '57P03' }); }, delaysMs: [1], recoverEveryMs: 5 },
+    });
+    try {
+      expect((await kernel.router.handle(new Request('http://x/healthz'), { address: '127.0.0.1' } as never)).status).toBe(503);
+      expect(lines.filter((l) => l.status === 'access code sync failed').map((l) => l.errorCode)).toEqual(['57P03']);
+      down = false;
+      for (let i = 0; i < 200 && !lines.some((l) => l.status === 'access code sync recovered'); i++) await new Promise((r) => setTimeout(r, 5));
+      await new Promise((r) => setTimeout(r, 30));
+      const healed = lines.filter((l) => l.status === 'access code sync recovered');
+      expect(healed.map((l) => [l.level, l.process, Object.keys(l).sort().join(',')])).toEqual([['info', 'web', 'level,process,realTime,status']]);
+      expect(JSON.stringify(lines)).not.toMatch(/Harold|6145550100|Oak/);
+    } finally {
+      await kernel.close();
+    }
+  }, 30_000);
 });

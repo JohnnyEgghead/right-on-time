@@ -6,7 +6,7 @@
 // with the caller and the access-code state resolved from the request's cookies as the API routes resolve them.
 import type { Settings } from '@bw/config';
 import { createClient, createPool, hashPassword, inTransaction, verifyPassword, type Queryable } from '@bw/db';
-import type { Logger } from '@bw/log';
+import { causeCodeOf, type Logger } from '@bw/log';
 import { DbClock, Temporal, toWire } from '@bw/time';
 import { routedOutside } from '../../maps/src/route-source.ts';
 import { PgNotifyBus } from './events/bus.ts';
@@ -32,6 +32,8 @@ export interface WebKernelOptions {
   /** The database password of this process (from DATABASE_PASSWORD_FILE), when the URL carries none. */
   databasePassword?: string | undefined;
   log: Logger;
+  /** F-1872: a test seam. The access code sync's run and waits, so a test drives the kernel's own sync to a recovery (never set in production). */
+  syncSeam?: { run: () => Promise<void>; delaysMs: readonly number[]; recoverEveryMs: number };
 }
 
 /** The waits between the tries of the start-up access code sync (5 tries in all). */
@@ -58,6 +60,8 @@ export interface SyncState {
   readonly ready: Promise<void>;
   /** True from the last failed start-up try until a try answers (only with the access code on). */
   failed(): boolean;
+  /** The last failed try's cause code (@bw/log causeCodeOf, never the message); undefined before any failure (F-1848). */
+  cause(): string | undefined;
   stop(): void;
 }
 
@@ -66,21 +70,25 @@ export interface SyncOptions {
   codeOn: boolean;
   delaysMs: readonly number[];
   recoverEveryMs: number;
-  onFail: () => void;
+  /** Once, when every start-up try has failed: the last try's error (F-1848: the caller logs its cause code). */
+  onFail: (error: unknown) => void;
+  /** Once, when a background try answers after onFail (F-1848: the recovery line). */
+  onRecover?: () => void;
 }
 
 /** Run the start-up sync with its tries; after the last failure log once, flag the state, and keep trying in the background. */
 export function startSync(o: SyncOptions): SyncState {
   let failed = false;
   let stopped = false;
+  let cause: string | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const { run } = o;
   const recover = (): void => {
     if (run === null || stopped) return;
     timer = setTimeout(() => {
       run().then(
-        () => { failed = false; },
-        () => recover(),
+        () => { failed = false; o.onRecover?.(); },
+        (e: unknown) => { cause = causeCodeOf(e); recover(); },
       );
     }, o.recoverEveryMs);
     timer.unref();
@@ -88,18 +96,22 @@ export function startSync(o: SyncOptions): SyncState {
   const ready = run
     ? syncWithRetry(run, o.delaysMs).then(
         () => undefined,
-        () => {
-          o.onFail();
+        (e: unknown) => {
+          cause = causeCodeOf(e);
+          o.onFail(e);
           failed = o.codeOn;
           recover();
         },
       )
     : Promise.resolve();
-  return { ready, failed: () => failed, stop: () => { stopped = true; if (timer) clearTimeout(timer); } };
+  return { ready, failed: () => failed, cause: () => cause, stop: () => { stopped = true; if (timer) clearTimeout(timer); } };
 }
 
-/** The router with the failed-sync answer in front: 503 as a kernel Problem (the 11.5 headers and no-store come from `problem`). */
-export function syncGuard(router: Router, sync: SyncState): Router {
+/**
+ * The router with the failed-sync answer in front: 503 as a kernel Problem (the 11.5 headers and no-store come from `problem`).
+ * F-1848: each guarded 503 is logged at error level as the kernel logs a call (contract, route, status), with the sync's cause code.
+ */
+export function syncGuard(router: Router, sync: SyncState, log: Logger): Router {
   // F-1690: compiled and ordered once (the fewest parameters first; the sort is stable, so ties keep route order), and the constant built once.
   const bySpecificity = router.routes
     .map((r) => ({ route: r, path: compilePath(r.path), specificity: specificity(r.path) }))
@@ -116,6 +128,8 @@ export function syncGuard(router: Router, sync: SyncState): Router {
         const method = request.method === 'HEAD' ? 'GET' : request.method;
         const matched = bySpecificity.find((c) => c.route.method === method && c.path.match(pathname) !== null)?.route;
         const contract = matched?.contract ?? 'API-171';
+        // Every row of the policy table is an API-<n> contract (the kernel logs entry.contract the same way).
+        log.error({ contract: contract as `API-${number}`, ...(matched ? { route: matched.path } : {}), status: 503, errorCode: sync.cause() ?? 'server_error' });
         return problem(503, 'server_error', { contract, worldEpoch: 0, demoNow: epoch }, request);
       }
       return router.handle(request, info);
@@ -174,13 +188,14 @@ export function createWebKernel(opts: WebKernelOptions): WebKernel {
   // keeps trying in the background (RECOVER_EVERY_MS), so a database that answers late (a host reboot) heals without a restart,
   // which an exited-only restart policy would never give a process that stays up.
   const sync = startSync({
-    run: settings.ACCESS_CODE ? () => syncAccessCode(pool, settings.ACCESS_CODE as string, clock) : null,
+    run: opts.syncSeam?.run ?? (settings.ACCESS_CODE ? () => syncAccessCode(pool, settings.ACCESS_CODE as string, clock) : null),
     codeOn: settings.ACCESS_CODE_ON,
-    delaysMs: SYNC_DELAYS_MS,
-    recoverEveryMs: RECOVER_EVERY_MS,
-    onFail: () => log.error({ status: 'access code sync failed', errorCode: 'server_error' }),
+    delaysMs: opts.syncSeam?.delaysMs ?? SYNC_DELAYS_MS,
+    recoverEveryMs: opts.syncSeam?.recoverEveryMs ?? RECOVER_EVERY_MS,
+    onFail: (e) => log.error({ status: 'access code sync failed', errorCode: causeCodeOf(e) }),
+    onRecover: () => log.info({ status: 'access code sync recovered' }),
   });
-  const guarded = syncGuard(router, sync);
+  const guarded = syncGuard(router, sync, log);
   return {
     router: guarded,
     pages,

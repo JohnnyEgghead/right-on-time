@@ -1,15 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: tooling (checks ci/page-inventory.ts against UI-SPECIFICATION section 2.3, BUILD_PLAN D-9; no product requirement)
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { build, compare, parseSpec, type Inventory } from './page-inventory.ts';
 
 const root = path.resolve(import.meta.dirname, '..');
-const specText = readFileSync(path.join(root, 'docs', 'UI-SPECIFICATION.md'), 'utf8');
-const spec = parseSpec(specText);
+// F-1852: docs/UI-SPECIFICATION.md is a private path (scripts/private-paths.txt), so a public copy has none and every test here skips
+// with a note naming it; in the private checkout the file is there and every test runs.
+const SPEC_FILE = path.join(root, 'docs', 'UI-SPECIFICATION.md');
+const noSpec = existsSync(SPEC_FILE) ? '' : 'docs/UI-SPECIFICATION.md is not in this copy (a private path the public export leaves out)';
+const specText = noSpec ? '' : readFileSync(SPEC_FILE, 'utf8');
+const spec = noSpec ? [] : parseSpec(specText);
+beforeEach((ctx) => {
+  if (noSpec) ctx.skip(noSpec);
+});
 
 describe('page inventory', () => {
   it('section 2.3 holds 81 screens and SCR-CUS-07 has 5 routes', () => {

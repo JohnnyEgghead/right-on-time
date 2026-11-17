@@ -2,7 +2,7 @@
 // G-CI1 step 1 (no database): the offline conflict table constant (@bw/domain OFFLINE_CONFLICT_TABLE, the only copy
 // in code, which the 36 server cases of cells.db.test.ts are generated from) held cell for cell to REQUIREMENTS
 // section 4.3's own table, read from the document, so the server cases and the requirement cannot drift apart.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CHANGE_COLUMNS, conflictVerdict, ITEM_ACTIONS, OFFLINE_CONFLICT_TABLE } from '../../../packages/domain/src/index.ts';
@@ -54,10 +54,14 @@ export function tableProblems(req: Map<string, Map<string, string>>, verdict: (a
 }
 
 const doc = () => readFileSync(path.join(ROOT, 'docs', 'REQUIREMENTS.md'), 'utf8');
+// F-1852: docs/REQUIREMENTS.md is a private path (scripts/private-paths.txt), so in a public copy the tests that read it skip with a
+// note naming it; the private checkout has it and they run.
+const noRequirements = existsSync(path.join(ROOT, 'docs', 'REQUIREMENTS.md')) ? '' : 'docs/REQUIREMENTS.md is not in this copy (a private path the public export leaves out)';
 
 describe('G-CI1: the conflict table constant equals REQUIREMENTS section 4.3 (FR-TECH-6)', () => {
   // why: FR-TECH-6
-  it('agrees cell for cell, 6 rows by 6 columns, with nothing extra on either side', () => {
+  it('agrees cell for cell, 6 rows by 6 columns, with nothing extra on either side', (ctx) => {
+    if (noRequirements) ctx.skip(noRequirements);
     expect(tableProblems(requirementsTable(doc()), conflictVerdict)).toEqual([]);
     expect(Object.keys(OFFLINE_CONFLICT_TABLE)).toHaveLength(6);
   });
@@ -70,7 +74,8 @@ describe('G-CI1: the conflict table constant equals REQUIREMENTS section 4.3 (FR
   });
 
   // why: FR-TECH-6 (must-fail, every run)
-  it('reports a planted flipped cell and a planted missing row', () => {
+  it('reports a planted flipped cell and a planted missing row', (ctx) => {
+    if (noRequirements) ctx.skip(noRequirements);
     const flipped = (a: string, c: string) => (a === 'finished' && c === 'assigned' ? 'apply' : conflictVerdict(a, c));
     expect(tableProblems(requirementsTable(doc()), flipped)).toEqual(['(finished, assigned): constant apply, REQUIREMENTS flag']);
     const noArrived = doc().replace(/^\| Arrived \|.*\n/m, '');

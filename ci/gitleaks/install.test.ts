@@ -19,12 +19,13 @@ describe('gitleaks pin and install', () => {
   });
 
   // why: NFR-14 the installed version is the spec's: the SPECIFICATIONS tool table and the pin agree
-  it('the pin equals the version in the SPECIFICATIONS tool table (when the planning docs are present)', () => {
+  // why: F-1863 a public copy skips this with a note naming docs/SPECIFICATIONS.md, never passes it green with no proof run
+  it('the pin equals the version in the SPECIFICATIONS tool table (when the planning docs are present)', (ctx) => {
     let spec = '';
     try {
       spec = readFileSync(path.resolve(import.meta.dirname, '..', '..', 'docs', 'SPECIFICATIONS.md'), 'utf8');
     } catch {
-      return; // the publish set has no planning files
+      ctx.skip('docs/SPECIFICATIONS.md is not in this copy (a private path the public export leaves out)');
     }
     expect(spec).toMatch(/\| Secret scanner \| gitleaks \| 8\.30\.1 \|/);
   });

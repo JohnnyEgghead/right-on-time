@@ -8,7 +8,7 @@ import { loadConfig } from '@bw/config';
 import { BILLING_EVENT_KINDS } from '@bw/domain';
 import { createLogger } from '@bw/log';
 import { BILLING_CONCURRENCY, billingLaneFor, WORKER_POOL_MAX } from './billing/link.ts';
-import { eventHandlers, eventLanes, type WorkerDeps } from './jobs.ts';
+import { eventHandlers, eventLanes, giveUpsFor, type WorkerDeps } from './jobs.ts';
 
 const deps = { settings: loadConfig({}), log: createLogger({ process: 'worker', write: () => undefined }) } as unknown as WorkerDeps;
 
@@ -31,6 +31,13 @@ describe('the worker registry wires billing as the dispatcher billing lane (F-35
     expect(BILLING_CONCURRENCY).toBeGreaterThanOrEqual(1);
     const main = readFileSync(new URL('./main.ts', import.meta.url), 'utf8');
     expect(main).toMatch(/createPool\(\{[^}]*max: WORKER_POOL_MAX[,\s]/);
+  });
+
+  // why: F-1844, F-368: a serial kind with no give-up retried a failing event every pass for ever with no end record.
+  it('gives every serial-lane kind a give-up, and no kind outside the serial lane', () => {
+    const serial = eventHandlers.map(([kind]) => kind).sort();
+    expect(Object.keys(giveUpsFor(deps)).sort()).toEqual(serial);
+    expect(serial).toEqual(['alert.check', 'autopilot.step', 'eta.sweep', 'text.reminder', 'text.try']);
   });
 
   // why: F-357

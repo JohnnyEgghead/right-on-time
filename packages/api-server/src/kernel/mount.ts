@@ -12,11 +12,13 @@
 // (section 7.2), its labels, and the 11.5 headers. The 3 rows without an envelope: API-171's plain body (OI-46),
 // API-83's file (text/csv), which the kernel writes from the handler's text, and API-09's event stream (a stream row,
 // F-344: authorized like every row, then answered as text/event-stream from the handler's stream, with no transaction).
+// F-1845: a server_error the kernel makes (a throw, or an answer outside the row's contract) logs the call's line at error
+// level with its cause code (KernelCause): the caller's answer is the same server_error as before.
 import {
   allowedErrors, errorDetailProblems, errorMessageKey, ERROR_STATUS, hasEnvelope, problemType, requiredLabels, rowJsonSchema,
   type ErrorCode, type Label, type Meta,
 } from '@bw/api';
-import type { Logger } from '@bw/log';
+import { causeCodeOf, type Logger } from '@bw/log';
 import { Temporal, toWire, type Clock, type Instant } from '@bw/time';
 import type { ApiPolicyEntry, ApiRequest, Caller, EventBusPort, Handler, KernelSettings, PolicyEntry, TokenCheck, TokenKind, Tx } from '../types.ts';
 import { ACCESS_COOKIE, accessCookieValid, requestIsHttps } from './access-code.ts';
@@ -224,6 +226,14 @@ function clientAddress(h: Headers, info: CallInfo): string {
   return fwd || info.address || 'unknown';
 }
 
+/**
+ * F-1845: why the kernel answered server_error, the call line's errorCode at error level. A throw anywhere in the call
+ * logs @bw/log causeCodeOf (the error's code or class name, never its message). An answer outside the row's contract logs
+ * its own code: 'response_shape' (a status, body, image, stream, error code or error detail the row does not allow) or
+ * 'cookie_not_allowed' (a Set-Cookie name the row may not set, F-289).
+ */
+type KernelCause = 'response_shape' | 'cookie_not_allowed' | (string & {});
+
 function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps, limiter: RateLimiter, zone: string): (call: Call) => Promise<Response> {
   const row = entry.row;
   const rules = rateRules(row);
@@ -240,6 +250,7 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
     let caller = { kind: 'anonymous' } as Caller;
     let status = 500;
     let errorCode: ErrorCode | undefined;
+    let cause: KernelCause | undefined;
     const refuse = (code: ErrorCode, fields?: { field: string; problem: string }[], detail?: unknown): Response => {
       // A code the row may not answer is itself a defect: the caller sees server_error, the log names nothing private.
       let c: ErrorCode = allowed.has(code) ? code : 'server_error';
@@ -255,9 +266,15 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
         c = 'server_error';
       }
       // SPECIFICATIONS 7.4: the health check answers 503, never 500, when it is not healthy (the deploy rolls back at once on 500).
+      if (c === 'server_error' && code !== 'server_error') cause ??= 'response_shape';
       status = c === 'server_error' && entry.contract === HEALTH_CHECK ? 503 : ERROR_STATUS[c];
       errorCode = c;
       return problem(status, c, meta, request, fields, members);
+    };
+    /** A handler's answer the kernel replaces with server_error (F-1845: logged with its own code). */
+    const substitute = (why: 'response_shape' | 'cookie_not_allowed'): Response => {
+      cause = why;
+      return refuse('server_error');
     };
     const readClock = async (): Promise<Instant> => {
       const [demoNow, worldEpoch] = await Promise.all([deps.clock.demoNow(), deps.clock.worldEpoch()]);
@@ -319,7 +336,7 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
           // A stream row (API-09): no transaction (the stream outlives the call); the body is the handler's stream.
           const r = await handler(req, NO_TX, context);
           if (!r.ok) return refuse(r.code, undefined, r.detail);
-          if (r.status !== 200 || !(r.data instanceof ReadableStream)) return refuse('server_error');
+          if (r.status !== 200 || !(r.data instanceof ReadableStream)) return substitute('response_shape');
           status = 200;
           return stream(r.data, request);
         }
@@ -344,14 +361,14 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
         });
         if (result instanceof Refusal) return refuse(result.code, result.fields, result.detail);
 
-        if (!okStatuses.includes(result.status)) return refuse('server_error');
+        if (!okStatuses.includes(result.status)) return substitute('response_shape');
         status = result.status;
         const allowed = COOKIE_ALLOW[entry.contract] ?? [];
-        if ((result.cookies ?? []).some((c) => !allowed.includes(c.slice(0, c.indexOf('='))))) return refuse('server_error');
+        if ((result.cookies ?? []).some((c) => !allowed.includes(c.slice(0, c.indexOf('='))))) return substitute('cookie_not_allowed');
         setCookies = result.cookies ?? [];
         if (result.status === 204) return finish(new Response(null, { status: 204 }), request);
         const data = row.response.safeParse(result.data);
-        if (!data.success) return refuse('server_error');
+        if (!data.success) return substitute('response_shape');
         if (row.file && typeof data.data === 'string') {
           // A file row (API-83): the kernel writes the file's text as the body; a file carries no envelope (contract.ts file).
           return finish(new Response(data.data, { status, headers: {
@@ -361,7 +378,7 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
         if (row.image) {
           // An image row (API-175): the stored file itself, inline, with its own media type; never kept by a cache (finish).
           const img = data.data as { type?: unknown; bytes?: unknown };
-          if (typeof img.type !== 'string' || !(img.bytes instanceof Uint8Array)) return refuse('server_error');
+          if (typeof img.type !== 'string' || !(img.bytes instanceof Uint8Array)) return substitute('response_shape');
           return finish(new Response(img.bytes as Uint8Array<ArrayBuffer>, { status, headers: { 'content-type': img.type, 'content-length': String(img.bytes.byteLength) } }), request);
         }
         if (!hasEnvelope(row)) return json(status, data.data, request, 'application/json');
@@ -371,19 +388,25 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
         if (deps.settings.DEMO_MODE && !native) labels.add('demo_mode');
         return json(status, { data: data.data, meta: { ...meta, viewer: viewer(entry, caller), labels: [...labels] } }, request, 'application/json');
       })();
-    } catch {
-      // Any throw (the session store, the clock, the database, the handler): server_error, and the log says only that.
+    } catch (e) {
+      // Any throw (the session store, the clock, the database, the handler): server_error to the caller, and the log line
+      // names its cause code, never its message (F-1845).
+      cause = causeCodeOf(e);
       if (meta.demoNow === '') await readClock().catch(() => undefined);
       res = refuse('server_error');
     }
     // F-230: sign out clears the session cookie on every answer, a refusal included (an httpOnly cookie cannot be cleared by script).
     if (entry.contract === SIGN_OUT) setCookies = [clearedSessionCookie(secureCookies(deps.settings.APP_ORIGIN))];
     for (const c of setCookies) res.headers.append('set-cookie', c);
-    deps.log.info({
+    const line = {
       ...(meta.demoNow ? { demoTime: meta.demoNow } : {}),
       contract: entry.contract, route: entry.path, status, durationMs: Math.round(performance.now() - call.started),
-      ...(errorCode ? { errorCode } : {}), ...(caller.kind === 'staff' ? { userId: caller.userId } : {}),
-    });
+      ...(caller.kind === 'staff' ? { userId: caller.userId } : {}),
+    };
+    // F-1845: a server_error answer is an error-level line with its cause (a handler's own server_error refusal, such as
+    // API-171's stale heartbeat, has no further cause and logs server_error); every other answer is the info line it was.
+    if (errorCode === 'server_error') deps.log.error({ ...line, errorCode: cause ?? 'server_error' });
+    else deps.log.info({ ...line, ...(errorCode ? { errorCode } : {}) });
     return res;
   };
 }

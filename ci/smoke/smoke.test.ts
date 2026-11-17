@@ -254,8 +254,11 @@ describe('ci/smoke/leak-check.sh', () => {
   });
 
   // why: F-1453 the workflow's 2 smoke steps set a per-run made-up BW_SMOKE_PLANT_SECRET, and the job stays on the self-hosted runner only
-  it('sets a per-run BW_SMOKE_PLANT_SECRET on both smoke steps of the workflow and never runs on a hosted runner', () => {
-    const wf = readFileSync(path.join(__dirname, '..', '..', '.github', 'workflows', 'smoke-public-tag.yml'), 'utf8');
+  it('sets a per-run BW_SMOKE_PLANT_SECRET on both smoke steps of the workflow and never runs on a hosted runner', (ctx) => {
+    // F-1852: .github/workflows/ is a private path (scripts/private-paths.txt), so a public copy skips this with a note naming the file.
+    const WF = path.join(__dirname, '..', '..', '.github', 'workflows', 'smoke-public-tag.yml');
+    if (!existsSync(WF)) ctx.skip('.github/workflows/smoke-public-tag.yml is not in this copy (a private path the public export leaves out)');
+    const wf = readFileSync(WF, 'utf8');
     expect(wf.match(/BW_SMOKE_PLANT_SECRET: bw-smoke-plant-\$\{\{ github\.run_id \}\}/g)).toHaveLength(2);
     for (const m of wf.matchAll(/runs-on:(.*)/g)) expect(m[1]).toContain('self-hosted');
   });
@@ -401,5 +404,27 @@ describe('ci/smoke/smoke-public-tag.sh', () => {
     expect(local.filter((f) => !copied(f))).toEqual([]);
     expect(text).toContain('docker cp "$here/../page-walkers/origin-guard.ts" "$HARNESS:/h/origin-guard.ts"');
     expect(existsSync(path.join(__dirname, '..', 'page-walkers', 'origin-guard.ts'))).toBe(true);
+  });
+
+  // why: F-1880 the harness is a bare container with only playwright installed, so a copied file that statically imports a file the job does not copy (or a package other than playwright) crashes the smoke on load
+  it('copies the whole static import closure of the files it puts in the harness', () => {
+    const copiedFrom = [
+      ...[...text.matchAll(/docker cp "\$here\/([^"]+)" "\$HARNESS:\/h\/([^"]+)"/g)].map((m) => ({ src: path.join(__dirname, m[1]!), name: m[2]! })),
+      ...[...text.matchAll(/-C \/work\/copy\/([^ ]+) -cf - (\S+) \| docker cp - "\$HARNESS:\/h"/g)].map((m) => ({ src: path.join(repo, m[1]!, m[2]!), name: m[2]! })),
+    ];
+    const names = copiedFrom.map((c) => c.name);
+    expect(names).toEqual(expect.arrayContaining(['smoke.mjs', 'origin-guard.ts', 'passwords.ts']));
+    const problems: string[] = [];
+    for (const c of copiedFrom) {
+      const src = readFileSync(c.src, 'utf8');
+      // static imports and re-exports only; import type is erased at run time; a dynamic import() inside a try is how a module reaches an optional package
+      for (const m of src.matchAll(/^\s*(import|export)(?!\s+type\b)[^;'"]*?\sfrom\s+'([^']+)'|^\s*import\s+'([^']+)'/gm)) {
+        const spec = (m[2] ?? m[3])!;
+        if (spec.startsWith('./')) {
+          if (!names.includes(spec.slice(2))) problems.push(`${c.name} imports ${spec}, which the job does not copy`);
+        } else if (!spec.startsWith('node:') && spec !== 'playwright') problems.push(`${c.name} imports ${spec}, which the harness does not install`);
+      }
+    }
+    expect(problems).toEqual([]);
   });
 });

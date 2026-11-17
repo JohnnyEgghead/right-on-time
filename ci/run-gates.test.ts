@@ -870,8 +870,9 @@ describe('ci/gates.json parallel declarations (F-410)', () => {
     // G-CI6 is since P7-SCANS (ci/gates/G-CI6.sh runs ci/e2e-stack.sh: a Compose stack and two browsers); it has no parallel field, so it runs alone.
     // public-files-check is since P8-PUBLIC-FILES only because ci/public-files.ts names the word docker in a README regex (it starts no container, stack or browser); it has no parallel field, so it runs alone.
     // smoke-public-tag is since P7-SMOKE (ci/smoke/smoke-public-tag.sh: a Docker-in-Docker engine, a harness container and a browser); it has no parallel field, so it runs alone.
+    // public-copy-tests is since P9-AUDIT-PUBLIC (ci/gates/public-copy-tests.sh runs pnpm run test in a public export, so every file the root config runs is in the files it runs, as for G-CI4-nightly); it has no parallel field, so it runs alone.
     // outage-drill is since P8-OUTAGE-DRILL only because infra/tests/outage-drill.test.ts names docker compose in a --dry-run assertion (the driver sends its docker commands over ssh, stubbed in that test, so no container, stack or browser starts here); it has no parallel field, so it runs alone.
-    expect(touches.map((g) => g.id).sort()).toEqual(['G-CI1', 'G-CI4-nightly', 'G-CI5', 'G-CI6', 'contract-gates', 'import-target-counts', 'look-values-comparator', 'look-values-comparator-nightly', 'map-manifest', 'outage-drill', 'page-walkers','page-walkers-nightly', 'public-files-check', 'restore-test', 'smoke-public-tag']);
+    expect(touches.map((g) => g.id).sort()).toEqual(['G-CI1', 'G-CI4-nightly', 'G-CI5', 'G-CI6', 'contract-gates', 'import-target-counts', 'look-values-comparator', 'look-values-comparator-nightly', 'map-manifest', 'outage-drill', 'page-walkers','page-walkers-nightly', 'public-copy-tests', 'public-files-check', 'restore-test', 'smoke-public-tag']);
     for (const g of scripted.filter((x) => x.parallel?.exclusive.includes('engine-net'))) expect(touches).toContain(g);
   });
 

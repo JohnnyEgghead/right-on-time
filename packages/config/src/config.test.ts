@@ -2,14 +2,18 @@
 // @bw/config: the settings of SPECIFICATIONS section 11.1, read once and validated by 1 Zod schema; an invalid value
 // stops the process with a named error that never prints the value.
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ConfigError, databasePassword, loadConfig, settingsSchema } from './index.ts';
 
 const repo = path.resolve(import.meta.dirname, '..', '..', '..');
-const spec = readFileSync(path.join(repo, 'docs', 'SPECIFICATIONS.md'), 'utf8');
+// F-1852: docs/SPECIFICATIONS.md is a private path (scripts/private-paths.txt), so in a public copy the test that reads its 11.1
+// table skips with a note naming it; the private checkout has it and the test runs.
+const SPEC = path.join(repo, 'docs', 'SPECIFICATIONS.md');
+const noSpec = existsSync(SPEC) ? '' : 'docs/SPECIFICATIONS.md is not in this copy (a private path the public export leaves out)';
+const spec = noSpec ? '' : readFileSync(SPEC, 'utf8');
 
 const composeText = readFileSync(path.join(repo, 'infra', 'compose.yaml'), 'utf8');
 
@@ -53,7 +57,8 @@ const fails = (env: Record<string, string>): ConfigError => {
 
 describe('@bw/config', () => {
   // why: NFR-14, SD-3
-  it('knows every setting of the 11.1 table that a process loading it reads, and only those', () => {
+  it('knows every setting of the 11.1 table that a process loading it reads, and only those', (ctx) => {
+    if (noSpec) ctx.skip(noSpec);
     const known = Object.keys(settingsSchema.shape).sort();
     expect(specSettingNames().length).toBeGreaterThan(25);
     expect(known).toEqual(specSettingNames());

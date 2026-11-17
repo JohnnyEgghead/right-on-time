@@ -171,15 +171,26 @@ export class TechOutbox {
     return item;
   }
 
-  /** 1 sync (see the header); joins a running one. Never throws: a failure leaves every item waiting. */
+  /**
+   * 1 sync (see the header); joins a running one. Never rejects (F-1849): any throw (the store, the transport, the lock, a read)
+   * ends the sync with null, every item still waiting under its key, Sending off, and the next sync tries again (I3). The
+   * screens show the same states as a sync that found no signal; there is no other banner state.
+   */
   sync(): Promise<SendReport | null> {
     if (!this.running) {
-      const run = this.deps.lock ? this.deps.lock(() => this.syncOnce()) : this.syncOnce();
-      this.running = run.finally(() => {
+      this.running = this.guardedSync().finally(() => {
         this.running = null;
       });
     }
     return this.running;
+  }
+
+  private async guardedSync(): Promise<SendReport | null> {
+    try {
+      return await (this.deps.lock ? this.deps.lock(() => this.syncOnce()) : this.syncOnce());
+    } catch {
+      return null;
+    }
   }
 
   private async syncOnce(): Promise<SendReport | null> {
@@ -208,7 +219,8 @@ export class TechOutbox {
       return report;
     } finally {
       this.set({ sending: false });
-      await this.refresh();
+      // F-1849: a store that cannot be read now keeps the last list on screen; it is not the sync's answer.
+      await this.refresh().catch(() => undefined);
     }
   }
 

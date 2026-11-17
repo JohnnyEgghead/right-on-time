@@ -12,6 +12,9 @@ import { foldStreetName, readStreetList, type StreetListRow } from './street-lis
 
 const ROOT = path.resolve(import.meta.dirname, '..', '..', '..');
 const RECORD = path.join(ROOT, 'docs', 'build', 'spikes', 'P2-STREETS.md');
+// F-1852: docs/build/ is a private path (scripts/private-paths.txt), so in a public copy the tests that read the P2-STREETS record
+// skip with a note naming it; the private checkout has it and they run.
+const noRecord = existsSync(RECORD) ? '' : 'docs/build/spikes/P2-STREETS.md is not in this copy (a private path the public export leaves out)';
 const LIST = process.env['BW_STREET_LIST'] ?? path.join(ROOT, '.build', 'data', 'street-list.json');
 const DATA = path.join(ROOT, 'infra', 'data', 'p2-streets');
 // The 3 branch rectangles of infra/data/s8/boxes.json (the one box table, F-15): lon_min, lat_min, lon_max, lat_max. Written out here on purpose.
@@ -25,7 +28,8 @@ describe('the built street list (real file)', () => {
   const rows = readStreetList(LIST);
 
   // why: SD-23
-  it('is the file the record names: its SHA-256 equals the one recorded in docs/build/spikes/P2-STREETS.md, and the CI manifest pins the same one', () => {
+  it('is the file the record names: its SHA-256 equals the one recorded in docs/build/spikes/P2-STREETS.md, and the CI manifest pins the same one', (ctx) => {
+    if (noRecord) ctx.skip(noRecord);
     const m = /^\| `street-list\.json` \| \d+ \| ([0-9a-f]{64}) \|/m.exec(readFileSync(RECORD, 'utf8'));
     expect(m, 'record has a street-list.json output row').not.toBeNull();
     expect(createHash('sha256').update(readFileSync(LIST)).digest('hex')).toBe(m?.[1]);
@@ -146,7 +150,8 @@ describe('the one branch box table (F-15)', () => {
 
 describe('the build script input check', () => {
   // why: SD-23
-  it('refuses, writes nothing and exits 2 when an input does not match its pinned SHA-256', () => {
+  it('refuses, writes nothing and exits 2 when an input does not match its pinned SHA-256', (ctx) => {
+    if (noRecord) ctx.skip(noRecord);
     const dir = mkdtempSync(path.join(tmpdir(), 'p2streets-'));
     for (const f of ['streets.json', 'tl_2024_us_zcta520.zip', 'tl_2024_39_place.zip', 'tl_2024_39_cousub.zip']) writeFileSync(path.join(dir, f), 'not the pinned file');
     const out = path.join(dir, 'out');

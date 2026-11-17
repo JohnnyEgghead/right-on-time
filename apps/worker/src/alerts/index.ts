@@ -4,5 +4,5 @@
 // (API-160 Check now). The alert_setting rows are the seed's (F-444), defaults from @bw/domain alertSettingDefaults.
 export { alertEmailWords, type CopyLanguage } from './copy.ts';
 export { openAlert, runAlertChecks, showAlertEmailLink, type CheckEnv, type CheckReport } from './check.ts';
-export { alertCheckHandler, ALERT_CHECK, HEARTBEAT_EVERY_MS, startAlertJobs, writeHeartbeat } from './jobs.ts';
+export { alertCheckHandler, ALERT_CHECK, giveUpAlertCheck, HEARTBEAT_EVERY_MS, startAlertJobs, writeHeartbeat } from './jobs.ts';
 export { INFO_RULES, RULES, textGaveUpLink, type Rule, type RuleEnv, type Wanted } from './rules.ts';

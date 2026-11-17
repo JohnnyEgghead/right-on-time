@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { foldStreetName as fold } from '../../db/src/street-list.ts';
@@ -57,6 +57,15 @@ const jobBranch = (j: { technician: string | null; branch?: string }, b: (e: str
 /** 1 sample row of the approved Jobs page (office-jobs.html, DK-88): its R list, and the Live row's jobs that list leaves out. */
 interface PageRow { job: string; customer: string; city: string; service: string; day: string; window: string; tech: string; status: string; bookedBy: string }
 const JOBS_PAGE = path.join(PKG, '../../mockups/pages/office-jobs.html');
+// F-1852: mockups/ and docs/REQUIREMENTS.md, docs/SPECIFICATIONS.md are private paths (scripts/private-paths.txt), so in a public copy
+// the tests that read them skip with a note naming the path; the private checkout has them and they run.
+const absent = (...rels: string[]): string => {
+  const gone = rels.filter((rel) => !existsSync(path.join(PKG, '../..', rel)));
+  return gone.length ? `${gone.join(' and ')} not in this copy (private paths the public export leaves out)` : '';
+};
+const noJobsPage = absent('mockups/pages/office-jobs.html');
+const noReqSpec = absent('docs/REQUIREMENTS.md', 'docs/SPECIFICATIONS.md');
+const noReq = absent('docs/REQUIREMENTS.md');
 const quoted = (line: string): string[] => [...line.matchAll(/'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1] ?? m[2] ?? '');
 function jobsPageRows(): PageRow[] {
   const html = readFileSync(JOBS_PAGE, 'utf8');
@@ -427,7 +436,8 @@ describe('the world seed fixture (BUILD_PLAN D-3 step 2)', () => {
   });
 
   // why: F-238
-  it('every job number REQUIREMENTS and SPECIFICATIONS tell is pinned to its technician, day and window', () => {
+  it('every job number REQUIREMENTS and SPECIFICATIONS tell is pinned to its technician, day and window', (ctx) => {
+    if (noReqSpec) ctx.skip(noReqSpec);
     const docs = ['REQUIREMENTS.md', 'SPECIFICATIONS.md'].map((f) => readFileSync(path.join(PKG, '../../docs', f), 'utf8')).join('\n');
     const cited = new Set([...docs.matchAll(/\b[Jj]obs? (24[89]\d\d)\b|jobs\/(24[89]\d\d)\b/g)].map((m) => Number(m[1] ?? m[2])));
     expect(cited.size).toBeGreaterThan(0);
@@ -440,8 +450,13 @@ describe('the world seed fixture (BUILD_PLAN D-3 step 2)', () => {
   });
 
   // why: F-292 (the F-238 class over the wider population: the approved pages and UI-SPECIFICATION tell jobs too)
-  it('every live-range job number an approved page or UI-SPECIFICATION tells is pinned to its technician, day and window, or named as not pinned', () => {
+  it('every live-range job number an approved page or UI-SPECIFICATION tells is pinned to its technician, day and window, or named as not pinned', (ctx) => {
     const root = path.join(PKG, '../..');
+    // F-1852: mockups/ and docs/UI-SPECIFICATION.md are private paths (scripts/private-paths.txt), so a public copy skips this with a
+    // note naming them; the private checkout has both and the test runs.
+    if (!existsSync(path.join(root, 'mockups/pages')) || !existsSync(path.join(root, 'docs/UI-SPECIFICATION.md'))) {
+      ctx.skip('mockups/pages and docs/UI-SPECIFICATION.md are not in this copy (private paths the public export leaves out)');
+    }
     const pages = readdirSync(path.join(root, 'mockups/pages')).filter((f) => f.endsWith('.html')).map((f) => readFileSync(path.join(root, 'mockups/pages', f), 'utf8'));
     const spec = readFileSync(path.join(root, 'docs/UI-SPECIFICATION.md'), 'utf8');
     const toldAll = new Set([...[...pages, spec].join('\n').matchAll(/\b(24[6-9]\d\d)\b/g)].map((m) => Number(m[1])));
@@ -467,7 +482,8 @@ describe('the world seed fixture (BUILD_PLAN D-3 step 2)', () => {
   });
 
   // why: F-292, F-555, F-318 (the approved Jobs page's sample rows are the seed's facts: owner ruling b23b26d9 "Match the page")
-  it('every job of the approved Jobs page sample rows has the customer, city, service, day, window, technician, status and channel the page tells', () => {
+  it('every job of the approved Jobs page sample rows has the customer, city, service, day, window, technician, status and channel the page tells', (ctx) => {
+    if (noJobsPage) ctx.skip(noJobsPage);
     const rows = jobsPageRows();
     expect(rows.map((r) => r.job).sort()).toEqual(['24790', '24791', '24797', '24800', '24805', '24819', '24825', '24830', '24840', '24841', '24842', '24866', '24871']);
     expect(storyRowsCheck(fixture, rows)).toEqual([]);
@@ -480,6 +496,7 @@ describe('the world seed fixture (BUILD_PLAN D-3 step 2)', () => {
   // why: F-1651 (the page's Done, On site, Late and At risk words are each job's timing at 10:28 AM on the baked tracks; the
   // old check passed any finished script row, so 24805, 24797 and 24819 read Done though the page tells Late and At risk)
   it('every Done, On site, Late and At risk row of the approved Jobs page is that job at 10:28 AM on the baked tracks', (ctx) => {
+    if (noJobsPage) ctx.skip(noJobsPage); // F-1861: a public copy with the track set fetched still lacks the page
     const skip = storyTracksSkip(TRACKS); // F-1665: the manifest's track set, else a skip that says why or a failure
     if (skip) ctx.skip(skip);
     expect(storyMomentCheck(momentAt1028(fixture), jobsPageRows())).toEqual([]);
@@ -487,6 +504,7 @@ describe('the world seed fixture (BUILD_PLAN D-3 step 2)', () => {
 
   // why: F-1651 (the check above can fail: with the visit before it, 24815, on time and 30 minutes long, 24805 is no longer Late at 10:28)
   it('fails a fixture whose Late page job has an on-time visit before it', (ctx) => {
+    if (noJobsPage) ctx.skip(noJobsPage); // F-1861
     const skip = storyTracksSkip(TRACKS);
     if (skip) ctx.skip(skip);
     const fx = JSON.parse(out['fixture.json']) as Fixture;
@@ -528,7 +546,8 @@ describe('the world seed fixture (BUILD_PLAN D-3 step 2)', () => {
   });
 
   // why: F-292 (the check above can fail: job 24805 given another Dublin customer, so only the name is wrong)
-  it('fails a fixture whose page job names another Dublin customer', () => {
+  it('fails a fixture whose page job names another Dublin customer', (ctx) => {
+    if (noJobsPage) ctx.skip(noJobsPage);
     const fx = JSON.parse(out['fixture.json']) as Fixture;
     const j = fx.demoWeekJobs.find((x) => x.jobNumber === 24_805) as Fixture['demoWeekJobs'][number];
     const dublin = fx.customers.find((c) => c.ref !== j.customer && c.city === 'Dublin') as Fixture['customers'][number];
@@ -692,7 +711,8 @@ describe('Columbus booking windows (FR-BOOK-6, F-201)', () => {
 
 // why: FR-IMP-6
 describe('the checks hold their own copy of the FR-IMP-6 table (F-204)', () => {
-  it('FR_IMP_6 in checks.ts equals the numbers in docs/REQUIREMENTS.md and the generator TARGETS', () => {
+  it('FR_IMP_6 in checks.ts equals the numbers in docs/REQUIREMENTS.md and the generator TARGETS', (ctx) => {
+    if (noReq) ctx.skip(noReq);
     const req = readFileSync(path.join(PKG, '../../docs/REQUIREMENTS.md'), 'utf8');
     const table = req.slice(req.indexOf('**Import target counts (FR-IMP-6).**'));
     const n = (re: RegExp): number => Number((re.exec(table) as RegExpExecArray)[1]?.replace(/,/g, ''));

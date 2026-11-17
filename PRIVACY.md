@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 # Privacy policy: Right On Time
 
-Last updated: Nov 15, 2026.
+Last updated: Nov 16, 2026.
 
 Right On Time is a free, open-source app for field technicians. This policy says what the iPhone app and the public sample site it connects to do with data. It states only what the code does. The code is public in this repository, so you can check each statement.
 
@@ -42,6 +42,7 @@ The app does not ask for your location and does not read it. No place is sent in
 - The sample company's data: customers, jobs, notes and photos. All of it is made up. If you add a note or a photo, it is stored there too, so do not enter real personal information.
 - Your session, stored only as a one-way hash of its token, never the token.
 - A web server log of each request: the time, the method, the page, the status, the size and the duration. It holds no IP address and no sign-in.
+- An app log, kept by the server's processes for the operator. A line can hold only these fields: the real time, the sample site's demo time, the level, the process name, the request's contract and route pattern, the status, the duration, an error code (a short code or error type, never an error message), the user id of a signed-in staff member, a job number, a count of failures, a scheduled task's kind and its id. It holds no name, phone number, address, message text or IP address.
 - The sample site sends no real text messages or email. Texts and email in it are shown on screen only.
 
 ## The nightly reset and backups

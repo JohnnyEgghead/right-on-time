@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { anchors, cut, KIT_DIR, NATIVE_ONLY, SLICES, slices } from './kit-slices.ts';
 
 const kit = readFileSync(path.join(KIT_DIR, 'kit.css'), 'utf8');
 const repo = path.resolve(import.meta.dirname, '../../..');
+// F-1852: docs/design/ is a private path (scripts/private-paths.txt), so in a public copy the byte-identity test skips with a note
+// naming it; the private checkout has it and the test runs. The slice tests read only the copied sheets.
+const noKit = existsSync(path.join(repo, 'docs/design/kit.css')) ? '' : 'docs/design/kit.css is not in this copy (a private path the public export leaves out)';
 
 describe('the copied kit sheets', () => {
   // why: FR-DEMO-1 the shell renders from the kit sheets copied byte-identical (P2-SHELL look clause)
-  it('are byte-identical to docs/design', () => {
+  it('are byte-identical to docs/design', (ctx) => {
+    if (noKit) ctx.skip(noKit);
     expect(readFileSync(path.join(KIT_DIR, 'kit.css')).equals(readFileSync(path.join(repo, 'docs/design/kit.css')))).toBe(true);
     expect(readFileSync(path.join(KIT_DIR, 'tokens/brand.css')).equals(readFileSync(path.join(repo, 'docs/design/tokens/brand.css')))).toBe(true);
   });

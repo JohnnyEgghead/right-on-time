@@ -6,6 +6,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { BUS_CHANNEL, createClient, decodeNotification, openEmailLink, type Queryable } from '@bw/db';
 import { ALERT_FACTS, ALERT_TYPES, alertSettingDefaults, type AlertType } from '@bw/domain';
+import { createLogger } from '@bw/log';
 import { useMigratedDatabase } from '../../../../packages/db/src/testing/fixture.ts';
 import { addCustomer, addJob, I, loginPool, seedOutboxWorld, setDemoClock, type OutboxRef } from '../../../../packages/outbox/src/testing/world.ts';
 import { runNextDue, type EventHandler } from '../dispatcher.ts';
@@ -457,7 +458,7 @@ describe('the worker: alert.check event and heartbeat', () => {
     };
     const pool = loginPool(db.url(), 'bw_worker');
     try {
-      const opts = { through: I(at(90)), demoNow: I(at(60)) };
+      const opts = { through: I(at(90)), demoNow: I(at(60)), log: createLogger({ process: 'worker', write: () => undefined }) };
       const results = await Promise.all([runNextDue(pool, { 'alert.check': gated }, opts), runNextDue(pool, { 'alert.check': gated }, opts)]);
       expect(results.map((r) => (r && 'outcome' in r ? r.outcome.state : r))).toEqual(['done', 'done']);
     } finally {

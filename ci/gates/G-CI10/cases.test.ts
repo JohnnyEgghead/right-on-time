@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // G-CI10 step 1 (no database): the finish-path check's committed must-fail cases, run every time (W-38), and the check
 // over the real spec, contract table and probe list (invariant 10; FR-BILL-3).
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { allContracts } from '../../../packages/api/src/index.ts';
@@ -8,6 +9,9 @@ import { checkFinishPaths, finishOracleFromSpec, readFinishOracle } from './fini
 import { FINISH_PROBES } from './finish-probes.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..', '..', '..');
+// F-1852: docs/SPECIFICATIONS.md is a private path (scripts/private-paths.txt), so in a public copy the real-tree case skips with a
+// note naming it; the private checkout has it and the case runs. The planted cases need no file.
+const noSpec = existsSync(path.join(ROOT, 'docs', 'SPECIFICATIONS.md')) ? '' : 'docs/SPECIFICATIONS.md is not in this copy (a private path the public export leaves out)';
 const ORACLE = ['API-102', 'API-26', 'API-62'];
 
 describe('G-CI10 finish-path check: committed must-fail cases', () => {
@@ -43,7 +47,8 @@ describe('G-CI10 finish-path check: committed must-fail cases', () => {
 
 describe('G-CI10 finish-path check: the real tree', () => {
   // why: FR-BILL-3, invariant 10
-  it('finds every finish route of section 6.6 either absent or probed', () => {
+  it('finds every finish route of section 6.6 either absent or probed', (ctx) => {
+    if (noSpec) ctx.skip(noSpec);
     expect(readFinishOracle(ROOT)).toEqual(ORACLE);
     const r = checkFinishPaths({ oracle: readFinishOracle(ROOT), contractIds: new Set(allContracts.map((c) => c.id)), probeIds: FINISH_PROBES.map((p) => p.id) });
     expect(r.problems).toEqual([]);

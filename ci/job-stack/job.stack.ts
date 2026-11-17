@@ -425,13 +425,13 @@ describe.each(engines)('the job page on the Compose stack, %s', (engine, type) =
     }
   });
 
-  // why: F-702, FR-TEXT-15, UC-17 (SCR-OFC-03's Live row: EVT-03 moves a text's status word with no reload)
+  // why: F-702, FR-TEXT-15, UC-17 (SCR-OFC-03's Live row: EVT-03 moves a text's status word with no reload); F-1838 (F-704 made an office text's row read "Office text sent by <name>" with the status word in its small line, so the row is matched by those 2 parts)
   it('moves an office text to Delivered in Texts and activity with no reload', async () => {
     const o = await open(browser, HAROLD);
     try {
       const p = o.page;
-      const line = msg('job.feed.text', { kind: msg('job.feed.textKind.office'), status: msg('msg.status.delivered') });
-      const rows = p.locator(`${SCREEN} [data-ctl="CTL-OFC-03-17"] .ev`).filter({ hasText: line });
+      const lead = msg('job.feed.kind.office_text', { by: '' }).trim();
+      const rows = p.locator(`${SCREEN} [data-ctl="CTL-OFC-03-17"] .ev`).filter({ hasText: lead }).filter({ hasText: msg('msg.status.delivered') });
       await p.locator(`${SCREEN} [data-ctl="CTL-OFC-03-17"] .ev`).first().waitFor();
       const before = await rows.count();
       await p.locator(`${SCREEN} .jh [data-ctl="CTL-OFC-03-21"]`).click();

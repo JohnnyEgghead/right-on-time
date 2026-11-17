@@ -2,7 +2,7 @@
 // F-1684: infra/deploy/deploy.sh runs here against stubbed ssh and curl (never the hosted server).
 // (1) a failed ROUTES read is a failed deploy with a clear line, never "locked"; (2) a probe transport error still reaches the verdict line.
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -36,15 +36,20 @@ describe('infra/deploy/deploy.sh verdicts (stubbed ssh and curl)', () => {
     });
     const stubLog = path.join(tmp, 'routes', 'calls.log');
     writeFileSync(stubLog, '');
+    const logDir = path.join(tmp, 'routes', 'logs');
+    const realBefore = existsSync(path.join(root, '.build/deploy')) ? readdirSync(path.join(root, '.build/deploy')).sort() : [];
     const r = spawnSync('bash', [script, '--allow-dirty'], {
       cwd: root,
       encoding: 'utf8',
-      env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}`, BW_HOST: 'admin@192.0.2.1', BW_KEY: '/nonexistent/key', STUB_LOG: stubLog, REAL_NODE: process.execPath },
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}`, BW_HOST: 'admin@192.0.2.1', BW_KEY: '/nonexistent/key', BW_DEPLOY_LOG_DIR: logDir, STUB_LOG: stubLog, REAL_NODE: process.execPath },
     });
     const out = r.stdout + r.stderr;
     expect(out).toMatch(/STOP: cannot read ROUTES from the server.*deploy FAILED/);
     expect(r.status).toBe(1);
     expect(readFileSync(stubLog, 'utf8')).toBe('');
+    // why: F-1835 the run logs into BW_DEPLOY_LOG_DIR and writes nothing into the real .build/deploy folder
+    expect(readdirSync(logDir).filter((f) => f.endsWith('-deploy.log'))).toHaveLength(1);
+    expect(existsSync(path.join(root, '.build/deploy')) ? readdirSync(path.join(root, '.build/deploy')).sort() : []).toEqual(realBefore);
   });
 
   // why: F-1684
