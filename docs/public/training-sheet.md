@@ -23,7 +23,7 @@ You make sure every visit has a technician and an arrival window, and that every
 ## Words on the board
 
 - **Jobs today.** The number of visits on the day.
-- **Late.** The arrival window has passed and the technician is not there yet. A text has been sent.
+- **Late.** The technician's estimated arrival is after the end of the arrival window. A visit can show Late before the window ends. The customer's late text has its own rule: it goes out when the estimate is 20 or more minutes later than the time the customer was last told.
 - **At risk.** The visit may run late.
 - **Unassigned.** The visit has no technician yet. It waits in the Unassigned row.
 - **Needs attention.** A tab that lists the late, at risk and unassigned visits. Look here first.
@@ -50,7 +50,7 @@ You do these in order. Each one names its screen and the control it uses.
 - Read the job page before you text or call the customer.
 - Pick an arrival window that shows room. A window marked "Full" cannot be picked.
 - Add a note when you learn something the next person needs. A note cannot be changed or deleted after you save it.
-- No text goes out between 9 PM and 8 AM the customer's time. A text sent then waits until 8 AM.
+- No text goes out between 9 PM and 8 AM the customer's time, with 2 exceptions: the on the way text and the running late text go out at any hour. Every other text sent then waits until 8 AM.
 - If a screen does not look like this sheet, stop and ask your trainer. Do not guess.
 
 ## When you are done

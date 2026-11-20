@@ -86,7 +86,7 @@ describe.each(engines)('shell look on %s', (engine, type) => {
             await serveMapFiles(page.context());
             await page.reload({ waitUntil: 'load' });
           }
-          await page.waitForSelector('.r1-screen', { state: 'attached' });
+          await page.waitForSelector('.r1-screen', { state: 'visible' }); // visible: a streamed screen is first attached in React's hidden segment (F-1909)
           if (c.ready) await page.waitForSelector(c.ready, { state: 'attached', timeout: 60_000 });
           if (c.widthFrom) await applyWidths(page, c.widthFrom, widths);
         },

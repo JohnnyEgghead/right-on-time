@@ -82,7 +82,9 @@ describe.each(engines)('board look on %s', (engine, type) => {
           await serveMapFiles(page.context());
           await page.reload({ waitUntil: 'load' });
         }
-        await page.waitForSelector('.r1-screen', { state: 'attached' });
+        // Visible, not attached: a streamed screen is attached first inside React's hidden segment (div hidden id=S:0),
+        // where every box measures 0 px; the Loading case measured there on a8e90d75 and on this head alike (P9-UG-WEB).
+        await page.waitForSelector('.r1-screen', { state: 'visible' });
         if (c.ready) await page.waitForSelector(c.ready, { state: 'visible', timeout: 60_000 });
         if (c.maps) await page.waitForSelector('[data-map-state="ready"]', { state: 'attached', timeout: 60_000 });
         if (c.widthFrom) await applyWidths(page, c.widthFrom, widths);

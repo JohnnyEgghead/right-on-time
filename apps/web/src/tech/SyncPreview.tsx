@@ -11,8 +11,10 @@ import '../shell/css/phone.ts';
 import '../../styles/page-tech-offline.css';
 import type { SYNC_PREVIEWS } from './preview-names.ts';
 
-const tile = (cap: string, node: ReactNode, cls = 'b') => (
-  <div className="bw-screen bw-tech-tile">
+// The tile draws a part of DK-111's screens alone, so it carries data-screen-of (page-scope.ts): DK-111's page sheet styles it.
+// SCR-TEC-09 Waiting to send is the screen the sync strip opens; the count-synced tile is SCR-TEC-05's, as its caption says.
+const tile = (cap: string, node: ReactNode, cls = 'b', screen = 'SCR-TEC-09') => (
+  <div className="bw-screen bw-tech-tile" data-screen-of={screen}>
     <div className="r1-st" data-bw-cap={cap}><div className={cls}>{node}</div></div>
   </div>
 );
@@ -24,7 +26,7 @@ export function SyncPreview({ name }: { name: (typeof SYNC_PREVIEWS)[number] }) 
     case 'old':
       return tile('CMP-10 Sync strip: 24-hour banner', <div className="r1p-pad"><OldItemsBanner fixed={STATES.old!} /></div>, 'b flat');
     case 'count-synced':
-      return tile('SCR-TEC-05 Add note, web: Empty', <div className="screen r1p-mini"><div className="apphead"><div className="clkrow"><WaitingCount fixed={STATES.synced!} /></div></div></div>);
+      return tile('SCR-TEC-05 Add note, web: Empty', <div className="screen r1p-mini"><div className="apphead"><div className="clkrow"><WaitingCount fixed={STATES.synced!} /></div></div></div>, 'b', 'SCR-TEC-05');
     case 'sent':
       return tile('Sent announcement', <SentAnnouncer fixed={STATES.sent!} />);
   }

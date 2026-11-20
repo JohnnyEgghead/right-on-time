@@ -19,11 +19,9 @@
 :where(.att) > p.r1-note { margin: 10px 14px; }
 /* CTL-OFC-02-15: a refused photo or signature the server kept shows as a tile, a photo's from its small copy (API-175 size thumb, UD-55). */
 :where(.bw-att-tile) { display: block; width: 88px; height: 60px; object-fit: cover; border-radius: 6px; margin: 4px 0; }
-:where(.bw-noothers) { margin: 0 0 10px; }
 /* A text input's default size would widen its half of the 2-column field grid (WebKit sizes 1fr columns by it). */
 :where(.g2f) input.bw-field-input { width: 0; }
-/* The frame draws the conflict message larger than a field message, with no margin (DK-85 SCR-OFC-19 tiles). */
-.r1-dlg .r1-fmsg.bw-conflict { margin: 0; font-size: 14px; }
+/* The reassign and conflict dialogs' own adaptations are in board-dialogs.css (F-1884: loaded wherever the dialogs are drawn). */
 /* The office frame's set carries the options sheet (DK-21's white date arrows) and its body is .r1 (kit :where(body.r1) .panel .ph);
    the board's frame has neither, so the board restores its own frame's values. */
 .bw-screen .datenav .arrow { background: transparent; }
@@ -90,7 +88,7 @@
   .bw-screen .seg { height: auto; }
   .bw-screen .bw-date { min-height: 44px; display: flex; align-items: center; }
   .bw-screen .sumbar .btn, .bw-screen .r1-dlg-f .btn, .bw-screen .r1-pop .btn, .bw-screen .r1-x { min-height: 44px; min-width: 44px; }
-  .bw-screen .r1-dlg .r1-input, .bw-screen .rl2 { min-height: 44px; }
+  .bw-screen .r1-dlg .r1-input { min-height: 44px; }
   .bw-screen .r1-dlg .r1-input > input, .bw-screen .r1-dlg .r1-input > select { min-height: 44px; }
   .bw-screen .r1-dlg-f { flex-wrap: wrap; }
   .bw-screen .r1-dlg-f .btn, .bw-screen .r1-pop .acts .btn { white-space: normal; height: auto; }

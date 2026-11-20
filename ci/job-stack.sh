@@ -10,7 +10,7 @@
 # stops and starts the stack's worker so an on-the-way text is still unsent when the office acts), SCR-OFC-23's time_overlap and
 # window_full messages and the role-gated controls; then (P4-NEWJOB) the new job page's suite, ci/newjob-stack/newjob.stack.ts, on the same stack:
 # a Sep 15 job at 5:01 PM on Sep 14, a customer made from the page and the Spanish confirmation in the inbox, the SD-26 order, Not suggested,
-# the reschedule's new confirmation and the Comfort Club words on 4 pages; then (P4-CUSTOMER-ACTIONS) the customer page's actions, ci/customer-actions-stack/customer-actions.stack.ts. Torn down on every exit path (a reaper outside the process group covers a
+# the reschedule's new confirmation and the Comfort Club words on 4 pages; then (P4-CUSTOMER-ACTIONS) the customer page's actions, ci/customer-actions-stack/customer-actions.stack.ts; then (P9-UG-WEB) the user-guide web findings, ci/ug-web-stack/ug-web.stack.ts. Torn down on every exit path (a reaper outside the process group covers a
 # kill). No docker: exit 3 ("stack unavailable", a red). Run by ci/gates/page-walkers.sh (step 10, Chromium) and
 # ci/gates/page-walkers-nightly.sh (step 3, WebKit). BW_JOB_PROJECT names a lane's own project: bw-w22-job or bw-w22-job-<x>,
 # <x> starting with a lowercase letter or digit; any other name exits 2.
@@ -113,6 +113,12 @@ BW_JOB_STACK_URL="$base" BW_JOB_DB_CONTAINER="$(compose ps -q db)" BW_JOB_WORKER
 BW_JOB_STACK_URL="$base" BW_JOB_DB_CONTAINER="$(compose ps -q db)" BW_JOB_WEB_CONTAINER="$(compose ps -q web)" BW_JOB_PROXY_CONTAINER="$(compose ps -q proxy)" \
   BW_JOB_KEISHA="$keisha" BW_JOB_DANA="$dana" \
   pnpm exec vitest run --config ci/customer-actions-stack/vitest.config.ts || suite=$?
+# P9-UG-WEB: the user-guide web findings (ci/ug-web-stack, F-1884 to F-1888 and their class F-1896) on the same stack, after the suites
+# above: it reads the board, job, booking, technician, inbox and live map pages, jumps the clock 1 minute only when the world has no move yet,
+# and cancels the bookings it makes.
+BW_JOB_STACK_URL="$base" BW_JOB_DB_CONTAINER="$(compose ps -q db)" \
+  BW_JOB_KEISHA="$keisha" BW_JOB_DANA="$dana" BW_JOB_TECHSEED="$techseed" \
+  pnpm exec vitest run --config ci/ug-web-stack/vitest.config.ts || suite=$?
 web="$(compose ps -aq web)"
 echo "job-stack: web after the suite: $(docker inspect -f '{{.State.Status}}, OOM killed {{.State.OOMKilled}}, restarts {{.RestartCount}}' "$web"), memory $(docker stats --no-stream --format '{{.MemUsage}}' "$web") (used / the container limit, read from docker)"
 exit "${suite:-0}"

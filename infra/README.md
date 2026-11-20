@@ -1,6 +1,6 @@
 # infra
 
-What runs the app, on the hosted server `bw.j7l.io` and on an own copy. The section and decision numbers below (SPECIFICATIONS SD-3, 11.1 and so on) cite design documents that are not published.
+What runs the app, on the hosted server `bw.j7l.io` and on an own copy. The section and decision numbers below (SPECIFICATIONS SD-3 and so on) cite design documents that are not published. The settings are in the settings table below.
 
 | Path | What it is |
 |---|---|
@@ -8,7 +8,7 @@ What runs the app, on the hosted server `bw.j7l.io` and on an own copy. The sect
 | `image/Dockerfile` | The 1 app image (web, worker and pbs are 3 entry points of it); `plant` is the rollback drill's target |
 | `nginx/` | `http.conf` (log format, upstream), site files `hosted.conf`, `local.conf`, `bootstrap.conf`, and `routes-locked.conf` / `routes-open.conf` |
 | `placeholder/index.html` | The locked page, served by nginx while the site is locked |
-| `profiles/demo.env` | The `demo` profile: the hosted demo's settings (SPECIFICATIONS 11.1) |
+| `profiles/demo.env` | The `demo` profile: the hosted demo's settings (the settings table below) |
 | `hosted/` | Hosted server only: `hosted.env` (site, lock, ports), `setup.sh`, `certbot-renew.sh` and its systemd timer, `bucket-check.sh` |
 | `deploy/deploy.sh` | The deploy, started by hand from this Mac or Spectre |
 | `deploy/server-deploy.sh` | Its server half (install, start, health wait, rollback) |
@@ -72,9 +72,44 @@ Each deploys a planted image whose `/healthz` answers that status. It passes whe
 
 Until P8-UNLOCK the hosted server runs `ROUTES=locked`. nginx sends only `/healthz` to the web container and answers every other path with the placeholder page itself. The lock lives in nginx, not in the image, so no image deployed before release can open the demo. ROUTES comes from the deploy mode (F-1645), never from a file: `deploy.sh` stages exactly 1 `ROUTES` line, `open` only for `--release <tag> --profile demo`, `locked` for every other deploy and drill, and stops (exit 2) when `hosted.env` or `demo.env` holds one. P8-UNLOCK opens the demo with `bash infra/deploy/deploy.sh --release <tag> --profile demo` and no file change. A later plain deploy no longer locks the site silently (F-1660): `deploy.sh` reads the server's `ROUTES` on every deploy, and when it reads `open` and the deploy would stage `locked`, it stops (exit 2) before anything is built, copied or changed. Re-run with `--release <tag> --profile demo` to keep it open, or add `--lock` to lock it on purpose (`--lock` changes nothing else, and does not combine with `--drill`, `--profile` or `--host-files`). A server with no `ROUTES` line, or `ROUTES=locked`, deploys as before.
 
+## The settings table
+
+Every key of the settings schema (`packages/config/src/index.ts`), its own-copy default and what it does. Put a key in `.env` as `KEY=value` to change it. The default is the one `compose.yaml` sets; a key Compose does not set shows the schema's own default or "not set". `HTTP_BIND` is Compose's own setting, not the schema's: it is the address the proxy listens on (default `127.0.0.1:8080`, this computer only).
+
+| Setting | Own copy default | What it does |
+|---|---|---|
+| `APP_ORIGIN` | `http://localhost:8080` | The address people type, with no path. Texts and the sign-in cookie use it; set it to match when you open the copy from another device. |
+| `TEXT_LINK_HOST` | `bw.j7l.io` | The host name written into the links in customer texts. |
+| `DEMO_MODE` | `off` | On: the sign-in page offers a "Sign in as" list of the sample people. |
+| `ACCESS_CODE_ON` | `off` | On: the site asks for the access code before any page. |
+| `ACCESS_CODE` | not set | The access code (6 or more characters), used when `ACCESS_CODE_ON` is on. A secret. |
+| `ACCESS_COOKIE_KEY` | not set | The key that signs the access cookie (32 or more characters). A secret. |
+| `RESET_PROTECTION` | `off` | On: Forgot password answers "not sent" for every address. |
+| `SAMPLE_PASSWORD_SEED` | not set (`.env.example` holds the published sample seed) | The seed of the sample people's passwords (16 or more characters); setup needs it. |
+| `REVIEWER_PASSWORD` | not set | The password of the app-review account, which setup creates only when this is set (10 or more characters). A secret. |
+| `NIGHTLY_RESET` | `off` | On: the world resets to its starting state every night at 3:00 AM Eastern. |
+| `IDLE_RESET_MINUTES` | `120` | Real minutes with no change before the world resets to its starting state. `0` turns the idle reset off. |
+| `RESET_COOLDOWN_SECONDS` | `300` | The least number of seconds between 2 resets that a person asks for. |
+| `SOURCE_REPO_URL` | `https://github.com/JohnnyEgghead/right-on-time` | Where the footer's Source link points (an https address). |
+| `PUBLIC_COMMIT` | not set (reads `unknown`) | The public commit the footer's Source link names; the release deploy sets it. |
+| `IOS_INSTALL_KIND` | `none` | How the iPhone app is offered: `none`, `unlisted` or `adhoc`. |
+| `IOS_INSTALL_LINK` | not set (empty) | The iPhone app's install link; it must fit `IOS_INSTALL_KIND`. |
+| `BACKUP_TARGET` | `none` | Where backups go: `none` or `lightsail`. |
+| `BACKUP_BUCKET` | not set | The backup bucket's name, when `BACKUP_TARGET` is `lightsail`. |
+| `BACKUP_REGION` | not set | The backup bucket's region (`us-east-1` or `us-east-2`). |
+| `DATA_LOCATION_APP` | `This computer` | Where the System health page says the app's data lives. |
+| `DATA_LOCATION_BACKUPS` | `This computer` | Where the System health page says the backups live. |
+| `DATA_LOCATION_TEXTS` | `This computer` | Where the System health page says the text messages are handled. |
+| `DATA_LOCATION_MAPS` | `This computer` | Where the System health page says the maps come from. |
+| `DATABASE_URL` | not set | The database address, for a run outside Compose (`pnpm run setup`). Compose builds its own. |
+| `DATABASE_PASSWORD_FILE` | not set | The file holding a process's database password. The migrate step writes it; leave it alone. |
+| `PBS_URL` | not set (reads `http://pbs:8090`) | The pretend billing service's address. |
+| `PHOTOS_DIR` | `/data/photos` | The folder for uploaded photos. |
+| `LOG_LEVEL` | `info` | How much the logs say: `debug`, `info`, `warn` or `error`. |
+
 ## Settings and the demo profile
 
-Every setting of SPECIFICATIONS 11.1 that Compose sets is an interpolated variable whose default is the own-copy value, so a plain `docker compose up` is "all off". The hosted demo's values are `profiles/demo.env`; `deploy.sh --profile demo` adds them to the server's `.env`. A Compose `profiles:` entry can only add or drop services, never change a setting, so the demo profile is a settings file. Secrets never go in it; on the server the postgres password stays in `/etc/brightwater/db.env` (root, mode 600).
+Every setting in the table above that Compose sets is an interpolated variable whose default is the own-copy value, so a plain `docker compose up` is "all off". The hosted demo's values are `profiles/demo.env`; `deploy.sh --profile demo` adds them to the server's `.env`. A Compose `profiles:` entry can only add or drop services, never change a setting, so the demo profile is a settings file. Secrets never go in it; on the server the postgres password stays in `/etc/brightwater/db.env` (root, mode 600).
 
 On the server, `/opt/brightwater/.env` holds `hosted.env`, the profile when asked, and `BW_IMAGE`, so every plain `docker compose` there (the certbot timer too) sees the same values. Those are the deploy's keys, rewritten by every deploy and named on the file's first line (`# deploy-owned keys: ...`). Every other `KEY=value` line already in that file (the owner's: secrets, `IOS_INSTALL_KIND`, `IOS_INSTALL_LINK`) is kept, byte for byte, below them on every deploy (F-98); the deploy log names the kept keys, never a value. A key the last deploy owned and this one does not (the demo profile not asked) is dropped. `ROUTES` and `BW_MAPS_DIR` are the deploy's keys too: an owner line for either is not carried. F-1649: no owner line is dropped without a log line naming its key (or, for a line that is no `KEY=value`, its line number), never its value; `export` prefixes, spaces around `=` and multi-line quoted values are read as Compose reads them. `/opt/brightwater/.prev/` holds the previous release's files.
 
@@ -94,7 +129,9 @@ It stops with 1 JSON log line, status `setup refused` with the stop's code in `e
 
 ### Resetting a set-up world (F-1801)
 
-A world that finished setup never takes changed sample rows: setup stops on it (`world_not_fresh`), and the nightly reset refills the world from its own snapshot. To give it the current sample data, `bash infra/deploy/reset-world.sh` (run by hand from this Mac, like `deploy.sh`; the server from `BW_HOST`) stops `web`, `worker` and `pbs`, removes the `db` service and its database volume, starts `db` again, runs `migrate`, runs setup with the sample password seed of the server's own `.env` (so the same accounts and sign-ins come back), and starts the services; then run `infra/backup/hosted-check.sh`. Visitor changes go, as at every nightly reset; alert and health history starts over; the demo is offline while setup runs. It changes no setting in the `.env`, and photo files no row names go at the worker's hourly cleanup. Each step is printed; the log is `.build/deploy/<UTC stamp>-reset.log`; exit 0 only on success, and a re-run after a failed step starts again at its checks. On the hosted demo it runs at P8-B9-RELEASE, as 1 owner grant (owner answer 5d88f9a6). `--local [--project <name>] [--env-file <file>]` runs the same steps on a local stack started from `infra/compose.yaml`.
+On an own copy the world also resets on its own after 120 minutes with no change (`IDLE_RESET_MINUTES`, default 120; `0` turns it off). The nightly reset (3:00 AM Eastern) is the hosted demo's: `NIGHTLY_RESET` is `off` on an own copy. The hosted demo keeps both, from `profiles/demo.env`.
+
+A world that finished setup never takes changed sample rows: setup stops on it (`world_not_fresh`), and the nightly reset refills the world from its own snapshot. To give it the current sample data, `bash infra/deploy/reset-world.sh` (run by hand from this Mac, like `deploy.sh`; the server from `BW_HOST`) stops `web`, `worker` and `pbs`, removes the `db` service and its database volume, starts `db` again, runs `migrate`, runs setup with the sample password seed of the server's own `.env` (so the same accounts and sign-ins come back), and starts the services; then run `infra/backup/hosted-check.sh`. Visitor changes go, as at every nightly reset; alert and health history starts over; the demo is offline while setup runs. It changes no setting in the `.env`, and photo files no row names go at the worker's hourly cleanup. Each step is printed; the log is `.build/deploy/<UTC stamp>-reset.log`; exit 0 only on success, and a re-run after a failed step starts again at its checks. On the hosted demo it runs at P8-B9-RELEASE, as 1 owner grant (owner answer 5d88f9a6). `--local [--project <name>] [--env-file <file>]` runs the same steps on a local stack started from `infra/compose.yaml`. A copy made by the README steps keeps its settings in `.env` at the repository root, so run it as `bash infra/deploy/reset-world.sh --local --env-file .env`; the script's own default file is `infra/.env`.
 
 A world set up before migration 0020 (an own copy or the hosted demo set up before that migration shipped) shows no old customer numbers on the customer page (SCR-OFC-14), and its reset keeps them empty (F-890). 0020 adds `customer.old_customer_number` with no backfill: only an import writes it, and the reset restores the world's own snapshot, taken before the column existed. The data is otherwise sound. To show the old numbers, recreate the database and set up again, from the repo root: `docker compose --env-file .env -f infra/compose.yaml down`, `docker volume rm brightwater_pgdata`, `docker compose --env-file .env -f infra/compose.yaml up -d --wait` (migrate runs first), then `docker compose --env-file .env -f infra/compose.yaml --profile setup run --rm setup`. This discards every change made in that world. On the hosted server, run the same commands with `sudo` and `-f /opt/brightwater/compose.yaml`.
 
@@ -118,4 +155,4 @@ Not needed today; the live server was set up by spike S5. On a new one: copy `co
 - `/healthz` answers 200 while the database answers and the worker heartbeat (`system.worker_heartbeat`, written every 10 s by the worker, P3-ALERTS) is under 60 s old; otherwise it answers 503, including when the database does not answer, never 500.
 - The event stream route `/api/v1/events` (API-09) is built: `packages/api-server/src/events` (the bus and the stream handler), served by the web process through the kernel (a contract row with a policy entry, F-344), configured in `routes-open.conf` (from spike S1).
 - Finding F-61 (a browser sends `Accept-Encoding`, and compression can buffer a stream): the app side is met. The stream is answered by the kernel path, which never passes through Next.js (so Next's gzip never applies), with `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`; nginx has gzip off (the image default, and `gzip off` on the events location). The load run with browser headers stays with F-61's testkit deferral.
-- SPECIFICATIONS 11.1 names `/opt/brightwater/.env` for the hosted secrets, matching the live server's S5 layout (`/opt/brightwater`, `/etc/brightwater/db.env`). P8-UNLOCK places its secrets.
+- The Settings and the demo profile section above names `/opt/brightwater/.env` for the hosted secrets, matching the live server's S5 layout (`/opt/brightwater`, `/etc/brightwater/db.env`). P8-UNLOCK places its secrets.

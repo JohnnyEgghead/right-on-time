@@ -28,6 +28,7 @@ docs/UI-DESIGN-KIT-REVISIONS.md
 # holds only the app; planning and build records stay private; SPECIFICATIONS section 6.13).
 docs/build/
 docs/BUILD_REPORTS/
+docs/guide/
 docs/design/
 jl-anchor
 jl-build

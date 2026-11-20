@@ -91,13 +91,18 @@ describe('@bw/config', () => {
     expect(c.DEMO_MODE && c.ACCESS_CODE_ON && c.RESET_PROTECTION && c.NIGHTLY_RESET).toBe(true);
   });
 
+  // why: FR-DEMO-6
+  it('accepts 0 for IDLE_RESET_MINUTES, the off value of the idle reset', () => {
+    expect(loadConfig({ IDLE_RESET_MINUTES: '0' }).IDLE_RESET_MINUTES).toBe(0);
+  });
+
   // why: NFR-14, FR-IOS-2
   it('names the invalid setting and never prints its value', () => {
     const cases: [Record<string, string>, string][] = [
       [{ APP_ORIGIN: 'bw.j7l.io' }, 'APP_ORIGIN'],
       [{ APP_ORIGIN: 'https://bw.j7l.io/app' }, 'APP_ORIGIN'],
       [{ DEMO_MODE: 'yes' }, 'DEMO_MODE'],
-      [{ IDLE_RESET_MINUTES: '0' }, 'IDLE_RESET_MINUTES'],
+      [{ IDLE_RESET_MINUTES: '-1' }, 'IDLE_RESET_MINUTES'],
       [{ RESET_COOLDOWN_SECONDS: '5 min' }, 'RESET_COOLDOWN_SECONDS'],
       [{ ACCESS_COOKIE_KEY: 'short-secret-value' }, 'ACCESS_COOKIE_KEY'],
       [{ IOS_INSTALL_KIND: 'unlisted' }, 'IOS_INSTALL_LINK'],

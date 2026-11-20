@@ -3,23 +3,10 @@
 // New customer and Edit customer form rules, the search request, and the time zones the page offers. No React, no network.
 import type { MessageKey } from '@bw/i18n';
 import type { ClientT } from '../shell/intl.tsx';
+import { usDigits } from '../shell/phone.ts';
 
-const digits = (s: string) => s.replace(/\D/g, '');
-
-/** 10 digits (or 11 with a leading 1) of a US number; null otherwise (FR-TEXT-13, CTL-OFC-38-02). */
-export function usDigits(text: string): string | null {
-  const d = digits(text);
-  if (d.length === 10) return d;
-  if (d.length === 11 && d.startsWith('1')) return d.slice(1);
-  return null;
-}
-
-/** "(614) 555-0163" for an E.164 number or any 10-digit text; the input back when it is neither. */
-export function formatPhone(value: string | null): string {
-  if (!value) return '';
-  const d = usDigits(value);
-  return d ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : value;
-}
+// The phone helpers live in shell/phone.ts (F-1888: the 1 formatter every screen shows a stored number through).
+export { formatPhone, usDigits } from '../shell/phone.ts';
 
 export function dateNumbers(date: string): { year: number; month: number; day: number; weekday: number } {
   const [y, m, d] = date.split('-').map(Number) as [number, number, number];

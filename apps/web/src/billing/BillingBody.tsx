@@ -313,9 +313,11 @@ function Actions({ i, busy, p }: { i: Item; busy: RowBusy | undefined; p: Billin
       </>
     );
   }
+  // Retry now is for a retrying row only (FR-BILL-10; CTL-OFC-10-07): the server refuses any other state (F-1898).
+  const retrying = i.state === 'retrying';
   return (
     <>
-      {busy === 'retry' ? (
+      {!retrying ? null : busy === 'retry' ? (
         <Busy label={t('billing.act.retryNow.busy')} size="sm" ctl="CTL-OFC-10-07" />
       ) : (
         <button type="button" className="btn sm" data-ctl="CTL-OFC-10-07" onClick={() => p.onRetryNow?.(n)}>

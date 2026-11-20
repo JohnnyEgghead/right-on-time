@@ -63,6 +63,4 @@
   .bw-inb .pg { overflow: auto; }
   .bw-inb .inbox-err button { min-height: 44px; min-width: 44px; }
   .bw-inb .inputbar .field input { height: 44px; }
-  .bw-inb .r1-demobar.ph .clk { flex-wrap: wrap; }
-  .bw-inb .r1-demobar.ph { white-space: normal; height: auto; min-height: 30px; flex-wrap: wrap; padding-top: 4px; padding-bottom: 4px; row-gap: 2px; }
 }

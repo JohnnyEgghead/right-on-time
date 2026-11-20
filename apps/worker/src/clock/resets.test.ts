@@ -39,4 +39,11 @@ describe('the idle reset rule (FR-DEMO-6)', () => {
     expect(idleDue({ lastResetReal: reset, lastWriteReal: write }, I('2026-11-02T12:30:00Z'), 120)).toBe(true);
     expect(idleDue({ lastResetReal: reset, lastWriteReal: reset }, I('2026-11-03T12:00:00Z'), 120)).toBe(false);
   });
+
+  // why: FR-DEMO-6
+  it('never fires with IDLE_RESET_MINUTES=0, however long the world is idle', () => {
+    const c = { lastResetReal: new Date('2026-11-02T10:00:00Z'), lastWriteReal: new Date('2026-11-02T10:30:00Z') };
+    expect(idleDue(c, I('2026-11-02T10:30:00Z'), 0)).toBe(false);
+    expect(idleDue(c, I('2027-11-02T10:30:00Z'), 0)).toBe(false);
+  });
 });

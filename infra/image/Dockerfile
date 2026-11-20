@@ -18,6 +18,13 @@
 # (the Mac is arm64, the server amd64) needs no emulation.
 ARG NODE_IMAGE=node:26.12.1-bookworm-slim@sha256:88e480776c6149ff1d098cd304f44bf18057fb5d284a3329b78162d29821e28c
 
+# manifests (EXC-DOCKER-CACHE): only the package.json of each workspace package. The install steps of the
+# deps and web stages copy these, never the sources, so a source edit under packages/ leaves the install layer
+# cached. A new package under packages/ needs no edit here.
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS manifests
+COPY packages /p
+RUN mkdir /m && cd /p && find . -mindepth 2 -maxdepth 2 -name package.json -exec cp --parents {} /m/ \;
+
 FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS deps
 WORKDIR /app
 RUN npm install --global --no-fund --no-audit --no-update-notifier pnpm@12.14.0
@@ -25,7 +32,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/package.json
 COPY apps/worker/package.json apps/worker/package.json
 COPY apps/pbs/package.json apps/pbs/package.json
-COPY packages packages
+COPY --from=manifests /m/ packages/
 # P2-SETUP: @bw/setup and its closure (the generator, the import) too, so the one-shot setup
 # service runs from this image; the generator's committed inputs (packages/generator/*.json) ship
 # with it (Dockerfile.dockerignore; F-237).
@@ -35,6 +42,7 @@ RUN cpu=$([ "$TARGETARCH" = amd64 ] && echo x64 || echo "${TARGETARCH:-x64}") \
  && rm -rf node_modules/.pnpm/@next+swc-* \
  && ls -d node_modules/.pnpm/@img+sharp-linux-$cpu@* node_modules/.pnpm/@img+sharp-libvips-linux-$cpu@* \
  && mkdir -p /out/db-login/web /out/db-login/worker /out/db-login/pbs /out/photos
+COPY packages packages
 
 # web (P2-SHELL): the Next.js build of the pages, on the BUILD platform; its output is platform-free
 # JavaScript. The web process (apps/web/src/server.ts) serves it through Next's request handler,
@@ -48,8 +56,9 @@ WORKDIR /src
 RUN npm install --global --no-fund --no-audit --no-update-notifier pnpm@12.14.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/web/package.json apps/web/package.json
-COPY packages packages
+COPY --from=manifests /m/ packages/
 RUN pnpm install --frozen-lockfile --ignore-scripts --filter bw-web...
+COPY packages packages
 COPY apps/web apps/web
 RUN cd apps/web && node node_modules/next/dist/bin/next build \
  && dist=$([ "$BW_WEB_PREVIEW" = 1 ] && echo .next-preview || echo .next) \

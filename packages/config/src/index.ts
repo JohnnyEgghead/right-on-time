@@ -40,7 +40,7 @@ export const settingsSchema = z
     SAMPLE_PASSWORD_SEED: optionalSecret(16),
     REVIEWER_PASSWORD: optionalSecret(10),
     NIGHTLY_RESET: onOff.prefault('off'),
-    IDLE_RESET_MINUTES: int(1).prefault('120'),
+    IDLE_RESET_MINUTES: int(0).prefault('120'),
     RESET_COOLDOWN_SECONDS: int(0).prefault('300'),
     SOURCE_REPO_URL: z.url({ protocol: /^https$/ }).default('https://github.com/JohnnyEgghead/right-on-time'),
     PUBLIC_COMMIT: z.string().regex(/^(unknown|[0-9a-f]{7,40})$/, 'must be unknown or a commit sha').default('unknown'),

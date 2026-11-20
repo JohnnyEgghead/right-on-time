@@ -88,6 +88,13 @@ html body.r1 { height: auto; min-height: 0; overflow: visible; }
 .bw-screen .acts .btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .bw-screen .seetx { text-decoration: underline; }
 
+/* F-1886: the wide layout's 6 tiles share the step panel's width (the page sheet's 1fr columns grow to a name that will not wrap,
+   so the row ran past the panel); a name that does not fit its tile wraps inside it. */
+@media (min-width: 1201px) {
+  .bw-screen .svc { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .bw-screen .svc .tile b { white-space: normal; overflow-wrap: break-word; }
+}
+
 /* Below the wide layout: the columns stack and the tiles take 3 across. */
 @media (max-width: 1200px) {
   .bw-screen .main { grid-template-columns: minmax(0, 1fr); }

@@ -58,6 +58,10 @@ html body.r1 { width: auto; min-width: 0; }
 @media (max-width: 720px) {
   .bw-screen .r1-demobar, .bw-screen .r1-foot, .bw-screen .shr-head, .bw-screen .r1-pubhead { flex-wrap: wrap; height: auto; white-space: normal; }
   .bw-screen .r1-demobar { min-height: 34px; }
+  /* F-1885: the phone strip (kit .r1-demobar.ph: a fixed 30 px, 0,2,0 and later than this sheet) grows with a wrapped second line, so
+     the line never sits under the header that follows. One line keeps the kit's 30 px box; the strip's clock wraps inside it. */
+  .bw-screen .r1-demobar.ph { height: auto; min-height: 30px; padding-top: 4px; padding-bottom: 4px; row-gap: 2px; }
+  .bw-screen .r1-demobar.ph .clk { flex-wrap: wrap; }
   .bw-screen .r1-foot { min-height: 44px; }
   .bw-screen .shr-head { min-height: 64px; }
   .bw-screen .r1-pubhead { min-height: 68px; }

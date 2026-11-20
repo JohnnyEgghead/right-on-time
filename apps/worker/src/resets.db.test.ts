@@ -68,6 +68,16 @@ describe('the idle reset watcher (FR-DEMO-6)', () => {
     await db.admin().query('UPDATE system.demo_clock SET pbs_epoch = world_epoch WHERE id = 1');
     expect(await autoResetStep({ pool: worker, real: plus(r0, 125 + 600), idleMinutes: 120, nightly: false })).toBeNull();
   });
+
+  // why: FR-DEMO-6
+  it('never resets with IDLE_RESET_MINUTES=0, however long the world is idle', async () => {
+    const r0 = at('2026-11-02T13:00:00Z');
+    await world({ resetReal: r0, writeReal: plus(r0, 5) });
+    const before = await clockRow();
+    expect(await autoResetStep({ pool: worker, real: plus(r0, 5 + 120), idleMinutes: 0, nightly: false })).toBeNull();
+    expect(await autoResetStep({ pool: worker, real: plus(r0, 5 + 60 * 24 * 30), idleMinutes: 0, nightly: false })).toBeNull();
+    expect((await clockRow())!.world_epoch).toBe(before!.world_epoch);
+  });
 });
 
 describe('the nightly reset (FR-DEMO-7)', () => {

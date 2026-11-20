@@ -12,6 +12,8 @@
 #                                                 the same steps on a local stack started from infra/compose.yaml: Compose project
 #                                                 <name> (default brightwater, the file's own name), settings from <file> (default
 #                                                 infra/.env, the file Compose reads beside infra/compose.yaml)
+#                                                 a copy made by the README steps: --local --env-file .env (its settings file is the .env at
+#                                                 the repository root; the default above is infra/.env)
 # Env: BW_HOST, BW_KEY (default ~/.ssh/brightwater-lightsail.pem), as deploy.sh. BW_DEPLOY_LOG_DIR (default .build/deploy).
 #
 # Steps, each printed:
@@ -38,7 +40,7 @@ while [ $# -gt 0 ]; do
     --local) is_local=1; shift ;;
     --project) project="${2:?--project <name>}"; shift 2 ;;
     --env-file) env_file="${2:?--env-file <file>}"; shift 2 ;;
-    *) echo "usage: bash infra/deploy/reset-world.sh [--local [--project <name>] [--env-file <file>]]" >&2; exit 2 ;;
+    *) echo "usage: bash infra/deploy/reset-world.sh [--local [--project <name>] [--env-file <file>]]  (a copy made by the README steps: --local --env-file .env; the default file is infra/.env)" >&2; exit 2 ;;
   esac
 done
 if [ "$is_local" = 0 ] && { [ -n "$project" ] || [ -n "$env_file" ]; }; then echo "--project and --env-file go with --local" >&2; exit 2; fi

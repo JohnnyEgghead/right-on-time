@@ -314,7 +314,7 @@ function PhotoViewer({ p, jobDate, onClose }: { p: ShownPhoto; jobDate: string; 
   }, [onClose]);
   const alt = t('tech.job.photoAlt', { by: p.by ?? '', at: noteWhen(p.at, jobDate, t.lang) });
   return (
-    <div className="bw-tech-overlay">
+    <div className="bw-tech-overlay" data-screen-of="SCR-TEC-04">
       <div className="r1-dim" onClick={onClose} />
       <div ref={sheet} className="r1-sheet" role="dialog" aria-modal="true" aria-label={t('tech.job.photoTitle')} data-ctl="CTL-TEC-04-11">
         <div className="grab" />
@@ -363,7 +363,7 @@ function PhotoSheet({ job, fixed }: { job: JobCopy; fixed?: { state: 'none' | 'p
   const label = t('tech.photo.title');
   const preview = state !== 'none';
   return (
-    <div className="bw-tech-overlay" data-screen-sheet="SCR-TEC-06">
+    <div className="bw-tech-overlay" data-screen-of="SCR-TEC-06">
       <div className="r1-dim" onClick={cancel} />
       <div ref={sheet} className="r1-sheet" role="dialog" aria-modal="true" aria-label={label}>
         <div className="grab" />

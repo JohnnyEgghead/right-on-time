@@ -30,6 +30,12 @@ You need Docker (or Podman or Colima, see below) with Compose, plus Node 26.12.1
    cp .env.example .env
    ```
 
+   Then add this line to `.env` to get the "Sign in as" list of the sample people on the sign-in page (without it, `DEMO_MODE` is `off` and the page asks for an email and a password):
+
+   ```sh
+   DEMO_MODE=on
+   ```
+
 2. Download the map files and the street list from their GitHub releases, and check them. This is about 2.8 GB, so allow time and disk space: 2.7 GB of it is the routing service's files, which `pnpm run setup:maps` fetches.
 
    ```sh
@@ -44,18 +50,22 @@ You need Docker (or Podman or Colima, see below) with Compose, plus Node 26.12.1
    docker compose --env-file .env -f infra/compose.yaml up -d
    ```
 
-4. Open <http://localhost:8080>.
+4. Open <http://localhost:8080>. The start page has 3 doors. Choose Sign in under Office and managers. With `DEMO_MODE=on`, the sign-in page has a "Sign in as" list of sample people: pick Dana Ruiz (the manager) and the dispatch board opens. Picking a technician opens the technician web app at `/tech`, not the board. With demo mode off, there is no list: choose Forgot password and type `dana.ruiz@brightwater.example`. Your copy shows the reset email in its on-screen email inbox, and the link in it sets a new password.
 
-`infra/README.md` has the details: what each service does, the settings, and how to start over.
+A copy listens on `127.0.0.1:8080` only (`HTTP_BIND`), so only the computer it runs on can open it. To open it from another device, set `HTTP_BIND` (for example `0.0.0.0:8080`) and an `APP_ORIGIN` that matches the address you type in that device's browser (for example `http://192.168.1.20:8080`) in `.env`, then run the `up -d` line again. With `DEMO_MODE=on`, anyone who can reach your copy can sign in as any sample person, the manager included, with no password. Do that only on a network only you use. Before you open your copy, do both of these. First, change `SAMPLE_PASSWORD_SEED` before the first setup, because the published seed and the code that works the passwords out are public, and with them anyone can sign in as the manager. Second, turn the access code on (`ACCESS_CODE_ON=on`, with an `ACCESS_CODE` of 6 or more characters and an `ACCESS_COOKIE_KEY` of 32 or more), because it stops "Sign in as" and Forgot password for anyone who does not have the code.
+
+`infra/README.md` has the details: what each service does, the settings table (every setting, its own-copy default and what it does), and how to start over.
+
+An own copy resets itself to its starting state after 120 minutes with no change, and every change visitors made goes with it. To turn that off, set `IDLE_RESET_MINUTES=0` in `.env`. The nightly reset at 3:00 AM Eastern is the hosted demo's: it is off on your copy (`NIGHTLY_RESET=off`).
 
 ### Settings beside demo mode
 
-Every setting is an environment variable with an own-copy default. These 2 sit side by side, because both change what the sign-in pages allow (the design documents, which are not published, call this section 11.1):
+Every setting is an environment variable with an own-copy default; the settings table in `infra/README.md` lists them all. These 2 sit side by side, because both change what the sign-in pages allow:
 
 | Setting | Own copy default | Hosted demo | What it does |
 |---|---|---|---|
 | `DEMO_MODE` | `off` | `on` | Demo mode: the web sign-in page offers a "Sign in as" list of the sample people, with an on-screen marker. |
-| `RESET_PROTECTION` | `off` | `on` | Reset protection: with it `on`, Forgot password answers "not sent" for every address. With demo mode on, a sample person is refused whatever this setting says, so the password the start page lists keeps working. With it `off` (your copy), a staff member who forgot a password resets it from the on-screen email inbox. So with it `off`, anyone who can reach the sign-in page can reset any staff password, a manager's included: keep a copy with it `off` on a network only you use. |
+| `RESET_PROTECTION` | `off` | `on` | Reset protection: with it `on`, Forgot password answers "not sent" for every address. With demo mode on, Forgot password is refused for a sample person whatever this setting says. With it `off` (your copy), a staff member who forgot a password resets it from the on-screen email inbox. So with it `off`, anyone who can reach the sign-in page can reset any staff password, a manager's included. This applies once your copy can be reached from another device (see `HTTP_BIND` above): until then only the computer it runs on can reach it. Keep a copy that other devices can reach on a network only you use. |
 
 The hosted demo turns reset protection on so that a visitor cannot lock the sample people out. Your own copy leaves it off.
 

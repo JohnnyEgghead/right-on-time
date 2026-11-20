@@ -188,6 +188,11 @@ export async function compareLook(opts: CompareOptions): Promise<CompareResult> 
       if (opts.setup) {
         await opts.setup(reads.app, 'app');
         await opts.setup(reads.frame, 'frame');
+        // Again after setup: text the setup waited for (a streamed screen revealed, a state drawn) can start a font face that the
+        // load's wait never saw, and a width read in the fallback face misses by about 1 px (P9-UG-WEB, red on a8e90d75 too).
+        for (const p of [reads.app, reads.frame]) {
+          await p.evaluate(() => (globalThis as unknown as { document: { fonts: { ready: Promise<unknown> } } }).document.fonts.ready);
+        }
       }
       const differences: Difference[] = [];
       for (const pair of opts.pairs) {

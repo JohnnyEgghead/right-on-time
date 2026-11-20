@@ -8,7 +8,7 @@ Right On Time is a free, open-source app for field technicians. This policy says
 ## The short version
 
 - The app has no advertising, no tracking and no analytics.
-- Everything on the sample site is made-up sample data for a fictional company named Brightwater. The site resets every night.
+- Everything on the sample site is made-up sample data for a fictional company named Brightwater. The hosted site resets every night.
 - The app does not read your location.
 - Nothing is sold or shared with anyone.
 
@@ -47,7 +47,8 @@ The app does not ask for your location and does not read it. No place is sent in
 
 ## The nightly reset and backups
 
-- The sample site resets itself to its starting state every night at 3:00 AM Eastern, and after 120 minutes with no change. A reset removes what visitors added: notes, photos and changes.
+- The hosted sample site resets itself to its starting state every night at 3:00 AM Eastern, and after 120 minutes with no change. A reset removes what visitors added: notes, photos and changes.
+- A copy you run yourself has no nightly reset (`NIGHTLY_RESET` is off), but it does have the idle reset: after 120 minutes with no change it returns to its starting state and removes what was added. Set `IDLE_RESET_MINUTES=0` in the copy's `.env` to turn the idle reset off.
 - A backup of the site's database is copied every night at 2:30 AM Eastern to private storage with the hosting provider, in the same region as the server. Backups older than 14 days are deleted. A backup can hold what a visitor added before that night's reset.
 - Backups are used only to restore the site. They are not read for any other purpose.
 

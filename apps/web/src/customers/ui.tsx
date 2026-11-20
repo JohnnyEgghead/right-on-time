@@ -52,7 +52,7 @@ export function Dialog({ screen, title, closeCtl, onClose, inline, wide, hosted 
   };
   return (
     <div className={inline ? 'r1-scrim in' : 'r1-scrim bw-modal'} onKeyDown={onKey} ref={root}>
-      <div className={`r1-dlg${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} {...(hosted ? { 'data-screen': screen } : {})} tabIndex={-1}>
+      <div className={`r1-dlg${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} {...(hosted ? { 'data-screen': screen } : { 'data-screen-of': screen })} tabIndex={-1}>
         <div className="r1-dlg-h">
           <h2>{title}</h2>
           <button type="button" className="r1-x" aria-label={t('customers.dialog.close')} data-ctl={closeCtl} onClick={onClose}>

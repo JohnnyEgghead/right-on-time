@@ -13,6 +13,7 @@ import { Fill } from '../import/ui.tsx';
 import { Icon } from '../shell/Icon.tsx';
 import { useT, type ClientT } from '../shell/intl.tsx';
 import { ErrorPanel, LiveIndicator, type LiveState } from '../shell/Panels.tsx';
+import { formatPhone } from '../shell/phone.ts';
 import { dayText, outcomeRules, scriptParts, showsButtons, timeWords, zoneAbbr, type CallData, type CallOutcome, type FailedText, type ReminderCall } from './model.ts';
 
 export type CallStatus = 'loading' | 'error' | 'ready';
@@ -156,7 +157,7 @@ function ReminderTable({ p, t }: { p: CallListBodyProps; t: ClientT }) {
               <small>{r.area}</small>
             </td>
             <td>
-              <span className="bw-ph">{r.phone ?? ''}</span>
+              <span className="bw-ph">{formatPhone(r.phone)}</span>
               <small>{t(`calls.reason.${r.reason}` as MessageKey)}</small>
             </td>
             <td>
@@ -288,7 +289,7 @@ function FailedList({ p, t }: { p: CallListBodyProps; t: ClientT }) {
                 : t('calls.failed.gaveUp', { type, when: r.failedAt ? w.clock(r.failedAt) : '' });
             return (
               <div className="fr" key={r.entryId} onClick={() => p.onSelect?.(r.entryId)} onFocusCapture={() => p.selected !== r.entryId && p.onSelect?.(r.entryId)}>
-                <b>{r.customer}</b> <span className="bw-ph">{r.phone ?? ''}</span>
+                <b>{r.customer}</b> <span className="bw-ph">{formatPhone(r.phone)}</span>
                 <small>
                   {line}{' '}
                   <Link className="jlk" aria-label={`${t('calls.failed.visit', { day, window: w.windowLabel(r.visit.window) })}: ${t('calls.btn.openJob')}`} href={`/office/jobs/${r.visit.jobNumber}`} data-ctl="CTL-OFC-09-06">
@@ -467,7 +468,7 @@ function PrintSheet({ data, date, t, w }: { data: CallData; date: string; branch
           {rows.map((r) => (
             <tr key={r.entryId}>
               <td>{r.customer}</td>
-              <td>{r.phone ?? ''}</td>
+              <td>{formatPhone(r.phone)}</td>
               <td>{`${dayText(t, r.visit.day)}, ${w.windowLabel(r.visit.window)}`}</td>
               <td>{r.visit.technician ?? t('msg.ctx.unassigned')}</td>
               <td>{languageText(r.language, t)}</td>

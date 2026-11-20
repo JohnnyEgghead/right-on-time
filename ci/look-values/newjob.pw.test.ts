@@ -76,7 +76,7 @@ describe.each(engines)('new job page look on %s', (engine, type) => {
       browser,
       setup: async (page, which) => {
         if (which === 'frame') return tagFrames(page);
-        await page.waitForSelector('.r1-screen', { state: 'attached' });
+        await page.waitForSelector('.r1-screen', { state: 'visible' }); // visible: a streamed screen is first attached in React's hidden segment (F-1909)
         if (c.ready) await page.waitForSelector(c.ready, { state: 'visible', timeout: 60_000 });
         if (c.widthFrom) await applyWidths(page, c.widthFrom, widths);
       },

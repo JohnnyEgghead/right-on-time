@@ -45,8 +45,9 @@ export function nightlyDue(lastResetReal: Instant, real: Instant): boolean {
   return real.since(night).total('minutes') < NIGHTLY_WINDOW_MINUTES;
 }
 
-/** Is the idle reset due at `real`? Only after a write since the last reset, and idleMinutes after the last write. */
+/** Is the idle reset due at `real`? Only after a write since the last reset, and idleMinutes after the last write. 0 turns it off. */
 export function idleDue(c: Pick<LockedClock, 'lastWriteReal' | 'lastResetReal'>, real: Instant, idleMinutes: number): boolean {
+  if (idleMinutes === 0) return false;
   if (c.lastWriteReal.getTime() <= c.lastResetReal.getTime()) return false;
   return real.since(instant(c.lastWriteReal)).total('minutes') >= idleMinutes;
 }

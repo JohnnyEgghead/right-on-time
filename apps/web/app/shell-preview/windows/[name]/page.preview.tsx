@@ -18,8 +18,9 @@ const THU = '2026-09-17';
 const LAST = SETTINGS.windows[4]!.windowId;
 
 // The states board draws a part of the screen in a tile body (DK-64 .r1-st .b); the app draws the same part in the same wrapper.
+// The tile carries data-screen-of (not a screen root, page-scope.ts), so SCR-OFC-12's page sheet styles the part it draws.
 const tile = (title: string, node: React.ReactNode) => (
-  <div className="bw-screen">
+  <div className="bw-screen" data-screen-of="SCR-OFC-12">
     <title>{title}</title>
     <div className="r1-st">
       <div className="b flat">{node}</div>

@@ -1,0 +1,11 @@
+/* The adaptations of the board's 2 hosted dialogs, SCR-OFC-18 reassign and SCR-OFC-19 conflict (F-1884): board/Dialogs.tsx loads
+   this sheet with the board's page sheet, so a dialog drawn by another host (the job page, SCR-OFC-03) is styled as the board draws
+   it, on a fresh load and after a move from the board. Every class here is the 2 dialogs' own; it sets no compared value at
+   1440 x 900 (OA-84). Moved from board.css unchanged. */
+:where(.bw-noothers) { margin: 0 0 10px; }
+/* The frame draws the conflict message larger than a field message, with no margin (DK-85 SCR-OFC-19 tiles). */
+.r1-dlg .r1-fmsg.bw-conflict { margin: 0; font-size: 14px; }
+@media (max-width: 719px) {
+  /* A reassign row at a finger's size. */
+  .bw-screen .rl2 { min-height: 44px; }
+}

@@ -4,6 +4,12 @@
 // SCR-OFC-32 block popover, SCR-OFC-18 reassign, SCR-OFC-19 conflict, SCR-OFC-31 add or change a block, SCR-OFC-33 delete
 // a block. Each takes its data and its busy and message states as props, so the screen drives them and the harness
 // build shows each state its frame draws. Escape closes; focus goes to the stated control on open and back on close.
+// F-1884: the dialogs load every sheet their markup needs, so another host (the job page) draws SCR-OFC-18 and SCR-OFC-19 as the
+// board does: the office kit, the board's page sheet (scoped to the board's screens and these 2 hosted ones, page-scope.ts) and
+// the 2 dialogs' own adaptations.
+import '../shell/css/office.ts';
+import '../../styles/page-office-board.css';
+import '../../styles/app/board-dialogs.css';
 import type { MessageKey } from '@bw/i18n';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '../shell/Icon.tsx';

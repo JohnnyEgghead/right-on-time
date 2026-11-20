@@ -22,7 +22,19 @@ const config: NextConfig = {
   // No image optimizer: it would need the native sharp binary of the build machine inside a cross-architecture image.
   images: { unoptimized: true },
   outputFileTracingRoot: repoRoot,
-  turbopack: { root: repoRoot },
+  turbopack: {
+    root: repoRoot,
+    // F-1896: every page sheet (apps/web/styles/page-*.css, the kit's byte copies) is bundled with its rules scoped to its
+    // own screens (src/shell/css/page-scope.ts), so a sheet left in the document after a client move never reaches the
+    // next screen. The scope is a 0-specificity :where(), so the cascade among the rules that apply is unchanged.
+    rules: {
+      '*.css': {
+        condition: { path: /(^|\/)apps\/web\/styles\/page-[a-z0-9-]+\.css$/ },
+        loaders: [path.join(import.meta.dirname, 'src/shell/css/page-scope-loader.ts')],
+        type: 'css',
+      },
+    },
+  },
   transpilePackages: ['@bw/api', '@bw/i18n', '@bw/outbox', '@bw/sms', '@bw/time'],
   poweredByHeader: false,
   reactStrictMode: true,

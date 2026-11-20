@@ -58,7 +58,6 @@
   .lm .r1p-foot a { display: inline-flex; align-items: center; min-height: 44px; }
   .lm .brandrow { flex-wrap: wrap; }
   .lm .eta { flex-wrap: wrap; }
-  .lm .r1-demobar.ph { height: auto; min-height: 30px; flex-wrap: wrap; padding-top: 4px; padding-bottom: 4px; row-gap: 2px; }
 }
 
 /* The trip progress: the frame sets these 2 widths inline; the page cannot (CSP), so each whole percent is a class on .eta. */

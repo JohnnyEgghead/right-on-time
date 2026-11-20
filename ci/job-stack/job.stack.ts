@@ -252,7 +252,9 @@ describe.each(engines)('the job page on the Compose stack, %s', (engine, type) =
       // On a computer the call shows Harold's number and starts no call (CMP-16).
       const harold = await jobOf(HAROLD);
       await p.locator(`${SCREEN} [data-ctl="CTL-OFC-03-22"] button`).click();
-      await expect.poll(async () => p.locator(`${SCREEN} [data-ctl="CTL-OFC-03-22"]`).innerText()).toContain(harold.customer.phone);
+      // F-1888: the number reads in the 1 shown form, (614) 555-0148, however it is stored (+16145550148).
+      const haroldShown = (harold.customer.phone as string).replace(/\D/g, '').replace(/^1(\d{10})$/, '$1').replace(/^(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3');
+      await expect.poll(async () => p.locator(`${SCREEN} [data-ctl="CTL-OFC-03-22"]`).innerText()).toContain(haroldShown);
     } finally {
       await close(o);
     }

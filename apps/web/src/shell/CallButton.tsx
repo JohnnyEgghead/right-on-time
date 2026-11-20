@@ -9,6 +9,7 @@ import { useId, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Icon } from './Icon.tsx';
 import { useT } from './intl.tsx';
 import { callMode, PHONE_QUERY, telHref, type CallMode } from './keys.ts';
+import { formatPhone } from './phone.ts';
 
 function subscribe(cb: () => void) {
   const mq = window.matchMedia(PHONE_QUERY);
@@ -42,6 +43,8 @@ export function CallButton({ name, fullName, number, className = 'btn sm', child
   const mode = useCallMode();
   const [shown, setShown] = useState(initialShown);
   const popId = useId();
+  // F-1888: the number reads in the 1 shown form (shell/phone.ts) however it is stored; the tel: link dials its digits.
+  const shownNumber = formatPhone(number);
   const label = children ?? (
     <>
       <Icon name="phone" />
@@ -49,7 +52,7 @@ export function CallButton({ name, fullName, number, className = 'btn sm', child
     </>
   );
   const dial = (form: boolean) => (
-      <a className={className} {...(form ? { 'data-callform': 'tel' } : {})} href={telHref(number)} data-ctl="CTL-CMP-16-01" data-cmp="CMP-16" aria-label={t('shell.call.number', { name: fullName ?? name, number })}>
+      <a className={className} {...(form ? { 'data-callform': 'tel' } : {})} href={telHref(number)} data-ctl="CTL-CMP-16-01" data-cmp="CMP-16" aria-label={t('shell.call.number', { name: fullName ?? name, number: shownNumber })}>
         {label}
       </a>
   );
@@ -71,7 +74,7 @@ export function CallButton({ name, fullName, number, className = 'btn sm', child
           <div className="r1-pop in bw-call-pop">
             <h3>{t('shell.call.label', { name: fullName ?? name })}</h3>
             <p className="bw-num" data-call-number="">
-              {number}
+              {shownNumber}
             </p>
           </div>
         ) : null}
