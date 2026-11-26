@@ -40,13 +40,13 @@ type In<R extends { request: z.ZodType }> = z.output<R['request']>;
 
 /** SD-29 lifetimes, in demo time: an invite link 7 days, a reset link 60 minutes. Hours, so a DST change never moves them. */
 export const INVITE_HOURS = 7 * 24;
-export const RESET_HOURS = 1;
+const RESET_HOURS = 1;
 /** SD-29: the seed starts the employee numbers at 40701; a new one is 1 above the highest in the world. */
-export const FIRST_EMPLOYEE_NUMBER = 40701;
+const FIRST_EMPLOYEE_NUMBER = 40701;
 
 const sha256 = (token: string): Buffer => createHash('sha256').update(token).digest();
 const wire = (d: Date): string => toWire(Temporal.Instant.fromEpochMilliseconds(d.getTime()), DEFAULT_ZONE);
-const refuse = <T>(status: number, code: 'not_found' | 'rule_refused' | 'validation_failed' | 'already_a_user' | 'gone' | 'account_turned_off'): ApiResult<T> =>
+const refuse = <T>(status: number, code: 'forbidden' | 'not_found' | 'rule_refused' | 'validation_failed' | 'already_a_user' | 'gone' | 'account_turned_off'): ApiResult<T> =>
   ({ ok: false, status, code });
 const appOf = (role: string): 'office' | 'tech' => (role === 'technician' ? 'tech' : 'office');
 const staffId = (req: { caller: { kind: string; userId?: string } }): string | null => (req.caller.kind === 'staff' ? (req.caller.userId ?? null) : null);
@@ -124,17 +124,17 @@ export const searchUsersHandler: Handler<Out<typeof searchUsers>> = async (req, 
 // ---------- API-150 invite ----------
 
 /** SD-29: 1 above the highest employee number in the world, under a transaction lock so 2 invites never take the same one. */
-export async function nextEmployeeNumber(tx: Tx): Promise<string> {
+async function nextEmployeeNumber(tx: Tx): Promise<string> {
   await tx.query(`SELECT pg_advisory_xact_lock(hashtext('bw.employee_number'))`);
   const r = await tx.query<{ n: number | null }>(`SELECT max(employee_number::int) AS n FROM world."user" WHERE employee_number ~ '^[0-9]{5}$'`);
   const top = r.rows[0]?.n;
   return String(top === null || top === undefined ? FIRST_EMPLOYEE_NUMBER : top + 1);
 }
 
-/** A password token whose plain value is dropped at once; API-166 re-mints it when the email opens (see the file head). */
+/** A password token whose plain value is dropped at once; the email's opening re-mints it (API-166; see the file head). */
 async function writePasswordToken(tx: Tx, userId: string, kind: 'invite' | 'reset', now: string): Promise<void> {
   // F-612: the newer email supersedes an earlier unused token of the same kind with the same expiry (2 sends at one demo instant, the clock
-  // paused), so API-166's email-to-token match stays one to one.
+  // paused), so the email-to-token match of the email's opening (API-166) stays one to one.
   await tx.query(
     `UPDATE world.password_token SET used_at = $3::timestamptz
       WHERE user_id = $1 AND kind = $2 AND used_at IS NULL AND expires_at = $3::timestamptz + make_interval(hours => $4)`,
@@ -188,17 +188,28 @@ export const inviteUserHandler: Handler<Out<typeof inviteUser>> = async (req, tx
 
 // ---------- API-151, API-152, API-170 ----------
 
-async function target(tx: Tx, id: string) {
-  return (await tx.query<{ id: string; role: Role; status: string; status_before_off: string | null }>(
-    `SELECT id, role, status, status_before_off FROM world."user" WHERE id = $1 FOR UPDATE`, [id],
-  )).rows[0];
+type TargetRow = { id: string; role: Role; status: string; status_before_off: string | null };
+
+/**
+ * The user a change names, locked together with the manager who makes it, the 2 rows in id order (F-1934: 2 managers who act
+ * on each other at once wait for each other here, never cross). The caller's row is read under that lock, after the session
+ * check of a call that waited: a caller who is no longer an active manager gets the answer of a caller who is no manager.
+ */
+async function target(tx: Tx, id: string, by: string | null): Promise<{ user: TargetRow } | { refused: ApiResult<never> }> {
+  const r = await tx.query<TargetRow>(
+    `SELECT id, role, status, status_before_off FROM world."user" WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE`, [by === null ? [id] : [id, by]]);
+  const caller = r.rows.find((u) => u.id === by);
+  if (caller?.role !== 'manager' || caller.status !== 'active') return { refused: refuse(403, 'forbidden') };
+  const user = r.rows.find((u) => u.id === id);
+  return user ? { user } : { refused: refuse(404, 'not_found') };
 }
 
 export const setUserRoleHandler: Handler<Out<typeof setUserRole>> = async (req, tx) => {
   const by = staffId(req);
   const p = req.params as In<typeof setUserRole>;
-  const u = await target(tx, p.userId);
-  if (!u) return refuse(404, 'not_found');
+  const t = await target(tx, p.userId, by);
+  if ('refused' in t) return t.refused;
+  const u = t.user;
   // CTL-OFC-43-07: never the signed-in manager's own row; the same role is no change.
   if (u.id === by || u.role === p.role) return refuse(409, 'rule_refused');
   await tx.query(`UPDATE world."user" SET role = $2 WHERE id = $1`, [u.id, p.role]);
@@ -209,8 +220,9 @@ export const setUserRoleHandler: Handler<Out<typeof setUserRole>> = async (req, 
 export const turnUserOffHandler: Handler<Out<typeof turnUserOff>> = async (req, tx) => {
   const by = staffId(req);
   const p = req.params as In<typeof turnUserOff>;
-  const u = await target(tx, p.userId);
-  if (!u) return refuse(404, 'not_found');
+  const t = await target(tx, p.userId, by);
+  if ('refused' in t) return t.refused;
+  const u = t.user;
   if (u.id === by || (u.status !== 'active' && u.status !== 'invited')) return refuse(409, 'rule_refused');
   await tx.query(`UPDATE world."user" SET status = 'turned_off', status_before_off = status WHERE id = $1`, [u.id]);
   // FR-AUTH-12: turning off ends the user's sessions (the session layer also admits only an active user's session).
@@ -222,8 +234,9 @@ export const turnUserOffHandler: Handler<Out<typeof turnUserOff>> = async (req, 
 export const turnUserOnHandler: Handler<Out<typeof turnUserOn>> = async (req, tx) => {
   const by = staffId(req);
   const p = req.params as In<typeof turnUserOn>;
-  const u = await target(tx, p.userId);
-  if (!u) return refuse(404, 'not_found');
+  const t = await target(tx, p.userId, by);
+  if ('refused' in t) return t.refused;
+  const u = t.user;
   if (u.status !== 'turned_off') return refuse(409, 'rule_refused');
   // Back to the status they had when turned off: Active, or Invited (their invite link works again).
   await tx.query(`UPDATE world."user" SET status = coalesce(status_before_off, 'active'), status_before_off = NULL WHERE id = $1`, [u.id]);
@@ -234,7 +247,7 @@ export const turnUserOnHandler: Handler<Out<typeof turnUserOn>> = async (req, tx
 // ---------- API-153 role access ----------
 
 /**
- * The areas of CTL-OFC-43-11, each as the screens it is made of. An area is open to a role when the policy table admits the
+ * The areas of the table of what each role can see (CTL-OFC-43-11), each as the screens it is made of. An area is open to a role when the policy table admits the
  * role to every one of its screens (Admin: the office role opens Arrival windows and Import, but not Users, System health or
  * the demo clock, so it reads No), except Customer phones, which is open where any of its screens is (FR-AUTH-4: the
  * office's job page, the technician's own job). Read from the same table the kernel enforces (FR-AUTH-1).
@@ -385,7 +398,7 @@ export const passwordLinkHandler: Handler<Out<typeof passwordLink>> = async (req
   return { ok: true, status: 200, data: { kind: t.kind, user: { name: t.name, role: t.role, branch: t.branch_id }, app: appOf(t.role) } };
 };
 
-/** SD-29's rules beyond the length: not the email, not 1 repeated character. */
+/** The password rules beyond the length (SD-29): not the email, not 1 repeated character. */
 export function passwordRuleBroken(password: string, email: string): 'is_email' | 'one_character' | null {
   if (password.trim().toLowerCase() === email.trim().toLowerCase()) return 'is_email';
   if ([...new Set(password)].length === 1) return 'one_character';

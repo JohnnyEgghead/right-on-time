@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// P2-SEED (owner ruling c025a9ec, moved from P2-SHELL): API-10 GET /clock on the real migrated database answers its
+// API-10 GET /clock on the real migrated database answers its
 // specified 500 server_error before the reference seed, and 200 after it, with world epoch 1 and the demo time read from
 // the row the seed wrote. The production kernel as the web process's own login bw_web, like shell-reads.db.test.ts;
 // no fixture row is inserted: the only rows are the seed's. Run by gate G-CI7 step 3.

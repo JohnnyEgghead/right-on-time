@@ -30,7 +30,7 @@ export interface SetPasswordProps {
 
 /** The SD-29 rules in the order the page lists them; each is met or not for the typed text. */
 /** The page does not know the address: the server checks it, and `emailRefused` marks that rule unmet after its refusal. */
-export function passwordRules(typed: string, emailRefused = false): { key: 'length' | 'notEmail' | 'notOneCharacter'; met: boolean }[] {
+function passwordRules(typed: string, emailRefused = false): { key: 'length' | 'notEmail' | 'notOneCharacter'; met: boolean }[] {
   return [
     { key: 'length', met: typed.length >= PASSWORD_MIN && typed.length <= PASSWORD_MAX },
     { key: 'notEmail', met: typed.length > 0 && !emailRefused },
@@ -38,7 +38,7 @@ export function passwordRules(typed: string, emailRefused = false): { key: 'leng
   ];
 }
 
-export const signInAfter = (app: 'office' | 'tech') => `${app === 'tech' ? '/tech/sign-in' : '/sign-in'}?set=1`;
+const signInAfter = (app: 'office' | 'tech') => `${app === 'tech' ? '/tech/sign-in' : '/sign-in'}?set=1`;
 
 export function SetPasswordScreen({ token, state: given, info: givenInfo, typed = '', clock, appInfo }: SetPasswordProps) {
   const t = useT();

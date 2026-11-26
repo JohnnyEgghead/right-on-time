@@ -16,7 +16,7 @@ import { ErrorPanel, LiveIndicator, type LiveState } from '../shell/Panels.tsx';
 import { formatPhone } from '../shell/phone.ts';
 import { dayText, outcomeRules, scriptParts, showsButtons, timeWords, zoneAbbr, type CallData, type CallOutcome, type FailedText, type ReminderCall } from './model.ts';
 
-export type CallStatus = 'loading' | 'error' | 'ready';
+type CallStatus = 'loading' | 'error' | 'ready';
 
 export interface CallListBodyProps {
   status: CallStatus;

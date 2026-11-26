@@ -55,7 +55,7 @@ const uncappedPart = record.replace(capSection, '');
 const SERVICES = ['proxy', 'web', 'worker', 'pbs', 'db', 'routing'];
 const routes = (r: string): boolean => { const [a, b] = r.split('/').map(Number); return a! * 10 >= b! * 9; };
 const allRouted = (r: string): boolean => { const [a, b] = r.split('/').map(Number); return a === b; };
-// NFR-13's count is host used memory (BUILD_PLAN section 3 D-21; owner answer 8936427c); the cgroup sum and docker stats sit beside it.
+// The memory count a setting is judged by (NFR-13) is host used memory (BUILD_PLAN section 3 D-21; owner answer 8936427c); the cgroup sum and docker stats sit beside it.
 const fits = !noRecord && s.stopped === null && s.burstRouted.every(routes) && s.burstP95Ms.max <= s.sd49LimitMs && s.hostUsedPercentOfPlan <= 60;
 // The capped verdict (W36-ROUTING-CAP): all 5 runs, every leg routed, route p95 within SD-49, 0 kills or restarts, host used within 60%.
 const capFits = !noRecord && c.stopped === null && c.runs === 5 && c.burstRouted.every(allRouted) && c.burstP95Ms.max <= c.sd49LimitMs

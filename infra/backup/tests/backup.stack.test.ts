@@ -176,7 +176,7 @@ describe('backup and restore test on the local stack (SPECIFICATIONS 11.7)', () 
         { input: readFileSync(path.join(bucketDir, 'backups', stamp, 'brightwater.dump')), maxBuffer: 64 * 1024 * 1024 });
       if (change) sql(change, scratch);
     };
-    /** The checksums the code before F-1579 made (its deployed checksums.sql), on the scratch database. */
+    /** The checksums an older deployed checksums.sql made (the code before F-1579), on the scratch database. */
     const deployedSums = () => JSON.parse(sql(`${deployedSql}\nSELECT pg_temp.bw_checksums();`, scratch));
     /** A manifest the old way: no checksum_method, key-only checksums by the deployed code. */
     const oldManifest = () => {
@@ -296,7 +296,7 @@ describe('backup and restore test on the local stack (SPECIFICATIONS 11.7)', () 
     const ev = events(r.out);
     expect(ev.map((e) => e.event)).toContain('backup_failed');
     expect(ev.find((e) => e.event === 'backup_failed')?.msg).toMatch(/a failed backup_record row is written/);
-    // The SD-30 rule's input: the last backup failed. No passed row was added (its transaction rolled back).
+    // The input of the backup_failed alert rule (SD-30): the last backup failed. No passed row was added (its transaction rolled back).
     expect(sql("SELECT result FROM system.backup_record WHERE kind = 'backup' ORDER BY started_real DESC LIMIT 1")).toBe('failed');
     expect(sql("SELECT count(*) FROM system.backup_record WHERE kind = 'backup' AND result = 'passed'")).toBe(passed);
     expect(sets()).toEqual([stamp]);

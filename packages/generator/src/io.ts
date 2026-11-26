@@ -11,8 +11,8 @@ import type { Files, Manifest } from './checks.ts';
 export const PKG = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 export const MANIFEST_FILE = path.join(PKG, 'MANIFEST.json');
 export const TRUTH_FILE = path.join(PKG, 'truth.json');
-export const NAMED_FILE = path.join(PKG, 'named-people.json');
-export const ROSTER_FILE = path.join(PKG, 'technicians.json');
+const NAMED_FILE = path.join(PKG, 'named-people.json');
+const ROSTER_FILE = path.join(PKG, 'technicians.json');
 export const DEFAULT_OUT = path.join(DEFAULT_DIR, 'generator');
 
 export function loadInputs(opts: { streetList?: string; named?: string; roster?: string } = {}): Parameters<typeof generate>[0] {

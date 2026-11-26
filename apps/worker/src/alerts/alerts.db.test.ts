@@ -304,7 +304,7 @@ describe('default switches and the alert email', () => {
     const r = await db.admin().query<{ type: string; bell: boolean; managers_email: boolean; set_by: string | null; set_at: Date | null }>(`SELECT * FROM world.alert_setting ORDER BY type`);
     expect(r.rows).toHaveLength(ALERT_TYPES.length);
     expect(r.rows).toEqual([...ALERT_TYPES].sort().map((type) => ({ type, bell: ALERT_FACTS[type].bell, managers_email: ALERT_FACTS[type].managersEmail, set_by: null, set_at: null })));
-    // SD-30's table, restated: managers' email default is on for the 2 backup types only.
+    // The default switches, restated: managers' email is on for the 2 backup types only (SD-30).
     expect(r.rows.filter((x) => x.managers_email).map((x) => x.type)).toEqual(['backup_failed', 'restore_test_failed']);
   });
 

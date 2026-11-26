@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The board's reads (P4-BOARD; API-20 board day, API-30 suggested technicians, API-131 move preview) on the real database
+// The board's reads (API-20 board day, API-30 suggested technicians, API-131 move preview) on the real database
 // (PostgreSQL 18, the migrated schema, P2-SEED's reference seed) through the production kernel as bw_web, with the
 // dispatchers' real sessions. The demo clock is the seeded Tue, Sep 15, 2026, 7:00 AM. Run by gate G-CI7 step 3.
 import { approximateDriveMinutes, worksOn } from '@bw/domain';
@@ -150,7 +150,7 @@ describe('board day (API-20)', () => {
   // why: FR-DISP-9
   it('lists every flagged item of the branch not yet marked handled, whatever the date, until Mark handled', async () => {
     const j = await book('2026-09-17', 'two_hour 08:00', 'Kevin Doyle');
-    // The phone's item the server flagged (the item path itself is P3-ITEMS's, tested in tech-items/items.db.test.ts).
+    // The phone's item the server flagged (the item path itself is tested in tech-items/items.db.test.ts).
     const [item] = await rows<{ key: string }>(
       `INSERT INTO world.tech_item (key, technician_id, job_number, kind, base_version, world_epoch, device_time_real, offset_saved_real, demo_time,
                                     since_save_ms, received_at, result)

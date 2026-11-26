@@ -53,6 +53,8 @@ export interface TodayViewProps {
   onJob: (job: LocalJob, history: boolean) => void;
   onDirections: (job: LocalJob) => void;
   onFinish: (job: LocalJob) => void;
+  /** The jobs whose finish waits for its signature: each Done row draws the Finish link back to the finish screen. */
+  owedSignatures?: ReadonlySet<number>;
   onCall: (phone: string) => void;
 }
 
@@ -80,9 +82,9 @@ function Waiting(props: { id: string; pending: boolean; sent: boolean }) {
   );
 }
 
-function Num(props: { id: string; children?: ReactNode; kind?: 'ok' | 'way' | 'sk' | 'next' }) {
-  const box = props.kind === 'ok' ? s.numOk : props.kind === 'way' ? s.numWay : props.kind === 'sk' ? s.numSk : props.kind === 'next' ? s.numNext : null;
-  const ink = props.kind === 'ok' ? s.numOkText : props.kind === 'way' ? s.numWayText : props.kind === 'next' ? s.numNextText : s.numText;
+function Num(props: { id: string; children?: ReactNode; kind?: 'ok' | 'sk' | 'next' }) {
+  const box = props.kind === 'ok' ? s.numOk : props.kind === 'sk' ? s.numSk : props.kind === 'next' ? s.numNext : null;
+  const ink = props.kind === 'ok' ? s.numOkText : props.kind === 'next' ? s.numNextText : s.numText;
   return (
     <View {...lk(props.id, [s.num, box])}>
       {props.kind === 'ok' ? <Icon id={`${props.id}.icon`} name="check" size={15} color={color.white} strokeWidth={3} /> : props.children !== undefined ? <Text {...lk(`${props.id}.text`, ink)}>{props.children}</Text> : null}
@@ -132,7 +134,7 @@ function Header(p: TodayViewProps) {
 
 // ---- rows ----------------------------------------------------------------------------------------------------------------------
 
-function DoneRow(props: { j: LocalJob; i: number; zone: string; lang: 'en' | 'es'; t: T; onJob: TodayViewProps['onJob'] }) {
+function DoneRow(props: { j: LocalJob; i: number; zone: string; lang: 'en' | 'es'; t: T; onJob: TodayViewProps['onJob']; onFinish?: () => void }) {
   const { j, i, t } = props;
   const id = `today.done.${i}`;
   const stamp = j.endedAt ?? j.localAt;
@@ -148,6 +150,11 @@ function DoneRow(props: { j: LocalJob; i: number; zone: string; lang: 'en' | 'es
       <View {...lk(`${id}.trail`, s.trail)}>
         <Chip id={`${id}.st`} status="done" label={word} />
         <Waiting id={`${id}.wait`} pending={j.pending} sent={j.sent} />
+        {props.onFinish ? (
+          <Pressable {...lk(`${id}.finish`, [s.sbtn, s.sbtnPri])} onPress={props.onFinish} accessibilityRole="button">
+            <Text {...lk(`${id}.finish.text`, [s.sbtnText, { color: color.white }])}>{t('tech.today.finish')}</Text>
+          </Pressable>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -198,7 +205,7 @@ function NextCard(p: TodayViewProps & { j: LocalJob }) {
   const canWay = canStartWay(p.jobs, j);
   const onSite = j.status === 'on_site';
   const statusWord = t(`customers.status.${j.status}` as MessageKey);
-  // F-1106: CTL-TEC-02-02's arrival estimate when online (a late card shows the late text's new time instead).
+  // F-1106: the arrival estimate on the Today card (CTL-TEC-02-02) when online (a late card shows the late text's new time instead).
   const leaveNow = lateCard ? null : leaveNowLine(j, p.online, zone, p.lang, t);
   return (
     <View {...lk('today.card', s.card)}>
@@ -420,7 +427,7 @@ export function TodayView(p: TodayViewProps) {
         ) : null}
         {list && done.length > 0 ? (
           <Group id="today.done">
-            {done.map((j, i) => <DoneRow key={j.jobNumber} j={j} i={i} zone={zone} lang={p.lang} t={t} onJob={p.onJob} />)}
+            {done.map((j, i) => <DoneRow key={j.jobNumber} j={j} i={i} zone={zone} lang={p.lang} t={t} onJob={p.onJob} {...(p.owedSignatures?.has(j.jobNumber) ? { onFinish: () => p.onFinish(j) } : {})} />)}
           </Group>
         ) : null}
         {list && next ? <NextCard {...p} j={next} /> : null}
@@ -468,8 +475,6 @@ const s = StyleSheet.create({
   numText: type(750, 13, 18.2, tone.ink700),
   numOk: { backgroundColor: color.okLine, borderColor: color.okLine },
   numOkText: type(750, 13, 18.2, color.white),
-  numWay: { backgroundColor: tone.wayBg, borderColor: tone.wayLine },
-  numWayText: type(750, 13, 18.2, tone.wayInk),
   numSk: { backgroundColor: tone.ink150, borderColor: tone.ink150 },
   numNext: { backgroundColor: color.orange500, borderColor: color.orange500 },
   numNextText: type(750, 13, 18.2, color.ink900),

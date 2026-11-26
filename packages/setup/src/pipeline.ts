@@ -10,7 +10,8 @@
 //
 // Setup's role (F-150, setup half): setup runs as the schema owner, the login the migrate step uses. It creates the
 // snapshot tables (role app has nothing on world_snapshot or pbs_snapshot, migration 0007) and writes memberships (app
-// holds SELECT only). The reset's role is P3-REPLAY's.
+// holds SELECT only). The reset has no role of its own: the web process and the worker (role app) call
+// system.restore_world, which runs as the schema owner (migration 0014; P3-REPLAY).
 //
 // A fresh world only. Setup holds a session advisory lock for its whole run (a second setup stops with setup_running).
 // Before step 3 it stops with import_run_running while an office import run is marked running (requested through
@@ -72,7 +73,7 @@ export interface SetupEvent {
 export interface SetupOptions {
   /** The schema owner's database URL (the password, when any, is in PGPASSWORD or the URL). */
   databaseUrl: string;
-  /** SAMPLE_PASSWORD_SEED (SD-9). */
+  /** The seed the sample users' passwords derive from (the value of SAMPLE_PASSWORD_SEED; SD-9). */
   sampleSeed: string;
   reviewerPassword?: string | undefined;
   /** The verified bundled street list. */

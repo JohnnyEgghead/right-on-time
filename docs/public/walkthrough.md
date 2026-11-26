@@ -22,7 +22,7 @@ Start with the app at the sign-in address you were given. The demo clock starts 
 Screen: "Sign in"
 Control: "Sign in"
 
-You sign in to the office app with your own email and password.
+You sign in to the office app with your own email and password. Your trainer makes this sign-in just before you start (see "Your sign-in" in the training sheet). A reset of the demo erases it. If the page says your sign-in and password do not match, ask your trainer to make it again.
 
 1. Go to "/sign-in". This is the sign-in page.
 2. See "Sign in".
@@ -51,7 +51,7 @@ Control: "Open job"
 
 Every visit on the board is a block. A click on the block shows a small card. The card leads to the whole job.
 
-1. Click "Harold Jenkins". This is a block on the board.
+1. Click "Harold Jenkins". This is a block on the board. A block can cut long words short. Click the block to see all its words.
 2. See "Job 24830". The card shows the job number.
 3. Click "Open job". The job page opens.
 4. See "Job 24830".
@@ -125,10 +125,12 @@ A time block holds a technician's time for something that is not a job, such as 
 4. Choose "Maria Santos" in "Technician".
 5. Type "Supply run" in "Label".
 6. Type "Parts counter" in "Place".
-7. Type "13:00" in "Start". This is 1:00 PM.
-8. Type "13:30" in "End". This is 1:30 PM.
-9. Click "Add block". This button is inside the form.
-10. See "Supply run".
+7. Click the first number in "Start". This is the hour. Do not click the second number: typing there leaves the box empty.
+8. Type "01:00:P" in "Start". This is 1:00 PM. Each colon moves you to the next part of the box. If the box shows 24-hour times, type 13:00 instead.
+9. Click the first number in "End". This is the hour.
+10. Type "01:30:P" in "End". This is 1:30 PM. If the box shows 24-hour times, type 13:30 instead.
+11. Click "Add block". This button is inside the form. It stays gray until both times are in the boxes.
+12. See "Supply run". The block on the row can cut long words short. Click the block to see all its words.
 
 ## Task 9. Book a new job
 
@@ -158,7 +160,7 @@ The customer cancels. You cancel the visit and the job stays in the history. No 
 
 1. Click "Board".
 2. See "Jobs today".
-3. Click "Debra Desai". This is a block on the board.
+3. Click "Debra Desai". This is a block on the board. Click the block to see all its words.
 4. Click "Open job".
 5. Click "Cancel visit". A question opens.
 6. See "Cancel visit".

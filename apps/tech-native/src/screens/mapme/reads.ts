@@ -251,7 +251,7 @@ export class MapMeReads {
     this.writePrefs();
   }
 
-  /** CTL-TEC-10-09: kept on the phone at once. */
+  /** Sets the text size and keeps it on the phone at once (the text size row of the Me tab, CTL-TEC-10-09). */
   setSize(size: TextSize): void {
     this.set({ textSize: size });
     this.writePrefs();

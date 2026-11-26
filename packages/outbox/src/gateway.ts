@@ -10,7 +10,7 @@ export interface TextGateway {
     Promise<{ result: 'delivered' } | { result: 'failed'; reason: string }>;
 }
 
-/** text_simulator.mode (FR-TEXT-16). */
+/** The values of text_simulator.mode, the modes a manager sets on the System health page: up, every send fails, sends to 1 customer fail, the next N sends fail (FR-TEXT-16). */
 export const SIMULATOR_MODES = ['up', 'all_fail', 'fail_customer', 'fail_next_n'] as const;
 export type SimulatorMode = (typeof SIMULATOR_MODES)[number];
 

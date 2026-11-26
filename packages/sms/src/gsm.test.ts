@@ -40,7 +40,7 @@ describe('segment counter against outside GSM 03.38 vectors', () => {
   });
 
   for (const v of vectors) {
-    // why: HC-06
+    // why: HC-06 the analyzer gives each outside vector's message count and unit count
     it(`matches: ${v.description}`, () => {
       const a = analyzeSms(v.message);
       expect(a.messages).toBe(v.parts.length);

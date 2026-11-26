@@ -169,7 +169,7 @@ final class MapMeUITests: XCTestCase {
     let online = el("parts.count").label
     settle()
     mark("PARTS-ONLINE \(online)")
-    // Clear (CTL-TEC-16-03) empties the search.
+    // The Clear button empties the parts search (CTL-TEC-16-03).
     el("parts.clear").tap()
     XCTAssertTrue(el("parts.empty").waitForExistence(timeout: 10), "Clear did not empty the search")
     // The signal off and the app opened again (F-1074): the same search answers from the copy kept on the phone, not the one in memory, the same count.

@@ -86,8 +86,14 @@ function plantedRepo(name: string, extra: Record<string, string> = {}): string {
     // F-1571 (owner answer 44079436): the vendored jl-dev scripts and the local-only orphans runner stay private.
     'ci/vendor/jl-dev/planted-by-list.py',
     'ci/test-reason-orphans.sh',
-    // F-1605: the owner's drill values.
+    // The owner's drill values stay private (F-1605).
     'infra/owner.env',
+    // F-1919: the 2 lines that had no plant (docs/guide/ and the owner's local env file).
+    'docs/guide/planted-by-list.md',
+    'infra/owner.local.env',
+    // F-1920: the build-continuity git hook of the jl-dev harness, and any later plugin file in that folder.
+    '.githooks/pre-push',
+    '.githooks/planted-by-list',
   ]) put(p, 'private\n');
   for (const [p, t] of Object.entries(extra)) put(p, t);
   git(dir, 'add', '-A');

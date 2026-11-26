@@ -35,7 +35,7 @@ export interface ApiPolicyEntry {
   row: ContractRow;
 }
 
-/** A page entry: 1 per page route of UI-SPECIFICATION 2.3, with its access of section 2.4. */
+/** A page entry: 1 per page route, with its access: public, roles, a token or a one-time link (UI-SPECIFICATION 2.3, section 2.4). */
 export interface PagePolicyEntry {
   kind: 'page';
   screen: `SCR-${string}`;

@@ -32,7 +32,7 @@ export interface CallButtonProps {
   number: string;
   /** Overrides the button class; the default is the kit's small button. */
   className?: string;
-  /** Overrides the visible content (CMP-15's office phone shows the number itself). */
+  /** Overrides the visible content (the office phone in the booking site header, CMP-15, shows the number itself). */
   children?: ReactNode;
   /** Previews: the number already shown, as the kit frame draws it. */
   initialShown?: boolean;

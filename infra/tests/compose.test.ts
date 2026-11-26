@@ -240,7 +240,7 @@ describe('infra/compose.yaml', () => {
 
   // why: SD-3
   it('keeps the volume names the live server holds (the certificate and the database), plus 1 login volume per process', () => {
-    // P3-ITEMS adds the photo volume (SPECIFICATIONS section 2 volumes; SD-32): photo and signature files, written once by web.
+    // The photo volume (SPECIFICATIONS section 2 volumes; SD-32) holds photo and signature files, written once by web.
     expect(Object.keys(compose.volumes).sort()).toEqual(['acme', 'dblogin-pbs', 'dblogin-web', 'dblogin-worker', 'letsencrypt', 'pgdata', 'photos']);
   });
 
@@ -350,7 +350,7 @@ describe('infra/compose.yaml', () => {
   // why: SD-3
   it('hosted.env picks the TLS site and leaves ROUTES to the deploy mode (F-1645: deploy-stage.test.ts checks the lock)', () => {
     const hosted = envFile('infra/hosted/hosted.env');
-    // P3-BACKUP added the backup settings (infra/tests/backup.test.ts checks them); P6-ROUTING-MEMORY the routing cap (D-21).
+    // The hosted settings include the backup ones (infra/tests/backup.test.ts checks them) and the routing memory cap (D-21).
     expect(hosted).toEqual({ PROXY_CONF: 'hosted.conf', HTTP_BIND: '80', HTTPS_BIND: '443',
       BACKUP_TARGET: 'lightsail', BACKUP_BUCKET: 'brightwater-backup-use1', BACKUP_REGION: 'us-east-1', ROUTING_MEM_LIMIT: '320m' });
     expect(svc.proxy!.environment).toEqual({ PROXY_CONF: '${PROXY_CONF:-local.conf}', ROUTES: '${ROUTES:-open}' });

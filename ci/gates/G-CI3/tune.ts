@@ -7,6 +7,7 @@
 //    Tue Sep 15, 10:28 AM: "1 Late", "2 At risk") read for each listed job's ETA and window end, and the margins that
 //    reproduce its counts with the rule of @bw/domain timingOf.
 // Not a gate step: it measures, it does not pass or fail anything.
+// Kept as evidence, nothing calls it: it made the measured record that set the per-window job limits (2 and 3) and the 15-minute at-risk margin; run it by hand to repeat that measurement.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { PER_WINDOW_LIMIT, timingOf } from '../../../packages/domain/src/index.ts';

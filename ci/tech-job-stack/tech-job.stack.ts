@@ -23,7 +23,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
 import type { BrowserContext, BrowserType, Page } from 'playwright';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { guardedContext, guardedPersistentContext, type GuardedContext } from '../page-walkers/origin-guard.ts';
 import { engines } from '../pw-engines.ts';
 
@@ -144,7 +144,7 @@ const sync = (page: Page) => page.evaluate(async () => {
   await (globalThis as unknown as { __bwTechOutbox: Hook }).__bwTechOutbox.sync();
 });
 const waitingCount = (page: Page) => page.evaluate(() => (globalThis as unknown as { __bwTechOutbox: Hook }).__bwTechOutbox.state().waiting.length);
-/** On my way and Arrived, as P5-TWA-TODAY's confirm sheets enter them (the page's own engine), then 1 sync. */
+/** On my way and Arrived, as the confirm sheets of the Today screen enter them (the page's own engine), then 1 sync. */
 const onSite = (page: Page, job: number, v: number) => page.evaluate(async ([n, base]) => {
   const h = (globalThis as unknown as { __bwTechOutbox: Hook }).__bwTechOutbox;
   await h.enter({ jobNumber: n, baseVersion: base, body: { kind: 'on_my_way' } });
@@ -226,6 +226,198 @@ describe.each(engines)('the job screens on %s', (engine, type) => {
       expect(body.replace(/\D/g, '')).not.toContain('6145550148');
       expect((JSON.parse(body) as { data: { customer: { phone: string | null } } }).data.customer.phone).toBeNull();
       expect((await page.content()).replace(/\D/g, '')).not.toContain('6145550148');
+    } finally {
+      await g.context.close();
+    }
+  });
+
+  describe('the job follows the demo day of the phone', () => {
+    const at = (day: string) => `${day}T10:00:00-04:00[America/New_York]`;
+    const net: Net = { off: false, uploads: [] };
+    let g: GuardedContext | null = null;
+    let page: Page;
+    let now = at('2026-09-15');
+    let epoch = 0;
+    let fails = false;
+    const reads = { clock: 0, job: 0 };
+    /** 12 API reads the case sends one after the other: a page that reads back to back reads many times while they run. */
+    const readWindow = () => page.evaluate(async () => {
+      for (let i = 0; i < 12; i += 1) await (await fetch('/api/v1/app-info')).text();
+    });
+    const hidden = () => page.locator('p[data-ctl="CTL-TEC-04-03"]').count();
+    /** The job opened on its own day with its number shown. */
+    const onItsDay = async () => {
+      now = at('2026-09-15');
+      await sync(page);
+      const sent = reads.job;
+      await open(page, `/tech/jobs/${HAROLD}`);
+      await expect.poll(() => reads.job, { timeout: 15_000 }).toBeGreaterThan(sent);
+      await page.locator('.acts [data-ctl="CTL-CMP-16-01"]').waitFor();
+      await expect.poll(hidden).toBe(0);
+    };
+    beforeAll(async () => {
+      g = await phone(type, net);
+      page = g.context.pages()[0] ?? (await g.context.newPage());
+      page.on('request', (r) => {
+        const path = new URL(r.url()).pathname;
+        if (path === '/api/v1/clock') reads.clock += 1;
+        if (path === `/api/v1/tech/jobs/${HAROLD}`) reads.job += 1;
+      });
+      await page.route(`${origin}/api/v1/clock`, async (r) => {
+        if (net.off) return r.abort('internetdisconnected');
+        if (fails) return r.fulfill({ status: 500, contentType: 'application/problem+json', body: JSON.stringify({ type: 'about:blank', title: 'refused', status: 500, code: 'server_error' }) });
+        try {
+          const response = await r.fetch();
+          const json = (await response.json()) as { data: { worldEpoch: number } };
+          Object.assign(json.data, { demoNow: now, paused: true, worldEpoch: json.data.worldEpoch + epoch });
+          return await r.fulfill({ response, json });
+        } catch {
+          return undefined; // the page closed under the request
+        }
+      });
+      await open(page, `/tech/jobs/${HAROLD}`);
+    });
+    afterAll(async () => {
+      await g?.context.close();
+    });
+
+    // why: FR-AUTH-4, F-1930 the customer's number shows only on the demo day of the visit: an open job hides it when a clock jump moves the phone's demo day, with no reset and no reload, and asks the server once what is today now
+    it('hides the number when the clock moves to another day with no reset', async () => {
+      await onItsDay();
+      const sent = reads.job;
+      now = at('2026-09-16');
+      await sync(page);
+      await expect.poll(hidden, { timeout: 15_000 }).toBe(1);
+      await expect.poll(() => reads.job - sent, { timeout: 15_000 }).toBe(1);
+    });
+
+    // why: FR-AUTH-4, F-1930 a phone that missed the clock's move while it had no signal shows the new day once the signal is back
+    it('hides the number when the signal comes back after a missed clock move', async () => {
+      await onItsDay();
+      net.off = true;
+      await page.context().setOffline(true);
+      now = at('2026-09-16');
+      net.off = false;
+      await page.context().setOffline(false);
+      await expect.poll(hidden, { timeout: 15_000 }).toBe(1);
+    });
+
+    // why: FR-AUTH-4, FR-DEMO-4 a world reset that sets another demo day reaches the open job: the number of a visit on another day is hidden
+    it('hides the number when a world reset sets another day', async () => {
+      await onItsDay();
+      epoch += 1;
+      now = at('2026-09-16');
+      await page.evaluate(() => {
+        const w = globalThis as unknown as { dispatchEvent(e: unknown): void; Event: new (n: string) => unknown };
+        w.dispatchEvent(new w.Event('focus'));
+      });
+      await expect.poll(hidden, { timeout: 15_000 }).toBe(1);
+    });
+
+    // why: F-1930 a failed clock read keeps the day the job shows and starts no run of reads
+    it('keeps its day and reads a bounded number of times while the clock does not answer', async () => {
+      await onItsDay();
+      const before = { ...reads };
+      now = at('2026-09-16');
+      fails = true;
+      try {
+        await sync(page);
+        await readWindow();
+        expect(reads.clock - before.clock, 'clock reads').toBeLessThanOrEqual(3);
+        expect(reads.job - before.job, 'job reads').toBe(0);
+        expect(await hidden()).toBe(0);
+      } finally {
+        fails = false;
+      }
+    });
+
+    // why: SD-16, F-1931 the job is read again once for each send that was answered, and an engine state change that sends nothing reads nothing
+    it('reads the job once for a send, and not at all for 5 syncs that send nothing', async () => {
+      await onItsDay();
+      const jobReads = async (what: () => Promise<unknown>) => {
+        const before = reads.job;
+        await what();
+        await readWindow();
+        return reads.job - before;
+      };
+      const note = async () => {
+        const answered = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/tech/items');
+        await page.evaluate(async ([n, v]) => {
+          const h = (globalThis as unknown as { __bwTechOutbox: Hook }).__bwTechOutbox;
+          await h.enter({ jobNumber: n, baseVersion: v, body: { kind: 'note', payload: { text: 'A note of the read count' } } });
+          await h.sync();
+        }, [HAROLD, version(HAROLD)] as const);
+        await answered;
+        await expect.poll(() => waitingCount(page)).toBe(0);
+        await expect.poll(() => reads.job).toBeGreaterThan(0);
+      };
+      const first = await jobReads(note);
+      const quiet = await jobReads(async () => {
+        for (let i = 0; i < 5; i += 1) await sync(page);
+      });
+      const second = await jobReads(note);
+      console.log(`F-1931 (${engine}): job reads after the first send ${first}, over 5 syncs that send nothing ${quiet}, after the next send ${second}`);
+      expect(quiet).toBe(0);
+      expect(first).toBe(1);
+      expect(second).toBe(1);
+    });
+  });
+
+  // why: FR-TECH-4, F-1932 the finish and its signature are 2 entries: when the second cannot be kept the screen says so and stays, and the next press keeps the signature with no second finish; when the first cannot be kept neither is
+  it('keeps the finish screen open with its error until the signature is kept, with 1 finish and 1 signature', async () => {
+    const net: Net = { off: false, uploads: [] };
+    const g = await phone(type, net);
+    try {
+      const page = g.context.pages()[0] ?? (await g.context.newPage());
+      await open(page, `/tech/jobs/${HAROLD}/finish`);
+      await page.locator('[data-ctl="CTL-TEC-07-05"] input').waitFor({ state: 'attached' });
+      // No call reaches the server from here: nothing this case enters is ever sent.
+      net.off = true;
+      await page.locator('[data-ctl="CTL-TEC-07-05"] input').check({ force: true });
+      await page.locator('[data-ctl="CTL-TEC-07-07"] input').first().fill('1');
+      await page.locator('[data-ctl="CTL-TEC-07-07"] input').nth(1).fill('5');
+      await sign(page);
+      /** From here the phone's item database refuses writes to this table ('' takes them again). */
+      const refuse = (table: string) => page.evaluate((name) => {
+        type Store = { name: string; transaction: { db: { name: string } } };
+        type Write = (this: Store, ...a: unknown[]) => unknown;
+        const w = globalThis as unknown as { IDBObjectStore: { prototype: Record<'add' | 'put', Write> }; __bwRefuse?: string };
+        if (w.__bwRefuse === undefined) {
+          for (const op of ['add', 'put'] as const) {
+            const real = w.IDBObjectStore.prototype[op];
+            w.IDBObjectStore.prototype[op] = function (this: Store, ...a: unknown[]) {
+              if (this.transaction.db.name === 'bw-tech-items' && this.name === w.__bwRefuse) throw new DOMException('full', 'QuotaExceededError');
+              return real.apply(this, a);
+            };
+          }
+        }
+        w.__bwRefuse = name;
+      }, table);
+      const kinds = () => page.evaluate(() => (globalThis as unknown as { __bwTechOutbox: Hook }).__bwTechOutbox.state().waiting.map((w) => (w as unknown as { kind: string }).kind).sort());
+      const finish = async () => {
+        await page.locator('[data-ctl="CTL-TEC-07-06"]').click();
+        await page.locator('.cstep [data-ctl="CTL-TEC-07-08"]').click();
+      };
+      const says = page.locator('.fmsg[role="alert"][data-ctl="CTL-TEC-07-14"]');
+
+      await refuse('items');
+      await finish();
+      await says.first().waitFor();
+      expect(await kinds()).toEqual([]);
+
+      await refuse('blobs');
+      await finish();
+      await expect.poll(kinds).toEqual(['finished']);
+      console.log(`F-1932 (${engine}): with the signature not kept, the phone holds ${JSON.stringify(await kinds())} at ${new URL(page.url()).pathname}`);
+      await says.first().waitFor();
+      expect(new URL(page.url()).pathname).toBe(`/tech/jobs/${HAROLD}/finish`);
+      expect(await page.locator('[data-ctl="CTL-TEC-07-14"][data-signed="1"]').count()).toBe(1);
+
+      await refuse('');
+      await finish();
+      await page.waitForURL(`**/tech/jobs/${HAROLD}?finished=1`);
+      await ready(page);
+      await expect.poll(kinds).toEqual(['finished', 'signature']);
     } finally {
       await g.context.close();
     }
@@ -419,6 +611,22 @@ describe.each(engines)('the job screens on %s', (engine, type) => {
       const note = page.locator(`[data-ctl="CTL-TEC-04-08"] .note[data-kind="office"]`, { hasText: body });
       await note.waitFor();
       expect(await note.locator('.by').innerText()).toMatch(/^Office, Keisha Thompson - \d{1,2}:\d\d [AP]M$/);
+    } finally {
+      await g.context.close();
+    }
+  });
+
+  // why: FR-DEMO-2, FR-TECH-3 the note screen draws the demo clock in its header while the job loads and when the job is not the technician's, as the job and finish screens do (F-1981)
+  it('draws the clock in the header of the note screen when the job is not the technician\'s', async () => {
+    const other = Number(psql(`SELECT j.job_number FROM world.job j JOIN world.technician t ON t.id = j.technician_id
+      WHERE t.name <> 'Maria Santos' AND j.date = '2026-09-15' ORDER BY j.job_number LIMIT 1`));
+    expect(other, 'a job of another technician on Sep 15').toBeGreaterThan(0);
+    const g = await phone(type, { off: false, uploads: [] });
+    try {
+      const page = g.context.pages()[0] ?? (await g.context.newPage());
+      await page.goto(`${origin}/tech/jobs/${other}/note`, { waitUntil: 'load' });
+      await page.waitForSelector('[data-screen="SCR-TEC-05"] .r1p-empty');
+      expect(await page.locator('[data-screen="SCR-TEC-05"] .apphead .r1p-clk').count()).toBe(1);
     } finally {
       await g.context.close();
     }

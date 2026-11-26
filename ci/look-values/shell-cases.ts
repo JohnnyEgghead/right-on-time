@@ -191,7 +191,7 @@ const MAP_CASES: ShellCase[] = [
       { app: '.bw-map-panel .zm button', frame: `${BOARD} .mapbox .zoom span` },
       { app: '.bw-map-panel a.osm', frame: `${BOARD} .mapbox .osm` },
       { app: '.bw-mkey', frame: `${BOARD} .mkey`, wrapRuled: 'F-816, owner answer e18182a0: the added words take a 2nd line' },
-      { app: '.bw-mkey span:not(:has(.free))', frame: `${BOARD} .mkey span` }, // F-816: the frame's 4 words
+      { app: '.bw-mkey span:not(:has(.free))', frame: `${BOARD} .mkey span` }, // the 4 key words the frame draws (F-816)
       { app: '.bw-mkey i:not(.free)', frame: `${BOARD} .mkey i` },
       { app: '[data-marker-id="v2"] circle', frame: `${BOARD} .mapbox svg > :nth-child(270) > circle` },
       { app: '[data-marker-id="v2"] text', frame: `${BOARD} .mapbox svg > :nth-child(270) > text` },
@@ -344,7 +344,7 @@ export const LOOK_FRAMES = [
  * Captioned tiles that draw the same markup as a screen a case already compares, so the state is held by that case.
  * Each names the case and why; the coverage test checks the case exists on the same frame.
  */
-export const DRAWN_AS: Record<string, { frame: string; caseName: string; why: string }> = {
+const DRAWN_AS: Record<string, { frame: string; caseName: string; why: string }> = {
   'CMP-07 Office top bar: Spec order (Billing, Demo clock in Admin)': {
     frame: 'mockups/pages/office-board.html',
     caseName: 'CMP-07 Office top bar, Board current (office-board main screen)',
@@ -358,7 +358,7 @@ export const DRAWN_AS: Record<string, { frame: string; caseName: string; why: st
 };
 
 /** The frame states a case really compares: the captions its frame selectors read. */
-export function comparedStates(cases: ShellCase[]): Set<string> {
+function comparedStates(cases: ShellCase[]): Set<string> {
   const out = new Set<string>();
   for (const c of cases) {
     for (const p of c.pairs) {

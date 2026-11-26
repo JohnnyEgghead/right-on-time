@@ -16,7 +16,7 @@ export interface BookmenuCase {
 }
 
 export const BOOKMENU_FRAME = 'mockups/pages/r1-book-c-club.html';
-export const UNKNOWN_FRAME = 'mockups/pages/r1-shr-404.html';
+const UNKNOWN_FRAME = 'mockups/pages/r1-shr-404.html';
 const cap = (c: string) => `[data-bw-cap="${c}"]`;
 const root = '.r1-screen[data-screen="SCR-CUS-07"]';
 const within = (appRoot: string, frameRoot: string, inner: string[]): SelectorPair[] => inner.map((s) => ({ app: `${appRoot} ${s}`, frame: `${frameRoot} ${s}` }));

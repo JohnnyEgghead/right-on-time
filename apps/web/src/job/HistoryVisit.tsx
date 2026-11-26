@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-export const historyJobHref = (jobNumber: number): string => `/office/jobs/${jobNumber}`;
+const historyJobHref = (jobNumber: number): string => `/office/jobs/${jobNumber}`;
 
 export function HistoryVisit({ jobNumber, children }: { jobNumber: number | null; children: ReactNode }) {
   return jobNumber === null ? <>{children}</> : <Link href={historyJobHref(jobNumber)}>{children}</Link>;

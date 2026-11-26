@@ -112,6 +112,24 @@ async function control(page: Page, name: string, kinds?: readonly (typeof KINDS)
   return found;
 }
 
+const HOUR_X = 8;
+/** Typing before React has hydrated the box fills it without the page hearing it (WebKit is quick enough to do this): wait until the box is wired. */
+async function hydrated(field: Locator): Promise<void> {
+  await field.evaluate((el) => new Promise<void>((done) => {
+    const wired = () => Object.keys(el).some((k) => k.startsWith('__reactProps'));
+    const t = setInterval(() => { if (wired()) { clearInterval(t); done(); } }, 50);
+    setTimeout(() => { clearInterval(t); done(); }, 10_000);
+  }));
+}
+/** What a time box reads back for the text a person types: "01:00:P" and "1:00:P" are 1:00 PM, which reads 13:00; "13:00" reads 13:00. */
+function timeValue(text: string): string {
+  const m = /^(\d{1,2}):(\d\d)(?::([AaPp]))?/.exec(text);
+  if (!m) throw new Error(`the step types "${text}" in a time box, and that is not a time`);
+  const pm = m[3]?.toUpperCase() === 'P';
+  const h = (Number(m[1]) % 12) + (pm ? 12 : 0);
+  return `${String(m[3] ? h : Number(m[1])).padStart(2, '0')}:${m[2]}`;
+}
+
 async function run(page: Page, step: Step, who: Who): Promise<void> {
   switch (step.verb) {
     case 'go':
@@ -127,7 +145,23 @@ async function run(page: Page, step: Step, who: Who): Promise<void> {
         await row.getByRole('button', { name: step.name, exact: true }).click();
         return;
       }
-      await (await control(page, step.name)).click();
+      const button = await control(page, step.name);
+      // A gray button does nothing when clicked and says no reason: a person sees it, so the run fails on it here, not 1 step later.
+      if ((await button.getAttribute('aria-disabled')) === 'true') throw new Error(`the button "${step.name}" is gray (not ready) when the step clicks it`);
+      await button.click();
+      return;
+    }
+    case 'clickhour': {
+      // The hour is the first number of a time box. A click on the left end of the box lands on it in Chromium and in WebKit; a click on the minute leaves the box empty (F-1966, F-1995).
+      const root = await scopeOf(page);
+      const field = root.getByLabel(step.field, { exact: true });
+      await field.first().waitFor({ timeout: WAIT_MS }).catch(() => {
+        throw new Error(`the walkthrough names a box that is not on the screen: "${step.field}"`);
+      });
+      await hydrated(field.first());
+      const box = await field.first().boundingBox();
+      if (!box) throw new Error(`the box "${step.field}" has no place on the screen`);
+      await field.first().click({ position: { x: HOUR_X, y: box.height / 2 } });
       return;
     }
     case 'pick':
@@ -145,12 +179,15 @@ async function run(page: Page, step: Step, who: Who): Promise<void> {
       await field.first().waitFor({ timeout: WAIT_MS }).catch(() => {
         throw new Error(`the walkthrough names a box that is not on the screen: "${step.field}"`);
       });
-      // Typing before React has hydrated the box fills it without the page hearing it (WebKit is quick enough to do this): wait until the box is wired.
-      await field.first().evaluate((el) => new Promise<void>((done) => {
-        const wired = () => Object.keys(el).some((k) => k.startsWith('__reactProps'));
-        const t = setInterval(() => { if (wired()) { clearInterval(t); done(); } }, 50);
-        setTimeout(() => { clearInterval(t); done(); }, 10_000);
-      }));
+      await hydrated(field.first());
+      // A time box is typed with the keys a person presses, after the step before it clicked the hour; every other box is filled.
+      if ((await field.first().getAttribute('type')) === 'time') {
+        await page.keyboard.type(text);
+        const want = timeValue(text);
+        const got = await field.first().inputValue();
+        if (got !== want) throw new Error(`the box "${step.field}" reads "${got}" after typing "${text}", not "${want}"`);
+        return;
+      }
       await field.first().fill(text);
       return;
     }

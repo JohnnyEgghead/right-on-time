@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // acceptance/page-inventory.json: the shared audit anchor (BUILD_PLAN D-9), set-equal to
 // docs/UI-SPECIFICATION.md section 2.3.
-//   node ci/page-inventory.ts generate   write the manifest from section 2.3 (done once, by P1-GATES)
+//   node ci/page-inventory.ts generate   write the manifest from section 2.3
 //   node ci/page-inventory.ts check      exit 1 unless the manifest and section 2.3 are set-equal
 // Env (for tests): CI_ROOT (repo root), INVENTORY_SPEC (spec file), INVENTORY_JSON (manifest).
 //
 // Each row carries its target phase and building task. The task is the one the plan names for the
 // screen (BUILD_PLAN task blocks: Design SSOT and Description lines). A screen a native task also
 // builds (technician pages and native screens) lists it in nativeTask. Pages carry the screen ID
-// as a data-screen root attribute (P2-SHELL owns the convention); no later lane edits this file.
+// as a data-screen root attribute (the app shell sets the convention).
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { isMain } from './is-main.ts';

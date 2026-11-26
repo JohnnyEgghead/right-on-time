@@ -164,7 +164,7 @@ case "${1:-}" in
     remote "$dc up -d --no-build --wait --wait-timeout 180 proxy web worker pbs db routing"
     ;;
   cap)
-    # A memory cap to measure with, on this throwaway copy only: compose.yaml's caps are SD-3's, tuned by P7-LOAD. No argument: the shipped cap.
+    # A memory cap to measure with, on this throwaway copy only: compose.yaml's caps are SD-3's, tuned by the load-day runs. No argument: the shipped cap.
     # It sends this checkout's compose.yaml again first, so a change to web's shipped settings (F-882) reaches the copy.
     remote 'cat > /opt/bw-load/infra/compose.yaml' <"$root/infra/compose.yaml"
     if [ -n "${2:-}" ]; then printf 'services:\n  web:\n    mem_limit: %s\n' "$2"; else echo 'services: {}'; fi | remote 'cat > /opt/bw-load/infra/cap.yaml'
@@ -275,7 +275,7 @@ case "${1:-}" in
     remote cat /tmp/bw-vmstat.log >"$out/server-vmstat.log"
     remote cat /tmp/bw-stats.log >"$out/server-stats.log"
     remote "$dc exec -T db psql -tA -U brightwater -d brightwater -c \"select count(*), percentile_disc(0.5) within group (order by ms), percentile_disc(0.95) within group (order by ms), max(ms) from system.delay_sample\"" >"$out/server-delay-samples.txt"
-    remote "$dc ps -q routing" | grep -q . && with_routing=routing || with_routing=''
+    routing_ids=$(remote "$dc ps -q routing") && grep -q . <<<"$routing_ids" && with_routing=routing || with_routing=''
     for s in web worker pbs db proxy $with_routing; do
       printf '%s memory.peak ' "$s"
       remote "$dc exec -T $s cat /sys/fs/cgroup/memory.peak" || echo unknown
@@ -351,7 +351,7 @@ PLIST
     aws_ls get-instances --query 'instances[].[name,bundleId,state.name,publicIpAddress]' --output text | tee "$dir/aws-after-instances.txt"
     if grep -q "$name" "$dir/aws-after-instances.txt"; then echo "temp-server: $name is still listed" >&2; exit 1; fi
     aws_ls get-key-pairs --query 'keyPairs[].name' --output text >"$dir/aws-after-key-pairs.txt"
-    if tr '\t' '\n' <"$dir/aws-after-key-pairs.txt" | grep -qxF "$key_name"; then echo "temp-server: key pair $key_name is still listed" >&2; exit 1; fi
+    if grep -qxF "$key_name" < <(tr '\t' '\n' <"$dir/aws-after-key-pairs.txt"); then echo "temp-server: key pair $key_name is still listed" >&2; exit 1; fi
     rm -f "$dir/key.pem" "$key_name_file"
     echo "temp-server: $name and its key pair deleted at $(date '+%b %-d, %-I:%M:%S %p %Z')"
     # The backstop last: when it is the backstop that runs this step, bootout ends it, and nothing is left to do.

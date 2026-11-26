@@ -81,7 +81,7 @@ export function isErrorCode(value: unknown): value is ErrorCode {
   return typeof value === 'string' && Object.hasOwn(ERROR_STATUS, value);
 }
 
-/** The i18n catalog key the UI will map a code to (P2-I18N owns the catalog; the key shape is the stable part). */
+/** The title a Problem answer carries for a code, shaped like a catalog key (error.<code>); pages choose their own words by code. */
 export function errorMessageKey(code: ErrorCode): `error.${ErrorCode}` {
   return `error.${code}`;
 }

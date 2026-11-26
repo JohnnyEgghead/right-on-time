@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Fixtures for text-budget-check: stand-in templates and slot values, committed so the 5
-// FR-TEXT-9 fail inputs run as must-fail arms every time, before the real templates exist
-// (P3-TEXTS). These are test copy, not product copy. The Spanish Saturday label is the correct "sáb" (F-419): no Spanish
+// FR-TEXT-9 fail inputs run as must-fail arms every time, whatever the real templates hold. These are test copy, not product copy. The Spanish Saturday label is the correct "sáb" (F-419): no Spanish
 // word for Saturday is GSM-7 basic, so the Spanish copy leaves the weekday out and the date names the day (FR-TEXT-10).
-import type { CheckInput, Failure, FailureKind, Lang, SlotValues, Template } from './text-budget.ts';
+import type { CheckInput, FailureKind, Lang, SlotValues, Template } from './text-budget.ts';
 import { BOOKABLE_DAYS } from './text-budget.ts';
 
 const EN_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -134,7 +133,7 @@ export const ARMS: readonly Arm[] = [
   },
 ];
 
-/** Arms 6 to 9 (P3-TEXTS): the check's own gaps closed by F-163, F-165, F-166 and F-167, each a must-fail case. */
+/** Arms 6 to 9: cases the budget check must refuse (an extension character in a render, a slot with no values, a formatted placeholder, fixed copy over budget at the maxima), each closing a gap the check once had (F-163, F-165, F-166, F-167). */
 const stand = standInSlotValues({}, armDayNumbers);
 export const CHECK_ARMS: readonly Arm[] = [
   {
@@ -158,7 +157,8 @@ export const CHECK_ARMS: readonly Arm[] = [
     ],
   },
   {
-    // Passes at the stand-in values (160 septets) and fails at the SD-17 maxima (163): fixed copy 1 over budget.
+    // The render is 160 septets at the stand-in values and 164 at the SD-17 maxima; the fixed copy, 149, is also 4 over
+    // the budget of 145.
     name: 'arm-9-fixed-copy-over-budget-at-the-maxima',
     expect: 'over-160',
     cases: [{ ...goodInput(true), templates: withText('reminder', 'en', `Brightwater: ${'a'.repeat(135)} {window}`) }],
@@ -170,7 +170,3 @@ export const CHECK_ARMS: readonly Arm[] = [
     cases: [{ ...goodInput(true), templates: withText('confirmation', 'es', `${'a'.repeat(107)} {date}`) }],
   },
 ];
-
-export function armFailsAsExpected(arm: Arm, failuresOf: (c: CheckInput) => Failure[]): boolean {
-  return arm.cases.every((c) => failuresOf(c).some((f) => f.kind === arm.expect));
-}

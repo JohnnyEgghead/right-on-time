@@ -102,7 +102,7 @@ const WHOLE: Weeks = { from: '2026-06-01', to: '2026-09-14' };
 /** The query that asks for the live week, and the week the page's To select picks. */
 const LIVE_WEEK = '2026-09-14';
 const LIVE_QUERY = `?toWeek=${LIVE_WEEK}`;
-/** FR-REP-5's pick: Jul 6 to Aug 30 is the 8 weeks of Jul 6 to Aug 24. */
+/** The week range picked in the Reports filter (FR-REP-5): Jul 6 to Aug 30 is the 8 weeks of Jul 6 to Aug 24. */
 const JUL_AUG: Weeks = { from: '2026-07-06', to: '2026-08-24' };
 const inWeeks = (w: Weeks, col = 'date::timestamp') => `date_trunc('week', ${col}) BETWEEN DATE '${w.from}' AND DATE '${w.to}'`;
 const weeksIn = (w: Weeks) => Math.round((Date.parse(w.to) - Date.parse(w.from)) / (7 * 86_400_000)) + 1;

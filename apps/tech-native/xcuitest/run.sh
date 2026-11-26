@@ -201,7 +201,7 @@ compose build web >/dev/null
 compose up -d --no-build --wait --wait-timeout 240 proxy web worker pbs db
 reviewer_pw="rv-$(node -e 'console.log(require("node:crypto").randomBytes(12).toString("base64url"))')"
 SAMPLE_PASSWORD_SEED="$seed" REVIEWER_PASSWORD="$reviewer_pw" compose --profile setup run --rm --no-deps setup >"$tmp/setup.log" 2>&1 || { tail -5 "$tmp/setup.log" >&2; exit 1; }
-for s in db pbs proxy web worker; do compose ps --status running --services | grep -qw "$s" || { step "FAIL service $s is not running"; exit 1; }; done
+for s in db pbs proxy web worker; do grep -qw "$s" < <(compose ps --status running --services) || { step "FAIL service $s is not running"; exit 1; }; done
 pgv="$(compose exec -T db psql -U brightwater -d brightwater -tAc 'show server_version')"
 base="http://127.0.0.1:$port"
 if [ -z "$profile" ]; then

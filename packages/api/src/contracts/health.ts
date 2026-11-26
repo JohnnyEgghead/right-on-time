@@ -79,9 +79,9 @@ export const alertItem = z.object({
   dismissible: z.boolean(),
 });
 
-export const alertSettingItem = z.object({ type: z.string(), bell: z.boolean(), managersEmail: z.boolean() });
+const alertSettingItem = z.object({ type: z.string(), bell: z.boolean(), managersEmail: z.boolean() });
 
-export const textSimulatorState = z.object({
+const textSimulatorState = z.object({
   mode: z.enum(TEXT_SIMULATOR_MODES),
   customerId: z.string().nullable(),
   customerName: z.string().nullable(),

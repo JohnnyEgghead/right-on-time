@@ -72,8 +72,6 @@ export function nativeMapStyle(files: NativeStyleFiles, stops: readonly MapStop[
   };
 }
 
-export type NativeMapStyle = ReturnType<typeof nativeMapStyle>;
-
 /** Every URL-like string in the style that would reach the network: an http(s), ws(s) or mapbox URL, or a pmtiles:// that is not a file. */
 export function remoteUrls(style: unknown): string[] {
   const found: string[] = [];

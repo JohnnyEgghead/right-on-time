@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 'use client';
-// SCR-OFC-02's timeline (DK-16, DK-17, DK-74 timeline.js): the hours header, the Unassigned row (CTL-OFC-02-10), 1 row per
+// The Dispatch board's timeline (SCR-OFC-02; DK-16, DK-17, DK-74 timeline.js): the hours header, the Unassigned row (CTL-OFC-02-10), 1 row per
 // technician (CTL-OFC-02-08) with its job blocks (CTL-OFC-02-09) and time blocks (CTL-OFC-02-33), the off-hours shading
 // (CTL-OFC-02-34) and the now line (CTL-OFC-02-11). Drag (pointer events) reassigns a job or moves a block: while a job is
 // dragged over a row, that row shows the drop target and the move preview (CTL-OFC-02-21; FR-DISP-17), released outside
@@ -274,6 +274,7 @@ export function Timeline(p: TimelineProps) {
         className="bw-btn-reset job task"
         data-ctl="CTL-OFC-02-33"
         data-block={b.blockId}
+        title={[b.label, b.place, spanText(b.start, b.end)].filter(Boolean).join(', ')}
         aria-busy={m ? true : undefined}
         aria-describedby={`bd${b.blockId}`}
         ref={(el) => { if (el) Object.assign(el.style, at(pos.left, pos.width)); }}
@@ -436,8 +437,8 @@ function CheckMark() {
   );
 }
 
-/** "10:28 AM" (DK-74 BW.fmt). */
-export function nowLabel(hour: number): string {
+/** The time of day as the frame writes it, for example "10:28 AM" (DK-74 BW.fmt). */
+function nowLabel(hour: number): string {
   let h = Math.floor(hour + 1e-6);
   let m = Math.round((hour - h) * 60);
   if (m === 60) {

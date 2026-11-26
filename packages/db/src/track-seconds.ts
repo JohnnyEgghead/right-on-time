@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The baked tracks' drive times (SPECIFICATIONS SD-15): the last cumulative second of the van_track row of each leg, so
-// the planner, the ETA and the sweep measure drive from the track and fall back to SD-22's approximate minutes only for
+// the planner, the ETA and the sweep measure drive from the track and fall back to the approximate minutes (SD-22) only for
 // a leg with no row. A leg is keyed `<from job number or depot>|<to job number>` (the planner's legRef).
 // P6-LIVE-ROUTING (SD-49): the readers and writes of the running app take their legs from the route source (packages/maps
 // route-source.ts: legFor, routedDrive), which routes a leg with no row live and stores it. This stored-rows-only read is setup's

@@ -44,7 +44,7 @@ export const ALERT_FACTS: Readonly<Record<AlertType, AlertTypeFacts>> = {
 };
 
 /**
- * The world.alert_setting rows the seed writes (section 3 writer table: 1 per SD-30 type, with SD-30's default switches;
+ * The world.alert_setting rows the seed writes (section 3 writer table: 1 per alert type, with that type's default switches (SD-30);
  * set_by and set_at null until API-161 changes one). The alert checks read these rows and never write them (F-444).
  */
 export function alertSettingDefaults(): { type: AlertType; bell: boolean; managersEmail: boolean }[] {

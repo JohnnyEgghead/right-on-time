@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The technician apps' item engine (SPECIFICATIONS section 5.1 steps 1 and 2, SD-47; UI-SPECIFICATION 4.5; D2: shared by the web
-// app and the native app since P6-NATIVE-SHELL, which moved it here from apps/web/src/tech/engine.ts): the 1 place an app's screens
+// app and the native app): the 1 place an app's screens
 // enter items and the 1 sender. It wraps the shared store and send loop with the app's reads: who is signed in (API-07), the clock
 // offset (API-10), the sync report (API-162). Each app supplies its store, transport, triggers and connection state.
 //
@@ -29,7 +29,7 @@ export const SYNC_EVERY_MS = 60_000;
  */
 export const SYNC_CALL_LIMIT_MS = 30_000;
 /** F-1746: the slowest line an upload's limit allows for, in bytes per ms (32 KB/s, about 0.26 Mbit/s: 10 MB in about 5.5 minutes). */
-export const UPLOAD_FLOOR_BYTES_PER_MS = 32;
+const UPLOAD_FLOOR_BYTES_PER_MS = 32;
 /**
  * F-1746: the limit for 1 photo or signature upload (API-103): the call limit plus its bytes' time at the floor rate, so a large photo on
  * a slow line still finishes and a small one that never answers ends as soon as a read would.
@@ -75,7 +75,7 @@ export interface EngineDeps {
 }
 
 /** F-1482: a server that never answers must not hold an entry for ever: the person gets the Connect-once notice after this long. */
-export const JOIN_LIMIT_MS = 5_000;
+const JOIN_LIMIT_MS = 5_000;
 
 export class NotReadyError extends Error {
   readonly reason: 'no_clock' | 'no_user';
@@ -152,7 +152,8 @@ export class TechOutbox {
       jobNumber: input.jobNumber, baseVersion: isBlobKind(input.body.kind) ? null : input.baseVersion, userId, ...input.body,
     } as QueuedItem;
     await this.deps.store.put(item, input.blob);
-    await this.refresh();
+    // F-1975: the entry is kept; a list read that fails after it keeps the last list on screen and is not the entry's answer.
+    await this.refresh().catch(() => undefined);
     if (this.state.online) void this.sync();
     return item;
   }
@@ -164,9 +165,11 @@ export class TechOutbox {
    */
   async correctFinish(key: string, payload: FinishPayload): Promise<QueuedItem> {
     await this.running?.catch(() => null);
+    const was = this.state.waiting.find((i) => i.key === key);
     await this.deps.store.correctFinish(key, payload);
-    await this.refresh();
-    const item = this.state.waiting.find((i) => i.key === key) as QueuedItem;
+    // F-1975: the correction is kept; a list read that fails after it is not the correction's answer.
+    const read = await this.refresh().then(() => true, () => false);
+    const item = (read ? this.state.waiting.find((i) => i.key === key) : was ? { ...was, payload } : undefined) as QueuedItem;
     if (this.state.online) void this.sync();
     return item;
   }

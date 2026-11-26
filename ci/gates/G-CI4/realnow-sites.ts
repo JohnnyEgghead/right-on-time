@@ -35,12 +35,12 @@ const USES: ReadonlySet<string> = new Set(REAL_TIME_USES);
 const SOURCE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const SEAM = 'packages/time/src/';
 
-export function isSeamFile(file: string): boolean {
+function isSeamFile(file: string): boolean {
   return file.startsWith(SEAM);
 }
 
 /** The seam's own tests plant bad tags on purpose (clock.test.ts), so they are not scanned. */
-export function isSeamTestFile(file: string): boolean {
+function isSeamTestFile(file: string): boolean {
   return isSeamFile(file) && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
 }
 
@@ -188,7 +188,7 @@ export function scanSource(text: string, file: string): Scan {
   return { sites, problems };
 }
 
-export function trackedSources(root: string): string[] {
+function trackedSources(root: string): string[] {
   const out = execFileSync('git', ['ls-files', '-z', '--', 'apps', 'packages'], { cwd: root, encoding: 'utf8' });
   return out
     .split('\0')

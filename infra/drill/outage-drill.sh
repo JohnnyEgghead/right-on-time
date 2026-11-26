@@ -220,7 +220,7 @@ log "preflight (reads only)"
 pre_hz="$(healthz)"; pre_hz="${pre_hz:-0}"
 [ "$pre_hz" = 200 ] || { log "REFUSED: /healthz answers $pre_hz before the stop, not 200"; exit 1; }
 ps_out="$(ssh_ "$R_PS" 2>&1)" || { log "REFUSED: cannot read the server (ssh or docker compose ps failed)"; exit 1; }
-echo "$ps_out" | grep -qx web || { log "REFUSED: web is not running on the server"; exit 1; }
+grep -qx web <<<"$ps_out" || { log "REFUSED: web is not running on the server"; exit 1; }
 api_get "$EV/api-pre.json" "$(($(date +%s) - 3600))" || { log "REFUSED: cannot read the UptimeRobot API"; exit 1; }
 grep -q '"stat":"ok"' "$EV/api-pre.json" && grep -q '"status":2' "$EV/api-pre.json" || { log "REFUSED: the monitor is not up (status 2) or the API call failed"; exit 1; }
 rm -f "$EV/api-pre.json"

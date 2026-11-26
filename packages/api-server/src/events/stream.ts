@@ -12,7 +12,7 @@ export const EVENTS_PATH = '/api/v1/events';
 /** SPECIFICATIONS 4.3: an SSE comment every 15 s real time. */
 export const HEARTBEAT_MS = 15_000;
 /** How long a stream opened while the LISTEN connection is down waits for it before it refuses (503 retry). */
-export const LISTEN_WAIT_MS = 5_000;
+const LISTEN_WAIT_MS = 5_000;
 
 /** One event as the SSE text: the `data:` line is `{ids}` only. */
 export const sseFrame = (e: BusEvent): string => `event: ${e.name}\nid: ${e.seq}\ndata: ${JSON.stringify({ ids: e.ids })}\n\n`;

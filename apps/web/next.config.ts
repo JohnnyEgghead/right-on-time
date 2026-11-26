@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The web app's build config (P2-SHELL; SPECIFICATIONS SD-2: Next.js 16.4.2 serves every web surface).
+// The web app's build config (P2-SHELL; SPECIFICATIONS SD-2: Next.js 16.4.6 serves every web surface).
 //
 // 2 builds from 1 tree:
 //   release (default): the image's web entry (infra/image/Dockerfile). Only page.tsx,

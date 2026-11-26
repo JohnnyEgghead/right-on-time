@@ -1,0 +1,91 @@
+{
+  // What knip reads for ci/dead-code.ts. An entry is a file something outside the import graph starts: a test runner, a shell script,
+  // a framework, a child process. knip counts an entry as used and does not report its exports, so each entry here needs a caller.
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "ci/**/*.test.ts",
+        "ci/**/*.stack.ts",
+        "ci/**/*.config.{ts,mjs}",
+        "ci/*.ts",
+        "ci/**/cli.ts",
+        "infra/**/*.test.ts",
+        "infra/**/*.config.ts",
+        "infra/**/*.{mjs,ts}",
+        "scripts/**/*.{ts,mjs}",
+        "*.config.{ts,mjs}",
+        "vitest.reporters.ts",
+        // started by hand in a container: ci/a11y-tools/run-container.sh
+        "ci/a11y-tools/run-web.ts",
+        // ci/auth-stack.sh
+        "ci/auth-stack/fixture.ts",
+        // ci/dead-code.ts hands it to knip
+        "ci/dead-code/reporter.mjs",
+        // ci/gates/contract-gates.sh, as the rows of its known-bad run
+        "ci/gates/contract-gates/cases/renamed-field.rows.ts",
+        // kept as evidence, started by hand: its first lines say what for
+        "ci/gates/G-CI3/tune.ts",
+        // setupFiles of 3 vitest configurations under ci/gates
+        "ci/gates/G-CI7/outside-fetch-setup.ts",
+        // ci/gates/public-copy-tests.sh
+        "ci/gates/public-copy-skips-reporter.ts",
+        // ci/gates/page-walkers.sh
+        "ci/page-walkers/run-inventory.ts",
+        // ci/smoke/smoke-public-tag.sh copies it into its browser container
+        "ci/smoke/smoke.mjs",
+        // started by hand: its first lines give the command
+        "ci/wave/stack-teardown-check.ts"
+      ],
+      "project": ["ci/**/*.{ts,tsx,mjs}", "infra/**/*.{ts,mjs,js}", "scripts/**/*.{ts,mjs}"],
+      // finished experiments, kept as they ran; nothing builds or imports them
+      "ignore": ["infra/spike/**"]
+    },
+    "apps/web": {
+      "entry": [
+        "src/**/*.test.{ts,tsx}",
+        "app/**/*.test.{ts,tsx}",
+        "app/**/*.preview.tsx",
+        "app/**/{page,layout,route,error,not-found,loading,template,default,global-error}.{ts,tsx}",
+        "*.config.{ts,mjs,js}",
+        "src/kit-slices.ts",
+        // started as a child process by src/process-errors.test.ts
+        "src/testing/next-error-delivery.ts",
+        // started as a child process by src/process-errors.test.ts (F-1939)
+        "src/testing/closed-stdout.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "app/**/*.{ts,tsx}"]
+    },
+    "apps/*": {
+      "entry": [
+        "src/**/*.test.{ts,tsx}",
+        "*.config.{ts,mjs,js}",
+        "scripts/**/*.{ts,mts,mjs}",
+        "src/main.ts",
+        "src/index.ts",
+        "index.{ts,js}",
+        // apps/worker: run in its container after each deploy (infra/deploy) and by ci/import-stack/import.stack.ts
+        "src/import/check.ts",
+        // apps/worker: preloaded into a child process by src/process-rejection.test.ts
+        "src/testing/reject-once-hooked.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/*": {
+      "entry": [
+        "src/**/*.test.ts",
+        "**/vitest*.config.ts",
+        "src/cli.ts",
+        "src/cli/*.ts",
+        "scripts/**/*.ts",
+        // packages/outbox: ci/gates/G-CI8.sh
+        "src/testing/text-budget-check.ts",
+        // packages/db: globalSetup of the database test configurations
+        "src/testing/global-setup.ts",
+        // packages/testkit: the load run's command
+        "src/load/cli.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
+    }
+  }
+}

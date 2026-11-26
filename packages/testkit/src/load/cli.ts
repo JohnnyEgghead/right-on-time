@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The load script's command line (P4-LOAD, P7-LOAD reuses it): runs the load day N times and writes the output file.
+// The load script's command line: runs the load day N times and writes the output file.
 //   NODE_EXTRA_CA_CERTS=<the temporary server's certificate> node packages/testkit/src/load/cli.ts \
 //     --origin https://<ip> --world <world.json> --out <dir> --label main --runs 5 --first-run 1 --run-seconds 1700 --rest-seconds 0 \
 //     --vans on --instance-plan small_3_0
@@ -8,8 +8,9 @@
 // it was made (never committed). <dir>/<label>-summary.json is rewritten after every run from every run file of the label in <dir>,
 // so it always pools runs 1 to N as measured; it refuses a set with a gap, a repeat or 2 shapes. --rest-seconds is an idle wait
 // before each run but the first of a chunk, so every run starts with the server in the same CPU state.
-// P7-LOAD adds --pages on (NFR-02: office pages in a browser on the office profile, pages.ts; --page-cert is the server's
-// certificate, --page-every-seconds the cycle) and, in every run, the end-state check and the NFR-03 counts; --task names the record.
+// --pages on (P7-LOAD) loads office pages in a browser on the office profile (NFR-02, pages.ts; --page-cert is the server's
+// certificate, --page-every-seconds the cycle). Every run makes the end-state check and the error and lost update counts (NFR-03);
+// --task names the record.
 // F-1498: --routing on|off names the arm (the routing service up at its cap, or stopped; run-day.sh sets it from BW_LOAD_ROUTING): it
 // is part of a run's shape, so 1 label never pools the 2 arms, and the summary says which arm it is.
 // Exit 0: every run finished. Exit 1: a run could not finish, or the run set is not whole. The verdict is in the file.
@@ -69,7 +70,7 @@ for (let n = firstRun; n < firstRun + runs; n++) {
   }
 }
 
-// NFR-02's profile: the real round trip to the server, measured once, plus the latency that makes it 20 ms (pages.ts).
+// The office network profile (NFR-02): the real round trip to the server, measured once, plus the latency that makes it 20 ms (pages.ts).
 const rtt = pagesOn ? await baseRttMs(new URL(a.origin).hostname) : Number.NaN;
 const added = pagesOn ? addedLatencyMs(rtt) : 0;
 const pager = world.dispatchers[0]!;

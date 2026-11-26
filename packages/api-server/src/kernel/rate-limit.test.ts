@@ -62,7 +62,7 @@ describe('API-01 hourly cap per address (F-1851)', () => {
     expect(await enter('203.0.113.7', 'RIGHT6')).toEqual({ status: 204, code: undefined });
   });
 
-  // why: FR-AUTH-6, FR-AUTH-11, F-1851 API-01's rules are both per address, and API-03 keeps its per-login hourly rule
+  // why: FR-AUTH-6, FR-AUTH-11, F-1851 the access code call's rules (API-01) are both per address, and sign-in (API-03) keeps its per-login hourly rule
   it('gives API-01 2 address rules and API-03 its login rule', () => {
     const MIN = 60_000;
     expect(rateRules({ id: 'API-01', path: '/access-code' })).toEqual([

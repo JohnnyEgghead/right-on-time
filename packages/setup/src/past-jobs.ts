@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// F-1541 (owner ruling 9796c392, Nov 13, 2026: "Fill them in"): the world seed's past pilot jobs (Mon, Aug 31 to Mon, Sep 14,
+// F-1541: the world seed's past pilot jobs (Mon, Aug 31 to Mon, Sep 14,
 // 2026; SD-25) carry the whole record a live visit leaves, not only their outcome, so the office job page and the customer
 // page of any of them read as a real visit. Each row copies the shape its live writer writes:
 //
@@ -109,7 +109,7 @@ const NO_PARTS_PERCENT: Readonly<Record<string, number>> = {
 };
 
 /** Office notes written before a visit (a dispatcher or customer service), and the technician's notes during one. */
-export const OFFICE_NOTES = [
+const OFFICE_NOTES = [
   'Customer asked for a call 30 minutes before arrival.',
   'Park in the driveway; street parking is permit only.',
   'Customer works from home; use the side door.',
@@ -119,7 +119,7 @@ export const OFFICE_NOTES = [
   'Customer prefers texts to calls.',
   'Please use shoe covers; new carpet upstairs.',
 ] as const;
-export const TECHNICIAN_NOTES = [
+const TECHNICIAN_NOTES = [
   'Showed the customer how to change the filter.',
   'Unit is about 18 years old; talked with the customer about a replacement quote.',
   'Customer asked about the Comfort Club; left a brochure.',
@@ -129,7 +129,7 @@ export const TECHNICIAN_NOTES = [
   'Customer was happy with the work.',
   'Outdoor unit sits low; suggested a pad before winter.',
 ] as const;
-export const NO_ONE_HOME_NOTES = [
+const NO_ONE_HOME_NOTES = [
   'No answer at the door or by phone. Left a door tag.',
   'Knocked and called twice; no one home. Door tag on the front door.',
   'Gate was locked and no one answered. Left a voicemail.',
@@ -138,9 +138,9 @@ export const NO_ONE_HOME_NOTES = [
 /** 1 job in NOTE_EVERY has a note (the brief's "about 1 in 5"). */
 export const NOTE_EVERY = 5;
 
-export interface PastStep { item: StepItem; key: string; at: Date; from: string; to: string; fromVersion: number; toVersion: number }
-export interface PastNote { id: string; key: string | null; kind: 'office' | 'technician'; at: Date; body: string; version: number }
-export interface PastFinish { laborMinutes: number; partCodes: string[]; noPartsUsed: boolean; workDone: string[] }
+interface PastStep { item: StepItem; key: string; at: Date; from: string; to: string; fromVersion: number; toVersion: number }
+interface PastNote { id: string; key: string | null; kind: 'office' | 'technician'; at: Date; body: string; version: number }
+interface PastFinish { laborMinutes: number; partCodes: string[]; noPartsUsed: boolean; workDone: string[] }
 export interface PastJob { jobNumber: number; steps: PastStep[]; finish: PastFinish | null; note: PastNote | null; onTheWayAt: Date }
 
 /** A no-one-home visit's minutes at the door before its end: 10 to 20, from its job number. */
@@ -164,7 +164,7 @@ export const FIT_DRIVE_MIN = 10;
 
 /**
  * F-1546: the generator draws each pilot visit's length apart from the next one's arrival, so in about 1 technician-day in 4 a
- * visit "ended" after the same technician had reached the next door. The SD-25 figures read the arrivals, outcomes and
+ * visit "ended" after the same technician had reached the next door. The pilot's on-time and no-one-home figures (SD-25) read the arrivals, outcomes and
  * technicians, so those stay (but for the doors F-1797 moves, below); a visit that ends at or after the next door ends instead
  * FIT_GAP_MAX minutes before it, or half the time from its own door to the next door if that is less (at least 1 minute). A
  * no-one-home visit's end never needs it in the fixture, and is refused if it would (its knock would move with it); so is a

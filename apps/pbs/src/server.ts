@@ -72,7 +72,7 @@ const jobOf = (s: string | undefined): number | null => {
   return n <= 2_147_483_647 ? n : null;
 };
 
-export function createPbsServer(opts: PbsOptions): PbsServer {
+function createPbsServer(opts: PbsOptions): PbsServer {
   const { pool, log } = opts;
   const holdMs = opts.holdMs ?? NOT_ANSWERING_HOLD_MS;
   const holds = new Set<{ timer: NodeJS.Timeout; cancel: () => void }>();

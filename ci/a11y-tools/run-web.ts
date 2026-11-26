@@ -5,6 +5,7 @@
 // It first proves each check on its planted fixtures (bad flagged, clean passed; a proof that fails exits 1), then walks the rows
 // and writes <out-dir>/web-<engine>.json. It judges nothing: a finding on a real page is a record for the checklist, not a failure
 // of this run. Run it inside the CI browser job image (BW_WAVE_CONTAINER=1), never on a developer machine.
+// Kept as evidence: ci/a11y-tools/run-container.sh runs it by hand, outside the gates; its output is the tool-run part of the accessibility checklist (reflow, 200% text, reduced motion).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
@@ -79,7 +80,7 @@ try {
   };
   await prove('reflow', '/reflow-bad.html', 'flagged');
   await prove('reflow', '/reflow-clean.html', 'clean');
-  await prove('reflow', '/reflow-ypanel-bad.html', 'flagged'); // F-1630
+  await prove('reflow', '/reflow-ypanel-bad.html', 'flagged'); // a 400 px box inside a panel that scrolls only up and down is still a reflow loss (F-1630)
   await prove('text', '/text-bad.html', 'flagged');
   await prove('text', '/text-clean.html', 'clean');
   // The page-zoom method (desktop rows, 200% = a 720 x 450 viewport): its bad page, its clean twin, and a page that only scrolls sideways (not a loss of text).
@@ -88,7 +89,7 @@ try {
   await prove('text', '/zoom-sideways.html', 'clean', undefined, true);
   await prove('motion', '/motion-bad.html', 'flagged');
   await prove('motion', '/motion-clean.html', 'clean');
-  await prove('motion', '/motion-script-bad.html', 'flagged'); // F-1631
+  await prove('motion', '/motion-script-bad.html', 'flagged'); // motion driven by a script, not by CSS, must be flagged too (F-1631)
   await prove('motion', '/motion-script-clean.html', 'clean');
   // The 200% check fires because of the doubling, not because the label clips already: at 100% the bad label fits.
   const at100 = await withPage(b0, [fixtureOrigin], { viewport: DESKTOP }, async (p) => { await p.goto(fixtureOrigin + '/text-bad.html'); }, async (p) => overflowPass(p, [DESKTOP]));

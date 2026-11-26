@@ -3,7 +3,7 @@
 // One place for every status, kind, reason and limit, so the enqueuer, the try handler, Try now and the tests agree.
 import { Temporal, type Instant } from '@bw/time';
 
-/** outbox_text.kind (FR-TEXT-1 to FR-TEXT-5, FR-TEXT-8, FR-TEXT-20). */
+/** The values of outbox_text.kind: the confirmation, reminder, on-the-way and late texts, the reply to a customer's R, and the office's own free text (FR-TEXT-1 to FR-TEXT-5, FR-TEXT-8, FR-TEXT-20). */
 export const TEXT_KINDS = ['confirmation', 'reminder', 'on_the_way', 'late', 'r_reply', 'office'] as const;
 export type TextKind = (typeof TEXT_KINDS)[number];
 /** The kinds rendered from a catalog template (every kind but the office's free text). */

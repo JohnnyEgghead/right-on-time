@@ -31,7 +31,7 @@ const toMode = (r: ModeRow): PbsMode => ({
 const MODE_SQL = 'SELECT mode, n_left, set_by, set_at, epoch FROM pbs.mode';
 
 /** The reason a Reject the next N call answers (FR-BILL-5): the data error a person then sees on the billing list. */
-export const REJECTED_REASON = 'Rejected as a data error by the pretend billing system';
+const REJECTED_REASON = 'Rejected as a data error by the pretend billing system';
 
 /** The 1 mode row, created at start-up when absent: Up, at epoch 0, so setup's epoch 1 reset applies (SD-12). */
 export async function ensureModeRow(db: Queryable): Promise<void> {

@@ -99,7 +99,7 @@ else
   check compare 0 "$(grep -c . <<<"$mismatches" || true) of ${ntables:-0} manifest tables differ (each logged as mismatch)"
 fi
 
-# import: the FR-IMP-6 counts.
+# import: each import target count must equal the count restored from the dump (FR-IMP-6).
 imp_bad=0 imp_n=0
 while IFS='|' read -r item target n; do
   [ -n "$item" ] || continue

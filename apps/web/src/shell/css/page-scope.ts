@@ -97,7 +97,7 @@ const roots = (id: string): string[] => {
 };
 
 /** The 2 suffixes a scoped rule's subject carries: `inside` (in a root) and `shown` (body or html, while a root is shown). */
-export function scopeSuffixes(scope: SheetScope): { inside: string; shown: string } {
+function scopeSuffixes(scope: SheetScope): { inside: string; shown: string } {
   if (scope.screens.length === 0) throw new Error('page-scope: a sheet scope names no screen');
   const any = (ids: readonly string[]): string => `:is(${ids.flatMap(roots).join(', ')})`;
   const all = any([...scope.screens, ...(scope.shared ?? [])]);
@@ -179,7 +179,7 @@ const stripComments = (s: string): string => {
 };
 
 /** A selector list split at its top-level commas, each selector trimmed. */
-export function splitSelectors(list: string): string[] {
+function splitSelectors(list: string): string[] {
   const out: string[] = [];
   let rest = stripComments(list);
   for (;;) {

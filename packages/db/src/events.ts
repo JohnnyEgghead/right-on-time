@@ -57,7 +57,7 @@ export function decodeNotification(payload: string | undefined): { name: EventNa
 }
 
 /**
- * EVT-04's ids for 1 alert (alert.created, alert.dismissed): the alert, and its branch when it has one, which the bus
+ * The ids an alert event (EVT-04) carries for 1 alert (alert.created, alert.dismissed): the alert, and its branch when it has one, which the bus
  * filters on (SD-30). A copy-wide alert (no branch) goes to every branch.
  */
 export const alertEventIds = (alertId: string, branch: string | null): EventIds => (branch === null ? { alertId } : { alertId, branch });

@@ -9,10 +9,10 @@ import { LANG_COOKIE, langCookie } from '../shell/lang.ts';
 import { callRow, rows, type InboxData } from './api.ts';
 import { InboxView, type InboxState, type ReplyKind } from './InboxView.tsx';
 
-/** The page re-reads this often (FR-TEXT-14). */
-export const REFRESH_MS = 5_000;
+/** How often the page re-reads the inbox, in milliseconds (FR-TEXT-14). */
+const REFRESH_MS = 5_000;
 /** How long the New text notice stays on (CTL-INB-01-09). */
-export const NEW_TEXT_MS = 6_000;
+const NEW_TEXT_MS = 6_000;
 
 export function InboxScreen({ token }: { token: string }) {
   const t = useT();
@@ -51,7 +51,10 @@ export function InboxScreen({ token }: { token: string }) {
     if (was !== null && now > was) setNewText(true);
   }, [token, t.lang, router]);
 
+  // F-1935: a link that answers not found stays not found, so the page asks no more.
+  const gone = state === 'not_valid';
   useEffect(() => {
+    if (gone) return;
     void read();
     const every = window.setInterval(() => void read(), REFRESH_MS);
     const onFocus = () => void read();
@@ -60,7 +63,7 @@ export function InboxScreen({ token }: { token: string }) {
       window.clearInterval(every);
       window.removeEventListener('focus', onFocus);
     };
-  }, [read]);
+  }, [read, gone]);
 
   useEffect(() => {
     if (!newText) return;

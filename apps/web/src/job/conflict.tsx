@@ -18,7 +18,7 @@ import { useT } from '../shell/intl.tsx';
 import type { Answer } from './api.ts';
 import type { Refusal } from './model.ts';
 
-export type ConflictAction = 'reassign' | 'reschedule' | 'cancel' | 'finish' | 'correct' | 'edit';
+type ConflictAction = 'reassign' | 'reschedule' | 'cancel' | 'finish' | 'correct' | 'edit';
 
 /** What the busy primary says while Anyway runs (SCR-OFC-19 Resending): the dialog's own busy word. */
 const BUSY: Record<ConflictAction, MessageKey> = {

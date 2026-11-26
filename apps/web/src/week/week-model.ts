@@ -8,7 +8,6 @@ export type WeekData = z.infer<typeof boardWeek.response>;
 export type WeekDay = WeekData['days'][number];
 export type WeekTech = WeekData['technicians'][number];
 export type WeekCell = WeekTech['cells'][number];
-export type WeekJob = WeekData['unassignedJobs'][number];
 
 /** The date as numbers; weekday is ISO (1 Monday to 7 Sunday). */
 export function dateNumbers(date: string): { year: number; month: number; day: number; weekday: number } {
@@ -99,7 +98,7 @@ export function cellView(cell: WeekCell, day: WeekDay, today: string, installer:
 }
 
 
-export interface Totals {
+interface Totals {
   booked: number;
   capacity: number;
 }

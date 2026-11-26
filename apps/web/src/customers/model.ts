@@ -67,7 +67,7 @@ export const shortName = (name: string): string => {
   return w.length > 1 ? `${w[0]} ${w[w.length - 1]?.[0]}.` : name;
 };
 
-// --- The search request (CTL-OFC-05-01, -06 to -11) -------------------------------------------------------------------
+// --- The customer search request and its filters (CTL-OFC-05-01, -06 to -11) -------------------------------------------------------------------
 
 export interface SearchFilters {
   branch: string | null;
@@ -80,11 +80,6 @@ export const NO_FILTERS: SearchFilters = { branch: null, city: null, plan: null,
 export const filtersSet = (f: SearchFilters): boolean => Object.values(f).some((v) => v !== null);
 /** The empty state: no text and no filter (CTL-OFC-05-01: nothing is sent). */
 export const searchIsEmpty = (query: string, f: SearchFilters): boolean => query.trim() === '' && !filtersSet(f);
-
-/** The cities of a branch, for the City filter (CTL-OFC-05-07). The page learns them from the results it has seen. */
-export function citiesOf(seen: readonly string[]): string[] {
-  return [...new Set(seen)].sort((a, b) => a.localeCompare(b));
-}
 
 /** The query words wrapped for <mark>: the parts of `name` the folded query matches, folded the way the server folds (apostrophes out). */
 export function markParts(name: string, query: string): { text: string; hit: boolean }[] {
@@ -115,7 +110,7 @@ export function markParts(name: string, query: string): { text: string; hit: boo
   return parts.filter((p) => p.text !== '');
 }
 
-// --- The forms (SCR-OFC-38, SCR-OFC-39) -----------------------------------------------------------------------------------
+// --- The new and edit customer forms (SCR-OFC-38, SCR-OFC-39) -----------------------------------------------------------------------------------
 
 export interface CustomerForm {
   name: string;
@@ -149,7 +144,7 @@ export const formHasInput = (f: CustomerForm): boolean => f.name.trim() !== '' |
 
 export const EMPTY_FORM: CustomerForm = { name: '', mobile: '', street: null, streetText: '', houseNumber: '', textLanguage: 'en', textsOn: true };
 
-// --- The page (SCR-OFC-06) --------------------------------------------------------------------------------------------------
+// --- The customer page: time zones, equipment words, its controls' calls and note times (SCR-OFC-06); and the search page's Also found in jobs line (SCR-OFC-05) --------------------------------------------------------------------------------------------------
 
 /** The United States zones the time zone select offers (CTL-OFC-06-06): IANA name and the catalog word of its name. */
 export const US_ZONES = [

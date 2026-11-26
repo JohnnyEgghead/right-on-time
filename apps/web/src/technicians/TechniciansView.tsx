@@ -21,7 +21,7 @@ import {
 
 export type TechState = 'loading' | 'ready' | 'error';
 
-export interface TechHandlers extends PanelHandlers {
+interface TechHandlers extends PanelHandlers {
   query?: (text: string) => void;
   branch?: (id: string) => void;
   filterSkill?: (id: string) => void;

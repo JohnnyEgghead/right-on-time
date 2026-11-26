@@ -105,7 +105,7 @@ export function mapSummary(t: Say, phase: MapPhase, stops: number, done: number)
 
 export type MePhase = 'day' | 'loading' | 'error' | 'offlineNone';
 
-/** Which of SCR-TEC-10's rows the Me tab is in: a saved or read day, or, with none saved, Loading, Day not loaded or Offline, nothing saved (F-1747). */
+/** Which state the Me tab (SCR-TEC-10) is in: a saved or read day, or, with none saved, Loading, Day not loaded or Offline, nothing saved (F-1747). */
 export function mePhase(hasDay: boolean, offline: boolean, settled: boolean, failed: boolean): MePhase {
   if (hasDay) return 'day';
   if (offline) return 'offlineNone';
@@ -119,7 +119,7 @@ export function distText(t: Say, lang: string, leg: Leg, serviceKey: string): st
   return mi === null ? t('tech.map.distApprox', { n: leg.minutes, service }) : t('tech.map.dist', { n: leg.minutes, mi, service });
 }
 
-// SCR-TEC-08's states and reads: steps.ts (P6-NATIVE-STEPS, kit 0.9: Job moved, Route not loaded and Offline, steps saved are its own).
+// The states and reads of the Directions screen (SCR-TEC-08), among them Job moved, Route not loaded and "Offline, steps saved", are in steps.ts.
 
 export type PartsPhase = 'nocopy' | 'empty' | 'results' | 'nomatch';
 

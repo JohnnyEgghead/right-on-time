@@ -62,7 +62,7 @@ export interface ImportCustomer {
   customerSince: string;
 }
 
-export interface ImportVisit {
+interface ImportVisit {
   customerIndex: number;
   technicianName: string;
   technicianId: string | null;
@@ -82,7 +82,7 @@ export interface ImportVisit {
   sourceRef: string;
 }
 
-export interface ImportEquipment {
+interface ImportEquipment {
   customerIndex: number;
   type: string;
   year: number | null;
@@ -99,7 +99,7 @@ export interface ImportProblem {
   example: string;
 }
 
-/** The FR-IMP-6 counts (REQUIREMENTS section 4.7's import target table), as the run's report states them. */
+/** The counts an import run's report states, such as customers clean or flagged and visits imported or not (FR-IMP-6, the import target table). */
 export interface ImportCounts {
   customers: { total: number; clean: number; flagged: number };
   visits: { total: number; imported: number; notImported: number };
@@ -115,7 +115,7 @@ export interface ImportModel {
   equipment: ImportEquipment[];
   problems: ImportProblem[];
   pairs: MatchPair[];
-  /** Candidate pairs scored inside the blocks (OQ-19's measure of the work blocking leaves). */
+  /** How many candidate pairs were scored inside the blocks: the work that blocking leaves (OQ-19). */
   comparisons: number;
   counts: ImportCounts;
 }
@@ -134,7 +134,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 
 /** A real calendar date in YYYY-MM-DD, or null. */
-export function readDate(cell: string): string | null {
+function readDate(cell: string): string | null {
   if (!DATE_RE.test(cell)) return null;
   try {
     return Temporal.PlainDate.from(cell, { overflow: 'reject' }).toString();

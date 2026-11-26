@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// API-21 Van positions (P4-BOARD-MAP; UI-SPECIFICATION 12.2; SPECIFICATIONS "Van positions", SD-22, FR-DEMO-8): the branch's vans
+// API-21 Van positions (UI-SPECIFICATION 12.2; SPECIFICATIONS "Van positions", SD-22, FR-DEMO-8): the branch's vans
 // of the technicians working the demo clock's today, each with its position computed on read by positionAt, so nothing is
 // stored and the board and the live map draw 1 position. The leg of a van on the way comes back with its track from SD-49's route
 // source (baked, else live), so the map draws the road, and with null while the routing service gives no route (FR-MAP-3). No position

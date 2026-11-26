@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Contract rows of the text area. The lane that builds the area adds its API-<nn> rows here (defineContract from ../contract.ts)
-// and its examples; no other file needs editing.
+// and its examples; its handler and policy entry are in packages/api-server.
 //
 // P4-MESSAGES: the office Messages page. API-40 Text log and API-41 Text detail feed SCR-OFC-08; API-144 Try now, API-145 Add to call
 // list and API-146 Text log export are its writes and export; API-42 Call list feeds SCR-OFC-09 and API-38 Record a call outcome is its
@@ -85,7 +85,7 @@ const textFilters = z.object({
   status: z.enum(TEXT_LOG_STATUSES).optional(),
   language: language.optional(),
   customerId: uuid.optional(),
-  /** CTL-OFC-08-07's typed name, matched on the folded customer name (API-34's customer search is P4-CUSTOMERS'). */
+  /** The customer name typed in the text log's Customer filter (CTL-OFC-08-07), matched on the folded customer name. */
   customer: z.string().max(80).optional(),
 });
 

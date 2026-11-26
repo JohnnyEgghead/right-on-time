@@ -26,7 +26,9 @@ const window = z.object({ start: wireTime, end: wireTime });
 
 /**
  * One leg: the baked track (points) with its drive minutes and length, or an approximate line (`track` null, `distanceMeters` null)
- * with SD-22's minutes (FR-MAP-3). `fromJob` null is the depot (the first leg of a day, or the van's last ended stop is not set).
+ * with the minutes of the approximate route (SD-22; FR-MAP-3). With a `fromJob` (API-104) it starts at that job. With none, and into the
+ * Map tab's next stop (API-163), it starts at the van's computed position: the previous stop (the last ended that day, else the depot),
+ * or along the way from it while the job is on the way (F-1003). The Map tab's other legs start at the stop before, the first at the depot.
  */
 export const routeLeg = z.object({
   from: lonLat,
@@ -86,7 +88,7 @@ export const dayRoute = defineContract({
     branch: z.string(),
     stops: z.array(z.object({
       jobNumber: z.number().int(),
-      /** 1, 2, 3 in the day's order (FR-TECH-1). */
+      /** The stop's place in the technician's day: 1, 2, 3 in the day's order (FR-TECH-1). */
       number: z.number().int().min(1),
       customer: z.string(),
       area: z.string(),

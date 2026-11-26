@@ -18,7 +18,7 @@ import { useT } from './intl.tsx';
 import { LanguageSwitch } from './LanguageSwitch.tsx';
 import type { Reader } from './reads.ts';
 
-export type SurfaceId = 'SURF-OFC' | 'SURF-PBS' | 'SURF-TWA' | 'SURF-CUS' | 'SURF-INB' | 'SURF-EML' | 'SURF-GATE' | 'SURF-SHR';
+type SurfaceId = 'SURF-OFC' | 'SURF-PBS' | 'SURF-TWA' | 'SURF-CUS' | 'SURF-INB' | 'SURF-EML' | 'SURF-GATE' | 'SURF-SHR';
 
 export interface ScreenProps {
   screen: string;
@@ -32,7 +32,7 @@ export interface ScreenProps {
   reader?: Reader | false;
   /** A signed-in page: the strip hears EVT-06 (DemoStrip `live`). */
   live?: boolean;
-  /** SCR-GATE-01 has no demo strip (UD-13). */
+  /** Leave out the demo strip above the page: the access-code gate page shows no demo clock (SCR-GATE-01, UD-13); the text inbox, the reschedule page and the technician screens with the clock in their header draw their own strip inside the page. */
   noClock?: boolean;
   footer?: boolean;
   phone?: boolean;
@@ -40,7 +40,7 @@ export interface ScreenProps {
   title?: string;
   /** The frame's own classes on the screen root (`r1k`, `g-a code`): the frame page's root carries them. */
   className?: string;
-  /** CMP-04's Demo mode on marker; false on SCR-GATE-01, whose frame shows the footer without it (UD-13). */
+  /** The footer's Demo mode on marker (CMP-04), shown unless false. The access-code gate page (SCR-GATE-01, UD-13) draws its own footer without the marker. */
   demoMarker?: boolean;
 }
 

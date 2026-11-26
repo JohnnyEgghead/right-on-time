@@ -10,7 +10,9 @@ import { Linking } from 'react-native';
 import { waitingTotal, type AppState, type NativeApp } from '../../core.ts';
 import { useT } from '../../ui/intl.tsx';
 import { dumpLook, LOOK_ON } from '../../ui/look.ts';
+import { jobData } from '../job/hooks.ts';
 import { openWaiting, type StatusKind } from '../job/nav.ts';
+import { owedSignatures } from '../job/owed.ts';
 import { openDirections } from '../mapme/index.tsx';
 import { useMapMe } from '../mapme/use-mapme.ts';
 import { applyWaiting, directionsMinutes, ENDED, nextJob, todayState, type Drive, type LocalJob, type TodayState } from './model.ts';
@@ -131,6 +133,7 @@ export function TodayScreen(props: { app: NativeApp; state: AppState }) {
       onJob={(job, history) => nav.navigate('Job', { jobNumber: job.jobNumber, ...(history ? { history: true } : {}) })}
       onDirections={(job) => openDirections(nav, job.jobNumber)}
       onFinish={(job) => nav.navigate('Finish', { jobNumber: job.jobNumber })}
+      owedSignatures={owedSignatures(outbox.waiting, (n) => jobData().copies.finish(n))}
       onCall={(phone) => void Linking.openURL(`tel:${phone}`)}
     />
   );

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Harness build only: what each page that embeds CMP-05 passes it, drawn around a branch's downtown, for the test page
 // (app/shell-preview/map/[config]) that proves the component in the 3 configurations FR-MAP-1 names. The pages that own
-// these maps (P4-BOARD-MAP, P5-LIVEMAP, P5-TWA-MAP-ME) pass their own data from the API; none of this ships in the release.
+// these maps (the board map, the live map, the technician Map screen) pass their own data from the API; none of this ships in the release.
 import { BRANCH_MAPS, type BranchId, type LngLat, type MapMarker, type MapRoute } from './map-model.ts';
 
 export type MapConfig = 'board' | 'jobs' | 'live' | 'technician';

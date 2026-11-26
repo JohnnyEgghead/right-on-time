@@ -85,7 +85,7 @@ export function addJob(admin: Queryable, ref: OutboxRef, customerId: string, dat
   });
 }
 
-/** Stand-in templates for every kind (test copy, not product copy: P3-TEXTS writes the real ones). */
+/** Stand-in templates for every kind (test copy, not product copy: the real texts are in the catalog). */
 export const testCatalog: TextCatalog = catalogTexts({
   en: {
     'text.confirmation': 'Brightwater: Your {service} visit is booked for {weekday}, {date}, {window}.',
@@ -103,7 +103,7 @@ export const testCatalog: TextCatalog = catalogTexts({
   },
 });
 
-/** Stand-in day labels (P3-TEXTS's slot formatter replaces them). */
+/** Stand-in day labels, in place of the catalog-driven visitDayLabels of slots.ts. */
 export const testDayLabels: VisitDayLabels = (date, lang) => {
   const d = Temporal.PlainDate.from(date);
   const en = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

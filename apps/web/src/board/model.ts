@@ -218,7 +218,7 @@ export function boardHref(branch: string | null, date: string | 'today'): string
   return `/office/board?${q.toString()}`;
 }
 
-// --- the map panel (P4-BOARD-MAP; CTL-OFC-02-24, -28 to -31) ------------------------------------------------------------
+// --- the map panel of the board: what it shows and its job list tabs (CTL-OFC-02-24, -28 to -31) ------------------------------------------------------------
 
 /** The Vans / Jobs / Both choice (CTL-OFC-02-24) and the job list tabs (CTL-OFC-02-28), Needs attention open as the frame draws it. */
 export type MapShows = 'vans' | 'jobs' | 'both';
@@ -262,7 +262,7 @@ export function shortWindow(start: string, end: string): string {
   return `${parts(start).h12}-${parts(end).h12}`;
 }
 
-/** A van's marker color state (FR-DISP-19's legend): its current job's timing wins, as a job block's does. */
+/** A van's marker color state (the map legend, FR-DISP-19): its current job's timing wins, as a job block's does. */
 export function vanState(v: Van, job: BoardJob | undefined): 'site' | 'way' | 'free' | 'late' {
   if (v.status === 'between_jobs') return 'free';
   if (job && v.status === 'on_the_way' && (job.timing === 'late' || job.timing === 'atRisk')) return 'late';

@@ -4,7 +4,7 @@
 // repeats once every REPEAT_FAILING_EVERY_MS real ms while runs keep failing (with the count of failed runs since the
 // previous line), and the first run that succeeds afterwards logs 1 recovery line (with the count of the whole outage).
 // Real elapsed time, not demo time: a paused or jumping demo clock must not silence or flood the line. /healthz is not
-// touched (D-27): it is NFR-11's monitored instrument and keeps its own rule.
+// touched (D-27): it is the monitored instrument (NFR-11) and keeps its own rule.
 import { causeCodeOf, type Logger, type ProcessState } from '@bw/log';
 
 /** 10 real minutes. */

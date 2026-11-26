@@ -22,7 +22,7 @@ export type DriveMinutes = (from: Point, to: Point, fromJob?: number | null, toJ
 export const legRef = (fromJob: number | null, toJob: number): string => `${fromJob ?? 'depot'}|${toJob}`;
 
 /**
- * SD-15's drive minutes: the baked track's last cumulative second / 60, rounded up, else SD-22's approximate minutes.
+ * The drive minutes of a leg (SD-15): the baked track's last cumulative second / 60, rounded up, else SD-22's approximate minutes.
  * `trackSeconds` maps {@link legRef} to a track's last cumulative second; a leg absent from it has no baked track.
  */
 export const trackedDriveMinutes = (trackSeconds: ReadonlyMap<string, number>): DriveMinutes => (a, b, fromJob, toJob) => {

@@ -4,7 +4,7 @@
 //     (section 7.4: 503 when it is 60 s old or more);
 //   - the alert.check event: runs every alert rule inside the dispatcher's transaction and schedules the next one 5 demo
 //     minutes after the run. During a clock jump's replay (section 5.2 step 6) a successor that would fall before the
-//     jump's target is written AT the target instead (F-435, P3-REPLAY's decision; ../clock/chain.ts, shared with
+//     jump's target is written AT the target instead (F-435, P3-REPLAY; ../clock/chain.ts, shared with
 //     eta.sweep): the replay runs the check at its own due time and once more at the target, never once per skipped
 //     5 minutes.
 // The first alert.check event is the seed's (section 3 writer table; packages/setup/src/world-seed.ts), and the worker

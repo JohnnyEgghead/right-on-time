@@ -6,13 +6,14 @@ import { readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { dayRoute, partsList, problemType, todayJobs } from '@bw/api';
+import { FinishLeave } from '@bw/outbox/src/items/native.ts';
 import { Temporal } from '@bw/time';
 import { NativeApp, waitingTotal, type NativeDeps } from '../../core.ts';
 import { memoryKeychain, nodeDir, SAMPLE_TOKEN } from '../../testing.ts';
 import { JobCopies } from './copies.ts';
 import { JobData } from './data.ts';
 import { HAROLD, haroldJob, jobServer, PARTS } from './fixtures.test-data.ts';
-import { checkFinish, emptyFinish, shownNotes, shownPhotos } from './model.ts';
+import { checkFinish, emptyFinish, finishWaits, shownNotes, shownPhotos } from './model.ts';
 import { compressPhoto } from './photo.ts';
 import { signaturePng } from './signature.ts';
 import { MapMeReads } from '../mapme/reads.ts';
@@ -294,6 +295,59 @@ describe('SCR-TEC-05 to -07 entries through the file store', () => {
     await app.sync();
     expect(server.ledger.get(fin.key)).toBe(1);
     expect(server.photos.get(sig.key)).toEqual({ bytes: png.byteLength, type: 'image/png', count: 1 });
+  });
+});
+
+describe('F-1932 the finish screen leaves with its finish and its signature, or stays', () => {
+  const payload = { parts: [], noPartsUsed: true, laborMinutes: 30, workDone: ['Tune-up'] };
+  const png = signaturePng([[{ x: 10, y: 40 }, { x: 120, y: 60 }]], 366, 92);
+  const input = { jobNumber: HAROLD, baseVersion: 3, payload, refusedKey: null, signature: png };
+  /** A signed-in phone with no signal whose item files can be refused: the write of the nth item from now on fails. */
+  async function failing() {
+    const p = await signedIn();
+    p.server.setSignal(false);
+    await p.app.sync();
+    const create = p.dirs.items.create;
+    let left = Number.POSITIVE_INFINITY;
+    p.dirs.items.create = (name, content) => {
+      if (name.startsWith('i-') && (left -= 1) < 0) throw new Error('no space left');
+      create(name, content);
+    };
+    const kinds = () => p.app.snapshot.outbox.waiting.map((i) => i.kind);
+    /** The condition the screen closes on (FinishScreen closeNow). */
+    const closes = (l: FinishLeave) => finishWaits(HAROLD, p.app.snapshot.outbox.waiting) && !l.owed;
+    return { ...p, leaving: new FinishLeave(p.app), kinds, closes, keepFirst: (n: number) => { left = n; } };
+  }
+
+  // why: FR-TECH-14, F-1932 a signature that is not kept after its finish was is not lost: the screen stays open and a retry leaves exactly 1 finish and 1 signature
+  it('stays open when the signature is not kept, and a retry enters the signature and no second finish', async () => {
+    const { leaving, kinds, closes, keepFirst, relaunch } = await failing();
+    keepFirst(1);
+    await expect(leaving.leave(input)).rejects.toThrow('no space left');
+    expect(kinds()).toEqual(['finished']);
+    expect(closes(leaving)).toBe(false);
+    // the finish that is kept is what leaves: only the signature still changes
+    expect(leaving.entriesOf({ parts: 1, signature: 'a' }, { parts: 2, signature: 'b' }, false)).toEqual({ parts: 1, signature: 'b' });
+    keepFirst(Number.POSITIVE_INFINITY);
+    await leaving.leave(input);
+    expect(kinds()).toEqual(['finished', 'signature']);
+    expect(closes(leaving)).toBe(true);
+    const again = relaunch();
+    await again.app.open();
+    expect(again.app.snapshot.outbox.waiting.map((i) => i.kind)).toEqual(['finished', 'signature']);
+  });
+
+  // why: F-1932 a finish that is not kept takes no signature with it: neither is on the phone, and a retry enters both
+  it('keeps neither when the finish is not kept', async () => {
+    const { leaving, kinds, closes, keepFirst } = await failing();
+    keepFirst(0);
+    await expect(leaving.leave(input)).rejects.toThrow('no space left');
+    expect(kinds()).toEqual([]);
+    expect(leaving.owed).toBe(false);
+    keepFirst(Number.POSITIVE_INFINITY);
+    await leaving.leave(input);
+    expect(kinds()).toEqual(['finished', 'signature']);
+    expect(closes(leaving)).toBe(true);
   });
 });
 

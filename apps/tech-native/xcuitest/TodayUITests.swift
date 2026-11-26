@@ -270,7 +270,7 @@ final class TodayUITests: XCTestCase {
     link.tap()
   }
 
-  /// The job screen (P6-NATIVE-JOB's SCR-TEC-04) is open on the job named; its Back returns to Today.
+  /// The Job screen (SCR-TEC-04) is open on the job named; its Back returns to Today.
   private func jobOpened(_ name: String, _ ctl: String) -> CGFloat {
     XCTAssertTrue(exists("job.bar.title", within: 30), "\(ctl) did not open the job screen")
     XCTAssertTrue(eventually(20) { self.el("job.bar.title").label.hasSuffix(name) }, "\(ctl) opened \(el("job.bar.title").label), not \(name)")
@@ -300,7 +300,7 @@ final class TodayUITests: XCTestCase {
     XCTAssertFalse(plain.exists, "the password field is plain text")
     Thread.sleep(forTimeInterval: 5) // a tap in the first seconds after a fresh install's launch gets no keyboard focus (KeyProbe run 1)
 
-    // CTL-TEC-01-01 and -02, typed key by key
+    // The email or employee number and the password, typed key by key (CTL-TEC-01-01 and -02)
     typeIn(login, maria.login, "the email or employee number field")
     XCTAssertEqual(login.value as? String, maria.login, "the typed employee number")
     typeIn(secure, maria.password, "the password field") // straight from the focused login field, as a person taps
@@ -338,7 +338,7 @@ final class TodayUITests: XCTestCase {
     signOutIfSignedIn()
   }
 
-  // ---- SCR-TEC-01, SCR-EML-03 and the reviewer's empty day ----------------------------------------------------------------------------
+  // ---- sign in (SCR-TEC-01), Forgot password (SCR-EML-03) and the reviewer's empty day ----------------------------------------------------------------------------
 
   /// SCR-EML-03 from Forgot password? (CTL-TEC-01-07): the native screen, its field empty and in focus.
   private func openForgot() {
@@ -413,7 +413,7 @@ final class TodayUITests: XCTestCase {
     XCTAssertEqual(itemSends(), sends, "a sign-in attempt sent items")
     XCTAssertTrue(signins().allSatisfy { $0 == "false" || $0 == "true" }, "a sign-in the relay could not read: \(signins())")
 
-    // SCR-EML-03: the Default frame (the field empty and in focus), then not an email (CTL-EML-03-01's field message), and Back to sign in
+    // The Forgot password screen (SCR-EML-03): its Default frame (the field empty and in focus), then a typed value that is not an email (the field message, CTL-EML-03-01), and Back to sign in
     relaunch()
     openForgot()
     focusOn(app.textFields["forgot.email.value"], "the reset email field")
@@ -539,7 +539,7 @@ final class TodayUITests: XCTestCase {
     mark("OFFLINE-NOTHING-SAVED")
     _ = get("/rule/clear") // the drops left over
 
-    // CTL-TEC-02-08: Refresh reads the day
+    // The Refresh button reads the day again (CTL-TEC-02-08)
     el("today.refresh").tap()
     XCTAssertTrue(exists("card.name", within: 45), "Refresh did not load the day")
     XCTAssertFalse(el("today.nosig").exists, "the No signal card stays after the read")

@@ -6,7 +6,7 @@ import { chooseLanguage, isLanguage, type Language } from '@bw/i18n';
 
 export const LANG_COOKIE = 'bw_lang';
 /** 400 days, the longest lifetime browsers keep (RFC 6265bis). */
-export const LANG_COOKIE_MAX_AGE_S = 400 * 24 * 60 * 60;
+const LANG_COOKIE_MAX_AGE_S = 400 * 24 * 60 * 60;
 
 export function langFromCookie(value: string | undefined, profile?: unknown): Language {
   if (profile !== undefined) return chooseLanguage('staff', { profile });

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The customer's live map (P5-LIVEMAP; UI-SPECIFICATION SCR-CUS-04, SCR-CUS-05, API-115, API-116; SPECIFICATIONS SD-17, 6.4 "Live map ends at
+// The customer's live map (UI-SPECIFICATION SCR-CUS-04, SCR-CUS-05, API-115, API-116; SPECIFICATIONS SD-17, 6.4 "Live map ends at
 // arrival"; FR-TEXT-4, FR-TEXT-22, FR-TEXT-23; NFR-04, invariant 5).
 //
 // {@link liveMapLinkState} is the 1 rule that says whether a live map link is live or ended, and why. Every reader of a live map link goes
-// through it: API-116 here, the page gate's status for the link page (kernel/pages.ts, wired in web.ts), and P5-INBOX's preview picture
-// (API-164). A coordinate is read only after it says `live`, so before On my way, after arrival and after an office change nothing about
+// through it: the live map data call (API-116) here, the page gate's status for the link page (kernel/pages.ts, wired in web.ts), and
+// the inbox's preview picture (API-164, P5-INBOX). A coordinate is read only after it says `live`, so before On my way, after arrival and after an office change nothing about
 // the van leaves the database (G-CI5, ci/gates/G-CI5/).
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -24,7 +24,7 @@ type Out = z.output<typeof liveMapData.response>;
 type In = z.output<typeof liveMapData.request>;
 
 /** Why a link ended: the technician arrived, or the office changed the visit (or the link is not yet, or no longer, a trip in progress). */
-export type LinkEnd = 'arrived' | 'changed';
+type LinkEnd = 'arrived' | 'changed';
 export type LinkState = { live: true } | { live: false; reason: LinkEnd };
 
 /** What the rule reads: the link's own stamps and the job's status and stamps (all epoch milliseconds, null when unset). */
@@ -64,7 +64,7 @@ interface LinkRead {
 }
 
 /** The link and its job, by token; null for no such live map link. No coordinate is read here. */
-export async function readLiveMapLink(tx: Tx, token: string): Promise<LinkRead | null> {
+async function readLiveMapLink(tx: Tx, token: string): Promise<LinkRead | null> {
   const r = (await tx.query<{
     token: string; created_at: Date; ended_at: Date | null; job_number: number; status: string; zone: string; branch_id: string; date: string;
     screen_label_key: string; window_start: Date; window_end: Date; on_the_way_at: Date | null; arrived_at: Date | null; texted_arrival: Date | null;
@@ -90,7 +90,7 @@ const ms = (d: Date | null): number | null => (d === null ? null : d.getTime());
 const wire = (d: Date, zone: string): string => toWire(Temporal.Instant.fromEpochMilliseconds(d.getTime()), zone);
 
 /** The rule over a read link at demo time `now`. */
-export const stateOfLink = (l: LinkRead, now: number): LinkState =>
+const stateOfLink = (l: LinkRead, now: number): LinkState =>
   liveMapLinkState({ endedAt: ms(l.endedAt), job: { status: l.job.status, onTheWayAt: ms(l.job.onTheWayAt), arrivedAt: ms(l.job.arrivedAt), technicianId: l.job.technicianId } }, now);
 
 /** The kernel's token check for a live map route: a known link passes; the handler decides gone (mount.ts). */
@@ -109,7 +109,7 @@ export async function liveMapLinkEnded(tx: Tx, token: string, now: number): Prom
  * The 410 of a live map link that has ended, for API-116 and API-164 alike: no coordinate in the body (FR-TEXT-4, NFR-04). Reason `changed`: only
  * the office phone, so no old van, technician or window shows.
  */
-export function endedAnswer(l: LinkRead, reason: LinkEnd): { ok: false; status: 410; code: 'gone'; detail: z.output<typeof liveMapEndedDetail> } {
+function endedAnswer(l: LinkRead, reason: LinkEnd): { ok: false; status: 410; code: 'gone'; detail: z.output<typeof liveMapEndedDetail> } {
   const j = l.job;
   const byArrival = reason === 'arrived';
   return {

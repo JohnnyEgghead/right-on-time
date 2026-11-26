@@ -39,7 +39,7 @@ const LATE_TEXTS = 74;
 export const KEISHA_EMAIL = 'keisha.t@brightwater.example';
 export const DANA_EMAIL = 'dana.ruiz@brightwater.example';
 export const BOOKER_PINS: Readonly<Record<number, string>> = { 24_800: MARCO.email, 24_805: KEISHA_EMAIL, 24_791: KEISHA_EMAIL, 24_840: KEISHA_EMAIL };
-export const bookerEmail = (jobNumber: number): string => BOOKER_PINS[jobNumber] ?? (jobNumber % 2 === 0 ? MARCO.email : KEISHA_EMAIL);
+const bookerEmail = (jobNumber: number): string => BOOKER_PINS[jobNumber] ?? (jobNumber % 2 === 0 ? MARCO.email : KEISHA_EMAIL);
 
 /**
  * The job history the approved pages name a person in (mockups/pages/office-billing.html, the Fixed in the last 7 days table):
@@ -74,7 +74,7 @@ export const OFFICE_NOTE = { customer: "Sean O'Brien", houseNumber: 287, date: '
  * Harold Jenkins's 2 notes as DK-87 Success draws them (mockups/pages/office-job.html): job notes on his Sep 15 job, as that frame shows
  * them on the job page; the customer page reads a customer's job notes too. FR-DISP-5's "and his notes". The frame gives dates only.
  */
-export const HAROLD_NOTES = [
+const HAROLD_NOTES = [
   { jobNumber: 24_830, author: 'Keisha Thompson', kind: 'office', date: '2026-09-10', time: '09:00', body: 'Please use the side door. The front steps are being repaired. Knock firmly; the doorbell does not work.' },
   { jobNumber: 24_830, author: 'Maria Santos', kind: 'technician', date: '2025-10-14', time: '11:00', body: 'Bring a 16x25x4 filter. Flame sensor was dirty last year; check it again.' },
 ] as const;
@@ -309,7 +309,7 @@ export async function seedWorld(tx: Queryable, opts: WorldSeedOptions): Promise<
       [n.jobNumber, n.author, n.kind, n.body, at(n.date, n.time)]);
   }
 
-  // 5. The sample block (FR-DISP-16).
+  // 5. The sample time block: a technician's non-job time on the board, apart from jobs (FR-DISP-16).
   const b = tech.get(SAMPLE_BLOCK.technician) as { id: string };
   await tx.query(
     `INSERT INTO world.time_block (technician_id, date, zone, start, "end", label, place, version, seeded) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, true)`,
@@ -349,7 +349,7 @@ export async function seedWorld(tx: Queryable, opts: WorldSeedOptions): Promise<
   for (const { j } of jobs) if (j.status === 'scheduled') await planReminder(tx, { jobNumber: j.jobNumber, now: seedNow });
   // F-1132, F-1151 (SD-25, F-744): the delivered late texts of the pilot's after period, so the Late texts sent card reads stored rows
   // near the approved reports frame's 74 in each whole pilot week instead of 0 (FR-REP-8). The after period's pilot jobs run Aug 31 to
-  // Sep 14 (the before period predates the app). A visit gets one only as FR-TEXT-5's sweep would send it: arrival minus the baseline
+  // Sep 14 (the before period predates the app). A visit gets one only as the late-text sweep (FR-TEXT-5) would send it: arrival minus the baseline
   // reached 20 minutes, the baseline being the visit's SD-15 planned arrival (a pilot visit has no texted arrival before its late text),
   // computed per technician-day on the planner's drive minutes exactly as the demo week's are. Each week takes LATE_TEXTS per whole week,
   // and a short week (Sep 14, its Monday only) the same per-day share, from its qualifying visits, latest against the plan first (then job

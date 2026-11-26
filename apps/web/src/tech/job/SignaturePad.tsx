@@ -6,8 +6,8 @@
 import { useEffect, useRef } from 'react';
 import { useT } from '../../shell/intl.tsx';
 
-export const SIG_W = 1200;
-export const SIG_H = 400;
+const SIG_W = 1200;
+const SIG_H = 400;
 
 export interface SignaturePadProps {
   png: Uint8Array | null;

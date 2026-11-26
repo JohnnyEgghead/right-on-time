@@ -21,7 +21,7 @@ const gates = JSON.parse(readFileSync('ci/gates.json', 'utf8')) as {
   defaultTimeoutS: number;
   gates: { id: string; when: string; timeoutS?: number }[];
 };
-const INSTALL_ALLOWANCE_S = 600; // apt, pnpm install, browser download (the script allows more)
+const INSTALL_ALLOWANCE_S = 600; // the offline pnpm install and the browser check inside the cap (the script allows more; apt and the browsers sit in the image, built before the cap starts)
 const FULL_CI_BUDGET_S = 2 * 60 * 60; // docs/BUILD_PLAN.md header: full CI <= 2 h (plan v0.24, F-1036)
 
 const runs = (job: Job) => (job.steps ?? []).map((s) => s.run ?? '').join('\n');

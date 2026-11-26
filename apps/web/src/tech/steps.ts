@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// SCR-TEC-08's turn-by-turn half on the web technician app, the pure part (P6-WEB-STEPS; UI-SPECIFICATION v0.15 SCR-TEC-08 CTL-TEC-08-05 to
+// The Directions screen's turn-by-turn half (SCR-TEC-08) on the web technician app, the pure part (P6-WEB-STEPS; UI-SPECIFICATION v0.15 SCR-TEC-08 CTL-TEC-08-05 to
 // CTL-TEC-08-08 and its states, section 4.5 rule 11; SPECIFICATIONS v0.13 SD-49, section 6.3 Directions; DK-113 mockups/pages/tech-map.html,
 // kit 0.9): which state the screen is in, the step rows, the Next turn card, each step's turn arrow and whether a re-read is another route
 // (Route updated). The rules are the native app's (apps/tech-native/src/screens/mapme/steps.ts, P6-NATIVE-STEPS), held equal by that app's
@@ -26,7 +26,7 @@ export interface ShownRoute { leg: Leg; branch: string; steps: RouteStep[]; at: 
 /** A read of the route: answered, the job is no longer this technician's (404 not_found: Job moved), or failed with signal. */
 export type RouteRead = ({ kind: 'leg' } & ShownRoute) | { kind: 'moved' } | { kind: 'failed' };
 
-/** The states of SCR-TEC-08 (UI-SPECIFICATION v0.15; content from DK-113's web frames, ruling D5b-1). */
+/** The states of the Directions screen (SCR-TEC-08; UI-SPECIFICATION v0.15; content from DK-113's web frames, ruling D5b-1). */
 export type StepsPhase = 'loading' | 'route' | 'approximate' | 'offlineSaved' | 'offline' | 'failed' | 'moved' | 'none';
 
 /**
@@ -60,7 +60,7 @@ export function stepIcon(step: Pick<RouteStep, 'kind' | 'direction'>): StepIcon 
   return 'arrowUp';
 }
 
-/** 1 row of the Steps list (CTL-TEC-08-06). */
+/** 1 row of the turn-by-turn Steps list (CTL-TEC-08-06). */
 export interface StepRow {
   index: number;
   icon: StepIcon;

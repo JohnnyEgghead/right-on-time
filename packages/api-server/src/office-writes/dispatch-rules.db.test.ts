@@ -154,7 +154,7 @@ describe('suggested technicians over the database (SD-26)', () => {
     const suggest = (job: number) => suggestTechnicians(pool, {
       branch: 'columbus', serviceId: 'furnace_tune_up', customerId: at(job).customer_id, date, windowId: win('two_hour 10:00'), excludeJob: job,
     }).then((r) => r.find((x) => x.technicianId === tech('Kevin Doyle')));
-    // The first-booked job comes first in the plan: its stop before is the depot (it was the second job before F-427).
+    // The first-booked job comes first in the plan: its stop before is the depot (F-427).
     expect((await suggest(first.jobNumber))?.driveMinutes).toBe(approximateDriveMinutes(depot, at(first.jobNumber)));
     // The second-booked job follows the first.
     expect((await suggest(second.jobNumber))?.driveMinutes).toBe(approximateDriveMinutes(at(first.jobNumber), at(second.jobNumber)));

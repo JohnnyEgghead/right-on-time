@@ -200,6 +200,16 @@ describe('byte-identical export (FR-IMP-5)', () => {
     expect(other()['customers.csv']).not.toBe(out['customers.csv']);
   });
 
+  // why: a world built on another seed must name that seed in its own seed value and in the _doc text of truth.json and fixture.json; the default seed's committed files stay byte-identical, so only another seed can show the old bug of always writing the default seed 20260915.
+  for (const n of ['truth.json', 'fixture.json'] as const) {
+    it(`a world built on another seed names its own seed in ${n}, in the seed value and in the _doc text`, () => {
+      const doc = JSON.parse(other()[n]) as { seed: number; _doc: string };
+      expect(doc.seed).toBe(SEED + 1);
+      expect(doc._doc).toContain(`seed ${SEED + 1}`);
+      expect(doc._doc).not.toContain(`seed ${SEED}`);
+    });
+  }
+
   it('every CSV uses \\n line ends and quotes only cells with a comma, quote or line break', () => {
     for (const n of ['customers.csv', 'visits.csv', 'equipment.csv'] as const) expect(out[n]).not.toContain('\r');
     const csv = toCsv(['a', 'b'], [['x, y', 'say "hi"']]);
@@ -504,7 +514,7 @@ describe('the world seed fixture (BUILD_PLAN D-3 step 2)', () => {
 
   // why: F-1651 (the check above can fail: with the visit before it, 24815, on time and 30 minutes long, 24805 is no longer Late at 10:28)
   it('fails a fixture whose Late page job has an on-time visit before it', (ctx) => {
-    if (noJobsPage) ctx.skip(noJobsPage); // F-1861
+    if (noJobsPage) ctx.skip(noJobsPage); // a public copy lacks the office jobs mockup page this check reads (F-1861)
     const skip = storyTracksSkip(TRACKS);
     if (skip) ctx.skip(skip);
     const fx = JSON.parse(out['fixture.json']) as Fixture;

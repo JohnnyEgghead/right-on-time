@@ -57,7 +57,7 @@ export function initialsOf(name: string): string {
 }
 
 const OPEN = new Set(['scheduled', 'on_the_way', 'on_site']);
-export const isOpen = (r: JobRow): boolean => OPEN.has(r.status);
+const isOpen = (r: JobRow): boolean => OPEN.has(r.status);
 
 /** The status word of a row (FR-DISP-14): Late or At risk over the job's own status, Unassigned for an open job with no technician. */
 export function chipOf(r: JobRow): StatusWord {
@@ -92,7 +92,7 @@ export const dayCell = (r: JobRow, today: string, t: T): string => (r.day === to
 export type Group = 'attention' | 'earlier' | 'today' | 'upcoming';
 
 /** CTL-OFC-30-17: the group a row sits in. Under Arrival window there is no Needs attention group. */
-export function groupOf(r: JobRow, today: string, sort: SortPick): Group {
+function groupOf(r: JobRow, today: string, sort: SortPick): Group {
   if (sort === 'attention' && r.needsAttention) return 'attention';
   return r.day < today ? 'earlier' : r.day === today ? 'today' : 'upcoming';
 }

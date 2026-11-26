@@ -14,7 +14,7 @@ import { Icon } from '../shell/Icon.tsx';
 import { useT, type ClientT } from '../shell/intl.tsx';
 import { ErrorPanel } from '../shell/Panels.tsx';
 import {
-  canSchedule, confirmationKey, listed, noOpenWindow, noTexts, offeredDays, reasonLine, roomFill, serviceIcon, standout, visitOfDetail, visitOfHit,
+  canSchedule, listed, noOpenWindow, noTexts, offeredDays, reasonLine, roomFill, serviceIcon, standout, visitOfDetail, visitOfHit,
   type Day, type Picks, type Tech, type Visit,
 } from './model.ts';
 
@@ -34,7 +34,7 @@ export interface ViewProps {
   saving: boolean;
   /** An error from Schedule (every field keeps its value), or the leave-page words. */
   shown: Shown | null;
-  /** The branch's name (CTL-OFC-04-14). */
+  /** The branch's name, shown on the new job form (CTL-OFC-04-14). */
   branchName: string;
   /** The demo clock's day (API-10), null until it is read: a visit on it reads today, and it gets no reminder the evening before. */
   today: string | null;
@@ -418,9 +418,5 @@ export function NewJobView(p: ViewProps) {
   );
 }
 
-/** The words CMP-11 shows after Schedule (the toast the job page that opens carries). */
-export function doneWords(t: ClientT, c: Pick<Detail, 'name'>, jobNumber: number, answer: { status: string } | null): string {
-  return t(confirmationKey(answer), { n: jobNumber, name: firstName(c.name) });
-}
 // `offeredDays` is applied by the page when it reads API-29; re-exported so a preview builds its days the same way.
 export { offeredDays };

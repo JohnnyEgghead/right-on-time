@@ -35,7 +35,7 @@ export BACKUP_TARGET BACKUP_BUCKET BACKUP_REGION
 say "== hosted-check-server run $RUN"
 say "settings: BACKUP_TARGET=$BACKUP_TARGET BACKUP_BUCKET=$BACKUP_BUCKET BACKUP_REGION=$BACKUP_REGION"
 BW_PROJECT="${BW_PROJECT:-brightwater}"
-DB="$(docker ps -q --filter "label=com.docker.compose.project=$BW_PROJECT" --filter label=com.docker.compose.service=db | head -n 1)"
+DB="$(docker ps -q --filter "label=com.docker.compose.project=$BW_PROJECT" --filter label=com.docker.compose.service=db)"; DB=${DB%%$'\n'*}
 q() { docker exec -i -e PGOPTIONS='-c client_min_messages=warning' "$DB" psql -X -q -A -t -v ON_ERROR_STOP=1 -U brightwater -d brightwater -c "$1"; }
 # BACKUP_ENDPOINT_URL: the local rehearsal's S3-compatible server only (infra/backup/tests); never set on the server.
 s3() { aws --region "$BACKUP_REGION" ${BACKUP_ENDPOINT_URL:+--endpoint-url "$BACKUP_ENDPOINT_URL"} "$@"; }

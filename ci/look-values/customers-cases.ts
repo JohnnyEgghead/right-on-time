@@ -18,8 +18,8 @@ export interface CustomersCase {
   widthFrom?: { app: string; frame: string }[];
 }
 
-export const SEARCH_FRAME = 'mockups/pages/office-customer-search.html';
-export const CUSTOMER_FRAME = 'mockups/pages/office-customer.html';
+const SEARCH_FRAME = 'mockups/pages/office-customer-search.html';
+const CUSTOMER_FRAME = 'mockups/pages/office-customer.html';
 const S = 'SCR-OFC-05 Customer search: ';
 const N = 'SCR-OFC-38 New customer: ';
 const P = 'SCR-OFC-06 Customer page: ';
@@ -29,7 +29,7 @@ const cap = (c: string) => `[data-bw-cap="${c}"]`;
 const root = (screen: string) => `.r1-screen[data-screen="${screen}"]`;
 const within = (appRoot: string, frameRoot: string, inner: string[]): SelectorPair[] => inner.map((s) => ({ app: `${appRoot} ${s}`, frame: `${frameRoot} ${s}` }));
 
-/** The page header, filters and hint of SCR-OFC-05. `.q` carries the caret and the typed word in the frame (text-length bound): its box is compared, its inside is not. */
+/** The page header, filters and hint of the customers page (SCR-OFC-05). `.q` carries the caret and the typed word in the frame (text-length bound): its box is compared, its inside is not. */
 const SEARCH_HEAD = [
   '.pgh', '.pgh h1', '.pgh .row', '.pgh .acts .btn', '.pgh .acts .btn .ic', '.qrow', '.q', '.q .ic', '.sel', '.sel .k', '.sel .ic', '.hint', '.hint .ic', '.qrow > .btn.sm',
 ];

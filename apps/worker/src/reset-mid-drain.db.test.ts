@@ -36,8 +36,9 @@ let reset: Promise<void> | undefined;
 const nightlyResetDate = () => new Date(realNow('nightly_reset').epochMilliseconds);
 const clockAnchorDate = () => new Date(realNow('clock_anchor').epochMilliseconds);
 const recordStampDate = () => new Date(realNow('record_stamp').epochMilliseconds);
+// F-1923: through the worker pool, not db.admin(): the dispatcher's timer pass reads it too, and db.admin() is 1 shared connection that refuses an overlapping query.
 const epochNow = async (): Promise<number> =>
-  (await db.admin().query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1')).rows[0]!.world_epoch;
+  (await worker.query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1')).rows[0]!.world_epoch;
 
 /**
  * Start a reset on its own connection and wait (bounded) until it waits on a lock: the running claim's. The reset's promise

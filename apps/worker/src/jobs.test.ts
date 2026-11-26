@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The worker's job registry as F-357 rules it: 1 dispatcher with 2 claim lanes, billing in the parallel lane through the
+// The worker's job registry (F-357): 1 dispatcher with 2 claim lanes, billing in the parallel lane through the
 // production factory, its width below the worker's pool, and no kind in both lanes. No database: the registry entries
 // are built, not started.
 import { readFileSync } from 'node:fs';

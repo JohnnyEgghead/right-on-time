@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The policy-table actions of the billing writes (owner ruling c025a9ec; SPECIFICATIONS section 4; UI-SPECIFICATION 2.4):
-// each action's key (its contract id) is in API-07's list for every role its entry allows and absent for a role it denies.
+// each action's key (its contract id) is in the who-am-I call's permissions list (API-07) for every role its
+// entry allows and absent for a role it denies.
 import { correctFinish, markFixed, retryAll, retryNow, sendAgain, setPretendBillingMode } from '@bw/api';
 import { describe, expect, it } from 'vitest';
 import { permissionsOf } from '../handlers/me.ts';

@@ -1251,9 +1251,9 @@ describe('ci/gates.json nightly tier (P3-CI-CADENCE, D-15)', () => {
     // why: F-962 the pin matches the executable line with its exit capture, so a commented-out line or an appended "|| true" does not pass it
     for (const id of ['page-walkers', 'page-walkers-nightly']) expect(read(id), id).toMatch(/^bash ci\/booking-stack\.sh \|\| rc=/m);
     // F-967: the inbox stack suite runs in both halves too, after the booking stack
-    for (const id of ['page-walkers', 'page-walkers-nightly']) expect(read(id), id).toMatch(/^bash ci\/inbox-stack\.sh \|\| rc=/m); // F-977: the executable line with its exit capture, as F-962
+    for (const id of ['page-walkers', 'page-walkers-nightly']) expect(read(id), id).toMatch(/^bash ci\/inbox-stack\.sh \|\| rc=/m); // F-977: the executable line with its exit capture, as the booking pin does (F-962)
     // P5-TWA-MAP-ME: the map and Me stack suite runs in both halves too, after the inbox stack
-    for (const id of ['page-walkers', 'page-walkers-nightly']) expect(read(id), id).toMatch(/^bash ci\/mapme-stack\.sh \|\| rc=/m); // F-977: same rule
+    for (const id of ['page-walkers', 'page-walkers-nightly']) expect(read(id), id).toMatch(/^bash ci\/mapme-stack\.sh \|\| rc=/m); // the executable line with its exit capture, as for the inbox stack (F-977)
     expect(read('G-CI4-nightly')).toMatch(/^\s*TZ="\$zone" BW_EXPECT_TZ="\$zone" pnpm exec vitest run --reporter=json/m);
     expect(read('G-CI4-nightly')).not.toContain('packages/time ');
   });

@@ -46,7 +46,7 @@ function section(text: string, start: string, end: string): string {
 }
 
 /** Screen ids of a 2.4 first cell, ranges ("SCR-OFC-02 to SCR-OFC-10") expanded. */
-export function screensOf(cell: string): string[] {
+function screensOf(cell: string): string[] {
   const out: string[] = [];
   const rx = /SCR-([A-Z]+)-(\d+)(?:\s+to\s+SCR-\1-(\d+))?/g;
   for (const m of cell.matchAll(rx)) {
@@ -100,7 +100,7 @@ const COMPONENT_ACCESS: Record<string, Expected> = {
   'CMP-10': { kind: 'roles', roles: ['technician'] },
 };
 
-/** SPECIFICATIONS 7.4's 2 endpoints, which 12.2 does not list: API-171 (no code, no session) and API-172 (office and manager). */
+/** The 2 endpoints of SPECIFICATIONS 7.4 whose callers in the UI spec's contract table (12.2) name no UI control: API-171 (no code, no session) and API-172 (office and manager). */
 const SECTION_74: Record<string, Expected> = { 'API-171': { kind: 'public' }, 'API-172': { kind: 'roles', roles: ['manager', 'office'] } };
 
 /**
@@ -121,7 +121,7 @@ const NAMED_ACCESS: Record<string, Expected> = {
   'API-106': { kind: 'public' },
 };
 
-/** Rows 12.2 does not list yet, each with its basis in NAMED_ACCESS's comment; the doc batch's 12.2 row retires its entry here. API-175's row is listed since UI-SPECIFICATION 0.14 (F-875 follow-on), so none waits. */
+/** Rows the UI spec's contract table (12.2) does not list yet, each with its basis in NAMED_ACCESS's comment; the doc batch's 12.2 row retires its entry here. API-175's row is listed since UI-SPECIFICATION 0.14 (F-875 follow-on), so none waits. */
 const AWAITING_12_2: Record<string, Expected> = {};
 
 /**
@@ -248,8 +248,8 @@ export function sameAccess(entry: PolicyEntry, want: Expected): boolean {
   return [...entry.access.roles].sort().join() === [...want.roles].sort().join();
 }
 
-/** The verdict a principal must get, by the spec: allow, or the refusal code, in the SD-47 order. */
-export function expectedVerdict(
+/** The verdict a principal must get, by the spec: allow, or the refusal code: access code first, then sign-in, then role (SD-47). */
+function expectedVerdict(
   want: Expected,
   codeFree: boolean,
   who: { role: Role | null; via: 'password' | 'sign_in_as' | null },

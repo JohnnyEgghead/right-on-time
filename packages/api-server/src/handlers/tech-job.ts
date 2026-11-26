@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The web technician app's job reads (P5-TWA-JOB; UI-SPECIFICATION 12.2 API-101, and API-175, the stored photo and signature
+// The web technician app's job reads (UI-SPECIFICATION 12.2 API-101, and API-175, the stored photo and signature
 // file 12.2 does not list yet: F-707, F-727). Each read runs in the handler's 1 transaction (SD-6) and answers wall times in the
 // job's branch zone (12.1 item 5).
 //   API-101 the technician's own job: a job that is not the caller's answers forbidden (12.2), an unknown number not_found.
 //     The customer's phone is answered only when the job's date is today by the demo clock in the job's zone (FR-AUTH-4,
-//     OA-29 row 16): on any other day it is null, never sent. History follows SPECIFICATIONS section 6.2 as API-23 does.
+//     OA-29 row 16): on any other day it is null, never sent. History follows SPECIFICATIONS section 6.2 as the office job page's does (API-23).
 //   API-175 1 stored file by its item key: a photo (JPEG) or the job's signature (PNG), read from PHOTOS_DIR. Office staff
 //     and managers read any; a technician only a file of their own job (as API-101). A key no row holds is not_found, so
 //     after a world reset a file of the earlier world is gone too (its row is). size thumb answers a photo's small copy (SD-32,
@@ -36,7 +36,7 @@ interface JobRow {
 }
 
 /** API-101: the job, its customer (the phone only today), equipment, the last 3 visits, the notes and the photos. */
-export const myJobHandler: Handler<Out<typeof myJobRow>> = async (req, tx: Tx) => {
+const myJobHandler: Handler<Out<typeof myJobRow>> = async (req, tx: Tx) => {
   if (req.caller.kind !== 'staff') return forbidden;
   const { jobNumber } = req.params as In<typeof myJobRow>;
   const j = (await tx.query<JobRow>(
@@ -116,7 +116,7 @@ async function readStored(file: string): Promise<Uint8Array<ArrayBuffer> | null>
  * size thumb a photo answers its small copy (SD-32, UD-55), under the same access rules (they run first), made and written on
  * this read when it is missing; a signature answers its PNG whatever the size.
  */
-export const storedFileHandler: Handler<Out<typeof storedFileRow>> = async (req, tx: Tx, hctx) => {
+const storedFileHandler: Handler<Out<typeof storedFileRow>> = async (req, tx: Tx, hctx) => {
   if (req.caller.kind !== 'staff') return forbidden;
   const { key, size } = req.params as In<typeof storedFileRow>;
   const row = (await tx.query<{ file: string; job_number: number | null; type: 'image/jpeg' | 'image/png' }>(
@@ -139,7 +139,7 @@ export const storedFileHandler: Handler<Out<typeof storedFileRow>> = async (req,
   if (size === 'thumb' && row.type === 'image/jpeg') {
     const thumb = await readStored(path.resolve(dir, thumbFile(row.file)));
     if (thumb) return { ok: true, status: 200, data: { type: 'image/jpeg', bytes: thumb } };
-    // No small copy (a photo stored before SD-32's rule, or its copy lost): make it from the photo and keep it.
+    // No small copy (a photo stored before the small copy rule of SD-32, or its copy lost): make it from the photo and keep it.
     const photo = await readStored(file);
     if (!photo) return notFound;
     try {

@@ -19,7 +19,7 @@ import type { BrowserContext, ConsoleMessage, Page, Request, Response, WebError 
 /** The most entries 1 context keeps (the oldest are dropped first, and counted). */
 export const MAX_ENTRIES = 3000;
 /** The longest text an entry keeps. */
-export const MAX_TEXT = 4000;
+const MAX_TEXT = 4000;
 
 export type Entry = {
   /** Order across every recorder of this process. */

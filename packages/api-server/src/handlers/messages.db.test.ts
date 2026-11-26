@@ -3,7 +3,8 @@
 // FR-TEXT-25) on the real database (PostgreSQL 18, the migrated schema, P2-SEED's reference seed), through the production kernel as the
 // web process's login bw_web, with a dispatcher whose session the real session layer created. The log's texts and attempts are planted by
 // SQL (the outbox and the worker write them in production; their own tests prove that); the call list's reminder calls are never planted:
-// visits are booked through API-28 and the rows come from API-38 and the real reminder fire (F-651). Each handler is called over HTTP.
+// visits are booked through the office's create-job call (API-28) and the rows come from the call outcome call (API-38) and the real
+// reminder fire (F-651). Each handler is called over HTTP.
 // Run by gate G-CI7 step 3 (ci/gates/G-CI7/vitest.db.config.ts).
 import { fireReminder, reminderCallId } from '@bw/outbox';
 import { Temporal } from '@bw/time';

@@ -14,7 +14,7 @@ function dir(): Directory {
   return d;
 }
 
-export function mapFileOf(branch: BranchId): File {
+function mapFileOf(branch: BranchId): File {
   return new File(dir(), BRANCH_MAPS[branch].file);
 }
 

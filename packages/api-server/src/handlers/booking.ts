@@ -34,7 +34,7 @@ const notFound = { ok: false as const, status: 404, code: 'not_found' as const }
 const invalid = { ok: false as const, status: 422, code: 'validation_failed' as const };
 
 /** FR-BOOK-9: a date is bookable online while demo now is before 5:00 PM on the day before it, in the branch's zone; today never is. */
-export function onlineOpen(date: string, zone: string, now: Temporal.Instant): boolean {
+function onlineOpen(date: string, zone: string, now: Temporal.Instant): boolean {
   if (date <= localDateOf(now, zone)) return false;
   const cutoff = atLocal(addDays(date, -1), '17:00', zone, 'compatible');
   return Temporal.Instant.compare(now, cutoff) < 0;

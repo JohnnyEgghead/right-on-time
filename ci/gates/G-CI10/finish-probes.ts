@@ -15,7 +15,7 @@ import { sessionCookie, SqlSessionStore, startSession } from '../../../packages/
 import { createWebKernel } from '../../../packages/api-server/src/web.ts';
 import { realNow, toWire, Temporal, type RealTimeUse } from '../../../packages/time/src/index.ts';
 
-export interface FinishProbeContext {
+interface FinishProbeContext {
   /** Superuser connection of the gate's database (migrated, with the billing test world's reference rows). */
   admin: Queryable;
   /** The database URL, for a probe that mounts the production kernel on its own pool. */
@@ -24,7 +24,7 @@ export interface FinishProbeContext {
   newOnSiteJob(): Promise<number>;
 }
 
-export interface FinishProbeResult {
+interface FinishProbeResult {
   /** The error code the route answered (the whole response, or the item's result for API-102). */
   code: string;
 }

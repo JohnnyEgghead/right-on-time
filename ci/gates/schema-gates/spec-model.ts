@@ -11,7 +11,7 @@
 
 export type Store = 'world' | 'pbs' | 'system';
 
-export interface SpecColumn {
+interface SpecColumn {
   name: string;
   type: string; // as the document spells it: `timestamptz`, `text[]`, `double precision`
   nullable: boolean;
@@ -19,7 +19,7 @@ export interface SpecColumn {
   zoneNote: 'branch' | 'customer' | null; // a "zone: <owner>" note on the column's row
 }
 
-export interface SpecTable {
+interface SpecTable {
   schema: Store;
   name: string;
   columns: Map<string, SpecColumn>;
@@ -42,7 +42,7 @@ const DOC_TYPES = new Set([
   'jsonb', 'bytea', 'citext', 'text[]', 'integer[]',
 ]);
 
-export function sectionThree(doc: string): string {
+function sectionThree(doc: string): string {
   const start = doc.search(/^## 3\. /m);
   if (start < 0) throw new SpecParseError('SPECIFICATIONS has no "## 3. " heading');
   const rest = doc.slice(start + 1);
@@ -203,7 +203,7 @@ export function parseSpec(doc: string): SpecModel {
 // ---- Foreign keys: the "Nullability and keys" rules -------------------------------------------------------------
 
 /** Reference-shaped world columns that name no single table, so they carry no constraint. */
-export const UNCONSTRAINED_REFERENCES: Readonly<Record<string, string>> = {
+const UNCONSTRAINED_REFERENCES: Readonly<Record<string, string>> = {
   'world.import_problem_row.flagged_entity_id': 'the imported, flagged record: a customer, a visit or equipment',
   'world.van_track.build_id': 'the pinned map bake (D7), a file-level id with no table',
   'world.time_block_change.block_id': 'the moved block: a deleted block keeps its history, so no constraint',

@@ -24,7 +24,7 @@ interface ServiceRow {
   skill: Skill;
 }
 
-/** SD-20's 9 services in its order; the ids are the generator README's service ids. The first 6 are bookable online (FR-BOOK-14). */
+/** The 9 services in their order (SD-20); the ids are the generator README's service ids. The first 6 are bookable online (FR-BOOK-14). */
 export const SERVICES: readonly ServiceRow[] = [
   { id: 'furnace_tune_up', online: true, cents: 8900, jobType: 'maintenance', minutes: 60, skill: 'heating_cooling' },
   { id: 'ac_tune_up', online: true, cents: 8900, jobType: 'maintenance', minutes: 60, skill: 'heating_cooling' },
@@ -392,7 +392,8 @@ interface RosterEntry {
 }
 
 /** The generator's technician roster, read from its file (21 technicians, employee numbers from 40701; SD-29). */
-export function readRoster(file = path.resolve(import.meta.dirname, '..', '..', '..', 'generator', 'technicians.json')): RosterEntry[] {
+export function readRoster(): RosterEntry[] {
+  const file = path.resolve(import.meta.dirname, '..', '..', '..', 'generator', 'technicians.json');
   return (JSON.parse(readFileSync(file, 'utf8')) as { technicians: RosterEntry[] }).technicians;
 }
 
@@ -449,9 +450,9 @@ const SPANISH = new Set(['40708']);
 
 /**
  * Technician users with no technician row: no past visits exist for them, so they are seed-only (F-254).
- * P2-AUTH decision (F-270): the sign-in list needs no technician row for Teresa Molina. API-03, API-05 and API-15 read the user row only,
- * and API-07 answers user.name; a row would raise Springfield's window capacity from 15 to 20 and need generator and past-visit changes.
- * What a technician-role user with no technician row sees on the technician app's day reads is P5-TWA-TODAY's to answer as an empty day.
+ * The sign-in list needs no technician row for Teresa Molina (F-270): sign in, sign in as and the sample sign-in list (API-03, API-05, API-15)
+ * read the user row only, and Who am I (API-07) answers user.name; a row would raise Springfield's window capacity from 15 to 20 and need
+ * generator and past-visit changes. What a technician-role user with no technician row sees on the technician app's day reads is an empty day (F-278).
  */
 export interface ExtraUser { name: string; email: string; branch: BranchId; language: 'en' | 'es'; status: 'active' | 'invited' }
 export const EXTRA_USERS: readonly ExtraUser[] = [
@@ -486,7 +487,7 @@ export function planTechnicians(roster: readonly RosterEntry[]): TechnicianPlan[
       branch: t.branch,
       installer: t.installer,
       nameInTexts: first.slice(0, 10),
-      phone: `(${area}) 555-${PHONE_TAIL[t.employeeNumber] ?? `01${String(20 + i).padStart(2, '0')}`}`, // 555-0100 to 555-0140, inside FR-IMP-7's range
+      phone: `(${area}) 555-${PHONE_TAIL[t.employeeNumber] ?? `01${String(20 + i).padStart(2, '0')}`}`, // the technicians' numbers run 555-0103 to 555-0140, inside the fictional 555-0100 to 555-0199 range (FR-IMP-7)
       email: `${t.name.toLowerCase().replace(/[^a-z ]/g, '').replace(/ +/g, '.')}@brightwater.example`,
       primarySkill,
       skills: t.installer ? ['install', 'heating_cooling'] : [primarySkill],

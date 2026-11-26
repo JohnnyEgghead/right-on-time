@@ -10,9 +10,11 @@
 // -14), which sit on Today: here they open Today.
 import '../../shell/css/phone.ts';
 import '../../../styles/page-tech-job.css';
+import { fromWire, Temporal } from '@bw/time';
 import { useEffect, useRef, useState } from 'react';
 import type { MessageKey } from '@bw/i18n/src/catalog.ts';
 import { CallButton } from '../../shell/CallButton.tsx';
+import { dayIn, useDemoClock, type DemoSource, type DemoTime } from '../../shell/demo-day.ts';
 import { Icon } from '../../shell/Icon.tsx';
 import { useT } from '../../shell/intl.tsx';
 import { useModalFocus } from '../../shell/modal-focus.ts';
@@ -20,6 +22,7 @@ import type { OutboxState } from '../engine.ts';
 import { NoSignalCard } from '../SyncStrip.tsx';
 import { TechAppFrame } from '../TechAppFrame.tsx';
 import { HeadClock } from './HeadClock.tsx';
+import { useOwedSignatures } from './owed.ts';
 import type { ClockAnswer } from '../../shell/clock.ts';
 import { techOutbox, useOwnOutbox } from '../useOutbox.ts';
 import { clockWords, datePast, noteWhen, shownNotes, shownPhotos, shownStatus, windowWords, type JobStatus, type ShownPhoto } from './model.ts';
@@ -37,6 +40,12 @@ const EQUIPMENT_ICON: Record<string, { icon: 'flame' | 'snow' | 'drop' | 'gauge'
   water_heater: { icon: 'drop', tint: 'bw-eq-cool' }, thermostat: { icon: 'gauge', tint: 'bw-eq-ink' },
 };
 const firstName = (n: string) => n.split(' ')[0] ?? n;
+
+/** The phone's demo time: the device clock by the last synced offset (FR-DEMO-9). It is read again at each sync, and does not run in between. */
+const phoneClock: DemoSource<DemoTime> = async () => {
+  const ms = await techOutbox().demoNowMs();
+  return ms === null ? null : { at: Temporal.Instant.fromEpochMilliseconds(ms), answer: { paused: true, rate: 1 } };
+};
 
 export interface JobScreenProps {
   jobNumber: number;
@@ -71,14 +80,26 @@ function Thumb({ p, className, alt, full = false }: { p: ShownPhoto; className: 
 
 export function JobScreen({ jobNumber, photo = false, fixed }: JobScreenProps) {
   const t = useT();
-  const { view, me: liveMe } = useJob(jobNumber, fixed?.view);
+  const { view, me: liveMe, reload } = useJob(jobNumber, fixed?.view);
   const outbox = useOwnOutbox(fixed ? (fixed.outbox ?? IDLE) : undefined);
   const me = fixed?.me ?? liveMe;
+  const owesSignature = useOwedSignatures(outbox.waiting);
   const clk = <HeadClock online={outbox.online} {...(fixed ? { fixed: fixed.clock } : {})} />;
-  const [demoNow, setDemoNow] = useState<number | null>(null);
+  // The phone's demo time (FR-DEMO-9): this app has no event stream, so each sync that ends (it saves the clock's offset) reads it again.
+  const { now: demoAt, readClock } = useDemoClock(fixed ? null : phoneClock);
+  const demoNow = demoAt?.epochMilliseconds ?? null;
   useEffect(() => {
-    if (!fixed) void techOutbox().demoNowMs().then(setDemoNow, () => undefined);
-  }, [fixed]);
+    void readClock();
+  }, [outbox.waiting, readClock]);
+  // Another demo day: the server says today of its read's own day (FR-AUTH-4), so the job is read again, once.
+  const demoDay = view.kind === 'job' && demoAt ? dayIn(demoAt, fromWire(view.job.job.window.start).timeZoneId) : null;
+  const jobDay = useRef<string | null>(null);
+  useEffect(() => {
+    if (demoDay === null) return;
+    const was = jobDay.current;
+    jobDay.current = demoDay;
+    if (was !== null && was !== demoDay) reload();
+  }, [demoDay, reload]);
   // CTL-TEC-04-04 (F-1369, owner answer fa9c9833): Directions is the drive from the van to THIS job; hidden once the job is On site or ended.
   const driveStatus = view.kind === 'job' ? shownStatus(view.job, outbox.waiting).status : null;
   const driveTo = view.kind === 'job' && view.job.job.today && (driveStatus === 'scheduled' || driveStatus === 'on_the_way') ? jobNumber : null;
@@ -274,7 +295,14 @@ export function JobScreen({ jobNumber, photo = false, fixed }: JobScreenProps) {
     </>
   );
 
-  const bottom = ended ? null : (
+  // A finish that waits for its signature reads Done, and the person who left its screen has no other way back to it (the finish screen enters only the signature).
+  const bottom = ended ? (owesSignature.has(jobNumber) ? (
+    <div className="bottom">
+      <div className="acts3">
+        <a className="pri" href={jobHref(jobNumber, '/finish')} data-ctl="CTL-TEC-04-15"><Icon name="check" sw={2.6} />{t('tech.job.finish')}</a>
+      </div>
+    </div>
+  ) : null) : (
     <div className="bottom">
       {st.status === 'scheduled' ? <a className="omw" href={todaySheetHref('omw', jobNumber)} data-ctl="CTL-TEC-04-13"><Icon name="truck" sw={2.2} />{t('tech.job.onMyWay')}</a> : null}
       <div className="acts3">

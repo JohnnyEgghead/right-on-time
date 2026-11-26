@@ -21,12 +21,12 @@ const T1 = 'Hi Harold, Maria is running about 10 minutes behind her last job. Th
 const T2 = 'Hi Harold, Maria is running about 10 minutes behind her last job, which took longer than planned because of a stuck valve. She is on her way now and will text when she is close. Brightwater';
 const NOTE = 'Gate code changed to 4471.';
 /** The permission keys of the frame's signed-in person (Dana R., Manager): every role-gated control of the page (F-565). */
-export const CUSTOMER_PERMS = ['API-37', 'API-140', 'API-141', 'API-142', 'API-143'];
+const CUSTOMER_PERMS = ['API-37', 'API-140', 'API-141', 'API-142', 'API-143'];
 const FURNACE = HAROLD_DETAIL.equipment[0]!.id;
 
 function Hosted({ state }: { state: HostedState }) {
   const who = dialogCustomer(HAROLD_DETAIL);
-  // DK-87's Adding tile draws Type focused (the kit's .focus class: an inline dialog is not focused).
+  // The Adding tile of the job page's frame (DK-87) draws Type focused (the kit's .focus class: an inline dialog is not focused).
   useEffect(() => {
     if (state === 'equipment-adding') document.getElementById('bw-eq-type')?.classList.add('focus');
   }, [state]);

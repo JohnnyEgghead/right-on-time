@@ -27,7 +27,7 @@ describe('parseSpec on the real SPECIFICATIONS', () => {
 
   it('reads types, null and unique per column, pairing multi-name rows with their types', (ctx) => {
     if (noDoc) ctx.skip(noDoc);
-    expect(col('world.job', 'technician_id')).toMatchObject({ type: 'uuid', nullable: true }); // invariant 3
+    expect(col('world.job', 'technician_id')).toMatchObject({ type: 'uuid', nullable: true }); // null is Unassigned: a job holds at most 1 technician (invariant 3)
     expect(col('world.job', 'version')).toMatchObject({ type: 'integer', nullable: false }); // D15
     expect(col('world.equipment', 'year')).toMatchObject({ type: 'integer', nullable: true });
     expect(col('world.equipment', 'details')).toMatchObject({ type: 'text', nullable: true });
@@ -43,11 +43,11 @@ describe('parseSpec on the real SPECIFICATIONS', () => {
   it('reads each primary-key phrasing as the document means it', (ctx) => {
     if (noDoc) ctx.skip(noDoc);
     const pk = (t: string) => spec.tables.get(t)?.primaryKey;
-    expect(pk('world.tech_item')).toEqual(['key']); // invariant 1
+    expect(pk('world.tech_item')).toEqual(['key']); // the same key gets the stored answer again (invariant 1)
     expect(pk('pbs.invoice')).toEqual(['job_number']); // invariant 10, "Primary key: 1 invoice per job ever"
     expect(pk('system.session')).toEqual(['token_hash']); // "Primary key: SHA-256 of the token" names the first column only
     expect(pk('world.job_part')).toEqual(['job_number', 'part_id']); // "Primary key (job_number, part_id)"
-    expect(pk('world.membership')).toEqual(['customer_id']); // "Primary key (FR-DISP-32)" is a citation
+    expect(pk('world.membership')).toEqual(['customer_id']); // the parenthesis in "Primary key (FR-DISP-32)" cites a requirement; it is not a column list
     expect(pk('world.text_attempt')).toEqual(['text_id', 'number']); // "Primary key pair"
     expect(pk('world.import_problem_row')).toEqual(['run_id', 'file', 'row_number']);
     expect(pk('world.street')).toEqual(['id']); // an id column and no key note
@@ -57,7 +57,7 @@ describe('parseSpec on the real SPECIFICATIONS', () => {
   it('derives the foreign keys of "Nullability and keys", none from the 5 cross-store columns', (ctx) => {
     if (noDoc) ctx.skip(noDoc);
     const fk = expectedForeignKeys(spec);
-    expect(fk.get('world.job.customer_id')).toBe('world.customer.id'); // OI-57
+    expect(fk.get('world.job.customer_id')).toBe('world.customer.id'); // a job's customer must exist before the job: setup order depends on this foreign key (OI-57)
     expect(fk.get('world.job.service_id')).toBe('world.service_type.id'); // explicit note
     expect(fk.get('world.alert_email_link.email_link_hash')).toBe('world.email_link.token_hash'); // explicit note
     expect(fk.get('world.note.item_key')).toBe('world.tech_item.key');

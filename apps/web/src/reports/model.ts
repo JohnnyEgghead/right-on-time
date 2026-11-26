@@ -68,7 +68,7 @@ export function weekEnd(monday: string): string {
 }
 
 /** The first pilot week (SD-25), the first Monday the week selects offer. */
-export const FIRST_WEEK = '2026-06-01';
+const FIRST_WEEK = '2026-06-01';
 const REAL_MONDAY = (v: string): boolean => {
   const d = new Date(`${v}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v && d.getUTCDay() === 1;

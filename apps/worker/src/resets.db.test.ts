@@ -158,7 +158,7 @@ describe('Cleanup after a reset (SD-12, section 2)', () => {
       await expect(stat(path.join(dir, files.orphanThumb))).rejects.toThrow(); // SD-32: an orphan's small copy goes with it
       for (const f of [files.referencedThumb, files.keptRefusedThumb]) expect((await stat(path.join(dir, f))).isFile()).toBe(true);
       expect((await stat(path.join(dir, files.referenced))).isFile()).toBe(true);
-      expect((await stat(path.join(dir, files.keptRefused))).isFile()).toBe(true); // F-1168
+      expect((await stat(path.join(dir, files.keptRefused))).isFile()).toBe(true); // a flagged photo row still points at this file, so cleanup keeps it (F-1168)
       expect((await stat(path.join(dir, files.inFlight))).isFile()).toBe(true); // F-474: a send's file before its row commits
       expect(report.clockMovesPruned).toBe(Number(moves.rows[0]!.n));
       expect(await cleanup({ pool: worker, photosDir: path.join(dir, 'none'), real })).toMatchObject({ filesDeleted: 0 });

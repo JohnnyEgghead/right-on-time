@@ -128,7 +128,7 @@ describe('API-140 Add note and API-142 Edit equipment (FR-DISP-27)', () => {
     expect(d.notes.map((n) => n.body)).toContain('Gate code 4410. Dog in the yard.');
   });
 
-  // why: F-851 (API-35 and API-36 refuse a merged customer; API-140's customerId path and API-141 saved on the merged record)
+  // why: F-851 (customer detail, API-35, and customer edit, API-36, refuse a merged customer; the add office note call's customerId path, API-140, and the add equipment call, API-141, saved on the merged record)
   it('refuses a customer note and a piece of equipment for a merged customer with not_found, and writes nothing', async () => {
     const other = (await rows<{ id: string }>('SELECT id FROM world.customer WHERE id <> $1 LIMIT 1', [customerId]))[0]!.id;
     const notes = async () => Number((await rows<{ n: string }>('SELECT count(*) AS n FROM world.note WHERE customer_id = $1', [customerId]))[0]!.n);

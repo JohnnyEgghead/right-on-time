@@ -16,8 +16,8 @@ export interface MessagesCase {
   widthFrom?: WidthFrom[];
 }
 
-export const OFFICE_MESSAGES = 'mockups/pages/office-messages.html';
-export const OFFICE_CALL_LIST = 'mockups/pages/office-call-list.html';
+const OFFICE_MESSAGES = 'mockups/pages/office-messages.html';
+const OFFICE_CALL_LIST = 'mockups/pages/office-call-list.html';
 
 const cap = (caption: string) => `[data-bw-cap="${caption}"]`;
 const root = (screen: string) => `.r1-screen[data-screen="${screen}"]`;

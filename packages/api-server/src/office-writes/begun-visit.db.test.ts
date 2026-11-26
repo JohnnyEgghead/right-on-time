@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The office's job writes on a visit the technician has begun, and on a closed one (P4-JOB; F-505, F-506, F-566,
+// The office's job writes on a visit the technician has begun, and on a closed one (F-505, F-506, F-566,
 // F-507 item 3), on the real database through the production kernel as bw_web, with dispatchers whose sessions the real
-// session layer made. The on-the-way text and its live map link are made by P3-TEXTS's real trigger (sendOnTheWay), the
+// session layer made. The on-the-way text and its live map link are made by the real on-the-way text trigger (sendOnTheWay, P3-TEXTS), the
 // one an applied On my way runs, so the end this file proves is the end of a real link and a real queued text.
 // Run by gate G-CI7 step 3 (ci/gates/G-CI7/vitest.db.config.ts) with the other api-server database tests.
 import { catalogs } from '@bw/i18n/src/catalog.ts';
@@ -46,7 +46,7 @@ async function created(input: { window: string; technician: string; service?: st
 }
 
 /**
- * The job On the way the way an applied On my way leaves it: status and on_the_way_at, then P3-TEXTS's real trigger
+ * The job On the way the way an applied On my way leaves it: status and on_the_way_at, then the real on-the-way text trigger (P3-TEXTS)
  * (the live map token, the queued on-the-way text, texted_arrival). The customer gets a mobile and texts on first.
  */
 async function onTheWay(job: Job): Promise<{ token: string; textId: string }> {

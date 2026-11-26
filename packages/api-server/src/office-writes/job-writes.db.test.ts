@@ -77,7 +77,7 @@ describe('cancel a job (API-25) on a day with a block in the plan (F-504)', () =
     const arrival = async (n: number) => (await rows<{ planned_arrival: Date }>('SELECT planned_arrival FROM world.job WHERE job_number = $1', [n]))[0]!.planned_arrival;
     const before = await arrival(c.jobNumber);
     // A block over where C will be once A is gone (about 10:15 AM, its window start plus 15 minutes) and clear of today's plan is not
-    // possible through API-23's own rule, so it goes in the way a merge leaves one: by the database.
+    // possible through the block write's own overlap rule (createBlock, API-136), so it goes in the way a merge leaves one: by the database.
     await rows(`INSERT INTO world.time_block (technician_id, date, zone, start, "end", label, place, version, seeded)
                 VALUES ($1, $2, 'America/New_York', $3, $4, 'Gap', NULL, 1, false)`, [tech('Jamal Carter'), date, '2026-09-24T14:20:00Z', '2026-09-24T14:30:00Z']);
     const r = await cancel(a.jobNumber, a.version);

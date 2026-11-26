@@ -85,7 +85,7 @@ function findEntry(dir: Entry[], id: number): Entry | null {
 }
 
 /** The raw (decompressed) bytes of tile z/x/y, or null when the file holds none. */
-export function readTile(file: string, z: number, x: number, y: number): Buffer | null {
+function readTile(file: string, z: number, x: number, y: number): Buffer | null {
   const fd = openSync(file, 'r');
   try {
     const head = readAt(fd, 0, HEADER_BYTES);
@@ -130,7 +130,7 @@ function fields(b: Buffer, start: number, end: number): { tag: number; wire: num
 }
 
 /** The road lines of the `roads` layer of a tile (Protomaps schema); every other layer is skipped. */
-export function decodeRoads(tile: Buffer): Road[] {
+function decodeRoads(tile: Buffer): Road[] {
   const roads: Road[] = [];
   for (const layer of fields(tile, 0, tile.length).filter((f) => f.tag === 3 && f.wire === 2)) {
     const lf = fields(tile, layer.from, layer.to);

@@ -27,7 +27,7 @@ const asDate = (i: Instant): Date => new Date(i.epochMilliseconds);
 const asInstant = (d: Date): Instant => Temporal.Instant.fromEpochMilliseconds(d.getTime());
 
 /** The 6 presets (FR-DEMO-5), relative to demo now's date in the branch zone where they say "today" or "tomorrow". */
-export function presetTargets(demoNow: Instant, zone: string = DEFAULT_ZONE): readonly { presetId: PresetId; target: Instant }[] {
+function presetTargets(demoNow: Instant, zone: string = DEFAULT_ZONE): readonly { presetId: PresetId; target: Instant }[] {
   const today = localDateOf(demoNow, zone);
   // A preset names a wall time that exists on its day ('reject' would only fire on a spring-forward gap, which none hits).
   const at = (date: string, time: string) => atLocal(date, time, zone, 'compatible');
@@ -46,11 +46,11 @@ const replayRunning = <T>(): ApiResult<T> => ({ ok: false, status: 409, code: 'r
 const noUser = <T>(): ApiResult<T> => ({ ok: false, status: 401, code: 'unauthenticated' });
 
 /** A replay running, or a reset the billing service has not confirmed yet (SD-12): the clock moves wait. */
-export const clockBusy = (c: Pick<LockedClock, 'replayTarget' | 'pbsEpoch' | 'worldEpoch'>): boolean =>
+const clockBusy = (c: Pick<LockedClock, 'replayTarget' | 'pbsEpoch' | 'worldEpoch'>): boolean =>
   c.replayTarget !== null || c.pbsEpoch < c.worldEpoch;
 
 /** Seconds left of the reset cool-down at `real` (0 when a reset is allowed). */
-export function cooldownLeft(lastResetReal: Date, real: Date, cooldownS: number): number {
+function cooldownLeft(lastResetReal: Date, real: Date, cooldownS: number): number {
   return Math.max(0, Math.ceil(cooldownS - (real.getTime() - lastResetReal.getTime()) / 1000));
 }
 

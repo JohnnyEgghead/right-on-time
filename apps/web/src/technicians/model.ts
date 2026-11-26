@@ -14,9 +14,9 @@ export type T = ClientT;
 export type AppKind = 'web' | 'native';
 
 export const WORKING_PICKS = ['', 'today', 'off'] as const;
-export type WorkingPick = (typeof WORKING_PICKS)[number];
+type WorkingPick = (typeof WORKING_PICKS)[number];
 export const APP_PICKS = ['', 'waiting', 'clear'] as const;
-export type AppPick = (typeof APP_PICKS)[number];
+type AppPick = (typeof APP_PICKS)[number];
 
 export interface Filters { query: string; skill: string; working: WorkingPick; app: AppPick }
 export const NO_FILTERS: Filters = { query: '', skill: '', working: '', app: '' };
@@ -89,7 +89,7 @@ export function weekHours(r: TechRow, saturday: TechData['saturdayHours'], today
 }
 
 /** The load bar's width step: classes `bw-tc-w<N>` are in the app's sheet (the page CSP refuses a style attribute). */
-export const LOAD_STEPS = [0, 17, 20, 33, 40, 50, 60, 67, 80, 83, 100] as const;
+const LOAD_STEPS = [0, 17, 20, 33, 40, 50, 60, 67, 80, 83, 100] as const;
 export function loadStep(n: number, capacity: number): number {
   if (capacity <= 0) return 0;
   const pct = Math.min(100, (n / capacity) * 100);

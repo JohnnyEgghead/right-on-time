@@ -17,8 +17,8 @@ import { imageSize, writeBlobFile } from './blob.ts';
 
 /** SD-32: the small copy's longest side, in pixels. */
 export const THUMB_LONGEST = 320;
-/** SD-32: quality 0.8 (sharp's scale is 1 to 100). */
-export const THUMB_QUALITY = 80;
+/** The small copy's JPEG quality: 0.8, which is 80 on sharp's scale of 1 to 100 (SD-32). */
+const THUMB_QUALITY = 80;
 
 /**
  * SD-32: the most pixels a photo may have and still get a small copy: 2048 x 2048, the largest picture the apps' compression makes

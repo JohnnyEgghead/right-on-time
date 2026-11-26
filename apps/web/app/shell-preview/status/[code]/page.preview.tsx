@@ -19,6 +19,6 @@ export default async function StatusPreview({ params }: { params: Promise<{ code
   const problem = PROBLEMS[code];
   if (!problem) notFound();
   const outcome = enforce(problem, `/shell-preview/status/${code}`);
-  // Only the outcomes that leave the page up reach here (code-needed: the gate is P2-AUTH's).
+  // Only the outcomes that leave the page up reach here (code-needed is the access-code gate, which is not a status page).
   return <div className="r1-screen bw-screen" data-screen="PREVIEW-OUTCOME" data-outcome={outcome} />;
 }

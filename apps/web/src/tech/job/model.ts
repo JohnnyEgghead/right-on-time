@@ -129,7 +129,7 @@ export function noteWhen(at: string, jobDate: string, lang: string): string {
   return day.slice(0, 4) === jobDate.slice(0, 4) ? dateShort(day, lang) : datePast(day, lang);
 }
 
-// ---------- The finish screen (SCR-TEC-07) ----------
+// ---------- The finish screen: parts, labor time and the finish check (SCR-TEC-07) ----------
 
 /** CTL-TEC-07-02: the parts whose name or code holds the typed text, ignoring case (OA-54: only the fixed list). */
 export function findParts(parts: readonly Part[], text: string, limit = 6): Part[] {
@@ -144,7 +144,7 @@ export function addPart(rows: readonly PartRow[], p: Part): { rows: PartRow[]; a
   return { rows: [...rows, { partId: p.partId, name: p.name, code: p.code, quantity: 1 }], added: true };
 }
 
-/** CTL-TEC-07-04: a quantity of at least 1. */
+/** Change a part row's quantity by the given step, never below 1 (CTL-TEC-07-04). */
 export const stepQuantity = (rows: readonly PartRow[], partId: string, by: number): PartRow[] =>
   rows.map((r) => (r.partId === partId ? { ...r, quantity: Math.max(1, r.quantity + by) } : r));
 

@@ -209,6 +209,39 @@ describe('wave-run CI container core file limit (F-1165, F-501)', () => {
   });
 });
 
+describe('wave-run prep limit inside the engine and container expiries (F-2000)', () => {
+  const prep = (secs: string) => spawnSync('bash', ['ci/wave-run.sh', '--prep-check', secs], { encoding: 'utf8' });
+  it('passes a prep inside its limit and names a longer one, or an unread one, red', () => {
+    // why: F-2000 - nightly 8d66a046 spent 534 s before the exec, so the container's sleep (CAP + 120 from its start) ended the run inside the cap with no verdict
+    const limit = Number(/^PREP_CAP_S=(\d+)\s*$/m.exec(readFileSync('ci/wave-run.sh', 'utf8'))?.[1]);
+    expect(limit).toBeGreaterThan(534);
+    expect(prep('534').status).toBe(0);
+    expect(prep(String(limit)).status).toBe(0);
+    const over = prep(String(limit + 1));
+    expect(over.status).toBe(1);
+    expect(over.stderr).toContain('F-2000');
+    expect(prep('').status).toBe(1);
+    expect(prep('soon').status).toBe(1);
+  });
+  it('starts the prep clock before the engine, gives both expiries the prep limit on top of the cap, and checks the prep before the exec', () => {
+    // why: F-2000 - the cap's timer starts with the exec, so an expiry that starts earlier must also cover the time before it
+    const live = readFileSync('ci/wave-run.sh', 'utf8').split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+    const t0 = live.indexOf('PREP_T0=$(date +%s)');
+    const engine = live.indexOf('--entrypoint timeout "$ENGINE_IMAGE" "$((PREP_CAP_S + CAP + 180))"');
+    const container = live.indexOf('--entrypoint sleep "$CI_IMG" "$((PREP_CAP_S + CAP + 120))"');
+    const shipped = live.indexOf('RED: shipping the tree failed');
+    const check = live.indexOf('prep_ok "$(( $(date +%s) - PREP_T0 ))" || exit 1');
+    const exec = live.indexOf('"$NAME" bash -c "$INNER"');
+    expect(t0).toBeGreaterThan(-1);
+    expect(engine).toBeGreaterThan(t0);
+    expect(container).toBeGreaterThan(engine);
+    expect(shipped).toBeGreaterThan(container);
+    expect(check).toBeGreaterThan(shipped);
+    expect(exec).toBeGreaterThan(check);
+    expect(live).not.toMatch(/"\$\(\(CAP \+ \d+\)\)"/);
+  });
+});
+
 describe('wave-run setup builds every web image a stack gate builds (F-485)', () => {
   it('builds each build-argument set a gate script uses before ci.sh runs, and leaves a failed preview build to the gate', () => {
     // why: F-485 - the BW_WEB_PREVIEW=1 image, built inside page-walkers, took 335 s beside G-CI7 and pushed the gate past its limit

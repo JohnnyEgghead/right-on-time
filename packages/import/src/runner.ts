@@ -104,12 +104,12 @@ export class ImportRefused extends Error {
   }
 }
 
-/** The demo time for started_at, finished_at and the merges' at: setup passes SD-24's stamps, the office the demo clock. */
+/** The demo time for started_at, finished_at and the merges' at: setup passes its own fixed stamps of Aug 31, 2026 (SD-24), the office the demo clock. */
 export type RunClock = () => Date | Promise<Date>;
 
 export interface RunRequest {
   kind: RunKind;
-  /** true for setup's 2 runs (FR-IMP-10). */
+  /** True for the dry run and the real run that setup makes when it seeds the world (FR-IMP-10). */
   bySetup: boolean;
   byUser: string | null;
   /** started_at. */
@@ -317,7 +317,7 @@ export async function runPendingImport(pool: Connector, opts: PendingOptions): P
       throw new ImportRunFailed(run.id, before);
     }
     // This attempt is counted before it starts, so a process that dies during it has spent it. A re-execution starts
-    // over at parse, 0 percent (EVT-08 says so when that is a change).
+    // over at parse, 0 percent (the import progress event, EVT-08, says so when that is a change).
     const attempt = before + 1;
     await record.query(`UPDATE world.import_run SET stage = 'parse', percent = 0, report = $2::jsonb WHERE id = $1`,
       [run.id, JSON.stringify({ attempts: attempt } satisfies RunAttempts)]);

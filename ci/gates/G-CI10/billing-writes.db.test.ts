@@ -104,7 +104,7 @@ describe('Send again (API-61)', () => {
     expect(await invoices(job)).toHaveLength(1);
   });
 
-  // why: FR-AUTH-1, FR-BILL-7
+  // why: FR-AUTH-1, FR-BILL-7 - a technician session cannot resend a billing item (403) and the item stays waiting
   it('refuses a technician', async () => {
     const job = await waitingJob(260);
     expect(await call('POST', `/billing/queue/${job}/resend`, {}, technician.cookie)).toMatchObject({ status: 403 });

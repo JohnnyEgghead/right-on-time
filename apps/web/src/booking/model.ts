@@ -37,7 +37,7 @@ export const emptyDraft = (lang: Lang): Draft => ({
   serviceId: null, streetText: '', street: null, house: '', date: null, windowId: null, name: '', mobile: '', textsOn: true, textLanguage: lang, languagePicked: false,
 });
 
-/** The service icons of DK-118's picker (a service the frame does not draw takes its nearest trade's). */
+/** The service icons of the Book a visit page's picker (DK-118; a service the frame does not draw takes its nearest trade's). */
 const SERVICE_ICON: Record<string, IconName> = {
   furnace_tune_up: 'flame', ac_tune_up: 'snow', heating_or_ac_fix: 'wrench', plumbing_repair: 'drop', water_heater: 'heater', thermostat: 'gauge',
 };
@@ -56,7 +56,7 @@ export function phoneText(text: string): string {
   return m ? `(${m.slice(0, 3)}) ${m.slice(3, 6)}-${m.slice(6)}` : text.trim();
 }
 
-/** CTL-CUS-01-14: a whole house number from 1 to 99999. */
+/** A house number the booking form accepts: a whole number from 1 to 99999, else null (CTL-CUS-01-14). */
 export const houseNumber = (text: string): number | null => (/^\d{1,5}$/.test(text.trim()) && Number(text) >= 1 ? Number(text) : null);
 
 /** Whether a step's own fields are complete (the Continue button of steps 1 to 5, CTL-CUS-01-10). */
@@ -92,7 +92,7 @@ export const addressLine = (house: number | string, street: Pick<Street, 'name' 
 
 const ymd = (date: string) => ({ y: Number(date.slice(0, 4)), m: Number(date.slice(5, 7)), d: Number(date.slice(8, 10)) });
 /** ISO weekday of a "YYYY-MM-DD": 1 Monday to 7 Sunday. */
-export function isoWeekday(date: string): number {
+function isoWeekday(date: string): number {
   const x = ymd(date);
   const w = new Date(Date.UTC(x.y, x.m - 1, x.d)).getUTCDay();
   return w === 0 ? 7 : w;
@@ -107,7 +107,7 @@ export const addMonthsTo = (month: string, n: number): string => {
   const m = Number(month.slice(5, 7)) - 1 + n;
   return `${y + Math.floor(m / 12)}-${String(((m % 12) + 12) % 12 + 1).padStart(2, '0')}`;
 };
-export const daysInMonth = (month: string): number => new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate();
+const daysInMonth = (month: string): number => new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate();
 
 type DateValues = Record<'weekday' | 'month' | 'day' | 'year', string | number>;
 const dateValues = (t: ClientT, date: string): DateValues => {
@@ -135,7 +135,7 @@ export function windowZoned(start: string, end: string): string {
 /** A window as the booking pages name it: "10 AM-12 PM EDT". */
 export const windowLabel = (w: Pick<OnlineWindow, 'start' | 'end'>): string => windowZoned(w.start, w.end);
 
-// --- The calendar (CTL-CUS-01-05, CTL-CUS-01-19) -----------------------------------------------------------------------------------------
+// --- The booking calendar and the kind of each day (CTL-CUS-01-05, CTL-CUS-01-19) -----------------------------------------------------------------------------------------
 
 export type DayKind = 'past' | 'today' | 'open' | 'few' | 'sunday' | 'noTech' | 'closed' | 'full' | 'unknown';
 
@@ -176,7 +176,7 @@ export function monthGrid(month: string, today: string, days: ReadonlyMap<string
   return cells;
 }
 
-/** The 5 days a phone shows around the picked day or today (DK-119's strip): bookable or not, each its kind. */
+/** The 5 days a phone shows around the picked day or today (the strip of the Book a visit phone frame, DK-119): bookable or not, each its kind. */
 export function dayStrip(from: string, today: string, days: ReadonlyMap<string, OnlineDay>): { date: string; kind: DayKind }[] {
   return Array.from({ length: 5 }, (_, i) => addDaysTo(from, i)).map((date) => ({ date, kind: dayKind(date, today, days) }));
 }
@@ -206,7 +206,7 @@ export function optionWords(t: ClientT, filled: { date: string; start: string },
 /** An option's room: "<n> left" when the answer gives places left, else Open. */
 export const roomWords = (t: ClientT, w: Pick<OnlineWindow, 'placesLeft'>): string => (w.placesLeft !== null ? t('booking.window.left', { n: w.placesLeft }) : t('booking.window.open'));
 
-// --- Keeping the draft (UIS.FR-STATE-4) -------------------------------------------------------------------------------------------------------
+// --- Keeping the booking draft in the browser (UIS.FR-STATE-4) -------------------------------------------------------------------------------------------------------
 
 const KEY = 'bw.booking.draft';
 export interface Kept { draft: Draft; step: StepNumber; taken: { date: string; windowId: string; start: string; end: string } | null }
@@ -228,5 +228,5 @@ export function writeKept(k: Kept | null): void {
   }
 }
 
-/** The widest a phone layout is (CTL-CMP-15-05's menu button shows below it too): wider is the computer layout. */
+/** The widest a phone layout is (the menu button of the booking site header, CTL-CMP-15-05, shows below it too): wider is the computer layout. */
 export const PHONE_MAX_WIDTH = 760;

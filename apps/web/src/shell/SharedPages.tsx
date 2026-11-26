@@ -28,7 +28,7 @@ const KINDS: Record<SharedKind, { screen: string; ctl: string; ico: string; icon
 };
 
 /** The role's home page (API-07): SCR-TEC-02 for a technician, SCR-OFC-02 for staff; signed out, Book a visit. */
-export function homeFor(me: Pick<Me, 'role'> | null, signedOutHome: string): string {
+function homeFor(me: Pick<Me, 'role'> | null, signedOutHome: string): string {
   if (!me) return signedOutHome;
   return me.role === 'technician' ? '/tech' : '/office/board';
 }

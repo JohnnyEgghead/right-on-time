@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The reader of the dispatcher walkthrough (docs/public/walkthrough.md; FR-DIST-10, SC-04). The script file is the one source of the 10 tasks:
 // the Playwright run (ci/training-stack/training.stack.ts) and the structure test (walkthrough.test.ts) both read their steps from it here.
-// A step is a numbered line that starts with one of 6 verbs; the words in double quotes are what the app shows on the screen. Any text after
+// A step is a numbered line that starts with one of 7 verbs; the words in double quotes are what the app shows on the screen. Any text after
 // the verb's own words is explanation for the reader and is ignored. A line that starts with no known verb is an error, never skipped.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -9,6 +9,7 @@ import path from 'node:path';
 export type Step =
   | { verb: 'go'; path: string }
   | { verb: 'click'; name: string; beside?: string }
+  | { verb: 'clickhour'; field: string }
   | { verb: 'pick'; name: string }
   | { verb: 'see'; text: string }
   | { verb: 'type'; value: { kind: 'text'; text: string } | { kind: 'email' } | { kind: 'password' }; field: string }
@@ -31,6 +32,7 @@ export const repoRoot = path.resolve(import.meta.dirname, '../..');
 export function parseStep(text: string): Step {
   let m: RegExpExecArray | null;
   if ((m = /^Go to "([^"]+)"/.exec(text))) return { verb: 'go', path: m[1]! };
+  if ((m = /^Click the first number in "([^"]+)"/.exec(text))) return { verb: 'clickhour', field: m[1]! };
   if ((m = /^Click "([^"]+)" beside "([^"]+)"/.exec(text))) return { verb: 'click', name: m[1]!, beside: m[2]! };
   if ((m = /^Click "([^"]+)"/.exec(text))) return { verb: 'click', name: m[1]! };
   if ((m = /^Pick "([^"]+)"/.exec(text))) return { verb: 'pick', name: m[1]! };
@@ -39,7 +41,7 @@ export function parseStep(text: string): Step {
   if ((m = /^Type your password in "([^"]+)"/.exec(text))) return { verb: 'type', value: { kind: 'password' }, field: m[1]! };
   if ((m = /^Type "([^"]*)" in "([^"]+)"/.exec(text))) return { verb: 'type', value: { kind: 'text', text: m[1]! }, field: m[2]! };
   if ((m = /^Choose "([^"]+)" in "([^"]+)"/.exec(text))) return { verb: 'choose', name: m[1]!, field: m[2]! };
-  throw new Error(`walkthrough: a step starts with no known verb (Go to, Click, Pick, See, Type, Choose): "${text}"`);
+  throw new Error(`walkthrough: a step starts with no known verb (Go to, Click, Click the first number in, Pick, See, Type, Choose): "${text}"`);
 }
 
 /** Reads the tasks from the walkthrough text. Throws on a malformed task header, a missing Screen or Control line, or a step out of number. */

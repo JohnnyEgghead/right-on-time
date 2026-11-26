@@ -61,3 +61,4 @@ apps/web/.next-preview.lock/
 *.xcresult
 # Audit Lab reports (owner-local; never committed, so never in the public export)
 AUDITS/
+.qtree-session/

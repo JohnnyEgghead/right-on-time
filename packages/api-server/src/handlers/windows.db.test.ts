@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The arrival windows page's read and writes through the production kernel (P4-ADMIN-WINDOWS; FR-BOOK-2, FR-BOOK-8, FR-BOOK-17,
+// The arrival windows page's read and writes through the production kernel (FR-BOOK-2, FR-BOOK-8, FR-BOOK-17,
 // FR-BOOK-18, UC-13): API-90 Booking settings, API-91 Set a day's mode and API-155 Set window capacities, called over the real handlers
 // as a signed-in dispatcher or manager (the web process's login bw_web, the real session layer) on real PostgreSQL 18 with P2-SEED's
 // reference seed (Columbus's 5 windows at 12, 12, 11, 11, 10, the peak days Wed Sep 16 and Fri Sep 18 switched by Dana Ruiz). Jobs are

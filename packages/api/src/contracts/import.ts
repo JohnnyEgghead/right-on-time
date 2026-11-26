@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { addressField, defineContract, phoneField, type ContractRow } from '../contract.ts';
 import { cursorQuerySchema } from '../paging.ts';
 
-/** An RFC 9557 time (UI-SPECIFICATION 12.1 item 5). */
+/** An RFC 9557 time: a timestamp string that carries its zone (UI-SPECIFICATION 12.1 item 5). */
 const wireTime = z.string().min(1);
 const count = z.number().int().nonnegative();
 
@@ -198,7 +198,7 @@ const pairRecord = z.object({
 
 const pairStatus = z.enum(['listed', 'merged', 'kept_separate', 'skipped']);
 
-export const duplicatePair = z.object({
+const duplicatePair = z.object({
   pairId: z.string(),
   recordA: pairRecord,
   recordB: pairRecord,

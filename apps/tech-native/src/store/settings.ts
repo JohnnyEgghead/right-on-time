@@ -16,7 +16,7 @@ export interface NativeSettings {
   opened: boolean;
 }
 
-export const DEFAULT_SETTINGS: NativeSettings = { server: DEFAULT_SERVER, language: null, opened: false };
+const DEFAULT_SETTINGS: NativeSettings = { server: DEFAULT_SERVER, language: null, opened: false };
 
 const NAME = /^s-(\d{6,})\.json$/;
 

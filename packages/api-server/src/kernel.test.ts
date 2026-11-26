@@ -155,7 +155,7 @@ describe('the access-code gate in the SD-47 order', () => {
 });
 
 describe('sessions (SD-8)', () => {
-  // why: FR-AUTH-10, SD-8
+  // why: FR-AUTH-10, SD-8 (idle and total limits by role: 30 minutes and 12 hours for office and managers, 8 and 14 hours for technicians, 30 and 90 days when kept signed in)
   it('has the SD-8 lifetimes', () => {
     const h = (d: { total(u: 'hours'): number }) => d.total('hours');
     expect([h(lifetimes('office', false).idle), h(lifetimes('office', false).length)]).toEqual([0.5, 12]);

@@ -83,7 +83,7 @@ export function WideButton(props: { id: string; label: string; icon?: NativeIcon
 }
 
 /** The phone's Reduce Motion setting, read at once and followed while the screen is open (true until the first read answers, so nothing turns early). */
-export function useReduceMotion(): boolean {
+function useReduceMotion(): boolean {
   const [on, setOn] = useState(true);
   useEffect(() => {
     let live = true;

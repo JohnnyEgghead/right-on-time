@@ -79,7 +79,7 @@ if [ "$GOT" != "$OHIO_SHA" ]; then
 fi
 echo "maps-bake: $OHIO sha256 equals the pin"
 
-# 3. Legs of the seeded schedule (FR-MAP-5).
+# 3. Write the legs file: the route legs of the seeded schedule (FR-MAP-5).
 node "$ROOT/packages/maps/src/cli.ts" legs --out "$OUT/legs.json"
 
 # 4. Remote: volume, extract, OSRM prepare, route every leg. Inputs go through stdin (a bind mount of a local path would

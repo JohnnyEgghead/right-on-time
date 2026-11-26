@@ -164,7 +164,7 @@ describe('On my way after an arrival (FR-TEXT-19, OA-50, OI-3; section 5.1 step 
     expect(j.status).toBe('on_the_way');
     const tok = await w.rows<{ token: string; kind: string; ended_at: Date | null }>('SELECT token, kind, ended_at FROM world.link_token WHERE job_number = $1', [n]);
     expect(tok.map((t) => [t.kind, t.ended_at])).toEqual([['live_map', null]]);
-    // F-470: the shipped text.on_the_way, rendered by P3-TEXTS's sendOnTheWay: the arrival is texted_arrival (the ETA
+    // F-470: the shipped text.on_the_way, rendered by sendOnTheWay (P3-TEXTS): the arrival is texted_arrival (the ETA
     // from 10:28 rounded to 5 minutes) and the link carries the live map token on the text link host.
     const arrival = Temporal.Instant.fromEpochMilliseconds(j.texted_arrival!.getTime());
     expect(arrival.epochMilliseconds % (5 * MIN)).toBe(0);

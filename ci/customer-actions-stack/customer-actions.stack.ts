@@ -474,7 +474,7 @@ describe.each(engines)('the customer page actions on the Compose stack, %s', (en
 
   // why: FR-DISP-30 NFR-05 the search text of Also found in jobs is in the request body only: in no request URL, no address bar and no log of the web process or the proxy
   it('sends the search text in the request body only: in no URL and in no log', async () => {
-    // Harold's mobile number, as the office types it: it matches him (API-34) and his jobs (API-133), and it is NFR-05's own kind of text.
+    // Harold's mobile number, as the office types it: it matches him (API-34) and his jobs (API-133), and it is the kind of text the logs must never carry (NFR-05).
     const word = '555-0148';
     const sent: { url: string; body: string | null }[] = [];
     const urls: string[] = [];

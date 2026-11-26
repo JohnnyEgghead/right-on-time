@@ -2,7 +2,7 @@
 // Test and gate support for the import (not product code): the real generator's output, the reference rows the import
 // resolves against, a pool as the web process's login, and a whole-database fingerprint for the dry-run check.
 //
-// The reference rows are P2-SEED's real reference seed (D-3 step 1), so a past visit's technician_id mapping meets the
+// The reference rows come from the real reference seed (D-3 step 1; P2-SEED), so a past visit's technician_id mapping meets the
 // seeded roster. Nothing here reads the zone registry (finding F-152).
 import path from 'node:path';
 import { createPool, type Queryable } from '@bw/db';
@@ -45,10 +45,10 @@ export function generatedWorld(): GeneratedWorld {
 /** A test value of SAMPLE_PASSWORD_SEED (SD-9), not a deployed secret. */
 export const TEST_SAMPLE_SEED = 'test-seed-0123456789ab';
 /** The real instant the seeded clock row is anchored to (a fixed test value). */
-export const TEST_ANCHOR_REAL = new Date('2026-11-01T16:00:00Z');
+const TEST_ANCHOR_REAL = new Date('2026-11-01T16:00:00Z');
 
 /**
- * The reference rows, written by P2-SEED's own reference seed (D-3 step 1: branches, the real bundled street list,
+ * The reference rows, written by setup's own reference seed (packages/db/src/seed; D-3 step 1: branches, the real bundled street list,
  * services, staff and technician users, technicians from the generator's roster, windows, the clock row), as a
  * superuser connection: the seed's role, not the import's.
  */
@@ -96,7 +96,7 @@ export async function databaseFingerprint(q: Queryable, excludeRun?: string): Pr
   return out;
 }
 
-/** SD-24's setup stamps: the dry run 5:38 to 5:59 AM and the real run 6:02 to 6:44 AM, Mon, Aug 31, 2026, EDT. */
+/** Setup's fixed stamps (SD-24): the dry run 5:38 to 5:59 AM and the real run 6:02 to 6:44 AM, Mon, Aug 31, 2026, EDT. */
 export function stampClock(kind: 'dry_run' | 'real'): () => Date {
   const [start, end] = kind === 'dry_run'
     ? ['2026-08-31T05:38:00-04:00', '2026-08-31T05:59:00-04:00']

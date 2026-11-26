@@ -24,7 +24,7 @@ export const PLACES_LEFT_THRESHOLD = 3;
 export const fewWindowsLeft = (open: number, total: number): boolean => open > 0 && open * 2 <= total;
 
 /** 1 window of the online channel's answer: its room is shown as Open, `placesLeft` left, or Full. */
-export const onlineWindow = z.object({
+const onlineWindow = z.object({
   windowId: z.string(), start: wireTime, end: wireTime, state: z.enum(['open', 'full']),
   /** The window's room when it is at or below the threshold; null when it shows Open (or Full). */
   placesLeft: z.number().int().nullable(),

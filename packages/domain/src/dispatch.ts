@@ -14,7 +14,7 @@ export interface RankFacts {
   id: string;
   name: string;
   skill: SkillMatch;
-  /** SD-27 room in the job's window. */
+  /** Whether the technician has room: live jobs that day under their daily capacity, and live jobs in the job's window under the window's limit (SD-27). */
   room: boolean;
   /** Drive minutes from the stop before the window that day (the previous job in the plan, else the depot). */
   driveMinutes: number;

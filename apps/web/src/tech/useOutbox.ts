@@ -19,7 +19,7 @@ import { webTransport } from './transport.ts';
 let engine: TechOutbox | null = null;
 
 /** A short device name for the sync report (API-162 device): the kind of phone or computer, never the full user agent. */
-export function deviceName(ua: string): string {
+function deviceName(ua: string): string {
   if (/iPhone|iPad|iPod/.test(ua)) return 'iPhone web app';
   if (/Android/.test(ua)) return 'Android web app';
   return 'Web app';
@@ -78,7 +78,11 @@ export function useOwnOutbox(fixed?: OutboxState): OutboxState {
   // F-1041: the person the phone recorded at sign-in comes first; the store's user is the last API-07 answer, which stays the previous
   // technician's until the first sync after a sign-in answers (and for good if that sync fails).
   const who = fixed ? s.userId : signedInPerson() ?? s.userId;
-  return useMemo(() => ({ ...s, waiting: ownItems(s.waiting, who), lastSent: ownItems(s.lastSent, who) }), [s, who]);
+  // F-1931: each list keeps its identity until the engine sets a new one. A screen reads its job again when lastSent changes, and a sync that
+  // sends nothing changes the state several times.
+  const waiting = useMemo(() => ownItems(s.waiting, who), [s.waiting, who]);
+  const lastSent = useMemo(() => ownItems(s.lastSent, who), [s.lastSent, who]);
+  return useMemo(() => ({ ...s, waiting, lastSent }), [s, waiting, lastSent]);
 }
 
 /** The engine's state for a screen; starts the engine on the page's first use. A fixed state is a preview's. */

@@ -16,7 +16,7 @@ import { createReader } from '../shell/reads.ts';
 import { forgetPerson } from './local.ts';
 import { clearSignOutOwed, endSession, forgetShell, SIGN_OUT_OWED, signOutOwed } from './session.ts';
 
-export const SIGN_IN_PATH = '/tech/sign-in';
+const SIGN_IN_PATH = '/tech/sign-in';
 /** The pages that hold nothing of a person: the gate never blanks them. */
 const OPEN_PATHS: readonly string[] = [SIGN_IN_PATH, '/tech/install'];
 const RETRY_MS = 5_000;

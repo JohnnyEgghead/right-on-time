@@ -362,7 +362,7 @@ describe('a fresh pnpm run setup on an empty PostgreSQL 18 (D-3, OI-57)', () => 
   // why: F-815, SD-21: a step on the same minute as the end of the visit before runs after it, in the dispatcher's own order (due_at, id), so its text measures from the right stop; F-292: 43 same-minute pairs, was 38; F-1651: 42 on approximate minutes, 73 on the baked tracks (the 10:28 AM story pins)
   it('runs each On my way after the end of the visit before, even on the same minute', async () => {
     // F-1665: the count is the drive minutes', so it is named per state: setup chains on the manifest's baked tracks when
-    // MAPS_DIR is set (it verifies them first), else on SD-22's approximate minutes.
+    // MAPS_DIR is set (it verifies them first), else on the approximate drive minutes (SD-22).
     const SAME_MINUTE_PAIRS = process.env.MAPS_DIR ? 73 : 42;
     expect(await rows(`
       WITH s AS (SELECT subject, due_at, payload->>'step' AS step, row_number() OVER (ORDER BY due_at, id) AS rn FROM world.scheduled_event WHERE kind = 'autopilot.step'),

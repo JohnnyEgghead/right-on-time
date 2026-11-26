@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The derived effects of an applied status item (SPECIFICATIONS section 5.1 step 7) that are this lane's: the ETA an
-// applied On my way hands to P3-TEXTS's on-the-way trigger (SD-15), and the end of the visit's live map with the cancel
+// The derived effects of an applied status item (SPECIFICATIONS section 5.1 step 7): the ETA an
+// applied On my way hands to the on-the-way text trigger (SD-15), and the end of the visit's live map with the cancel
 // of any unsent on-the-way text at an arrival or an ending (section 5.2 step 5, FR-TEXT-4, FR-TEXT-19). Both run in the
 // item's transaction. A history-only On my way (section 5.1 step 9) never reaches here.
 //
-// The on-the-way text itself, its live map token and `texted_arrival` are P3-TEXTS's sendOnTheWay (@bw/outbox, FR-TEXT-3,
+// The on-the-way text itself, its live map token and `texted_arrival` are made by sendOnTheWay (@bw/outbox, FR-TEXT-3,
 // F-470): applyStatus calls it with the ETA below, so there is exactly 1 on-the-way trigger.
 import type { Queryable } from '@bw/db';
 import { cancelOnTheWayText, REASON } from '@bw/outbox';
@@ -13,8 +13,8 @@ import { legFor } from '../../../maps/src/route-source.ts';
 import { readPreviousStop } from '../office-writes/day.ts';
 
 /**
- * SD-15's ETA while on the way: the start + the leg's drive from the previous stop (the last ended job that day, else the
- * depot) from SD-49's route source: the track's (baked, else live) last cumulative second / 60 rounded up, else SD-22's approximate
+ * The ETA of a visit while on the way (SD-15): the start + the leg's drive from the previous stop (the last ended job that day, else the
+ * depot) from the route source (SD-49): the track's (baked, else live) last cumulative second / 60 rounded up, else SD-22's approximate
  * minutes (F-380). Whole minutes,
  * as the planner's, so a van that leaves when the plan says arrives when the plan says.
  */

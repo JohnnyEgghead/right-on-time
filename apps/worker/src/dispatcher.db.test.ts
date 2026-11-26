@@ -24,8 +24,9 @@ afterAll(async () => {
   await pool?.end();
 });
 
-/** The world epoch the drains name (F-642: required); read fresh, as a caller reads it with its bound. */
-const epoch = async (): Promise<number> => (await db.admin().query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1')).rows[0]!.world_epoch;
+/** The world epoch the drains name (F-642: required); read fresh, as a caller reads it with its bound. F-1923: through the worker pool, not db.admin():
+ * the dispatcher's timer pass reads the epoch as the test's own drain does, and db.admin() is 1 shared connection that refuses an overlapping query. */
+const epoch = async (): Promise<number> => (await pool.query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1')).rows[0]!.world_epoch;
 
 async function plant(kind: string, dueAt: string, subject: string): Promise<string> {
   return inTransaction(pool, (tx) => scheduleEvent(tx, { kind, dueAt: I(dueAt), subject, payload: { subject } }));

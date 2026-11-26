@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 'use client';
-// CMP-04 footer (DK-27, markup DK-79): Source link (CTL-CMP-04-01, the slot FR-DIST-3 fills in P8-PUBLISH), the sample
+// CMP-04 footer (DK-27, markup DK-79): Source link to the public repo's commit of the running release (CTL-CMP-04-01, FR-DIST-3; the repo itself when the commit is unknown), the sample
 // data notice (CTL-CMP-04-02, static catalog text) and the demo mode marker (CTL-CMP-04-03). The link and the marker come
 // from API-02: while it fails or has not landed, the link is hidden and the marker is not shown.
 import { useEffect, useState } from 'react';

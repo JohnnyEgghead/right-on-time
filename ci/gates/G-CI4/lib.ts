@@ -10,7 +10,7 @@ export const ROOT = path.resolve(import.meta.dirname, '..', '..', '..');
 export const CASES = path.join(import.meta.dirname, 'cases');
 export const RULE = 'bw/no-system-clock';
 
-/** The 3 host zones of NFR-08. */
+/** The 3 host time zones the tests are run under, 1 run each (NFR-08). */
 export const HOST_ZONES = ['UTC', 'America/New_York', 'America/Los_Angeles'] as const;
 
 /**
@@ -95,7 +95,7 @@ export function specUnionTags(): string[] {
 }
 
 /** 1 test of a zone report: its file as the report names it (an absolute path), its id (file basename::full name), its status. */
-export interface ZoneTest {
+interface ZoneTest {
   file: string;
   id: string;
   status: string;
@@ -120,7 +120,7 @@ export interface ZoneReport {
 }
 
 /** The test that proves the host zone took effect (packages/time/src/dst.test.ts). */
-export const PROBE_TEST = 'the host zone is the one this run was started under';
+const PROBE_TEST = 'the host zone is the one this run was started under';
 
 /** Read 1 vitest JSON report of a host-zone run. */
 export function readZoneReport(zone: string, file: string): ZoneReport {

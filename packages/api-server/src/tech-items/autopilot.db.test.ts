@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The autopilot of the sample day (SPECIFICATIONS SD-21, OA-78) and the touched-by-person rule (F-491), on the real database
 // (PostgreSQL 18, the migrated schema, P2-SEED's reference seed) through the production kernel as bw_web. A step is run by
-// runAutopilotStep, the function the worker's autopilot.step handler calls; the technician's own items go through API-102.
+// runAutopilotStep, the function the worker's autopilot.step handler calls; the technician's own items go through the app's send-items call (API-102).
 // The sample day's own run (the seeded events through the real dispatcher) is in packages/setup/src/setup.db.test.ts.
 // Run by G-CI1 and by G-CI7 step 3.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';

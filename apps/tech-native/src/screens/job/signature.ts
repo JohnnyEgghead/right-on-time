@@ -6,12 +6,12 @@
 
 export type Stroke = { x: number; y: number }[];
 
-/** SD-32's largest signature. */
+/** The largest signature PNG kept, in pixels (SD-32). */
 export const SIG_MAX = { width: 1200, height: 400 } as const;
 /** The pen's width in the pad's points (the drawn line on the phone and in the PNG). */
 export const PEN = 2.6;
 
-/** The PNG's pixel size for a pad of w x h points: the pad scaled up to fit SD-32's box, keeping its shape. */
+/** The PNG's pixel size for a pad of w x h points: the pad scaled up to fit the largest size, SIG_MAX (SD-32), keeping its shape. */
 export function sigSize(w: number, h: number): { width: number; height: number; scale: number } {
   const scale = Math.min(SIG_MAX.width / w, SIG_MAX.height / h);
   return { width: Math.max(1, Math.floor(w * scale)), height: Math.max(1, Math.floor(h * scale)), scale };
@@ -98,7 +98,7 @@ function zlibStored(raw: Uint8Array): Uint8Array {
 }
 
 /** A 1-bit grayscale PNG of the canvas: ink black on white. */
-export function encodePng(c: { width: number; height: number; ink: Uint8Array }): Uint8Array {
+function encodePng(c: { width: number; height: number; ink: Uint8Array }): Uint8Array {
   const rowBytes = Math.ceil(c.width / 8);
   const raw = new Uint8Array((rowBytes + 1) * c.height);
   for (let y = 0; y < c.height; y++) {

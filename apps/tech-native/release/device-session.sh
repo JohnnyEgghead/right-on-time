@@ -96,7 +96,7 @@ for p in json.load(open(sys.argv[1]))["result"]["runningProcesses"]:
       found=0
       IFS='|' read -r -a alts <<<"$req"
       for alt in "${alts[@]}"; do
-        if [ -n "$alt" ] && printf '%s\n' "$words" | grep -q -F -x -e "$alt"; then found=1; fi
+        if [ -n "$alt" ] && grep -q -F -x -e "$alt" <<<"$words"; then found=1; fi
       done
       [ "$found" -eq 1 ] || { echo "device-session: FAIL marks.txt has no '$req' mark (F-1356); capture left running, add the mark and stop again" >&2; missing=1; }
     done

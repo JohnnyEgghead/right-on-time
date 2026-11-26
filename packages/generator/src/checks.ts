@@ -37,7 +37,7 @@ export const FR_IMP_6 = {
 } as const;
 
 /** FR-BOOK-6 (docs/REQUIREMENTS.md): the Columbus branch's 5 two-hour windows take at most these bookings, in time order. */
-export const FR_BOOK_6_LIMITS = [12, 12, 11, 11, 10] as const;
+const FR_BOOK_6_LIMITS = [12, 12, 11, 11, 10] as const;
 
 export type Files = Partial<Record<FileName, string | Buffer>>;
 const text = (f: Files, n: FileName): string => {
@@ -46,7 +46,7 @@ const text = (f: Files, n: FileName): string => {
   return typeof v === 'string' ? v : v.toString('utf8');
 };
 
-// ----- generator-manifest (FR-IMP-5) -----
+// ----- generator-manifest: the committed SHA-256 and size of each of the 5 generated files, 3 CSV and 2 JSON (FR-IMP-5) -----
 
 export interface Manifest {
   _doc: string;
@@ -82,7 +82,7 @@ export function checkManifest(manifest: Manifest, files: Files): string[] {
   return fails;
 }
 
-// ----- phone-range-scan (FR-IMP-7) -----
+// ----- phone-range-scan: every sample phone number is in the fictional 555-0100 to 555-0199 range (FR-IMP-7) -----
 
 const TEN_DIGIT = /(?<![\d])(?:\+?1[-. ]?)?\(?(\d{3})\)?[-. ]?(\d{3})[-. ]?(\d{4})(?!\d)/g;
 const SEVEN_DIGIT = /(?<![\d])(\d{3})[-. ](\d{4})(?!\d)/g;
@@ -90,7 +90,7 @@ const BARE_555 = /(?<![\d])555[-. ]?(\d{4})(?!\d)/g;
 const AREAS = new Set(['614', '937']);
 
 /** The area code each branch's customers carry (D10), typed here and not imported from generate.ts (as FR_IMP_6 is, F-204). */
-export const BRANCH_AREA: Readonly<Record<string, string>> = { columbus: '614', dayton: '937', springfield: '937' };
+const BRANCH_AREA: Readonly<Record<string, string>> = { columbus: '614', dayton: '937', springfield: '937' };
 
 /** The area codes a customer's city allows: its street rows' branches' codes (street-list.json). Undefined when the city has no street. */
 export type AreasOfCity = (city: string) => readonly string[] | undefined;
@@ -105,7 +105,7 @@ export function areasOfCityFrom(streets: readonly { city: string; branch: string
 }
 
 /** True for (614) or (937) 555-0100 to 555-0199, the only numbers a generated file may hold (D10). */
-export function inReservedRange(area: string, exchange: string, line: string): boolean {
+function inReservedRange(area: string, exchange: string, line: string): boolean {
   const n = Number(line);
   return AREAS.has(area) && exchange === '555' && n >= 100 && n <= 199;
 }
@@ -157,7 +157,7 @@ export function phoneRangeScan(files: Files, areasOf: AreasOfCity): string[] {
 
 interface Truth { counts: { exact: number; likely: number }; exact: { a: string; b: string }[]; likely: { a: string; b: string }[] }
 
-export function parseTruth(t: string): Truth {
+function parseTruth(t: string): Truth {
   return JSON.parse(t) as Truth;
 }
 
@@ -338,7 +338,7 @@ export function shareNoneCheck(files: Files): string[] {
   return fails;
 }
 
-// ----- SD-25 rates -----
+// ----- rates: on-time, no-one-home and call rates of the before and after periods of the pilot (SD-25) -----
 
 export interface Rate { visits: number; arrived: number; onTime: number; noOneHome: number; calls: number }
 export interface Rates { before: Rate; after: Rate; board7: Rate; weeks: { week: string; period: 'before' | 'after'; rate: Rate }[] }
@@ -396,7 +396,7 @@ export const onTimePct = (r: Rate): number => pct(r.onTime, r.arrived);
 export const nohPct = (r: Rate): number => pct(r.noOneHome, r.visits);
 export const callsPer100 = (r: Rate): number => pct(r.calls, r.visits);
 
-/** SD-25's bounds: before near 74% on time and 6% no one home, calls near twice the after rate; after >= 90%, < 3%. */
+/** The pilot's bounds (SD-25): before near 74% on time and 6% no one home, calls near twice the after rate; after >= 90%, < 3%. */
 export function ratesCheck(files: Files): string[] {
   const r = sd25Rates(files);
   const fails: string[] = [];
@@ -416,7 +416,7 @@ export function ratesCheck(files: Files): string[] {
   return fails;
 }
 
-// ----- the booking windows (FR-BOOK-6; F-201) -----
+// ----- the booking windows: the most jobs each of Columbus's 5 two-hour windows may hold (FR-BOOK-6; F-201) -----
 
 /**
  * No Columbus weekday window holds more jobs than FR-BOOK-6 allows (12, 12, 11, 11, 10 in time order), in the pilot
@@ -425,7 +425,7 @@ export function ratesCheck(files: Files): string[] {
  * grid (a window is its start and its length: a 4-hour window counts against no 2-hour limit and falls only on a seeded
  * 4-hour day, F-1653), and a Columbus population too small to mean the limits were tested (the floor is 1 full day of capacity).
  */
-export const COLUMBUS_JOBS_FLOOR = FR_BOOK_6_LIMITS.reduce((a, b) => a + b, 0);
+const COLUMBUS_JOBS_FLOOR = FR_BOOK_6_LIMITS.reduce((a, b) => a + b, 0);
 
 export function bookingWindowCheck(files: Files, branchOf: (employeeNumber: string) => string | undefined): string[] {
   const fx = JSON.parse(text(files, 'fixture.json')) as Fixture;

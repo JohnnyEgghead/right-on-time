@@ -98,7 +98,7 @@ export async function suggestTechnicians(tx: Queryable, input: SuggestInput): Pr
   return rankTechnicians(facts).map((r) => ({ ...r, stopBefore: stops.get(r.technicianId) ?? null }));
 }
 
-export interface UnassignedJob {
+interface UnassignedJob {
   jobNumber: number; date: string; windowId: string; window: { start: string; end: string }; customerId: string; serviceId: string; version: number;
 }
 

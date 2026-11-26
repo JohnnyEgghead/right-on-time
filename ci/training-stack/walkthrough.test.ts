@@ -38,6 +38,18 @@ describe('the dispatcher training sheet and walkthrough (FR-DIST-10)', () => {
     expect(sheet).toContain('walkthrough.md');
   });
 
+  // why: FR-DIST-10, SC-04 the time steps of Task 8 name the part of the box to click (the hour), then the keys to type, so the run presses what a person presses (F-1995)
+  it('Task 8 clicks the hour of Start and of End before it types a time', () => {
+    expect(parseStep('Click the first number in "Start". This is the hour.')).toEqual({ verb: 'clickhour', field: 'Start' });
+    const task8 = readWalkthrough().find((t) => t.n === 8)!;
+    const verbs = task8.steps.map((s) => s.step.verb + ':' + ('field' in s.step ? s.step.field : ''));
+    for (const f of ['Start', 'End']) {
+      const at = verbs.indexOf(`clickhour:${f}`);
+      expect(at, `a step clicks the hour of ${f}`).toBeGreaterThanOrEqual(0);
+      expect(verbs[at + 1], `the step after it types in ${f}`).toBe(`type:${f}`);
+    }
+  });
+
   // why: FR-DIST-10 a step that begins with no known verb is an error, and a step out of number is an error: the reader never skips a line it cannot understand
   it('the reader refuses what it cannot read', () => {
     expect(() => parseStep('Wiggle "Reassign".')).toThrow(/no known verb/);

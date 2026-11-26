@@ -232,7 +232,7 @@ export class TechReads {
     this.set({ noticesOn: on, ...(on ? {} : { notices: [] }) });
   }
 
-  /** CTL-TEC-10-09: kept on the phone at once. */
+  /** Change the text size and keep the choice on the phone at once (CTL-TEC-10-09). */
   setSize(size: TextSize): void {
     setTextSize(size);
     this.set({ textSize: size });
@@ -249,7 +249,7 @@ let client: ApiClient | null = null;
 let reads: TechReads | null = null;
 
 /** The page's one API client for the technician reads: every read is sent with `cache: 'no-store'`, so a phone never answers from what it kept. */
-export function techClient(): ApiClient {
+function techClient(): ApiClient {
   client ??= createClient({ baseUrl: window.location.origin, fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) });
   return client;
 }

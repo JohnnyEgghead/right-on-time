@@ -28,7 +28,7 @@ function SignInRoute() {
     saved={useSyncExternalStore(savedOnce.subscribe, () => savedOnce.value)} />;
 }
 
-/** Set when SCR-TEC-12's Save returned to the sign-in screen (the frames' Saved state, for the look dump). */
+/** Set when Save on the server address screen (SCR-TEC-12) returned to the sign-in screen (the frames' Saved state, for the look dump). */
 const savedOnce = {
   value: false,
   listeners: new Set<() => void>(),

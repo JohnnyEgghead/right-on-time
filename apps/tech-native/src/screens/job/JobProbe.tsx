@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The job screens' half of the XCUITest seam (src/screens/Probe.tsx; only with "-bwProbe 1"): Open job opens SCR-TEC-04 for the probe
-// job (Today's list is P6-NATIVE-TODAY's), and Damage an item writes 1 waiting-item file that does not parse into the item store's
+// The job screens' half of the XCUITest seam (src/screens/Probe.tsx; only with "-bwProbe 1"): Open job opens the Job screen (SCR-TEC-04) for the probe
+// job, and Damage an item writes 1 waiting-item file that does not parse into the item store's
 // directory, by the store's own name rule (F-985: what a power loss right after Saved can leave), so the suite can show that the
 // waiting count, SCR-TEC-09 and the sign-out guard all count it. The store's rules are not touched: the file is only named like an item.
 import { useNavigation, type NavigationProp, type ParamListBase } from '@react-navigation/native';

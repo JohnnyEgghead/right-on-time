@@ -81,7 +81,7 @@ export const APP_WIRING: Readonly<Record<string, Wiring>> = {
   // P4-JOBS. The release route is behind the page gate (a session) and reads the API, which the harness app has no database for; the preview routes
   // show the success state on the frame's data, and the loading and error states beside it.
   'SCR-OFC-30': { path: '/shell-preview/jobs/success', status: 200, also: [{ path: '/shell-preview/jobs/loading', status: 200 }, { path: '/shell-preview/jobs/error', status: 200 }] },
-  // P4-NEWJOB. The release route is behind the page gate (a session) and reads the API, which the harness app has no database for; the preview routes
+  // New job page: the release route is behind the page gate (a session) and reads the API, which the harness app has no database for; the preview routes
   // show the page on the frame's data (Harold Jenkins, a water heater visit with Kevin Doyle): customer picked, start, no match, no open window, saving, input kept.
   // The Done state is SCR-OFC-03 (walked by P4-JOB's rows) and draws only its toast here.
   'SCR-OFC-04': { path: '/shell-preview/newjob/picked', status: 200, also: [{ path: '/shell-preview/newjob/start', status: 200 }, { path: '/shell-preview/newjob/no-match', status: 200 }, { path: '/shell-preview/newjob/no-windows', status: 200 }, { path: '/shell-preview/newjob/saving', status: 200 }, { path: '/shell-preview/newjob/input-kept', status: 200 }] },

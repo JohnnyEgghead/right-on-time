@@ -26,7 +26,7 @@ function bar(p: string, opts: { sub?: boolean; back?: boolean } = {}): NativePai
   ];
 }
 
-/** The map box with its credit (CTL-CMP-05-01, CTL-CMP-05-04). */
+/** The pairs for 1 map box and its credit link (CTL-CMP-05-01, CTL-CMP-05-04). */
 function nmap(id: string): NativePair[] {
   return [
     { frame: '.nmap', native: id, kind: 'box' },
@@ -43,7 +43,7 @@ const STEP_HEIGHT = 'its height follows the step\'s words, which wrap as long as
  * SCR-TEC-08 with kit 0.9's turn-by-turn half (P6-NATIVE-STEPS; F-1233): the 216 px map with Show the whole route, the destination group,
  * the Next turn card, the Steps head and the ordered list of steps (the first marked Now, a plain step, the arrival).
  */
-export const DIRECTIONS_PAIRS: NativePair[] = [
+const DIRECTIONS_PAIRS: NativePair[] = [
   ...bar('dir', { back: true }),
   ...nmap('dir.map'),
   { frame: '.nmap .nfit', native: 'dir.fit', kind: 'box' },

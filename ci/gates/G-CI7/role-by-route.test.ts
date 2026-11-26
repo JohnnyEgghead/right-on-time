@@ -52,7 +52,7 @@ describe('G-CI7 role-by-route', () => {
     const h = await harness(policyTable, { ...handlers });
     const { problems, checked } = await pageProblems(policyTable, pages, inv, spec, covers, h.principal);
     expect(problems).toEqual([]);
-    // Every covered inventory row was checked, read from the inventory (P2-SHELL's SCR-SHR rows among them).
+    // Every covered inventory row was checked, read from the inventory (the shell's SCR-SHR rows among them).
     // A hosted screen (a dialog, popover or panel "on" its host page) has no route of its own: its host's row holds the verdict.
     const covered = inv.screens.filter((s) => covers(s) && routeClass(s, inv)?.kind !== 'none').map((s) => s.screen);
     expect(covered.length).toBeGreaterThanOrEqual(6);

@@ -206,7 +206,7 @@ describe('the report read (API-50)', () => {
     expect(r.data.headline.lateTexts).toBe(1);
   });
 
-  // why: FR-REP-2 and SC-02 a live No one home visit of Sep 15 raises its week's count by 1 and SC-02's population holds the live finished visits (typed: 10 pilot, 1 live No one home and 2 live finished visits are 13, and 1 of 13 is 7.7%); neither counts anywhere else; the live ones of Sep 14 do not count
+  // why: FR-REP-2 and SC-02 a live No one home visit of Sep 15 raises its week's count by 1 and the visits the no-one-home criterion counts (SC-02) hold the live finished visits (typed: 10 pilot, 1 live No one home and 2 live finished visits are 13, and 1 of 13 is 7.7%); neither counts anywhere else; the live ones of Sep 14 do not count
   it('counts a live No one home visit of Sep 15 for no one home only, over the live finished visits too', async () => {
     const r = await read('?branch=columbus&fromWeek=2026-09-14&toWeek=2026-09-14');
     expect(r.data.noOneHome).toEqual([{ week: '2026-09-14', rate: 7.7, count: 1, visits: 13 }]);
@@ -258,7 +258,7 @@ describe('the report read (API-50)', () => {
     expect(late.data.toWeek).toBe('2026-09-14');
   });
 
-  // why: FR-REP-6 the goals 90% and 3% come with label keys; FR-REP-4 the label is on the response; the periods are SD-25's
+  // why: FR-REP-6 the goals 90% and 3% come with label keys; FR-REP-4 the label is on the response; the weeks run from the first of the before period to the last of the after period (SD-25)
   it('answers the goals, the periods and the Simulated pilot data label', async () => {
     const r = await read('?branch=columbus&toWeek=2026-09-14');
     expect(r.meta.labels).toContain('simulated_pilot_data');
@@ -321,7 +321,7 @@ describe('every report number equals an independent SQL query on the rows (SC-01
                    FROM world.job j LEFT JOIN world.technician t ON t.id = j.technician_id WHERE NOT j.pilot AND j.status = '${status}' AND j.date >= '2026-09-15'`;
   /** The visits the page lists. */
   const VISITS = `(${PILOT} UNION ALL ${liveJobs('no_one_home')}) v`;
-  /** SC-02's Population, from its own words: the completed visits of the pilot data, together with the live visits that were finished or recorded as No one home. */
+  /** The visits the no-one-home success criterion counts (SC-02), from its own words: the completed visits of the pilot data, together with the live visits that were finished or recorded as No one home. */
   const SC02 = `(${PILOT} UNION ALL ${liveJobs('done')} UNION ALL ${liveJobs('no_one_home')}) v`;
   const WEEK = `to_char(date_trunc('week', date::timestamp), 'YYYY-MM-DD')`;
 
@@ -341,7 +341,7 @@ describe('every report number equals an independent SQL query on the rows (SC-01
     }
   });
 
-  // why: SC-02 the no-one-home counts, visits and rates of every week equal the independent query over SC-02's population, live finished and live No one home visits of Sep 15 included
+  // why: SC-02 the no-one-home counts, visits and rates of every week equal the independent query over the visits the no-one-home criterion counts (SC-02), live finished and live No one home visits of Sep 15 included
   it('no one home per week', async () => {
     const r = await read('?toWeek=2026-09-14');
     const q = await rows<{ wk: string; visits: string; noh: string }>(

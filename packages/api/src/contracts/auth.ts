@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Contract rows of the auth area. The lane that builds the area adds its API-<nn> rows here (defineContract from ../contract.ts)
-// and its examples; no other file needs editing.
-// P2-SHELL (owner ruling c025a9ec): API-07 who am I and API-08 save my settings, the reads of the office top bar (CMP-07)
-// and the language switch (CMP-03). The rest of the area (sign-in, sessions, users) is P2-AUTH's.
+// Contract rows of the auth area. A new row is added here with defineContract (from ../contract.ts) and its examples;
+// its handler and policy entry are in packages/api-server.
+// API-07 who am I and API-08 save my settings are the calls of the office top bar (CMP-07) and the language switch (CMP-03).
+// The rest of the area (sign-in, sessions, users) follows them in this file.
 import { z } from 'zod';
 import { defineContract, type ContractRow } from '../contract.ts';
 import { ROLES } from '../envelope.ts';
@@ -49,7 +49,7 @@ export const saveMySettings = defineContract({
   examples: [{ name: 'signed out: answered back, nothing stored', input: { language: 'es' }, expectStatus: 200 }],
 });
 
-// P2-AUTH: API-01 to API-06 and API-15 (UI-SPECIFICATION 12.2; SPECIFICATIONS 6.8, SD-8, SD-9, SD-47).
+// The access code (API-01), app info (API-02), sign-in (API-03), the sample people and signing in as one (API-04, API-05), sign-out (API-06) and sample technician sign-ins (API-15) (UI-SPECIFICATION 12.2; SPECIFICATIONS 6.8, SD-8, SD-9, SD-47).
 const nothing = z.object({});
 const signedInUser = z.object({
   id: z.string(),
@@ -324,7 +324,7 @@ export const emailByLink = defineContract({
   path: '/emails/{oneTimeToken}',
   request: z.object({ oneTimeToken: linkToken }),
   response: z.object({
-    /** Whose on-screen inbox this is (CTL-EML-01-01). */
+    /** Whose on-screen inbox this is, the person the email was sent to (CTL-EML-01-01). */
     inboxFor: z.string(),
     from: z.string(),
     to: z.string(),

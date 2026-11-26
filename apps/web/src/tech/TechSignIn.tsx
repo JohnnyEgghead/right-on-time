@@ -27,7 +27,7 @@ import { loginKey } from './model.ts';
 import { clearSignOutOwed } from './session.ts';
 
 export type TechSignInMessage = 'bad' | 'off' | 'set' | 'returned' | 'limited' | 'failed' | 'unsaved' | null;
-export const LOGIN_KEY = 'bw.tech.login';
+const LOGIN_KEY = 'bw.tech.login';
 /** A person picked from the sample list (Sign in as) is kept under LOGIN_KEY as this prefix and the person's id, so a different pick also forgets the last person's copies (F-1017). */
 const PICKED = 'as:';
 const OFFICE_PHONE = '(614) 555-0100';

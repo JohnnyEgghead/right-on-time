@@ -8,7 +8,7 @@ import type { SkillWords, TechData, TechRow, TechSkill } from './model.ts';
 const at = (hour: number) => wireAt(hour);
 const skill = (...s: string[]) => s as TechSkill[];
 
-export const FRAME_SKILLS = {
+const FRAME_SKILLS = {
   heating_cooling: ['Heating & cooling', 'Calefacción y aire'], heat_pumps: ['Heat pumps', 'Bombas de calor'], furnaces: ['Furnaces', 'Calefactores'],
   boilers: ['Boilers', 'Calderas'], plumbing: ['Plumbing', 'Plomería'], drains: ['Drains', 'Desagües'], water_heaters: ['Water heaters', 'Calentadores de agua'],
   gas_lines: ['Gas lines', 'Líneas de gas'], tankless: ['Tankless', 'Sin tanque'], thermostats: ['Thermostats', 'Termostatos'], mini_splits: ['Mini-splits', 'Minisplits'],

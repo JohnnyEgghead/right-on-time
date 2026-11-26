@@ -41,7 +41,7 @@ export interface InvoiceRequest {
 /** The Comfort Club member rate, in percent of the service line only (SD-20; FR-DISP-32's "15% off repairs"). */
 export const MEMBER_RATE_PERCENT = 15;
 
-/** The service line labels of SD-20's table, by the seeded service id (packages/db seed reference data). */
+/** The service line labels of the invoice table (SD-20), by the seeded service id (packages/db seed reference data). */
 export const SERVICE_INVOICE_LABELS: Readonly<Record<string, string>> = {
   furnace_tune_up: 'Furnace tune-up',
   ac_tune_up: 'AC tune-up',
@@ -116,7 +116,7 @@ export function lineWordsOf(line: { kind: string; label: string }): LineWords | 
   return null;
 }
 
-/** Compose the invoice of SD-20. A source the link cannot bill (an unknown service, a bad price) is a data error. */
+/** Composes 1 invoice (SD-20) from its service, labor, parts, work-done lines and member rate. A source the link cannot bill (an unknown service, a bad price) is a data error. */
 export function composeInvoice(src: InvoiceSource): ComposeResult {
   const label = SERVICE_INVOICE_LABELS[src.serviceId];
   if (label === undefined) return { ok: false, reason: `service ${src.serviceId} has no invoice line` };

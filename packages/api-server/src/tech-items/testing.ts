@@ -6,7 +6,7 @@
 // on-the-way text renders the shipped text.on_the_way through P3-TEXTS's sendOnTheWay, as the live path does (F-470).
 //
 // The clock: a test writes the epoch's clock_move rows and the clock row itself (setClock); the clock writers
-// (API-12 to API-14) are P3-REPLAY's. Real times are a fixed synthetic line (REAL0), never the wall clock.
+// (API-12 to API-14) are in handlers/clock-moves.ts (P3-REPLAY). Real times are a fixed synthetic line (REAL0), never the wall clock.
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';

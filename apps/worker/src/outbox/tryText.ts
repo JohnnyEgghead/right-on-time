@@ -159,7 +159,7 @@ async function nextTryTime(tx: Queryable, t: TextRow, n: number, now: Instant): 
  * The 5th failure is reported, never dropped (invariant 2): 1 call list row for the branch's day and 1 open office
  * alert. The call list row is skipped when the text already has one (the office's Add to call list, API-145) or has
  * no visit (an office text about no visit: call_list_entry.job_number is required; finding filed). The alert is
- * always written: SD-30's 1 open alert per type and subject (the text) is the index's job.
+ * always written: the rule of 1 open alert per type and subject (the text), SD-30, is the index's job.
  */
 async function reportGaveUp(tx: Queryable, t: TextRow, now: Instant, clock: Pick<Clock, 'realNow'>): Promise<void> {
   const callDate = localDateOf(now, t.branch_zone);

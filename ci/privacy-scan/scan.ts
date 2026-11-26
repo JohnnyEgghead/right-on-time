@@ -134,7 +134,7 @@ function dedupe<T extends { kind: string; customer: number }>(a: T[]): T[] {
 
 const parseTsv = (text: string): string[][] => text.split('\n').filter((l) => l.length).map((l) => l.split('\t'));
 
-export function readCustomers(file: string): Customer[] {
+function readCustomers(file: string): Customer[] {
   return parseTsv(readFileSync(file, 'utf8')).map(([mobile = '', homePhone = '', street = '', house = '']) => ({ mobile, homePhone, street, house }));
 }
 

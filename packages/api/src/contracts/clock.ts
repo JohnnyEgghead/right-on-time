@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Contract rows of the clock moves (UI-SPECIFICATION 12.2 API-11 to API-14; SPECIFICATIONS 6.9 FR-DEMO-3 to FR-DEMO-6,
-// section 5.2 step 6, SD-12). P3-REPLAY's rows; the clock read API-10 stays P2-SHELL's in ./demo.ts (owner ruling
-// c025a9ec). Managers only (SCR-OFC-17, SCR-OFC-27).
+// section 5.2 step 6, SD-12). The clock read API-10 is in ./demo.ts, not here. Managers only (SCR-OFC-17, SCR-OFC-27).
 import { z } from 'zod';
 import { defineContract, type ContractRow } from '../contract.ts';
 

@@ -57,7 +57,7 @@ export async function flagValues(tx: Queryable, input: {
 }
 
 /** The catalog keys: the dispatcher's list line and the technician's answer, 1 per flagging column. */
-export const officeFlagKey = (column: ChangeColumn | RefusedFlag): string => `offline.flag.${column}`;
+const officeFlagKey = (column: ChangeColumn | RefusedFlag): string => `offline.flag.${column}`;
 export const techFlagKey = (column: ChangeColumn | RefusedFlag): string => `tech.item.flagged.${column}`;
 /** The 2 refusals the phone cannot fix, flagged beside the table's columns (section 5.1 step 10; F-867). */
 export type RefusedFlag = 'validation_failed' | 'not_found';

@@ -186,7 +186,7 @@ function checkSet(record: string, prefix: string, { out, mem }: { out: Out; mem:
   expect(out.shape).toEqual({ jobs: 600, dispatchers: 14, technicians: 85, branches: 3 });
   expect(out.runSet).toBe('runs 1 to N, 1 shape');
   expect(out.totals.runs).toBe(out.runsRequired);
-  // D-21: the NFR lines are measured with routing in the stack (a summary made before F-1498 names no arm: it ran with routing).
+  // The performance requirement lines are measured with routing in the stack (D-21); a summary made before runs recorded their routing arm (F-1498) names none: it ran with routing.
   expect(out.routing ?? 'on').toBe('on');
   // the memory file covers the same window as the load summary
   expect(mem.window).toEqual({ start: out.firstRunStart, end: out.lastRunEnd });

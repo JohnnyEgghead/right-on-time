@@ -60,7 +60,7 @@ const PREVIEW = [
   { app: '.preview .pt span', frame: '.preview .pt span' }, { app: '.preview .bw-pv', frame: '.preview svg' },
 ];
 
-// DK-127 and DK-128 draw the thread and the reply field with other padding, line height and field color than DK-126 (their own page rules
+// The Spanish frame (DK-127) and the late text and R reply frame (DK-128) draw the thread and the reply field with other padding, line height and field color than the Success frame (DK-126) (their own page rules
 // differ from DK-126's), so the bubble, stamp, thread and field of the app hold DK-126's values and these 2 frames are compared on the rest.
 const NOT_BUBBLE_TOP = [...TOP, ...CONTACT, '.quiet', '.rbtns', '.rbtns span', '.inputbar .send', ...FOOT];
 

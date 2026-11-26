@@ -18,7 +18,7 @@ import {
   type TextRowData,
 } from './model.ts';
 
-export type LogStatus = 'loading' | 'error' | 'ready';
+type LogStatus = 'loading' | 'error' | 'ready';
 
 /** What the detail panel shows for the picked row. */
 export interface DetailView {

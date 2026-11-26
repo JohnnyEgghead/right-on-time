@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // API-50 Reports and API-51 Reports export (UI-SPECIFICATION 12.2; SPECIFICATIONS section 6.5 "REP", SD-25, SD-31; FR-REP-1 to FR-REP-8):
-// SCR-OFC-11's one read and its spreadsheet. Both read only the `report_visit` view (SD-25) for visits, plus `pilot_call` for the calls
+// The Reports page's one read (SCR-OFC-11) and its spreadsheet. Both read only the `report_visit` view (SD-25) for visits, plus `pilot_call` for the calls
 // and `outbox_text` for the late texts (FR-REP-2, FR-REP-8). Every rate is a percent with 1 decimal, made from whole counts the answer also
 // carries, so a person can check it; a week with no visits has a null rate. The goals are the contract's (FR-REP-6).
 import { z } from 'zod';
@@ -18,7 +18,7 @@ export const PILOT_FIRST_WEEK = '2026-06-01';
 export const PILOT_LAST_WHOLE_WEEK = '2026-09-07';
 export const BEFORE_PERIOD = { from: '2026-06-01', to: '2026-07-13' } as const;
 export const AFTER_PERIOD = { from: '2026-07-20', to: '2026-09-14' } as const;
-/** FR-REP-6: the goals, in percent. */
+/** The report goals, in percent: on time 90, no one home 3 (FR-REP-6). */
 export const GOAL_ON_TIME = 90;
 export const GOAL_NO_ONE_HOME = 3;
 
@@ -73,7 +73,7 @@ export const reports = defineContract({
     })),
     /** FR-REP-2, FR-REP-8: calls per week and the per-day figure (the week's calls over its working days with a visit; null with none). */
     calls: z.array(z.object({ week: localDate, calls: count, perDay: z.number().int().nullable() })),
-    /** FR-REP-2: no-one-home visits per week, live No one home visits included (FR-TECH-9); `visits` is SC-02's population, so live finished visits too. */
+    /** FR-REP-2: no-one-home visits per week, live No one home visits included (FR-TECH-9); `visits` is the population of the no-one-home goal (SC-02), so live finished visits too. */
     noOneHome: z.array(z.object({ week: localDate, rate: percent, count, visits: count })),
     /** FR-REP-8: late texts delivered per week. */
     lateTexts: z.array(z.object({ week: localDate, count })),

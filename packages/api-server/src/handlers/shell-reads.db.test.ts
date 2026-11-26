@@ -2,7 +2,7 @@
 // The 4 shell reads (owner ruling c025a9ec: API-07 who am I, API-08 save my settings, API-10 read the clock, API-130
 // search) on the real database (PostgreSQL 18, the migrated schema), through the production kernel (createWebKernel:
 // the real policy table, handlers, SQL sessions and clock) as the web process's own login bw_web. The fixture rows are
-// inserted here; the full sample data arrives with P2-SEED. Run by gate G-CI7 step 3 (ci/gates/G-CI7/vitest.db.config.ts).
+// inserted here, with no reference seed (P2-SEED). Run by gate G-CI7 step 3 (ci/gates/G-CI7/vitest.db.config.ts).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SEARCH_GROUP_CAP } from '@bw/api';
 import { loadConfig } from '@bw/config';

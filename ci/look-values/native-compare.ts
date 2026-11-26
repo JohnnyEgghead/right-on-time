@@ -31,7 +31,7 @@ import { DIRECTIONS_CASE, MAPME_CASES } from './native-mapme-cases.ts';
 import { JOB_CASES } from './native-job-cases.ts';
 import { NATIVE_TODAY_CASES } from './native-today-cases.ts';
 
-export const NATIVE_FRAME = 'mockups/pages/r1-ios-b.html';
+const NATIVE_FRAME = 'mockups/pages/r1-ios-b.html';
 
 export type Kind = 'box' | 'text' | 'type' | 'face' | 'icon';
 export interface NativePair {
@@ -60,7 +60,7 @@ export interface DumpView {
   };
   style: Record<string, unknown>;
 }
-export type Dump = { state: string; views: Record<string, DumpView> };
+type Dump = { state: string; views: Record<string, DumpView> };
 export type Values = Partial<Record<LookProperty, string>>;
 export interface NativeDifference { pair: string; property: LookProperty | 'element' | 'fill'; app: string; frame: string }
 
@@ -281,7 +281,7 @@ export const NATIVE_CASES: NativeCase[] = [...SHELL_CASES, ...MAPME_CASES, DIREC
 
 /** P6-NATIVE-STEPS's StepsUITests dumps SCR-TEC-08's Route and SCR-TEC-04's Success (with Photos (3)): the Directions case (its own set since
  * the steps) and the job set's Success case. */
-export const STEPS_CASES: NativeCase[] = [DIRECTIONS_CASE, ...JOB_CASES.filter((c) => c.state === 'job')];
+const STEPS_CASES: NativeCase[] = [DIRECTIONS_CASE, ...JOB_CASES.filter((c) => c.state === 'job')];
 
 /** The named case sets (F-1071): a rig run compares exactly the cases its test classes dump. `names` is comma separated; unknown is null. */
 export function casesNamed(names: string): NativeCase[] | null {
@@ -341,7 +341,7 @@ function nativeContent(v: DumpView): number {
   return n.width - side(v.style, 'padding', 'left') - side(v.style, 'padding', 'right') - b;
 }
 
-export async function compareNative(dumps: Record<string, Dump>, page: Page, cases: NativeCase[] = NATIVE_CASES): Promise<{ name: string; differences: NativeDifference[]; pairs: number }[]> {
+async function compareNative(dumps: Record<string, Dump>, page: Page, cases: NativeCase[] = NATIVE_CASES): Promise<{ name: string; differences: NativeDifference[]; pairs: number }[]> {
   const results: { name: string; differences: NativeDifference[]; pairs: number }[] = [];
   for (const c of cases) {
     const differences: NativeDifference[] = [];
@@ -379,7 +379,7 @@ export async function compareNative(dumps: Record<string, Dump>, page: Page, cas
 }
 
 /** Tags each frame tile (data-bw-cap by its caption, as compare.ts's tagFrames) and each state tile by its name (data-bw-tile). */
-export async function tagNativeFrames(page: Page): Promise<void> {
+async function tagNativeFrames(page: Page): Promise<void> {
   await page.evaluate(() => {
     const d = (globalThis as unknown as Win).document;
     for (const c of d.querySelectorAll('p.frame-cap')) (c.closest('.r1-st') ?? c.nextElementSibling)?.setAttribute('data-bw-cap', (c.textContent ?? '').trim());
@@ -390,7 +390,7 @@ export async function tagNativeFrames(page: Page): Promise<void> {
   });
 }
 
-export function loadDumps(dir: string): Record<string, Dump> {
+function loadDumps(dir: string): Record<string, Dump> {
   const out: Record<string, Dump> = {};
   for (const f of readdirSync(dir).filter((x) => x.endsWith('.json'))) {
     const d = JSON.parse(readFileSync(path.join(dir, f), 'utf8')) as Dump;

@@ -23,7 +23,7 @@ export interface CheckReport {
   causes: RuleFailure[];
 }
 
-export interface RuleFailure {
+interface RuleFailure {
   type: AlertType;
   /** A PostgreSQL error code such as 23505, else the error's class name. */
   code: string;
@@ -119,7 +119,7 @@ export async function showAlertEmailLink(tx: Queryable, alertId: string, manager
 
 export async function runAlertChecks(tx: Queryable, env: CheckEnv): Promise<CheckReport> {
   // The switches' rows are the seed's (section 3 writer table; F-444): a check reads them and writes none. A type with no
-  // row acts on SD-30's default.
+  // row acts on its default (SD-30).
   const settings = new Map(
     (await tx.query<{ type: string; managers_email: boolean }>(`SELECT type, managers_email FROM world.alert_setting`)).rows.map((s) => [s.type, s.managers_email]),
   );

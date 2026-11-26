@@ -53,7 +53,7 @@ export function shortName(name: string | null): string {
 
 const ROLE_KEY = { office: 'shell.role.office', manager: 'shell.role.manager', technician: 'shell.role.technician' } as const;
 export const SEARCH_DEBOUNCE_MS = 250;
-export const SEARCH_CARRY_KEY = 'bw.search.carry';
+const SEARCH_CARRY_KEY = 'bw.search.carry';
 
 export interface OfficeTopBarProps {
   me: Me;
@@ -138,7 +138,7 @@ export function OfficeTopBar({ me, alertCount, liveAlerts = true, initialPanel =
     router.replace(url.pathname + url.search);
   };
 
-  // CTL-CMP-07-06 the bell (FR-DISP-12) and SCR-OFC-28 the list it opens.
+  // The alerts bell and its count (CTL-CMP-07-06, FR-DISP-12), and the alerts list it opens (SCR-OFC-28).
   const bell = useBell({ enabled: liveAlerts && alertCount === undefined && branchKnown, branch, reader: read });
   const bellCount = alertCount !== undefined ? alertCount : bell.count;
   const bellOpen = initialPanel !== null || bell.open;
@@ -152,7 +152,7 @@ export function OfficeTopBar({ me, alertCount, liveAlerts = true, initialPanel =
     return () => document.removeEventListener('keydown', onKey);
   }, [bell.open, closeBell]);
 
-  // CTL-CMP-07-05 search and CTL-CMP-07-10 the "/" key.
+  // The search box (CTL-CMP-07-05) and the "/" key that moves focus to it (CTL-CMP-07-10).
   const inputRef = useRef<HTMLInputElement>(null);
   const [slash, setSlash] = useState(me.slashShortcut);
   const [slashError, setSlashError] = useState(false);

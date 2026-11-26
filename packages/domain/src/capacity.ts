@@ -15,7 +15,7 @@ export type JobStatus = 'scheduled' | 'on_the_way' | 'on_site' | 'done' | 'no_on
 /** A live job counts against capacity: every status but canceled (FR-BOOK-5). */
 export const isLive = (status: string): boolean => status !== 'canceled';
 
-/** Per-technician daily capacity by kind of day (FR-BOOK-5; OA-29 rows 2 and 3). */
+/** Jobs 1 technician who is not an installer can take in a day, by kind of day: 5 on a day of 2-hour windows, 6 on a day of 4-hour windows, 3 on a Saturday (FR-BOOK-5; OA-29). */
 export const DAY_CAPACITY = { two_hour: 5, four_hour: 6, saturday: 3 } as const;
 /** An installer's daily capacity: 1 install a day (FR-BOOK-5). */
 export const INSTALLER_DAY_CAPACITY = 1;

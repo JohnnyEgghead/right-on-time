@@ -425,7 +425,7 @@ describe('driver', () => {
   });
 });
 
-// ---- F-45: the certificate renewal alert ----
+// ---- The certificate renewal alert: its status script, its monitor and the drill's deploy step (F-45) ----
 const statusScript = path.join(root, 'infra/hosted/renewal-status.sh');
 const runStatus = (mode: string, env: Record<string, string>) => spawnSync('bash', [statusScript, mode], { env: { ...process.env, ...env }, encoding: 'utf8' });
 

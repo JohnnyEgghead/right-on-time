@@ -362,7 +362,7 @@ function ChangeLine({ c }: { c: UserChange }) {
   );
 }
 
-// ---------- the dialogs (DK-34) ----------
+// ---------- the dialogs of the users and roles screen (DK-34) ----------
 
 const CLOSE_PATH = '<path d="M6 6l12 12M18 6L6 18"/>';
 

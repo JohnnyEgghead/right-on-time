@@ -15,7 +15,6 @@ export const tone = {
   schedBorder: '#b8c2cc',
   schedInk: '#334155',
   wayBg: '#dbe8fe',
-  wayLine: '#2f6fe0',
   wayInk: '#1745a8',
   riskBg: '#fff1cf',
   riskLine: '#d48806',
@@ -24,5 +23,4 @@ export const tone = {
   glass: 'rgba(255, 255, 255, 0.12)',
   glassLine: 'rgba(255, 255, 255, 0.22)',
   glassTrack: 'rgba(255, 255, 255, 0.18)',
-  dim: 'rgba(0, 0, 0, 0.4)',
 } as const;

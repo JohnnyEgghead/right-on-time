@@ -9,7 +9,7 @@
 //   forbidden    SCR-SHR-01 (403): a signed-in person whose role the page does not admit
 //   not_found    SCR-SHR-02 (404): no policy entry, deny by default
 // A render verdict is status 200, except the live map link page after its link ended: status 410 (API-115, FR-TEXT-4), the same route's
-// content, which then reads API-116's 410 and shows SCR-CUS-05.
+// content, which then reads the live map data call's 410 (API-116) and shows the ended live map page (SCR-CUS-05).
 // A token page (`token`, `one_time`) renders its shell; its data comes only from its token contract, which the kernel
 // refuses with not_found for a bad token (mount.ts), so the page shows SCR-SHR-02.
 import type { Clock } from '@bw/time';

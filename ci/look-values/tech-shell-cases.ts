@@ -83,7 +83,7 @@ export const TECH_SHELL_CASES: TechShellCase[] = [
 ];
 
 /** The CMP-10 states the frames caption: every one must be compared by a case. */
-export const CMP10_PREFIX = 'CMP-10 ';
+const CMP10_PREFIX = 'CMP-10 ';
 
 export function uncoveredCmp10(captions: readonly string[], cases: readonly TechShellCase[] = TECH_SHELL_CASES): string[] {
   const covered = new Set(cases.flatMap((c) => c.captions));

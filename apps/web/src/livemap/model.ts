@@ -109,7 +109,3 @@ export const shownState = (state: LiveState, restoring: boolean): LiveState => (
 
 /** The history state the ended page writes over its entry (kept keys stay: the router's own). */
 export const endedHistoryState = (prev: unknown): Record<string, unknown> => ({ ...(prev && typeof prev === 'object' ? (prev as Record<string, unknown>) : {}), bwLiveMap: 'ended' });
-
-/** Preview and test states, by name (the harness build's preview routes). */
-export const LIVEMAP_STATES = ['on-the-way', 'loading', 'not-valid', 'update-failed'] as const;
-export const ENDED_STATES = ['by-arrival', 'changed'] as const;

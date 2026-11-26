@@ -24,12 +24,12 @@ import { NoSignalBanner, SentAnnouncer } from './SyncStrip.tsx';
 import { openTab } from './tab-open.ts';
 import { useOwnOutbox } from './useOutbox.ts';
 
-export const SW_URL = '/tech/sw.js';
+const SW_URL = '/tech/sw.js';
 export const SW_SCOPE = '/tech';
 
-export type TechTab = 'today' | 'map' | 'parts' | 'me';
+type TechTab = 'today' | 'map' | 'parts' | 'me';
 
-/** CMP-09's tabs in their order (Figure 8.4): Today, Map, Parts, Me. */
+/** The tabs of the tab bar (CMP-09) in their order (Figure 8.4): Today, Map, Parts, Me. */
 export const TABS: readonly { tab: TechTab; href: string; icon: IconName; label: MessageKey; ctl: string }[] = [
   { tab: 'today', href: '/tech', icon: 'list', label: 'tech.tab.today', ctl: 'CTL-CMP-09-01' },
   { tab: 'map', href: '/tech/map', icon: 'map', label: 'tech.tab.map', ctl: 'CTL-CMP-09-03' },
@@ -114,10 +114,10 @@ function useServiceWorker(on: boolean, jobs: string, complete: boolean) {
 }
 
 export interface TechAppFrameProps extends FrameData {
-  /** The screen's own header (its frame's .apphead), which places CMP-10's waiting count where the frame draws it. */
+  /** The screen's own header (its frame's .apphead), which places the waiting count (CMP-10) where the frame draws it. */
   header?: ReactNode;
   tab: TechTab | null;
-  /** Whether this screen's frame draws CMP-10's No signal strip under the header (DK-111); Today draws its card in the list. */
+  /** Whether this screen's frame draws the No signal strip (CMP-10) under the header (DK-111); Today draws its card in the list. */
   noSignalStrip?: boolean;
   /** A preview's fixed engine state; pages leave it unset and the engine runs. */
   fixed?: OutboxState;

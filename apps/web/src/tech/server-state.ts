@@ -8,9 +8,9 @@
 // phone (UI-SPECIFICATION 4.5). SCR-TEC-10 Me renders API-07 (the person's name and skill) the same way (F-1775), so it is marked too.
 // A later technician page that embeds a read is added to SCREENS_WITH_SERVER_STATE.
 export const SERVER_STATE_HEADER = 'x-bw-server-state';
-export const SHELL_QUERY = 'bw-shell';
+const SHELL_QUERY = 'bw-shell';
 
-export const SCREENS_WITH_SERVER_STATE: ReadonlySet<string> = new Set(['SCR-TEC-02', 'SCR-TEC-10']);
+const SCREENS_WITH_SERVER_STATE: ReadonlySet<string> = new Set(['SCR-TEC-02', 'SCR-TEC-10']);
 
 /**
  * The one reader of the shell variant (F-1783): a request is the shell when any `bw-shell` value is 1, whether the caller has the

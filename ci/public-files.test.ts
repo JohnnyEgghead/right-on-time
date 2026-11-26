@@ -122,13 +122,13 @@ describe('spdx-header-check', () => {
     const dir = tree('spdx-sh', (d) => {
       writeFileSync(path.join(d, 'ci/other.sh'), '#!/usr/bin/env bash\necho no header\n');
       writeFileSync(path.join(d, '.hook'), '');
-      mkdirSync(path.join(d, '.githooks'));
-      writeFileSync(path.join(d, '.githooks/pre-push'), '#!/bin/sh\nexit 0\n');
+      mkdirSync(path.join(d, 'hooks'));
+      writeFileSync(path.join(d, 'hooks/pre-push'), '#!/bin/sh\nexit 0\n');
     });
     const r = run(dir, 'spdx');
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('ci/other.sh');
-    expect(r.stderr).toContain('.githooks/pre-push');
+    expect(r.stderr).toContain('hooks/pre-push');
   });
 
   // why: F-1574 an SPDX line above the shebang leaves a script that no longer runs, so the shebang must stay on line 1

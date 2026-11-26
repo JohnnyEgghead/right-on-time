@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Contract rows of the tech area. The lane that builds the area adds its API-<nn> rows here (defineContract from ../contract.ts)
-// and its examples; no other file needs editing.
-// P3-ITEMS (SPECIFICATIONS section 5.1, section 4.6 SD-16; BUILD_PLAN D-7: the engine lane owns the item rows): API-102
-// queued items, API-103 a photo or signature upload, API-162 the app's sync report, and API-39, the office's Mark
-// handled of an item the server flagged (the other half of the offline conflict record; its list is P4-BOARD's API-20).
+// Contract rows of the tech area. A new row is added here with defineContract (from ../contract.ts) and its examples;
+// its handler and policy entry are in packages/api-server.
+// The item rows (SPECIFICATIONS section 5.1, section 4.6 SD-16): API-102 queued items, API-103 a photo or signature
+// upload, API-162 the app's sync report, and API-39, the office's Mark handled of an item the server flagged
+// (the other half of the offline conflict record; its list is API-20, the board read).
 import { z } from 'zod';
 import { addressField, defineContract, type ContractRow } from '../contract.ts';
 

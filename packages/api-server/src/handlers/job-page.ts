@@ -22,7 +22,7 @@ export function officeContext(req: ApiRequest): WriteContext {
 }
 
 /** Run 1 write; a WriteRefused becomes the refusal with its detail (the kernel owns the status, from the code). */
-export async function answerWrite<T>(fn: () => Promise<{ status: 200 | 201 | 204; data: T }>): Promise<ApiResult<T>> {
+async function answerWrite<T>(fn: () => Promise<{ status: 200 | 201 | 204; data: T }>): Promise<ApiResult<T>> {
   try {
     return { ok: true, ...(await fn()) };
   } catch (e) {
@@ -31,13 +31,13 @@ export async function answerWrite<T>(fn: () => Promise<{ status: 200 | 201 | 204
   }
 }
 
-export const finishJobOfficeHandler: Handler<Out<typeof finishJobOfficeRow>> = (req, tx: Tx) => answerWrite(async () => {
+const finishJobOfficeHandler: Handler<Out<typeof finishJobOfficeRow>> = (req, tx: Tx) => answerWrite(async () => {
   const p = req.params as In<typeof finishJobOfficeRow>;
   const done = await finishJobOffice(tx, officeContext(req), p);
   return { status: 200, data: { job: done.job, billing: { state: done.billing.state as Out<typeof finishJobOfficeRow>['billing']['state'] } } };
 });
 
-export const sendOfficeTextHandler: Handler<Out<typeof sendOfficeTextRow>> = async (req, tx: Tx) => {
+const sendOfficeTextHandler: Handler<Out<typeof sendOfficeTextRow>> = async (req, tx: Tx) => {
   try {
     return await answerWrite(async () => ({ status: 201, data: { text: await sendOfficeText(tx, officeContext(req), req.params as In<typeof sendOfficeTextRow>) } }));
   } catch (e) {

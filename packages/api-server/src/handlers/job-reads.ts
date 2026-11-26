@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The job page's reads and its 2 small writes (P4-JOB; UI-SPECIFICATION 12.2 API-23, API-29, API-37, API-107, API-110,
 // API-135, API-140, API-142). Each read runs in the handler's 1 transaction (SD-6) and answers wall times in the job's
-// branch zone (12.1 item 5). API-23's history follows SPECIFICATIONS section 6.2: the old system's past visits together
-// with the customer's done jobs, newest first, the last 3 and the count. API-135 answers the van only while the job is On
+// branch zone (12.1 item 5). The job page's history (API-23) follows SPECIFICATIONS section 6.2: the old system's past visits together
+// with the customer's done jobs, newest first, the last 3 and the count. The on-the-way read (API-135) answers the van only while the job is On
 // the way (invariant 5, NFR-04): the point is computed from the leg's track (SD-49: baked, else live) and the clock (SD-22, @bw/maps).
 import type {
   addEquipment as addEquipmentRow, addOfficeNote as addOfficeNoteRow, editEquipment as editEquipmentRow, inboxLink as inboxLinkRow, jobDetail as jobDetailRow,

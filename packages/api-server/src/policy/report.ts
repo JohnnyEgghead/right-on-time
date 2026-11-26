@@ -5,7 +5,7 @@ import type { PolicyEntry } from '../types.ts';
 import { api, MANAGER, page } from './entry.ts';
 
 export const reportPolicy: PolicyEntry[] = [
-  api(reports, MANAGER), // API-50, SCR-OFC-11
-  api(reportsExport, MANAGER), // API-51, CTL-OFC-11-04
+  api(reports, MANAGER), // Read the Reports page, for managers (API-50, SCR-OFC-11)
+  api(reportsExport, MANAGER), // Export the Reports page, for managers (API-51, CTL-OFC-11-04)
   page('SCR-OFC-11', '/office/reports', MANAGER),
 ];

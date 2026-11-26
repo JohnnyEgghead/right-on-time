@@ -54,7 +54,7 @@ export function Fill({ width, className }: { width: string; className?: string }
 }
 
 export type TabId = 'dry' | 'dups' | 'history';
-export const TAB_HREF: Record<TabId, string> = { dry: '/office/admin/import', dups: '/office/admin/import/duplicates', history: '/office/admin/import/history' };
+const TAB_HREF: Record<TabId, string> = { dry: '/office/admin/import', dups: '/office/admin/import/duplicates', history: '/office/admin/import/history' };
 
 export interface FrameProps {
   screen: string;
@@ -138,7 +138,7 @@ export function ImportFrame(p: FrameProps) {
 export interface DialogProps {
   screen: string;
   title: string;
-  /** The close control's ID (CTL-OFC-25-03, CTL-OFC-26-03). */
+  /** The control id of the dialog's close button (CTL-OFC-25-03, CTL-OFC-26-03). */
   closeCtl: string;
   onClose: () => void;
   /** Drawn inside its host (the look comparator's tiles) instead of over the page. */

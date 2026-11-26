@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The native job screens' reads (SCR-TEC-04 to SCR-TEC-07; P5-TWA-JOB's contracts): API-101 with signal, kept on the phone
+// The native job screens' reads (SCR-TEC-04 to SCR-TEC-07; P5-TWA-JOB's contracts): the job (API-101) with signal, kept on the phone
 // (copies.ts) for an open with no signal (SCR-TEC-04 Offline, saved), API-107's parts list kept the same way (UD-35), API-104's drive
 // minutes, and API-07 for who is signed in. A 403 or 404 is SCR-TEC-04's No longer yours: the kept copy is dropped, and any waiting
 // item for the job still sends. The copies are 1 person's: a different person than the copies' clears them before this read's

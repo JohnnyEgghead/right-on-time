@@ -18,7 +18,7 @@ const KEY: Record<DayChange['kind'], MessageKey> = {
   window: 'tech.notice.window',
 };
 
-export const noticeText = (t: ClientT, n: Pick<Notice, 'change' | 'n'>): string =>
+const noticeText = (t: ClientT, n: Pick<Notice, 'change' | 'n'>): string =>
   n.change ? t(KEY[n.change.kind], { job: n.change.job }) : t('tech.notice.several', { n: n.n });
 
 /** The live region: always in the page; each notice shows for the toast's 6 seconds, then leaves. */

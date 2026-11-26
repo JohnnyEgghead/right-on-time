@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Mounting and versioning (SPECIFICATIONS SD-4, section 7.1).
+// Where a contract row is served: under the API base path and version, or at the origin root for the exceptions below (SPECIFICATIONS SD-4, section 7.1).
 export const API_BASE = '/api/v1';
 export const API_VERSIONS = ['v1'] as const;
 /** v1 stays served this many days after the native app version that needs v2 is released. */

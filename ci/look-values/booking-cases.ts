@@ -38,7 +38,7 @@ const within = (appRoot: string, frameRoot: string, inner: string[]): SelectorPa
 const pairs = (appRoot: string, frameRoot: string, list: [string, string?][]): SelectorPair[] => list.map(([a, f]) => ({ app: `${appRoot} ${a}`.trim(), frame: `${frameRoot} ${f ?? a}`.trim() }));
 const tile = (caption: string) => `${cap(caption)} .b`;
 
-// --- SCR-CUS-01, the main picture (Step 1 to 6) ---------------------------------------------------------------------------------------------
+// --- The booking page, steps 1 to 6 (SCR-CUS-01): the main picture ---------------------------------------------------------------------------------------------
 const HERO = ['.hero', '.hero h1', '.hero p', '.hero .steps', '.hero .step', '.hero .step .n', '.hero .step.ok .n', '.hero .step.cur .n', '.hero .steps .line'];
 const LEFT = [
   '.main', '.main .left', '.main .right', '.main .left .box', '.main .left .box h2', '.main .left .box h2 .n', '.main .left .box h2 .chg',
@@ -70,14 +70,14 @@ const LEFT_LAST = `${SCREENS.s1} .main .left > .box:last-child`;
 const RIGHT_LAST = `${SCREENS.s1} .main .right > .box:last-child`;
 const CONT = [['.contb'], ['.contb .go'], ['.contb .go .ic'], ['.contb .k'], ['.contb .k .ic']] as [string, string?][];
 
-// --- SCR-CUS-02, the main picture (Options) --------------------------------------------------------------------------------------------------
+// --- The slot-taken page (SCR-CUS-02): the main picture, Options --------------------------------------------------------------------------------------------------
 const TAKEN_MAIN = [
   '.hero', '.hero h1', '.hero p', '.hero .steps', '.hero .step', '.hero .step .n', '.hero .steps .line', '.main .left .box h2', '.main .svc', '.main .tile',
   '.main .tile.sel', '.main .cal .mh', '.main .grid7', '.main .d', '.main .d.sel', '.main .win', '.main .win.full', '.main .win.few', '.main .win.few .r',
   '.main .alert', '.main .alert .t', '.main .alert h2', '.main .alert p', '.main .alert .t .ic', '.main .winnote', '.main .right .box', '.main .right .box h2', '.main .alts', '.main .alt', '.main .alt .radio', '.main .alt b', '.main .alt small', '.main .alt .r',
   '.main .alt .r.few', '.main .go', '.main .why', '.main .other', '.main .other .ic', '.main .sum', '.main .sum .li', '.main .sum .li b', '.main .sum .li b.none', '.main .right .box h2 small',
 ];
-// --- SCR-CUS-03, the main picture (Success) ----------------------------------------------------------------------------------------------------
+// --- The booking-done page (SCR-CUS-03): the main picture, Success ----------------------------------------------------------------------------------------------------
 const DONE_MAIN = [
   '.hero', '.hero .hl', '.hero .okmark', '.hero .okmark .ic', '.hero h1', '.hero p', '.hero .steps', '.hero .step', '.hero .step .n', '.hero .steps .line', '.main', '.main .col', '.main .box', '.main .box h2',
   '.main .box h2 small', '.main .visit', '.main .visit .big', '.main .visit .big .ico', '.main .visit .big .ico .ic', '.main .visit .big b', '.main .visit .big .win', '.main .visit .big .win strong',
@@ -154,7 +154,7 @@ export const BOOKING_CASES: BookingCase[] = [
     pairs: within(`${SCREENS.s1} .bw-ph`, '.r1-st:has(.grid7) .pg', DAY_STEP),
     widthFrom: [{ app: `${SCREENS.s1} .bw-ph .pg`, frame: '.r1-st:has(.grid7) .pg' }], ready: `${SCREENS.s1} .bw-ph .grid7`, viewport: { width: 520, height: 980 },
   },
-  // SCR-CUS-02
+  // The cases of the booking page shown when the chosen slot is taken (SCR-CUS-02)
   { name: `${S2}Options`, frame: 'taken', captions: [`${S2}Options`], app: '/shell-preview/booking-taken/options', pairs: within(SCREENS.s2, BODY, TAKEN_MAIN), ready: `${SCREENS.s2} .alert` },
   {
     name: `${S2}None nearby`, frame: 'taken', captions: [`${S2}None nearby`], app: '/shell-preview/booking-taken/none-nearby',
@@ -166,7 +166,7 @@ export const BOOKING_CASES: BookingCase[] = [
     pairs: pairs(`${SCREENS.s2} .main .right`, tile(`${S2}Booking`), [['.alts'], ['.alt'], ['.alt.sel'], ['.alt .radio'], ['.alt b'], ['.alt small'], ['.go.busy', '.go.busy'], ['.go.busy .r1-spin', '.go.busy .r1-spin']]),
     widthFrom: [{ app: `${SCREENS.s2} .main .right .alts`, frame: `${tile(`${S2}Booking`)} .alts` }, { app: `${SCREENS.s2} .main .right .go.busy`, frame: `${tile(`${S2}Booking`)} .go.busy` }], ready: `${SCREENS.s2} .go.busy`,
   },
-  // SCR-CUS-03
+  // The cases of the page shown when the booking is done (SCR-CUS-03)
   { name: `${S3}Success`, frame: 'done', captions: [`${S3}Success`], app: '/shell-preview/booking-done/success', pairs: within(SCREENS.s3, BODY, DONE_MAIN), ready: `${SCREENS.s3} .visit` },
   {
     name: `${S3}Loading`, frame: 'done', captions: [`${S3}Loading`], app: '/shell-preview/booking-done/loading',

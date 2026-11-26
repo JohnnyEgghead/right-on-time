@@ -11,8 +11,8 @@ import type { Street } from './model.ts';
 
 export type Answer<T> = { ok: true; data: T } | Refusal;
 
-/** What API-113 takes (CTL-CUS-01-13, CTL-CUS-02-03). */
-export interface BookInput {
+/** What the booking call (API-113) takes: the service, address, day, window and contact (CTL-CUS-01-13, CTL-CUS-02-03). */
+interface BookInput {
   serviceId: string; streetId: string; houseNumber: number; date: string; windowId: string; name: string; mobile: string | null;
   textsOn: boolean; textLanguage: 'en' | 'es'; timeZone: string;
 }

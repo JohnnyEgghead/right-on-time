@@ -72,7 +72,7 @@ interface ClockRowSql {
   last_write_real: Date;
 }
 
-/** Read the clock row (FOR UPDATE when `lock`), with demo now computed at `real` (SD-10's formula). Null before setup. */
+/** Read the clock row (FOR UPDATE when `lock`), with demo now computed at `real` from the clock's anchor and rate (SD-10; paused, it is the anchor). Null before setup. */
 export async function readClockAt(tx: Queryable, real: Date, lock = false): Promise<LockedClock | null> {
   const r = await tx.query<ClockRowSql>(
     `SELECT world_epoch, pbs_epoch, paused, replay_target, last_reset_real, last_write_real,

@@ -29,7 +29,7 @@ export const MANIFEST_FILE = path.join(import.meta.dirname, 'data-manifest.json'
  * which the image does not ship; ci/data-assets.ts re-exports it as DEFAULT_DIR.
  */
 export const DATA_DIR = path.resolve(import.meta.dirname, '..', '..', '..', '.build', 'data');
-export const ENSURE_CMD = 'node ci/data-assets.ts ensure';
+const ENSURE_CMD = 'node ci/data-assets.ts ensure';
 
 export function loadManifest(file = MANIFEST_FILE): DataAsset[] {
   return (JSON.parse(readFileSync(file, 'utf8')) as { assets: DataAsset[] }).assets;
@@ -61,7 +61,7 @@ export class AssetMismatch extends Error {
 }
 
 /** SHA-256 of a file, read in 1 MiB steps: a file past Node's 2 GiB readFileSync limit still hashes (F-365). */
-export function sha256OfFile(file: string): string {
+function sha256OfFile(file: string): string {
   const h = createHash('sha256');
   const fd = openSync(file, 'r');
   try {

@@ -192,7 +192,7 @@ export const addEquipment = defineContract({
   name: 'Add equipment',
   method: 'POST',
   path: '/customers/{customerId}/equipment',
-  // The same fields and limits as API-142 (SCR-OFC-37 add mode); the type is required.
+  // The same fields and limits as Edit equipment (API-142), for the equipment dialog's add mode (SCR-OFC-37); here the type is required.
   request: z.object({
     customerId: z.uuid(),
     type: z.string().trim().min(1).max(80),

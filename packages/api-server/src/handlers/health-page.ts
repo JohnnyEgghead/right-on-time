@@ -96,7 +96,7 @@ async function shapeAlerts(tx: Tx, rows: AlertRow[], caller: CallerRow, zone: st
 }
 
 /** API-43: today's alerts of the types whose bell switch is on, newest first (F-430: the switch is read now, so a bell-off type's alerts are not counted). */
-export const officeAlertsHandler: Handler<Out<typeof officeAlerts>> = async (req, tx) => {
+const officeAlertsHandler: Handler<Out<typeof officeAlerts>> = async (req, tx) => {
   const caller = await callerOf(tx, req);
   if (!caller) return { ok: false, status: 401, code: 'unauthenticated' };
   if (caller === 'gone') return { ok: false, status: 404, code: 'not_found' };
@@ -154,7 +154,7 @@ function nextSunday(after: Temporal.Instant): Temporal.Instant {
 }
 
 /** API-174: this manager's fresh link to their unopened copy (the showAlertEmailLink of the click, never of a read). */
-export const alertEmailLinkHandler: Handler<Out<typeof alertEmailLink>> = async (req, tx) => {
+const alertEmailLinkHandler: Handler<Out<typeof alertEmailLink>> = async (req, tx) => {
   const caller = await callerOf(tx, req);
   if (!caller) return { ok: false, status: 401, code: 'unauthenticated' };
   if (caller === 'gone') return { ok: false, status: 404, code: 'not_found' };
@@ -216,7 +216,7 @@ export function healthHandlers(client = pbsClientFor()): { 'API-43': Handler<unk
       return Math.round(sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2);
     };
 
-    // FR-HLTH-4: the recent alerts and the switches.
+    // The recent alerts and the alert switches (FR-HLTH-4).
     const recent = await tx.query<AlertRow>(
       `SELECT ${ALERT_COLUMNS} FROM world.alert a WHERE (a.branch_id IS NULL OR a.branch_id = $1) AND a.at >= $2::timestamptz - make_interval(days => $3)
         ORDER BY a.at DESC, a.id DESC LIMIT $4`, [caller.branch_id, req.demoNow.toString(), RECENT_DAYS, RECENT_MAX]);
@@ -240,7 +240,7 @@ export function healthHandlers(client = pbsClientFor()): { 'API-43': Handler<unk
       `SELECT o.id, c.name AS customer, o.kind, o.held_until, c.zone FROM world.outbox_text o JOIN world.customer c ON c.id = o.customer_id
         WHERE c.branch_id = $1 AND o.status = 'held' AND o.held_until IS NOT NULL ORDER BY o.held_until, o.id LIMIT 20`, [caller.branch_id]);
 
-    // FR-BILL-2: the billing card.
+    // The billing card: the jobs waiting on a person, today's counts and the last send (FR-BILL-2).
     const { waiting } = await billingList(tx, { branchId: caller.branch_id, now: req.demoNow });
     const counted = await billingToday(tx, { branch: caller.branch_id, zone, now: req.demoNow });
     const listedItems = waiting.filter((w) => w.state === 'waiting_person');

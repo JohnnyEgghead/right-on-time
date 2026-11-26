@@ -11,7 +11,7 @@ export type SimMode = Health['textSimulator']['mode'];
 export type T = (key: MessageKey, values?: Record<string, string | number>) => string;
 
 export const SIM_MODES: readonly SimMode[] = ['up', 'all_fail', 'fail_customer', 'fail_next_n'];
-/** SD-44: N is a whole number from 1 to 20. */
+/** The largest N of the text simulator's Fail the next N sends mode: a whole number from 1 to 20 (SD-44). */
 export const N_MAX = 20;
 
 /** The settings' values of FR-HLTH-2 (SPECIFICATIONS 12.1 DATA_LOCATION_*), each with its catalog words (FR-LANG-2, owner ruling on F-665). */

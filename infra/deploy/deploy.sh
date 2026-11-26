@@ -159,8 +159,9 @@ if [ "$host_files" = 1 ]; then
   ssh_ "sudo rm -rf ${REMOTE_STAGE}" || log "WARN: could not remove the stage $REMOTE_STAGE on the server"
   status_url="http://$DOMAIN/.well-known/acme-challenge/renewal-status.txt"
   body=$(curl -s --max-time 10 "$status_url" || true)
-  log "$status_url -> $(printf '%s' "$body" | head -n 1)"
-  if [ "$rc" = 0 ] && [ "$(printf '%s' "$body" | head -n 1)" = RENEWAL_OK ]; then log "HOST FILES OK"; exit 0; fi
+  first_line=${body%%$'\n'*}
+  log "$status_url -> $first_line"
+  if [ "$rc" = 0 ] && [ "$first_line" = RENEWAL_OK ]; then log "HOST FILES OK"; exit 0; fi
   log "HOST FILES FAILED (server exit $rc)"
   exit 1
 fi
@@ -191,7 +192,8 @@ if [ -n "$release" ]; then
   rdocker() { docker --context "$image_ctx" "$@"; }
   got=$(rdocker image inspect --format '{{.Id}}' "$tag" 2>/dev/null) || { log "STOP: $tag is not in the Docker engine of context $image_ctx"; exit 2; }
   [ "$got" = "$image_id" ] || { log "STOP: $tag (context $image_ctx) is now another image ($got), not the published one ($image_id)"; exit 2; }
-  rdocker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$tag" | grep -q -x -e "PUBLIC_COMMIT=$public_commit" \
+  # F-1926: read the env whole, then match it (no pipe into grep -q under pipefail).
+  img_env=$(rdocker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$tag") && grep -q -x -e "PUBLIC_COMMIT=$public_commit" <<<"$img_env" \
     || { log "STOP: the PUBLIC_COMMIT of $tag is not the public commit $public_commit"; exit 2; }
   got=$(rdocker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$tag")
   [ "$got" = "$public_commit" ] || { log "STOP: the revision label of $tag is '$got', not the public commit $public_commit"; exit 2; }
@@ -222,13 +224,15 @@ log "== transfer $deploy_tag"
 # server_env <tag>: the env of that image on the server (empty when the server does not hold it).
 server_env() { ssh_ "sudo docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' $1 2>/dev/null" || true; }
 if [ -n "$release" ]; then
-  if server_env "$deploy_tag" | grep -q -x -e "PUBLIC_COMMIT=$public_commit"; then
+  srv_env=$(server_env "$deploy_tag")
+  if grep -q -x -e "PUBLIC_COMMIT=$public_commit" <<<"$srv_env"; then
     log "server already holds $deploy_tag with PUBLIC_COMMIT $public_commit, skipped"
   else
     t0=$(date +%s)
     rdocker save "$deploy_tag" | gzip -1 | ssh_ "gunzip | sudo docker load" | sed 's/^/  /'
     log "loaded in $(( $(date +%s) - t0 ))s"
-    server_env "$deploy_tag" | grep -q -x -e "PUBLIC_COMMIT=$public_commit" \
+    srv_env=$(server_env "$deploy_tag")
+    grep -q -x -e "PUBLIC_COMMIT=$public_commit" <<<"$srv_env" \
       || { log "STOP: after the load, the server's $deploy_tag does not carry PUBLIC_COMMIT $public_commit"; exit 1; }
   fi
 elif [ "$deploy_tag" = "$tag" ] && [ "$allow_dirty" != 1 ] && ssh_ "sudo docker image inspect $deploy_tag >/dev/null 2>&1"; then
@@ -254,7 +258,7 @@ cp infra/deploy/server-deploy.sh "$stage/"
 node ci/data-assets.ts ensure >/dev/null
 mkdir -p "$stage/data"
 cp .build/data/street-list.json "$stage/data/"
-# F-388: only the deploy that asks (P8-UNLOCK's, --profile demo) turns the 2 backup timers on; server-deploy.sh reads this marker.
+# F-388: only the deploy that asks (--profile demo) turns the 2 backup timers on; server-deploy.sh reads this marker.
 [ "$profile" != demo ] || : > "$stage/backups-on"
 { grep -v '^#' infra/hosted/hosted.env; [ "$profile" != demo ] || grep -v '^#' infra/profiles/demo.env; } | grep -v '^$' > "$stage/env.files"
 # F-1645: ROUTES from the deploy mode (see the header), never from a file.
@@ -281,7 +285,9 @@ held=$(ssh_ "sudo cat $server_maps/.verified.sha256 2>/dev/null" || true)
 to_send=()
 bytes=0
 while IFS= read -r line; do
-  if ! printf '%s\n' "$held" | grep -q -x -F -e "$line"; then
+  # F-1926: a here-string, not a pipe. Under pipefail, grep -q leaves at its first match and the printf still writing took
+  # SIGPIPE, so a held file read as missing (and was re-sent). A here-string has no writer to take a signal.
+  if ! grep -q -x -F -e "$line" <<<"$held"; then
     f="${line#*  }"
     to_send+=("$f")
     bytes=$((bytes + $(wc -c < ".build/data/maps/$f")))
@@ -348,7 +354,8 @@ done
 log "routes $want expected: $([ "$as_want" = 1 ] && echo 'every probe answers so' || echo 'NOT every probe answers so')"
 # F-1808 (F-214's live clause): the live site sends Strict-Transport-Security, read from a real answer, not from the config files.
 hsts=0
-if curl -s -D - -o /dev/null --max-time 10 "https://$DOMAIN/" 2>/dev/null | tr -d '\r' | grep -qi '^strict-transport-security: .*max-age=[1-9]'; then hsts=1; fi
+hsts_headers=$(curl -s -D - -o /dev/null --max-time 10 "https://$DOMAIN/" 2>/dev/null | tr -d '\r') || hsts_headers=''
+if grep -qi '^strict-transport-security: .*max-age=[1-9]' <<<"$hsts_headers"; then hsts=1; fi
 log "https://$DOMAIN/ sends Strict-Transport-Security: $([ "$hsts" = 1 ] && echo yes || echo 'NO')"
 
 if [ -n "$drill" ]; then

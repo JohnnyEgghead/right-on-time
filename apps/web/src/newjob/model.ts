@@ -111,7 +111,7 @@ export function confirmationKey(answer: { status: string } | null): MessageKey {
 }
 
 /** The toast handed to the job page that opens after Schedule (the page that opens shows CMP-11 for it). */
-export const HANDOFF_KEY = 'bw.newjob.toast';
+const HANDOFF_KEY = 'bw.newjob.toast';
 export interface Handoff { jobNumber: number; key: MessageKey; values: Record<string, string | number> }
 export function writeHandoff(h: Handoff): void {
   try {
@@ -149,7 +149,7 @@ export const visitOfDetail = (d: Detail): Visit | null => {
 };
 
 /**
- * The refusal words of Schedule: API-28's technician_no_room names the limit that refused it, in SCR-OFC-04's own 3 texts (F-1800); an answer
+ * The refusal words of Schedule: API-28's technician_no_room names the limit that refused it, in the New job page's own 3 texts (SCR-OFC-04; F-1800); an answer
  * with no limit is a server fault and keeps no text of its own (F-1813). The job writes' shared codes (time_overlap names the block) follow.
  */
 export function scheduleShown(r: Refusal, name: string, window: string): Shown {

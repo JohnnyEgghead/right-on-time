@@ -9,7 +9,7 @@ export const ONE_TIME: Access = { kind: 'one_time' };
 export const token = (tokenKind: TokenKind): Access => ({ kind: 'token', tokenKind });
 export const roles = (...r: Role[]): Access => ({ kind: 'roles', roles: r });
 
-/** Office staff and managers (UI-SPECIFICATION 2.4, D13). */
+/** The office role and the manager role together (UI-SPECIFICATION 2.4, D13). */
 export const OFFICE = roles('office', 'manager');
 export const MANAGER = roles('manager');
 export const TECHNICIAN = roles('technician');
@@ -21,7 +21,7 @@ export function api(row: ContractRow, access: Access): ApiPolicyEntry {
   };
 }
 
-/** A page route of UI-SPECIFICATION 2.3. `beforeAccessCode` only for the 2 sign-in pages (SD-47 step 1). */
+/** A page route: a screen, a path and its access (UI-SPECIFICATION 2.3). `beforeAccessCode` is true only for the 2 sign-in pages, which open without the access code (SD-47 step 1). */
 export function page(screen: `SCR-${string}`, path: string, access: Access, beforeAccessCode = false): PagePolicyEntry {
   return { kind: 'page', screen, path, access, beforeAccessCode };
 }

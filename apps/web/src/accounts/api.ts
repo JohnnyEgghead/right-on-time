@@ -30,7 +30,6 @@ export type RoleAreas = z.output<typeof roleAccess.response>['areas'];
 export type UserChange = z.output<typeof userChanges.response>['changes'][number];
 export type OpenedEmail = z.output<typeof emailByLink.response>;
 export type PasswordLinkInfo = z.output<typeof passwordLink.response>;
-export type ResetAnswer = z.output<typeof requestReset.response>;
 export type InviteAnswer = z.output<typeof inviteUser.response>;
 
 type T = (key: MessageKey, values?: Record<string, string | number>) => string;

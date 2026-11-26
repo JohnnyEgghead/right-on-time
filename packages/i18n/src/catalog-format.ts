@@ -4,7 +4,7 @@
 
 export type CatalogMap = Record<string, string>;
 
-export function sortedKeys(map: CatalogMap): string[] {
+function sortedKeys(map: CatalogMap): string[] {
   return Object.keys(map).sort();
 }
 

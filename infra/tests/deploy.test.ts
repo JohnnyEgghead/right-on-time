@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Static checks of infra/deploy/deploy.sh. The live proof is the deploy logs in
-// .build/evidence/P1-DEPLOY; these tests keep a later edit from bringing the F-94 class back.
+// .build/evidence/P1-DEPLOY; these tests keep a later edit from bringing back the fault of F-94 (a root-owned stage left on the server, which stopped the next deploy) or adding a shell syntax error.
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -13,7 +13,7 @@ const code = lines.map((l) => l.replace(/^\s*#.*$/, ''));
 const lineOf = (re: RegExp) => code.findIndex((l) => re.test(l));
 
 describe('infra/deploy/deploy.sh', () => {
-  // why: F-94
+  // why: F-94 - an edit of deploy.sh that does not parse stops every deploy, as the fault of F-94 did
   it('parses as bash', () => {
     expect(() => execFileSync('bash', ['-n', script])).not.toThrow();
   });

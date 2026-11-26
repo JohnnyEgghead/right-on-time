@@ -78,7 +78,7 @@ describe('an office new job with a technician, routing on (F-1509)', () => {
     expect.soft(await rows<{ from_ref: string; to_ref: string; build_id: string }>(
       `SELECT from_ref, to_ref, build_id FROM world.van_track WHERE to_ref = ANY($1::text[]) ORDER BY from_ref, to_ref`, [[String(a), String(b)]]))
       .toEqual([{ from_ref: String(a), to_ref: String(b), build_id: 'live' }, { from_ref: 'depot', to_ref: String(a), build_id: 'live' }]);
-    // SD-15: both planned arrivals come from the routes (FakeRouting's 150 s: 3 minutes a leg), not from SD-22's minutes.
+    // SD-15: both planned arrivals come from the routes (FakeRouting's 150 s: 3 minutes a leg), not from the approximate minutes (SD-22).
     const day = await rows<{ job_number: number; window_start: Date; booked_at: Date; expected_minutes: number; lon: number; lat: number; planned_arrival: Date; shift_start: Date; depot_lon: number; depot_lat: number }>(
       `SELECT j.job_number, j.window_start, j.booked_at, j.expected_minutes, c.lon, c.lat, j.planned_arrival,
               (j.date + t.shift_start) AT TIME ZONE b.zone AS shift_start, b.depot_lon, b.depot_lat

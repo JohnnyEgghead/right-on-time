@@ -14,7 +14,7 @@ import { pgAdminUrl } from './provided.ts';
  * client is already executing a query"), so each later test waits out its own timeout too and the file outlasts its
  * gate's limit. Here the overlapping call is refused at once and names the query still in flight.
  */
-export function oneQueryInFlight(c: Queryable): Queryable {
+function oneQueryInFlight(c: Queryable): Queryable {
   let inFlight: string | null = null;
   return {
     async query<R>(text: string, values?: unknown[]) {

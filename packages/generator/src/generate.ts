@@ -77,24 +77,24 @@ export const TARGETS = {
  * FR-BOOK-6: the Columbus branch's 5 two-hour windows take at most 12, 12, 11, 11 and 10 bookings, in time order.
  * The demo week's weekdays book 2 under each limit (46 a day), so the booking site still offers every window (F-201).
  */
-export const COLUMBUS_WINDOW_LIMITS = [12, 12, 11, 11, 10] as const;
-export const DEMO_COLUMBUS_WINDOWS = COLUMBUS_WINDOW_LIMITS.map((n) => n - 2);
+const COLUMBUS_WINDOW_LIMITS = [12, 12, 11, 11, 10] as const;
+const DEMO_COLUMBUS_WINDOWS = COLUMBUS_WINDOW_LIMITS.map((n) => n - 2);
 /**
  * F-236: the sample day's Columbus windows follow the approved Sep 15 booking page (mockups/pages/customer-booking.html):
  * 8-10 Full (12 of 12, so FR-BOOK-6's 13th booking is refused), 10-12 Open (8 of 12), 12-2 "2 left" (9 of 11),
  * 2-4 Full (11 of 11), 4-6 Open (6 of 10). The other demo weekdays keep DEMO_COLUMBUS_WINDOWS.
  */
-export const SAMPLE_DAY_COLUMBUS_WINDOWS = [12, 8, 9, 11, 6] as const;
+const SAMPLE_DAY_COLUMBUS_WINDOWS = [12, 8, 9, 11, 6] as const;
 /**
  * F-236: Dayton's demo weekdays book 29 jobs (6, 6, 6, 6, 5 by window) for its 6 technicians of 5 a day each, so 1
  * Dayton technician has room every weekday instead of all 6 at 5 of 5.
  */
-export const DEMO_DAYTON_WINDOWS = [6, 6, 6, 6, 5] as const;
+const DEMO_DAYTON_WINDOWS = [6, 6, 6, 6, 5] as const;
 
 /** The export's 1 fixed stamp: Mon, Aug 31, 2026, 5:00 AM America/New_York (EDT, UTC-4) (SD-24). */
 export const EXPORTED_AT = '2026-08-31T05:00:00-04:00';
-export const BRANCH_ZONE = 'America/New_York';
-export const LAST_VISIT_DAY = day('2026-08-30');
+const BRANCH_ZONE = 'America/New_York';
+const LAST_VISIT_DAY = day('2026-08-30');
 const HISTORY_START = day('2020-09-01');
 export const PILOT_FIRST = day('2026-06-01');
 export const AFTER_FIRST = day('2026-07-20');
@@ -107,7 +107,7 @@ const FIRST_LIVE_JOB_NUMBER = 24_800;
 const HAROLD_SAMPLE_JOB = 24_830;
 
 /** A story job's sample-day visit (SD-21): the script row's minutes the page's 10:28 AM state needs, set over the drawn row. */
-export interface StoryScript { onMyWayLeadMinutes?: number; arrivalDelayMinutes?: number; workMinutes: number }
+interface StoryScript { onMyWayLeadMinutes?: number; arrivalDelayMinutes?: number; workMinutes: number }
 
 /** A job the requirements or an approved page tell as a story (F-238, F-292, F-318, F-555), pinned so no renumbering moves it. */
 export interface StoryJob {
@@ -163,7 +163,7 @@ export const STORY_JOBS: readonly StoryJob[] = [
   // more minutes after its plan). Greg Hoffman: 24810, then 24815 handed to him from Brian Schaefer, arriving 10:59, so
   // 24805 is Late, ETA 12:25 PM, and its plan of 11:27 sends the text. Jamal Carter: 24809, then 24814 handed to him from Tom
   // Reinhart, booked before 24797 and on site from 10:18, so 24797 is At risk, ETA 11:50 AM, 18 minutes after its 11:32
-  // plan: no text. 24821 (SD-49's stop, above) is placed on Jamal's 12-2 PM job and handed to Dave Kowalski, off 24797's
+  // plan: no text. 24821 (the stop the 6 baked legs named above end at; F-1444) is placed on Jamal's 12-2 PM job and handed to Dave Kowalski, off 24797's
   // route, so it is on time. Ashley Nguyen at 24803 from 8:55, with 24812's 2 hours after it, makes 24819 At risk, 19
   // minutes over its plan. Luis Ortega's 24804 arrives on its plan, so his day is on time (its drawn row ran 40 minutes late
   // and made 24822, 24813 and 24833 Late and At risk). Each service is one its technician's skills cover (F-1663). 24812
@@ -225,7 +225,7 @@ export const EQUIPMENT_COLUMNS = [
 // ---------------------------------------------------------------------------------------------------------------
 // Keys shared with the checks
 
-export const streetKey = (s: { name: string; city: string; zip: string }): string => `${s.name}|${s.city}|${s.zip}`;
+const streetKey = (s: { name: string; city: string; zip: string }): string => `${s.name}|${s.city}|${s.zip}`;
 export const digits = (s: string): string => s.replace(/\D/g, '');
 
 /** The import's exact-match key (section 6.7): folded name, street and house number, mobile digits. */
@@ -638,14 +638,15 @@ class Generator {
   }
 
   private truthJson(): string {
+    const seed = this.input.seed ?? SEED;
     const rows = (kind: 'exact' | 'likely') => this.pairs
       .filter((p) => p.kind === kind)
       .map((p) => (p.a.ref < p.b.ref ? [p.a.ref, p.b.ref] : [p.b.ref, p.a.ref]) as [number, number])
       .sort((x, y) => x[0] - y[0])
       .map(([a, b]) => ({ a: custRef(a), b: custRef(b) }));
     return jsonLines({
-      _doc: 'The planted-truth file (FR-IMP-3, FR-IMP-6): every planted duplicate pair by customers.csv customer_ref; a is the pair\'s row that comes first in customers.csv (record A, OI-50). Written by @bw/generator from seed 20260915.',
-      seed: SEED,
+      _doc: 'The planted-truth file (FR-IMP-3, FR-IMP-6): every planted duplicate pair by customers.csv customer_ref; a is the pair\'s row that comes first in customers.csv (record A, OI-50). Written by @bw/generator from seed ' + seed + '.',
+      seed,
       counts: { exact: TARGETS.exactPairs, likely: TARGETS.likelyPairs },
       exact: rows('exact'),
       likely: rows('likely'),
@@ -820,9 +821,10 @@ class Generator {
     ]));
   }
 
-  // ----- the world seed's fixture (D-3 step 2) -----
+  // ----- the world seed's fixture (D-3 step 2): the customers its rows name (the import writes them, the seed finds them), pilot and demo-week jobs, pilot calls, memberships and the sample day script -----
 
   private makeFixture(visits: Visit[]): string {
+    const seed = this.input.seed ?? SEED;
     const rng = this.rng;
     const named = new Map(this.customers.filter((c) => c.named !== '').map((c) => [c.named, c]));
     const used = new Set<number>();
@@ -989,8 +991,8 @@ class Generator {
       bookedVia: j.bookedVia, bookedAt: j.bookedAt,
     });
     return jsonLines({
-      _doc: 'The world seed\'s fixture (BUILD_PLAN D-3 step 2; SD-21, SD-25), written by @bw/generator from seed 20260915. Times are local wall clock in zone; job and call customers are named by customers.ref, and customers carries the import\'s exact-match key (nameSearch, street, city, zip, houseNumber) the world seed resolves (R-BP1). No customer here is in a truth.json pair. Technicians are employee numbers of technicians.json; services are the ids of the generator README. sampleDayScript holds each visit\'s minutes; the world seed chains them on the technician-day (src/chain.ts), since the drive minutes need the baked tracks.',
-      seed: SEED,
+      _doc: 'The world seed\'s fixture (BUILD_PLAN D-3 step 2; SD-21, SD-25), written by @bw/generator from seed ' + seed + '. Times are local wall clock in zone; job and call customers are named by customers.ref, and customers carries the import\'s exact-match key (nameSearch, street, city, zip, houseNumber) the world seed resolves (R-BP1). No customer here is in a truth.json pair. Technicians are employee numbers of technicians.json; services are the ids of the generator README. sampleDayScript holds each visit\'s minutes; the world seed chains them on the technician-day (src/chain.ts), since the drive minutes need the baked tracks.',
+      seed,
       zone: BRANCH_ZONE,
       customers: fixtureCustomers,
       pilotJobs: pilotJobs.map(job),
@@ -1166,8 +1168,8 @@ class Generator {
 }
 
 /** Calls per 100 visits: STORY's 260 calls a day over about 380 visits a day before; half that after (SD-25). */
-export const CALLS_PER_100_BEFORE = 68;
-export const CALLS_PER_100_AFTER = 34;
+const CALLS_PER_100_BEFORE = 68;
+const CALLS_PER_100_AFTER = 34;
 
 /** SD-25 quotas for n visits: no one home, then on time among the rest. */
 export function quota(n: number, period: 'before' | 'after'): { noh: number; on: number } {
@@ -1214,7 +1216,7 @@ function typoOf(rng: Prng, last: string): string | null {
 }
 
 /** JSON with 1 array element per line: stable, diffable and byte-identical (key order is construction order). */
-export function jsonLines(obj: Record<string, unknown>): string {
+function jsonLines(obj: Record<string, unknown>): string {
   const parts = Object.entries(obj).map(([k, v]) => {
     if (Array.isArray(v)) return `${JSON.stringify(k)}: [\n${v.map((x) => JSON.stringify(x)).join(',\n')}\n]`;
     return `${JSON.stringify(k)}: ${JSON.stringify(v)}`;

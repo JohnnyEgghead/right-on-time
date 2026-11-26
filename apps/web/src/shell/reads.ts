@@ -5,15 +5,17 @@
 // waits on, at P2-SHELL: API-02 (app info), API-07 (who am I), API-08 (save my settings), API-10 (the clock),
 // API-43 (office alerts), API-130 (search), API-06 (sign out). When a row lands, its read works with no change here.
 import { allContracts, ApiError, createClient, type ApiClient, type ContractRow } from '@bw/api';
+import { forgetSessionEpoch, rememberSessionEpoch } from '../auth/reset-reason.ts';
 
-export type ShellContractId = 'API-01' | 'API-02' | 'API-03' | 'API-04' | 'API-05' | 'API-06' | 'API-15' | 'API-07' | 'API-08' | 'API-10' | 'API-43' | 'API-130' | 'API-174' | 'API-176';
+type ShellContractId = 'API-01' | 'API-02' | 'API-03' | 'API-04' | 'API-05' | 'API-06' | 'API-15' | 'API-07' | 'API-08' | 'API-10' | 'API-43' | 'API-130' | 'API-174' | 'API-176';
 
 export type ReadResult<T> =
-  | { ok: true; data: T }
+  /** epoch: the world epoch the answer's envelope carries, when it has one. */
+  | { ok: true; data: T; epoch?: number }
   /** unavailable: no contract row in @bw/api yet. failed: the call answered a Problem or did not answer. */
   | { ok: false; reason: 'unavailable' | 'failed'; code?: string; status?: number };
 
-export function findRow(id: ShellContractId, rows: readonly ContractRow[] = allContracts): ContractRow | undefined {
+function findRow(id: ShellContractId, rows: readonly ContractRow[] = allContracts): ContractRow | undefined {
   return rows.find((r) => r.id === id);
 }
 
@@ -29,7 +31,11 @@ export function createReader(opts: { client?: ApiClient; baseUrl?: string; rows?
       if (!row) return { ok: false, reason: 'unavailable' };
       try {
         const answer = await client.call(row, input);
-        return { ok: true, data: answer.data as T };
+        if (id === 'API-06') forgetSessionEpoch(); // a sign-out the person asked for leaves no reset to explain
+        const epoch = answer.envelope?.meta.worldEpoch;
+        // Who am I answers only while the session lives: it is what proves a signed-in page and the world it was in.
+        if (id === 'API-07' && typeof epoch === 'number') rememberSessionEpoch(epoch);
+        return { ok: true, data: answer.data as T, ...(typeof epoch === 'number' ? { epoch } : {}) };
       } catch (e) {
         if (e instanceof ApiError) return { ok: false, reason: 'failed', code: e.problem.code, status: e.status };
         return { ok: false, reason: 'failed' };

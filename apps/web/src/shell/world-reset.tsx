@@ -12,7 +12,7 @@ import { useAnnounce } from './Announcer.tsx';
 import type { ClockAnswer } from './clock.ts';
 import { useT } from './intl.tsx';
 
-/** CTL-CMP-02-03's demo time, and the last move that made it: the notice gives way to the next move (CTL-CMP-02-01). */
+/** The world reset notice (CTL-CMP-02-03): the demo time, and the last move that made it; the notice gives way to the next move (CTL-CMP-02-01). */
 export interface ResetNotice {
   to: string;
   move: string;

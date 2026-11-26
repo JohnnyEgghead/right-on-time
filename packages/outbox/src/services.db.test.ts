@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The outbox's in-transaction services on PostgreSQL 18 as the web process's login bw_web (role app): enqueueText
-// (section 5.2 steps 1 and 2), reply intake with SD-46's target visit (FR-TEXT-8, OI-16) and Try now's precondition.
+// (section 5.2 steps 1 and 2), reply intake with its target visit (SD-46, FR-TEXT-8, OI-16) and Try now's precondition.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { inTransaction } from '@bw/db';
 import { useMigratedDatabase } from '../../db/src/testing/fixture.ts';

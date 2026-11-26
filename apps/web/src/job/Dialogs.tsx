@@ -20,7 +20,7 @@ import { useVersionedWrite } from './conflict.tsx';
 import { editRefusalShown, equipmentSuggestions, equipmentTypeSent, equipmentWord, refusalShown, rescheduleDone, textCount, type Job, type Refusal, type Shown } from './model.ts';
 
 type Done = (toast: Shown) => void;
-/** onKeep: SCR-OFC-19's Keep their change, which closes and re-reads (default: onClose). */
+/** onKeep: Keep their change, in the Someone else changed this job dialog (SCR-OFC-19), which closes and re-reads (default: onClose). */
 interface Common { job: Job; api: JobApi; onClose: () => void; onDone: Done; onKeep?: () => void; inline?: boolean }
 /**
  * The 3 dialogs the customer page hosts (F-671, D-19): SCR-OFC-35 Text, SCR-OFC-36 Add note and SCR-OFC-37 Add or edit equipment take a job (the job

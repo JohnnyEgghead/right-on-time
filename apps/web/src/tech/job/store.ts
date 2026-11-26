@@ -35,7 +35,7 @@ interface JobRow { jobNumber: number; job: JobCopy; savedRealMs: number }
 interface DraftRow { jobNumber: number; text: string }
 type PartsRow = { id: 'me'; name: string };
 
-export const JOBS_DB_NAME = 'bw-tech-jobs';
+const JOBS_DB_NAME = 'bw-tech-jobs';
 
 export class JobCopyStore {
   readonly db: Dexie;

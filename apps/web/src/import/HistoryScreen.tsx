@@ -17,7 +17,7 @@ import { BusyLabel, call, Dialog, ImportFrame, type FrameProps } from './ui.tsx'
 
 export type Part<T> = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: T };
 /** The merges loaded so far and the total the search matches (API-87 total: "Showing 5 of 1,206 merges"). */
-export interface MergesData { items: MergeItem[]; next: string | null; total: number }
+interface MergesData { items: MergeItem[]; next: string | null; total: number }
 export interface HistoryState { runs: Part<RunsAnswer>; merges: Part<MergesData>; dupCount?: number | null }
 export interface HistoryUi {
   find: string;

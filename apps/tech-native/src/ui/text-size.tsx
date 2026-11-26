@@ -12,7 +12,7 @@ const Scale = createContext<TextSize>('standard');
 export const TextSizeProvider = Scale.Provider;
 
 /** The text size in force where this is read (Standard with no provider above, as signed out). */
-export const useTextSize = (): TextSize => useContext(Scale);
+const useTextSize = (): TextSize => useContext(Scale);
 
 /** Text at the chosen size: the font size and the line height grow by the choice's share (Standard 100%, Large 112.5%, Larger 125%). */
 export function T(props: TextProps & { lkId?: string }) {

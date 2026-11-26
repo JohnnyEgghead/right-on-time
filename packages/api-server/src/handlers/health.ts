@@ -6,7 +6,7 @@
 import type { Handler } from '../types.ts';
 
 /** The heartbeat is stale at this age: the worker writes every 10 s, so 60 s is 6 missed beats. */
-export const HEARTBEAT_LIMIT_MS = 60_000;
+const HEARTBEAT_LIMIT_MS = 60_000;
 
 export const health: Handler<{ status: 'ok' }> = async (_req, tx, ctx) => {
   const r = await tx.query<{ beat_real: Date }>('SELECT beat_real FROM system.worker_heartbeat WHERE id = 1');

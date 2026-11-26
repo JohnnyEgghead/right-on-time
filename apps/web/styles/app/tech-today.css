@@ -30,7 +30,7 @@
 .bw-sheet-host .eta .ic { width: 26px; height: 26px; }
 .bw-sheet-host .eta b { font-size: 19px; font-weight: 760; display: block; letter-spacing: -.01em; }
 .bw-sheet-host .eta small { display: block; font-size: 13.5px; color: #24479a; font-weight: 550; }
-.bw-sheet-host .lab { white-space: nowrap; display: flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 12.5px; font-weight: 750; color: var(--ink-600); text-transform: uppercase; letter-spacing: .06em; }
+.bw-sheet-host .lab { white-space: nowrap; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; font-size: 12.5px; font-weight: 750; color: var(--ink-600); text-transform: uppercase; letter-spacing: .06em; }
 .bw-sheet-host .lab .ic { width: 15px; height: 15px; }
 .bw-sheet-host .lab .lang { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 650; color: var(--teal-700); background: var(--teal-50); border: 1px solid var(--teal-200); border-radius: 999px; padding: 2px 9px; }
 .bw-sheet-host .bubble { margin-top: 7px; background: #e9e9eb; border-radius: 18px 18px 18px 6px; padding: 10px 14px; font-size: 15px; line-height: 1.38; color: #111; }

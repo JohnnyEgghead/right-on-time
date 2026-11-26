@@ -15,7 +15,7 @@ import { checkParity } from '../../i18n/src/parity.ts';
 const catalog = textCatalogOf(catalogs);
 const LINK_HOST = 'bw.j7l.io';
 
-/** SD-17's fixed-copy budgets per template: [English, Spanish]. */
+/** The most characters of fixed copy (the text outside its slots) each template may hold when every slot is at its maximum: [English, Spanish] (SD-17). */
 const FIXED_BUDGET: Record<string, [number, number]> = {
   confirmation: [114, 106], reminder: [145, 140], on_the_way: [112, 112], late: [142, 142], r_reply: [117, 114],
 };

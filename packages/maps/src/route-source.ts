@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// SD-49's route source (SPECIFICATIONS v0.13 SD-49, SD-15, SD-22; owner ruling a923acaa, Nov 9, 2026, "Add live routing"; F-1255;
-// P6-LIVE-ROUTING). Every leg a reader needs, API-21, API-104, API-116, API-135 and API-163, the planned arrival and the ETA of SD-15 and
+// The route source (SD-49; SD-15, SD-22): baked tracks first, then live routing from the routing service.
+// Every leg a reader needs, API-21, API-104, API-116, API-135 and API-163, the planned arrival and the ETA of SD-15 and
 // the van positions of SD-22, comes from {@link legFor} (or {@link legsFor}, its batch, and {@link routedDrive}, its planner form), which
 // answers the first of:
 //   1. the stop pair's world.van_track row, baked (loaded at setup) or live (written by step 2 earlier in this world);
@@ -58,10 +58,10 @@ export interface RouteTrack {
 
 /** The route source's answer for 1 leg. */
 export interface LegAnswer {
-  /** `baked` or `live`: the track below; `approximate`: SD-22's straight line, no track and no steps. */
+  /** `baked` or `live`: the track below; `approximate`: a straight line (SD-22), no track and no steps. */
   source: 'baked' | 'live' | 'approximate';
   track: RouteTrack | null;
-  /** SD-15's drive minutes: the track's last cumulative second / 60 rounded up, else SD-22's approximate minutes. */
+  /** The drive minutes of the leg (SD-15): the track's last cumulative second / 60 rounded up, else the approximate (SD-22) minutes. */
   minutes: number;
 }
 

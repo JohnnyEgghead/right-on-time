@@ -12,6 +12,14 @@ A scheduling and dispatch app for a heating, cooling and plumbing service compan
 
 Brightwater Heating & Air and its people are fictional. This is a demo.
 
+## Status
+
+Right On Time v1 is complete. The owner accepted the v1 sign-off on November 26, 2026.
+
+- The hosted demo and the public copy run release v1.0.4.
+- v1.0.4 adds the phase 9 closing fixes, a board change, a code cleanup, and a newer Next.js (16.4.6; v1.0.3 used 16.4.2).
+- The iPhone app stays at version 1.0.1 (build 9). v1.0.4 changes no call or answer shape that app uses.
+
 ## License
 
 - The program code is under the **GNU Affero General Public License, version 3 or any later version** (`LICENSE`). Every source file carries the line `SPDX-License-Identifier: AGPL-3.0-or-later`.

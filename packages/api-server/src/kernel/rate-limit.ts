@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Rate limits (SPECIFICATIONS 7.1): link-token routes 60 per minute per address; API-01 and API-03 10 per minute per
-// address; API-03 20 per hour per login; API-01 20 per hour per address; API-165 5 per hour per address.
-// API-01's hourly cap is keyed by address because an access-code request carries no login, so a per-login rule never
+// Rate limits (SPECIFICATIONS 7.1): link-token routes 60 per minute per address; the access code call (API-01) and
+// sign-in (API-03) 10 per minute per address; sign-in 20 per hour per login; the access code call 20 per hour per address;
+// a password reset request (API-165) 5 per hour per address.
+// The access code call's hourly cap is keyed by address because an access-code request carries no login, so a per-login rule never
 // applied to it (F-1851, audit J-04). Owner answer c456ba21 (Nov 16, 2026), "Per address": 20 per hour from each
 // address, so 1 stranger cannot lock everyone else out, and a caller with many addresses gets 20 an hour from each.
 // Windows are real time (realNow('rate_limit'), section 11.3), so a demo clock jump never resets a limit. Over the limit: 429 rate_limited.

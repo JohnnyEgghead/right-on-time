@@ -4,7 +4,7 @@
 // reads are not ordered, and the first to land takes the diff. So the announcement is not decided by the read that EVT-04 alert.created
 // started: while that read is out, whichever read lands with a new alert announces it, once.
 
-export interface BellLanding<A> {
+interface BellLanding<A> {
   /** The newest alert this read added to the seen set, or undefined. */
   added: A | undefined;
   /** True when CMP-11 should announce `added`. */

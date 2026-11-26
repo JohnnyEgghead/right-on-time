@@ -77,7 +77,7 @@ describe.each(engines)('booking page look on %s', (engine, type) => {
       await g.context.close();
     }
     expect(byFrame.desktop).toHaveLength(10);
-    expect(byFrame.phone).toHaveLength(2); // the second is CMP-15's Menu tile, the shell's
+    expect(byFrame.phone).toHaveLength(2); // the second is the shell's Menu tile (CMP-15)
     expect(byFrame.taken).toHaveLength(4);
     expect(byFrame.done).toHaveLength(4);
     expect(uncoveredBooking(byFrame)).toEqual([]);

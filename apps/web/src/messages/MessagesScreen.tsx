@@ -6,11 +6,11 @@
 // The office kit slices first: a page's own sheet comes after them, as its frame's does.
 import '../shell/css/office.ts';
 import '../../styles/page-office-messages.css';
-import { ApiError, callList, createClient, readClock, textDetail, textLog, textLogExport, tryTextNow, addToCallList, type z } from '@bw/api';
-import { fromWire } from '@bw/time';
+import { ApiError, callList, createClient, textDetail, textLog, textLogExport, tryTextNow, addToCallList, type z } from '@bw/api';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { branchById } from '../shell/branches.ts';
+import { officeClock, useDemoDay } from '../shell/demo-day.ts';
 import { OfficeFrame } from '../shell/Frames.tsx';
 import { useT } from '../shell/intl.tsx';
 import { useBranch } from '../shell/useBranch.ts';
@@ -20,7 +20,7 @@ import { useMessagesLive } from './useMessagesLive.ts';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const FRESH_MS = 4000;
-const LOG_EVENTS = ['text.changed', 'world.reset'] as const;
+const LOG_EVENTS = ['text.changed'] as const;
 
 const IDLE: DetailView = { state: 'loading', data: null, trying: false, tried: null, adding: false, added: null, message: null };
 
@@ -46,8 +46,10 @@ export function MessagesScreen() {
   const branch = useBranch();
   const zone = branchById(branch).zone;
   const dateParam = params.get('date');
-  const [today, setToday] = useState<string | null>(null);
-  const date = dateParam && DATE.test(dateParam) ? dateParam : today;
+  // The demo clock's today (API-10): the day shown while the URL names none (UD-18).
+  const { day: today, readDay } = useDemoDay(officeClock);
+  const following = !(dateParam && DATE.test(dateParam));
+  const date = following ? today : dateParam;
   const [filters, setFilters] = useState<LogFilters>(NO_FILTERS);
   const [applied, setApplied] = useState<LogFilters>(NO_FILTERS);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -55,6 +57,13 @@ export function MessagesScreen() {
   const [data, setData] = useState<LogData | null>(null);
   const [callCount, setCallCount] = useState<number | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
+  // Another day is another list: its first page, with no row open.
+  const [listDay, setListDay] = useState(date);
+  if (listDay !== date) {
+    setListDay(date);
+    setCursor(null);
+    setPicked(null);
+  }
   const [detail, setDetail] = useState<DetailView>(IDLE);
   const [fresh, setFresh] = useState<ReadonlySet<string>>(new Set());
   const [exporting, setExporting] = useState(false);
@@ -67,17 +76,6 @@ export function MessagesScreen() {
   // The read must not change identity on each render (useT is a new function each time): the effects below would read again forever.
   const say = useRef(t);
   say.current = t;
-
-  // The demo clock's today (API-10): the day shown when the URL names none.
-  useEffect(() => {
-    let alive = true;
-    void client.call(readClock, {}).then((r) => {
-      if (alive) setToday(fromWire(r.data.demoNow).toPlainDate().toString());
-    }).catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, [client]);
 
   // The customer search applies after a pause in typing; every other filter at once.
   useEffect(() => {
@@ -113,9 +111,11 @@ export function MessagesScreen() {
     if (branch === null || date === null) return;
     try {
       const r = await client.call(callList, { branch, date });
+      // A count for a day or branch no longer shown is dropped, as load() drops its rows (F-1977).
+      if (shown.current.branch !== branch || shown.current.date !== date) return;
       setCallCount(r.data.count);
     } catch {
-      setCallCount(null);
+      if (shown.current.branch === branch && shown.current.date === date) setCallCount(null);
     }
   }, [client, branch, date]);
 
@@ -149,7 +149,7 @@ export function MessagesScreen() {
     void load();
     void loadCount();
     if (notice?.textId && pickedRef.current === `text:${notice.textId}`) void loadDetail(pickedRef.current, true);
-  });
+  }, { following, day: today, readDay });
 
   const go = (nextDate: string) => {
     const q = new URLSearchParams({ branch: branch ?? 'columbus', date: nextDate });

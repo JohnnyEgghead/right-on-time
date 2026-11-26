@@ -154,6 +154,45 @@ describe.each(engines)('the demo clock page on the Compose stack, %s', (engine, 
     if (resetFlow) {
       // The cool-down note counts down; Reset is on again when it is over (a timer in the page, the server's seconds from API-10).
       await until('the Reset button to be on', async () => (await resetButton(dana).getAttribute('aria-disabled')) !== 'true', 420_000);
+      // An invited manager signs in by password without the access code and opens the office. The reset erases that account.
+      const email = `rita.cole.${engine}@example.test`;
+      const invite = await dana.evaluate(async (addr) => {
+        const r = await fetch('/api/v1/users/invitations', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Rita Cole', email: addr, role: 'manager', branch: 'columbus' }) });
+        return { status: r.status, link: ((await r.json()) as { data?: { emailLink?: string } }).data?.emailLink ?? '' };
+      }, email);
+      expect(invite.status, 'the invite was sent').toBe(201);
+      const mg = await guardedContext(browser, [origin], DESKTOP);
+      contexts.push(mg.context);
+      const mail = await mg.context.newPage();
+      await writeOrigin(mail);
+      // This browser has not entered the access code: the invite email page is behind it.
+      await mail.goto(origin + '/', { waitUntil: 'networkidle' });
+      await mail.fill('#code', code!);
+      await mail.click('button[data-ctl="CTL-GATE-01-02"]');
+      await mail.waitForSelector('[data-screen="SCR-GATE-02"]');
+      await mail.goto(new URL(invite.link, origin).toString(), { waitUntil: 'load' });
+      await mail.click('[data-ctl="CTL-EML-01-03"]');
+      await mail.fill('#sp-password', 'a long made-up password 1');
+      await mail.click('[data-ctl="CTL-EML-02-04"]');
+      await mail.waitForURL('**/sign-in?set=1');
+      await mg.context.close();
+      const rg = await guardedContext(browser, [origin], DESKTOP);
+      contexts.push(rg.context);
+      const rita = await rg.context.newPage();
+      await writeOrigin(rita);
+      await rita.goto(origin + '/sign-in', { waitUntil: 'networkidle' });
+      await rita.fill('#si-email', email);
+      await rita.fill('#si-password', 'a long made-up password 1');
+      await rita.click('[data-ctl="CTL-OFC-01-04"]');
+      await rita.waitForURL('**/office/board');
+      await rita.waitForSelector('.r1-demobar');
+      // Another visitor with no session and no code: the first visit, which shows no reason.
+      const fg = await guardedContext(browser, [origin], DESKTOP);
+      contexts.push(fg.context);
+      const first = await fg.context.newPage();
+      await first.goto(origin + '/', { waitUntil: 'networkidle' });
+      await first.waitForSelector('[data-screen="SCR-GATE-01"]');
+      expect(await first.locator('[data-reason="world-reset"]').count(), 'a first visit shows no reset reason').toBe(0);
       // F-646: another open page, with a dialog open, follows the reset with no help from its own screen.
       await keisha.locator('button[data-ctl="CTL-CMP-07-06"]').click();
       await keisha.waitForSelector('.r1-alerts[role="dialog"]');
@@ -175,6 +214,12 @@ describe.each(engines)('the demo clock page on the Compose stack, %s', (engine, 
       // The world reset notice names the time it was reset to (CTL-CMP-02-03).
       await expect.poll(() => dana.locator('.r1-demobar [data-ctl="CTL-CMP-02-03"]').textContent(), { timeout: 30_000 }).toContain('Tue, Sep 15, 7:00 AM');
       await keisha.reload({ waitUntil: 'load' });
+      // The erased account's page lands on the access code screen with the reset's reason; the first visit still shows none.
+      await rita.reload({ waitUntil: 'load' });
+      await rita.waitForSelector('[data-screen="SCR-GATE-01"]');
+      await expect.poll(() => rita.locator('[data-reason="world-reset"]').textContent(), { timeout: 30_000 }).toBe('The demo world was reset to its starting state.');
+      await first.reload({ waitUntil: 'networkidle' });
+      expect(await first.locator('[data-reason="world-reset"]').count(), 'a first visit still shows no reset reason').toBe(0);
     }
     const start = await clockOf(dana);
     expect(start.demoNow.slice(0, 10)).toBe('2026-09-15');

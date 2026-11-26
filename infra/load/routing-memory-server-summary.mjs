@@ -63,7 +63,7 @@ for (let n = 1; existsSync(join(dir, `collect-${tag}-${n}`)); n++) {
     else if (w[1] === 'state') state[w[0]] = w.slice(2).join(' ');
     else if (w[1] === 'memory.stat') endStat[w[0]] = Object.fromEntries(w.slice(2).map((x) => x.split('=')).map(([k, v]) => [k, mib(v)]));
   }
-  // P4-LOAD's measure: docker stats' MemUsage (memory.current less inactive file cache), every 15 s; the max of the services' sum.
+  // The load day's memory measure: docker stats' MemUsage (memory.current less inactive file cache), every 15 s; the max of the services' sum.
   const unit = { B: 1 / 1048576, KiB: 1 / 1024, MiB: 1, GiB: 1024 };
   const statsAt = {};
   const statsMax = {};

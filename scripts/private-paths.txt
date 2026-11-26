@@ -52,6 +52,9 @@ infra/owner.env
 # F-1609: the hosted server's address (BW_HOST), kept out of every committed file, so out of owner.env too: this file is ignored by git
 # (.gitignore), mode 600, and read by the same helper after owner.env.
 infra/owner.local.env
+# F-1920: the build-continuity git hook of the jl-dev harness (a plugin file; owner answer 44079436, plugin files stay private).
+# It stays byte-identical to the harness copy, with no SPDX header, so a reinstall sees it as unchanged.
+.githooks/
 
 # The private repo's workflows are never copied (SD-38): .github at any depth.
 **/.github

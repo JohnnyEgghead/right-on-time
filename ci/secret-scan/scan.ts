@@ -24,7 +24,7 @@ import { isMain } from '../is-main.ts';
 import { ensure } from '../gitleaks/install.ts';
 
 const root = path.resolve(import.meta.dirname, '..', '..');
-export const CONFIG = path.join(import.meta.dirname, 'gitleaks.toml');
+const CONFIG = path.join(import.meta.dirname, 'gitleaks.toml');
 const LEAKS_EXIT = 7; // gitleaks's --exit-code when it finds a leak; any other nonzero is a failure to scan
 
 export interface Hit {
@@ -70,13 +70,13 @@ export function isText(file: string): boolean {
 }
 
 /** The files of `dir` that gitleaks's built-in path allowlist skips with this config (1 trace run). */
-export function skippedByDefault(bin: string, dir: string, config = CONFIG): string[] {
+function skippedByDefault(bin: string, dir: string, config = CONFIG): string[] {
   const r = spawnSync(bin, ['dir', '.', '--no-banner', '--no-color', '-c', config, '--exit-code', '0', '-l', 'trace'],{ cwd: dir, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
   if (r.status !== 0) throw new Error(`gitleaks trace run failed (exit ${r.status}): ${(r.stderr || '').trim().slice(-300)}`);
   return parseSkipped(`${r.stdout}\n${r.stderr}`);
 }
 
-export interface TreeScan {
+interface TreeScan {
   hits: Hit[];
   skipped: string[];
   rescanned: string[];
@@ -175,7 +175,7 @@ async function scanExport(dir: string): Promise<number> {
 }
 
 /** The F-341 probes on synthetic trees. Returns the lines that failed (empty = all hold). */
-export async function allowanceProbes(): Promise<{ lines: string[]; failed: string[] }> {
+async function allowanceProbes(): Promise<{ lines: string[]; failed: string[] }> {
   const bin = await ensure();
   const lines: string[] = [];
   const failed: string[] = [];

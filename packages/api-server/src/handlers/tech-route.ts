@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The web technician app's map reads (P5-TWA-MAP-ME; UI-SPECIFICATION 12.2 API-100, API-104, API-163; SPECIFICATIONS 6.3 "Directions",
+// The web technician app's map reads (UI-SPECIFICATION 12.2 API-100, API-104, API-163; SPECIFICATIONS 6.3 "Directions",
 // "Map tab", "Drive time", "Me screen", SD-15, SD-22; FR-TECH-5, FR-TECH-11, FR-TECH-13, FR-TECH-15, FR-MAP-3).
 //
 // ONE leg rule (FR-TECH-13): every leg comes from SD-49's route source, legFor (the stored track, baked or live, else a live route the
@@ -35,8 +35,8 @@ type Point = { lon: number; lat: number };
 
 const wire = (d: Date, zone: string): string => toWire(Temporal.Instant.fromEpochMilliseconds(d.getTime()), zone);
 
-/** One leg between 2 stops from the route source (SD-49): its track when it has one, baked or live, else the straight line with SD-22's minutes. */
-export async function legBetween(tx: Queryable, branch: string, from: { job: number | null } & Point, to: { job: number } & Point): Promise<Leg> {
+/** One leg between 2 stops from the route source (SD-49): its track when it has one, baked or live, else the straight line with the approximate minutes (SD-22). */
+async function legBetween(tx: Queryable, branch: string, from: { job: number | null } & Point, to: { job: number } & Point): Promise<Leg> {
   return (await routeBetween(tx, branch, from, to)).leg;
 }
 

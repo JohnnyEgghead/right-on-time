@@ -31,7 +31,7 @@ export const fetchPreview: PreviewFetch = async (path) => {
 };
 
 /** The card reads again on the page's own refresh (the thread's 5 s) and when the window is focused, until the answer is the ended one (F-969). */
-export const PREVIEW_REFRESH_MS = 5_000;
+const PREVIEW_REFRESH_MS = 5_000;
 
 export function LiveMapPreview({ path, host, fetchPreview: load = fetchPreview }: { path: string; host: string; fetchPreview?: PreviewFetch }) {
   const t = useT();

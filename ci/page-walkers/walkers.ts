@@ -8,10 +8,10 @@ import type { Page } from 'playwright';
 
 export type Finding = { walker: string; message: string };
 
-export const MIN_TAP_PX = 44;
+const MIN_TAP_PX = 44;
 export const PHONE_VIEWPORT = { width: 390, height: 844 };
 // Mockup viewports the overflow walker checks (SPECIFICATIONS section 14 names 520 x 980).
-export const OVERFLOW_VIEWPORTS = [
+const OVERFLOW_VIEWPORTS = [
   { width: 520, height: 980 },
   { width: 390, height: 844 },
 ];
@@ -116,7 +116,7 @@ export function forbiddenRuns(catalog: Catalog): string[] {
 // F-713: stored codes. A catalog key names its code in a segment (service.furnace_tune_up.screen, job.error.time_overlap): a lowercase
 // word with 1 or more underscores. Such a code on a page, as a whole word in text or an attribute, is a stored value shown raw, which no
 // English catalog value matches. The codes are read from the catalog's own keys, so a new code is covered with no list to keep.
-export function storedCodes(catalog: Catalog): string[] {
+function storedCodes(catalog: Catalog): string[] {
   const out = new Set<string>();
   for (const key of Object.keys(catalog.en)) for (const seg of key.split('.')) if (/^[a-z]+(?:_[a-z0-9]+)+$/.test(seg)) out.add(seg);
   return [...out];
@@ -197,7 +197,7 @@ const OVERFLOW_SCRIPT = `(() => {
 // visitor's device may use, does not (F-309: the sign-in layout fit 295 of 296 px on the Mac and overflowed in the wave
 // container). The probe widens every glyph run by 0.06em of letter spacing, about the step from Inter to Verdana, on
 // any machine and whatever font it picks, so a tight fit fails here instead of only where the font happens to be wide.
-export const WIDE_FONT_PROBE_CSS = '*, *::before, *::after { letter-spacing: 0.06em !important; }';
+const WIDE_FONT_PROBE_CSS = '*, *::before, *::after { letter-spacing: 0.06em !important; }';
 
 const PROBE_ON_SCRIPT = `(() => {
   const sheet = new CSSStyleSheet();

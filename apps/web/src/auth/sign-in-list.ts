@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// SCR-GATE-02's read of API-15 (CTL-GATE-02-04), as a state the start page draws. F-552: a session that has not entered the
+// The Start page's read of the sample technician sign-ins (SCR-GATE-02, API-15, CTL-GATE-02-04), as a state the start page draws. F-552: a session that has not entered the
 // hosted demo's access code (a password session passes the page's gate, F-288) is answered access_code_required, and the list
 // and install line stay hidden (UI-SPECIFICATION CTL-GATE-02-04, "shown only when ... the access code is entered (or off)"),
 // the same mapping SignInScreen gives API-04. Only another failure is the read-failed panel with Try again.

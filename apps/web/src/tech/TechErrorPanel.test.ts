@@ -12,6 +12,7 @@ const draw = (lastTry: string | undefined, locale: 'en' | 'es') =>
   );
 
 describe('TechErrorPanel', () => {
+  // why: NFR-06 a failed read's panel names the time of the last try and keeps the Try again button, in both languages
   it('names the last try when a failed time is known, in both languages', () => {
     const at = Date.UTC(2026, 10, 16, 15, 30);
     const en = lastTryOf(at, 'America/New_York', 'en') as string;
@@ -21,6 +22,7 @@ describe('TechErrorPanel', () => {
     expect(draw(es, 'es')).toContain(es);
   });
 
+  // why: NFR-06 a panel with no failed time draws no last-try words and still keeps the Try again button
   it('draws no last-try words without a failed time, and keeps the button', () => {
     expect(lastTryOf(null, 'America/New_York', 'en')).toBeUndefined();
     const html = draw(undefined, 'en');

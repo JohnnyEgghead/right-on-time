@@ -93,8 +93,6 @@ export const NOT_COMPARED: Record<string, string> = {
   'the search box and selects of the Success frame, inside': 'the frame draws the select values and the search text as plain text; the app puts a native control, invisible, over the same box. The boxes are compared; the control is held by the stack suite',
 };
 
-export const JOBS_CAPTIONS = [`${J}Success`, `${J}Loading`, `${J}Empty tab`, `${J}No results`, `${J}Exporting`, `${J}Error`, `${J}Live row`];
-
 /** The captions of the frame that no case compares (empty when every state has a case). */
 export function uncovered(frameCaptions: readonly string[]): string[] {
   const covered = new Set(JOBS_CASES.flatMap((c) => c.captions));

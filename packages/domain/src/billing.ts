@@ -3,7 +3,7 @@
 // HTTP contract between the billing client and pbs, the modes and their counts, and the queue states. Pure constants
 // and types, imported by apps/pbs, the worker's billing link and the web handlers that call them.
 
-/** The pbs failure modes (FR-BILL-5). */
+/** The modes the pbs billing stand-in can be set to: it answers, does not answer, is down, or rejects the next n requests (FR-BILL-5). */
 export const PBS_MODES = ['up', 'not_answering', 'down', 'reject_next_n'] as const;
 export type PbsModeName = (typeof PBS_MODES)[number];
 
@@ -42,7 +42,7 @@ export const RETRY_DEMO_MINUTES = 15;
 export const BILLING_STATES = ['not_sent', 'sending', 'retrying', 'waiting_person', 'in_billing', 'marked_fixed'] as const;
 export type BillingState = (typeof BILLING_STATES)[number];
 
-/** billing_attempt.result (section 3; invariant 2). */
+/** The result stored on 1 billing_attempt row: success, timeout, down or data_error (section 3; invariant 2). */
 export type AttemptResult = 'success' | 'timeout' | 'down' | 'data_error';
 
 export const BILLING_EVENT_KINDS = ['billing.send', 'billing.retry'] as const;

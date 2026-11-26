@@ -20,7 +20,7 @@ export interface StoredTrack {
   polyline: string;
   seconds: number[];
   distance_m: number;
-  /** SD-49's step objects, as stored (packages/maps/src/steps.ts TrackStep). */
+  /** The route steps of the leg, as stored (packages/maps/src/steps.ts TrackStep; SD-49). */
   steps: unknown[];
   build_id: string;
 }

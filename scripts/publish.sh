@@ -235,7 +235,7 @@ image_bound() {
   got="$("$DOCKER" --context "$ictx" image inspect --format '{{.Id}}' "$img" 2>/dev/null)" || die "the release image $img is not in the Docker engine of context $ictx: run scripts/publish.sh image $tag"
   [ "$got" = "$id" ] || die "$img (context $ictx) is now another image ($got), not the one checked for $commit ($id): run scripts/publish.sh image $tag again"
   env="$("$DOCKER" --context "$ictx" image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$img")" || die "reading the env of $img"
-  printf '%s\n' "$env" | grep -q -x -e "PUBLIC_COMMIT=$commit" || die "the PUBLIC_COMMIT of $img is not the prepared commit $commit (a stale image): run scripts/publish.sh image $tag again"
+  grep -q -x -e "PUBLIC_COMMIT=$commit" <<<"$env" || die "the PUBLIC_COMMIT of $img is not the prepared commit $commit (a stale image): run scripts/publish.sh image $tag again"
   got="$("$DOCKER" --context "$ictx" image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$img")" || die "reading the labels of $img"
   [ "$got" = "$commit" ] || die "the revision label of $img is '$got', not the prepared commit $commit (a stale image): run scripts/publish.sh image $tag again"
   echo "publish: the release image $img ($id, context $ictx) carries the prepared commit $commit"
@@ -362,7 +362,7 @@ image() {
     --build-arg "PUBLIC_COMMIT=$commit" --build-arg "SOURCE_COMMIT=$commit" --load -t "$img" "$ctx" || die "the image build"
   got="$(D image inspect --format '{{.Os}}/{{.Architecture}}' "$img")"
   [ "$got" = linux/amd64 ] || die "the image is $got, not linux/amd64"
-  D image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$img" | grep -q -x -e "PUBLIC_COMMIT=$commit" || die "the image's PUBLIC_COMMIT is not $commit"
+  img_env="$(D image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$img")" && grep -q -x -e "PUBLIC_COMMIT=$commit" <<<"$img_env" || die "the image's PUBLIC_COMMIT is not $commit"
   got="$(D image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$img")"
   [ "$got" = "$commit" ] || die "the image's revision label is '$got', not $commit"
   # FR-DIST-3 through the real code: the image's own config loader and app-info handler (API-02) make the footer's Source link.
@@ -446,29 +446,29 @@ release() {
     [ -n "$cmp" ] || die "the release comparison gave nothing"
   }
   compare
-  if [ "$cmp_ok" -eq 1 ] && printf '%s\n' "$cmp" | grep -q -x 'release published'; then
+  if [ "$cmp_ok" -eq 1 ] && grep -q -x 'release published' <<<"$cmp"; then
     state_set RELEASE_OK 1
     echo "publish: the release $tag is already published with every asset: nothing to do"
     return 0
   fi
-  if printf '%s\n' "$cmp" | grep -q -x 'release published'; then
+  if grep -q -x 'release published' <<<"$cmp"; then
     printf '%s\n' "$cmp" | grep -v '^ok ' >&2
     die "the release $tag is published and its assets differ; this script never changes a published release"
   fi
-  if printf '%s\n' "$cmp" | grep -q '^extra '; then
+  if grep -q '^extra ' <<<"$cmp"; then
     printf '%s\n' "$cmp" | grep '^extra ' >&2
     die "the draft release $tag holds files its manifests do not name; remove them by hand"
   fi
-  if printf '%s\n' "$cmp" | grep -q -x 'release none'; then
+  if grep -q -x 'release none' <<<"$cmp"; then
     notes="$work/release-notes.md"
     printf 'Right On Time %s.\n\nThe data files attached here (the map files, the baked tracks, the routing files and the street list) are made from OpenStreetMap data, (c) OpenStreetMap contributors, under the Open Database License 1.0 (see LICENSE-DATA.md). An own copy downloads them as the README says.\n' "$tag" > "$notes"
     "$GH" release create "$tag" --repo "$slug" --verify-tag --draft --title "Right On Time $tag" --notes-file "$notes" || die "creating the draft release"
     compare
   fi
   for x in $(printf '%s\n' "$cmp" | sed -n -e 's/^missing //p' -e 's/^differs \([^ ]*\).*/\1/p'); do
-    f="$(printf '%s\n' "$files" | grep -E "/${x//./\\.}\$" | head -1)"
+    f="$(grep -m 1 -E "/${x//./\\.}\$" <<<"$files")"
     [ -n "$f" ] || die "no local file for $x"
-    if printf '%s\n' "$cmp" | grep -q "^differs $x "; then
+    if grep -q "^differs $x " <<<"$cmp"; then
       "$GH" release upload "$tag" "$f" --repo "$slug" --clobber || die "uploading $x"
     else
       "$GH" release upload "$tag" "$f" --repo "$slug" || die "uploading $x"
@@ -480,7 +480,7 @@ release() {
   "$GH" release edit "$tag" --repo "$slug" --draft=false >/dev/null || die "publishing the release"
   compare
   [ "$cmp_ok" -eq 1 ] || die "the published release $tag does not match its manifests"
-  printf '%s\n' "$cmp" | grep -q -x 'release published' || die "the release $tag is still a draft"
+  grep -q -x 'release published' <<<"$cmp" || die "the release $tag is still a draft"
   state_set RELEASE_OK 1
   echo "publish: released $tag on $slug with $(printf '%s\n' "$cmp" | grep -c '^ok ') assets, each size and sha256 digest checked"
 }

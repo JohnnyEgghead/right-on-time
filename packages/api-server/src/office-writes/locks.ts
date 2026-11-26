@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The locks of SPECIFICATIONS section 5.3 (SD-14; invariant 3). This is the lock API every write that changes a
-// technician's day or a branch day uses: the office writes of this module, and later the online booking (P5-BOOKING), time off (P3-DISPATCH-RULES) and the technician items (P3-ITEMS).
+// technician's day or a branch day uses: the office writes of this module, the arrival window writes (handlers/windows.ts),
+// and, through this module's functions, the online booking, the customer's own move and an office customer merge or its undo.
+// A technician item takes no lock of this file: it takes its item key's lock (tech-items/shared.ts) and its job's row lock.
 //
 // Rules, for every caller:
 //   1. Lock order, always: booking-day rows, then technician-day locks, then job or block rows (section 5.3 step 6).
@@ -47,7 +49,7 @@ export async function lockBookingDays(tx: Queryable, keys: readonly BookingDayKe
 }
 
 /** The advisory key of a technician-day: hashtext(technician_id || date), as section 5.3 step 2 states it. */
-export const TECHNICIAN_DAY_KEY_SQL = 'hashtext($1::text || $2::text)';
+const TECHNICIAN_DAY_KEY_SQL = 'hashtext($1::text || $2::text)';
 
 /**
  * Technician-day lock (section 5.3 step 2): `pg_advisory_xact_lock(hashtext(technician_id || date))` for each day the

@@ -5,7 +5,8 @@
 // CMP-01 and CMP-02 are not on it). CTL-GATE-01-01 the code field, CTL-GATE-01-02 Enter, CTL-GATE-01-03 the staff Sign in link.
 // Enter calls API-01; on success the page that was asked for opens (this page is rendered in its place, so a reload shows it).
 import '../shell/css/gate.ts';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { resetEndedSession } from './reset-reason.ts';
 import { fieldText } from '../shell/early-form.ts';
 import { Icon, Mark } from '../shell/Icon.tsx';
 import { useT } from '../shell/intl.tsx';
@@ -32,6 +33,18 @@ export function AccessCodeScreen({ state: given, typed: givenTyped = '', appInfo
   const [kept, setKept] = useState(givenTyped);
   const [focused, setFocused] = useState(given === undefined);
   const busy = state === 'checking';
+  // A reset ended the session of a person who then lands here: say so (the same words the demo strip uses). A first visit shows nothing.
+  const [wasReset, setWasReset] = useState(false);
+  useEffect(() => {
+    if (given !== undefined || reader === false) return;
+    let live = true;
+    void resetEndedSession(reader || createReader({ baseUrl: window.location.origin })).then((yes) => {
+      if (live && yes) setWasReset(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [given, reader]);
   const sending = useRef(false);
   const message = empty ? t('auth.gate.empty') : state === 'wrong' ? t('auth.gate.wrong') : state === 'limited' ? t('auth.error.limited') : null;
 
@@ -84,6 +97,7 @@ export function AccessCodeScreen({ state: given, typed: givenTyped = '', appInfo
         </div>
         <div className="box">
           <h2>{t('auth.gate.title')}</h2>
+          {wasReset ? <p className="lead" role="status" data-reason="world-reset">{t('alert.world_reset')}</p> : null}
           <p className="lead">{t('auth.gate.why')}</p>
           <form className="codeform" action={(data) => void submit(data)} noValidate>
             <div className="r1-field" data-ctl="CTL-GATE-01-01">

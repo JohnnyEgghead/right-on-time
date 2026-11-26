@@ -63,10 +63,10 @@ export const RULE = {
   windowNotOffered: 'rule.windowNotOffered',
   customerNotActive: 'rule.customerNotActive',
 } as const;
-export type RuleKey = (typeof RULE)[keyof typeof RULE];
+type RuleKey = (typeof RULE)[keyof typeof RULE];
 
 /** A rule_refused refusal with its rule's catalog key (the detail API-22, 24, 25, 26, 27 and 28 name: ruleRefusedDetail). */
-export const ruleRefused = (key: RuleKey, why: string): WriteRefused => new WriteRefused('rule_refused', why, { key });
+const ruleRefused = (key: RuleKey, why: string): WriteRefused => new WriteRefused('rule_refused', why, { key });
 
 /** The statuses whose job the office may no longer change (CTL-OFC-03-04 to -08; UI-SPECIFICATION 12.1 item 9; F-505). */
 const CLOSED: ReadonlySet<WrittenJob['status']> = new Set(['done', 'no_one_home', 'canceled']);
@@ -481,7 +481,7 @@ export async function createJob(tx: Queryable, ctx: WriteContext | OnlineContext
   return answerJob(tx, jobNumber);
 }
 
-// --- Blocks (FR-DISP-34; OA-72, OA-75) ---------------------------------------------------------------------------
+// --- Blocks: a technician's labeled time block on 1 day (FR-DISP-34; OA-72, OA-75) -------------------------------
 
 interface BlockRow { id: string; technician_id: string; date: string; zone: string; start: Date; end: Date; label: string; place: string | null; version: number }
 const BLOCK_COLUMNS = 'id, technician_id, date::text AS date, zone, start, "end", label, place, version';
@@ -530,7 +530,7 @@ export async function createBlock(tx: Queryable, _ctx: WriteContext, input: {
 }
 
 /** The kind a block move writes in the block change log (owner ruling 8ef38e83, F-354). */
-export const BLOCK_MOVED = 'moved';
+const BLOCK_MOVED = 'moved';
 
 /**
  * The version_conflict members of a block (FR-DISP-34, FR-DISP-6; owner ruling 8ef38e83): the block change log row that
@@ -600,10 +600,10 @@ export async function deleteBlock(tx: Queryable, _ctx: WriteContext, input: { bl
   await publishEvent(tx, 'block.changed', { blockId: b.id, branch: t.branch, date: b.date });
 }
 
-// --- Customer merges (owner ruling a7cafbb1, F-267) --------------------------------------------------------------
+// --- Customer merges: each job moved is logged as a merged change (owner ruling a7cafbb1, F-267) --------------------
 
 /** The job_change kind a merge and its undo write for each job they move (F-267; section 3's enum gets it at the phase 3 doc batch). */
-export const MERGE_CHANGE_KIND = 'merged';
+const MERGE_CHANGE_KIND = 'merged';
 
 type JobPick = { job_number: number; technician_id: string | null; date: string };
 
@@ -633,6 +633,55 @@ async function holdJobDays(
     await tx.query('ROLLBACK TO SAVEPOINT job_days');
     known = [...known, ...fresh];
   }
+}
+
+/**
+ * The technician-days an address edit may have to plan again (API-36, F-1933; SD-15): those of the customer's open jobs from
+ * today on, locked before the customer row, then the customer row itself, which is held FOR UPDATE on return. A day already
+ * past, an ended job and a canceled job keep the plan they ran on.
+ *
+ * Lock order (section 5.3 step 6; F-379, F-622): the days in 1 sorted batch, the jobs' rows, the customer row. The job rows come
+ * before the customer because a technician's item holds its job's row and then refers to the customer (a text's foreign key):
+ * with the rows held, the plan's UPDATE never waits for one while the customer is held. A job that reached the customer between
+ * the read and the customer lock (a booking, a merge into the customer) starts the lock phase again with its day in the sorted
+ * batch, as mergePair does on LockOrderRetry; no day is ever asked for while the customer row is held, and each new start
+ * follows a job that committed meanwhile.
+ */
+export async function lockAddressEdit(tx: Queryable, customerId: string, now: Temporal.Instant): Promise<TechnicianDayKey[]> {
+  const read = async (): Promise<JobPick[]> => (await tx.query<JobPick>(
+    `SELECT j.job_number, j.technician_id, j.date::text AS date FROM world.job j JOIN world.branch b ON b.id = j.branch_id
+      WHERE j.customer_id = $1 AND j.technician_id IS NOT NULL AND j.status IN ('scheduled', 'on_the_way', 'on_site')
+        AND j.date >= ($2::timestamptz AT TIME ZONE b.zone)::date ORDER BY j.job_number`, [customerId, now.toString()])).rows;
+  let seed: readonly TechnicianDayKey[] = [];
+  await tx.query('SAVEPOINT address_edit');
+  for (;;) {
+    const { pick, locked } = await holdJobDays(tx, read, seed);
+    await tx.query('SELECT 1 FROM world.job WHERE job_number = ANY($1::int[]) ORDER BY job_number FOR NO KEY UPDATE', [pick.map((j) => j.job_number)]);
+    await tx.query('SELECT 1 FROM world.customer WHERE id = $1 FOR UPDATE', [customerId]);
+    const after = await read();
+    if (after.every((j) => pick.some((x) => x.job_number === j.job_number))) {
+      await tx.query('RELEASE SAVEPOINT address_edit');
+      return dayKeys(after.map((j) => [j.technician_id, j.date] as const));
+    }
+    await tx.query('ROLLBACK TO SAVEPOINT address_edit');
+    seed = [...locked, ...freshDays(after, locked)];
+  }
+}
+
+/**
+ * The plan half of an address edit that moved the point (F-1933): each day lockAddressEdit returned is settled from the new
+ * point. As in a merge, an overlap it causes is not a refusal (API-36 answers no time_overlap): the plan is written and the
+ * board shows it. 1 board.refresh when any planned arrival moved, so an open board follows (F-822), and never a job.changed.
+ */
+export async function planAddressEdit(tx: Queryable, days: readonly TechnicianDayKey[]): Promise<void> {
+  const plans = async () => (await tx.query<{ branch_id: string; job_number: number; at: Date | null }>(
+    `SELECT j.branch_id, j.job_number, j.planned_arrival AS at FROM world.job j
+       JOIN unnest($1::uuid[], $2::date[]) AS d(technician_id, date) ON d.technician_id = j.technician_id AND d.date = j.date ORDER BY j.job_number`,
+    [days.map((d) => d.technicianId), days.map((d) => d.date)])).rows;
+  const before = new Map((await plans()).map((j) => [j.job_number, j.at?.getTime()]));
+  for (const d of days) await settleDay(tx, d);
+  const moved = (await plans()).filter((j) => before.get(j.job_number) !== j.at?.getTime());
+  for (const branch of new Set(moved.map((j) => j.branch_id))) await publishEvent(tx, 'board.refresh', { branch });
 }
 
 /**

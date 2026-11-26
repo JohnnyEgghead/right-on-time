@@ -142,7 +142,7 @@ describe('API-03 sign in', () => {
     expect((await call(k, 'POST', '/api/v1/sessions', signInBody(emails.reviewer, REVIEWER_PASSWORD))).status).toBe(200);
   });
 
-  // why: FR-AUTH-10 Keep me signed in lasts 90 days; without it the cookie is a browser-session cookie and the limits are SD-8's
+  // why: FR-AUTH-10 Keep me signed in lasts 90 days; without it the cookie is a browser-session cookie and the session lasts 12 hours (SD-8)
   it('sets the Keep me signed in lifetimes in real time', async () => {
     const k = await kernel();
     const plain = await call(k, 'POST', '/api/v1/sessions', signInBody(emails.keisha, sample(emails.keisha)));
@@ -218,7 +218,7 @@ describe('the access-code gate (API-01)', () => {
     const dana = await call(k, 'POST', '/api/v1/sessions', signInBody(emails.dana, sample(emails.dana)));
     expect(dana.status).toBe(200);
     const session = pair(dana, 'bw_session')!;
-    expect((await call(k, 'GET', '/api/v1/me', undefined, session)).status).toBe(200); // past the gate by SD-47 step 2
+    expect((await call(k, 'GET', '/api/v1/me', undefined, session)).status).toBe(200); // the session cookie lets the call past the access code gate (SD-47 step 2)
     const target = { personId: ids[emails.keisha] };
     for (const [method, path, body] of [['GET', '/api/v1/demo/people?app=office'], ['GET', '/api/v1/demo/tech-sign-ins'], ['POST', '/api/v1/demo/sessions', target]] as const) {
       const r = await call(k, method, path, body, session);
@@ -240,7 +240,7 @@ describe('the access-code gate (API-01)', () => {
     const right = await call(k, 'POST', '/api/v1/access-code', { code: CODE });
     expect(right.status).toBe(204);
     const cookie = setCookies(right).find((c) => c.startsWith('bw_access='))!;
-    expect(cookie).toMatch(/; Path=\/; HttpOnly; SameSite=Lax; Max-Age=2592000$/); // plain http: not Secure (F-304)
+    expect(cookie).toMatch(/; Path=\/; HttpOnly; SameSite=Lax; Max-Age=2592000$/); // over plain http the cookie is not Secure (F-304)
     const viaHttps = await k.router.handle(
       new Request('http://web:3000/api/v1/access-code', { method: 'POST', headers: { 'content-type': 'application/json', origin: ORIGIN, 'x-forwarded-proto': 'https' }, body: JSON.stringify({ code: CODE }) }),
       { address: address() },
@@ -341,7 +341,7 @@ describe('Sign in as (API-04, API-05) and the sample sign-ins (API-15)', () => {
     for (const s of r.signIns) expect((await call(k, 'POST', '/api/v1/sessions', signInBody(s.email, s.password))).status).toBe(200);
   });
 
-  // why: FR-IOS-2 the unlisted link reaches API-15's answer only when the install kind is set
+  // why: FR-IOS-2 the unlisted link reaches the sample technician sign-ins answer (API-15) only when the install kind is set
   it('answers the unlisted install link when IOS_INSTALL_KIND is unlisted', async () => {
     const link = 'https://apps.apple.com/us/app/right-on-time/id1234567890';
     const k = createWebKernel({ settings: config({ DEMO_MODE: 'on', IOS_INSTALL_KIND: 'unlisted', IOS_INSTALL_LINK: link }), log });

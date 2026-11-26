@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// NFR-02's instrument (P7-LOAD): office pages loaded in a real browser on the office network profile, beside the load day's own
+// The page load instrument (NFR-02; P7-LOAD): office pages loaded in a real browser on the office network profile, beside the load day's own
 // traffic. Each cycle opens a fresh browser context (nothing cached) signed in as 1 dispatcher, throttles it to the profile through
 // the DevTools protocol (Network.emulateNetworkConditions), loads the next office page (cold), then the same page again (warm), and
 // reads the page's own navigation timing: navigation start to loadEventEnd. The profile's 20 ms round trip is the real one to the

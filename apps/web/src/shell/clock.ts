@@ -6,9 +6,9 @@
 import { dateParts, fromWire, formatTime, Temporal, zoneAbbreviation, type Instant, type Language } from '@bw/time';
 import type { MessageKey } from '@bw/i18n';
 
-export type MoveKind = 'jump' | 'pause' | 'resume' | 'reset';
+type MoveKind = 'jump' | 'pause' | 'resume' | 'reset';
 
-/** API-10's answer, as UI-SPECIFICATION 12.2 names its fields. Times are RFC 9557 strings carrying the zone. */
+/** The demo clock answer (API-10), as UI-SPECIFICATION 12.2 names its fields. Times are RFC 9557 strings carrying the zone. */
 export interface ClockAnswer {
   demoNow: string;
   realNow?: string;
@@ -35,7 +35,7 @@ export function toView(answer: ClockAnswer): ClockView {
 }
 
 /** The demo time shown elapsedMs of real time after the read (FR-DEMO-2: advance from the anchor, never the device clock). */
-export function advance(view: ClockView, elapsedMs: number): Instant {
+export function advance(view: Pick<ClockView, 'at'> & { answer: Pick<ClockAnswer, 'paused' | 'rate'> }, elapsedMs: number): Instant {
   if (view.answer.paused || elapsedMs <= 0) return view.at;
   return view.at.add(Temporal.Duration.from({ milliseconds: Math.round(elapsedMs * view.answer.rate) }));
 }

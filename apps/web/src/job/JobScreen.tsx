@@ -127,19 +127,25 @@ export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScre
   const [opened, setOpened] = useState<Job | null>(null);
   const [live, setLive] = useState<LiveState>(fixed?.live ?? 'live');
   const [inboxError, setInboxError] = useState(false);
-  // The job SCR-OFC-04's Schedule opened this page on (CTL-OFC-03-01): the handoff is read once, so any other way here keeps the Board trail.
+  // The job that Schedule on the New job page (SCR-OFC-04) opened this page on (CTL-OFC-03-01): the handoff is read once, so any other way here keeps the Board trail.
   const [scheduled, setScheduled] = useState<number | null>(null);
 
   // Reads overlap when events come close together (queued, sending, delivered): only the newest read's answer is shown.
+  // F-908: the "This job changed" notice owed by a read another read replaced is carried to the read that is shown, so 2 events close together still announce once.
   const newest = useRef(0);
+  const noticeDue = useRef(false);
   const read = useCallback(async (changed = false) => {
     const mine = ++newest.current;
+    if (changed) noticeDue.current = true;
     const r = await api.job(jobNumber);
     if (mine !== newest.current) return;
     if (!r.ok) return setJob(r.code === 'not_found' ? 'not_found' : (prev) => (typeof prev === 'object' ? prev : 'error'));
     setJob(r.data);
-    if (changed) announce(t('job.changed'), 'info');
-    // SCR-OFC-04's Schedule opened this page: CMP-11 states the server's answer about the confirmation text (GAP-10), once.
+    if (noticeDue.current) {
+      noticeDue.current = false;
+      announce(t('job.changed'), 'info');
+    }
+    // Schedule on the New job page (SCR-OFC-04) opened this page: CMP-11 states the server's answer about the confirmation text (GAP-10), once.
     const handed = fixed ? null : takeHandoff(jobNumber);
     if (handed) {
       setScheduled(jobNumber);
@@ -188,7 +194,7 @@ export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScre
     announce(t(shown.key as MessageKey, shown.values), 'check');
     void read();
   };
-  // SCR-OFC-19's Keep their change: closes and re-reads (CTL-OFC-19-03), with or without a live stream.
+  // Keep their change, in the Someone else changed this job dialog (SCR-OFC-19): closes and re-reads (CTL-OFC-19-03), with or without a live stream.
   const keep = () => {
     setModal(null);
     void read();

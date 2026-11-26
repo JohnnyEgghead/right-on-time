@@ -242,7 +242,7 @@ export async function firstCheck(post: Post, id: number, waitSec: number, pollSe
 
 export type StatusRead = { http: number | null; body: string };
 
-/** The whole F-45 check after the restart. Never throws: a failure becomes a FAIL verdict with its reason. */
+/** The whole certificate renewal alert check after the restart (F-45): the status file, the monitor, its first check. Never throws: a failure becomes a FAIL verdict with its reason. */
 export async function runF45(post: Post, getStatus: () => Promise<StatusRead>, o: { existingMonitorId: number; statusUrl: string; deployRc: number | null; waitSec: number; pollSec: number }, sleep?: (ms: number) => Promise<void>): Promise<F45> {
   const r: F45 = { deployRc: o.deployRc, statusUrl: o.statusUrl, statusHttp: null, statusFirstLine: '', statusOk: false, monitorId: null, created: null, firstCheckStatus: null, polls: 0, verdict: 'FAIL', detail: '' };
   try {

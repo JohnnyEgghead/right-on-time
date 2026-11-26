@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // API-10 read the clock (UI-SPECIFICATION 12.2; SPECIFICATIONS FR-DEMO-1, FR-DEMO-3, FR-DEMO-6, section 4.2): the shared
-// demo clock as every web surface's header shows it (CMP-01, CMP-02). Read only: the moves (API-11 to API-14) are
-// P3-REPLAY's. Answers before the access code (beforeAccessCode, SPECIFICATIONS 4.1).
+// demo clock as every web surface's header shows it (CMP-01, CMP-02). Read only: the moves (API-11 to API-14) are in
+// clock-moves.ts (P3-REPLAY). Answers before the access code (beforeAccessCode, SPECIFICATIONS 4.1).
 //
 // 1 read of the clock row, in the call's transaction, so every field is of 1 row: demoNow is that row's demo time at
 // the real instant reported as realNow (the P2-TIME seam demoTimeAt, the formula DbClock uses), so a client that keeps

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The send loop of both technician apps (SPECIFICATIONS section 5.1 steps 2 and 10; UI-SPECIFICATION 4.5 rules 1, 4
-// and 10; invariants I2 to I5 of model.ts). Pure over its 2 seams: the item store and the transport (the app's calls of
-// API-103 and API-102), so the web app and the native app run the same loop.
+// and 10; invariants I2 to I5 of model.ts). Pure over its 2 seams: the item store and the transport (the app's photo and signature
+// upload, API-103, and its batch of queued notes and statuses, API-102), so the web app and the native app run the same
+// loop.
 //
 // 1 send, in order: the caller's own waiting items in entry order (I5: another technician's items wait for that
 // technician); blobs first, each by API-103; then the rest by API-102 in batches of at most 50. Per answer:
@@ -11,7 +12,9 @@
 // Per call: an upload or batch refused as a whole with a 4xx keeps those items (their code recorded) and the send goes
 // on, except an upload the proxy refused for its size (413, F-1035): it is sent once more with no bytes, as the web app sends a photo
 // over the cap (F-978), so the server answers it under its key, flagged validation_failed and listed for the dispatcher, and it
-// leaves the phone; its bytes are never sent again. A network error, a 5xx, a signed-out (401) or forbidden (403) answer stops the
+// leaves the phone; its bytes are never sent again: the 413 stays on the item as its last try's code (even across a network stop), and the
+// next send sends it with no bytes at once. A photo whose upload gets no answer (network) steps aside: it and the uploads behind it wait,
+// recorded, and the notes and statuses go on in entry order (I4); the send stops for the network when their call fails too. A 5xx, a signed-out (401) or forbidden (403) answer stops the
 // send, and every item not yet
 // answered stays waiting, recorded so the screen can say "Will try again".
 //
@@ -55,7 +58,9 @@ export interface SendOptions {
 }
 
 /** F-1035: the answer of a proxy (nginx) that refused an upload's body for its size, before the server read it. */
-export const BODY_TOO_LARGE = 413;
+const BODY_TOO_LARGE = 413;
+/** The code of a try that ended in the 413 (the transport's `http_<status>`): an item that holds it is sent with no bytes at once. */
+const TOO_LARGE_CODE = 'http_413';
 const NO_BYTES = new Uint8Array(0);
 
 const isAnswered = (r: string): r is ItemResult['result'] => (ANSWERED_RESULTS as readonly string[]).includes(r);
@@ -67,9 +72,16 @@ export async function sendWaiting(store: ItemStore, transport: Transport, opts: 
   let stopped: CallStop | null = null;
 
   const keep = async (items: readonly QueuedItem[], why: Omit<LastTry, 'atRealMs'>) => {
-    const t: LastTry = { atRealMs: opts.nowMs(), ...why };
-    await store.recordTry(items.map((i) => i.key), t);
-    for (const i of items) kept.push({ key: i.key, why: t });
+    // A refusal for size stays on the item through a try that never got an answer (a network stop, a 5xx): the 413 is a fact about its bytes.
+    const sticky = why.outcome !== 'refused' && why.code === undefined;
+    const sized = sticky ? items.filter((i) => i.lastTry?.code === TOO_LARGE_CODE) : [];
+    const rest = items.filter((i) => !sized.includes(i));
+    for (const [group, extra] of [[rest, {}], [sized, { code: TOO_LARGE_CODE }]] as const) {
+      if (group.length === 0) continue;
+      const t: LastTry = { atRealMs: opts.nowMs(), ...why, ...extra };
+      await store.recordTry(group.map((i) => i.key), t);
+      for (const i of group) kept.push({ key: i.key, why: t });
+    }
   };
   const answer = async (item: QueuedItem, a: WireAnswer) => {
     if (!isAnswered(a.result)) {
@@ -81,13 +93,14 @@ export async function sendWaiting(store: ItemStore, transport: Transport, opts: 
     await store.markAnswered(item.key, result, at);
     answered.push({ ...result, key: item.key, kind: item.kind, jobNumber: item.jobNumber, enteredRealMs: item.enteredRealMs, userId: item.userId, answeredRealMs: at });
   };
-  const failed = async (f: CallFailure, these: readonly QueuedItem[], rest: readonly QueuedItem[]): Promise<boolean> => {
+  const failed = async (f: CallFailure, these: readonly QueuedItem[], rest: readonly QueuedItem[], code?: string): Promise<boolean> => {
     if (f.stop === null) {
       await keep(these, { outcome: 'refused', code: f.code });
       return false;
     }
     stopped = f.stop;
-    await keep([...these, ...rest], { outcome: f.stop });
+    await keep(these, { outcome: f.stop, ...(code ? { code } : {}) });
+    await keep(rest, { outcome: f.stop });
     return true;
   };
 
@@ -100,11 +113,23 @@ export async function sendWaiting(store: ItemStore, transport: Transport, opts: 
       await keep([b], { outcome: 'refused', code: 'blob_missing' });
       continue;
     }
-    let r = await transport.uploadBlob(b, bytes);
+    // A 413 kept on the item (it survives a network stop in the no-bytes try) sends no bytes at once; otherwise the bytes go first.
+    let tooLarge = b.lastTry?.code === TOO_LARGE_CODE;
+    let r = await transport.uploadBlob(b, tooLarge ? NO_BYTES : bytes);
     // F-1035: refused for its size before the server read it; the no-bytes body has the server answer it (flagged) under the same key.
-    if (!r.ok && r.stop === null && r.status === BODY_TOO_LARGE) r = await transport.uploadBlob(b, NO_BYTES);
+    if (!tooLarge && !r.ok && r.stop === null && r.status === BODY_TOO_LARGE) {
+      tooLarge = true;
+      r = await transport.uploadBlob(b, NO_BYTES);
+    }
     if (r.ok) await answer(b, r.answer);
-    else if (await failed(r, [b], [...blobs.slice(n + 1), ...items])) return finish();
+    else if (r.stop === 'network') {
+      // A photo that got no answer steps aside: it and the uploads behind it wait, and the notes and statuses go on (a line with no signal
+      // fails their call at once, and that call ends the send).
+      await keep([b], { outcome: 'network', ...(tooLarge ? { code: TOO_LARGE_CODE } : {}) });
+      await keep(blobs.slice(n + 1), { outcome: 'network' });
+      if (items.length === 0) stopped = 'network';
+      break;
+    } else if (await failed(r, [b], [...blobs.slice(n + 1), ...items], tooLarge ? TOO_LARGE_CODE : undefined)) return finish();
   }
   for (let i = 0; i < items.length; i += ITEMS_PER_SEND) {
     const batch = items.slice(i, i + ITEMS_PER_SEND);

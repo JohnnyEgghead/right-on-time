@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The customers area (P4-CUSTOMERS; UI-SPECIFICATION 12.2 API-34, API-35, API-36, API-111, API-139; SPECIFICATIONS FR-DISP-7, FR-DISP-29
+// The customers area (UI-SPECIFICATION 12.2 API-34, API-35, API-36, API-111, API-139; SPECIFICATIONS FR-DISP-7, FR-DISP-29
 // to FR-DISP-32, SD-23):
 //   API-34   search by name, street or phone. The typed text is folded as customer.name_search is (@bw/db foldStreetName: accents out,
 //            apostrophes dropped, other runs of non-alphanumerics 1 space), so "obrien" finds "O'Brien", "O'Brien-Miller" and "OBrien"
@@ -19,6 +19,7 @@ import { areaName } from '@bw/domain';
 import { localDateOf, Temporal, toWire } from '@bw/time';
 import type { z } from 'zod';
 import { branchTechnicians } from '../office-writes/day.ts';
+import { lockAddressEdit, planAddressEdit } from '../office-writes/service.ts';
 import type { ApiResult, Handler, Tx } from '../types.ts';
 import { branchOf, dayJobs, etas } from './board.ts';
 
@@ -29,7 +30,7 @@ const instant = (d: Date) => Temporal.Instant.fromEpochMilliseconds(d.getTime())
 const refuse = <T>(status: number, code: 'not_found' | 'rule_refused' | 'validation_failed'): ApiResult<T> => ({ ok: false, status, code });
 
 /** A phone text is searched by its digits: only digits and phone punctuation, at least 3 digits. */
-export function phoneDigits(query: string): string | null {
+function phoneDigits(query: string): string | null {
   if (!/^[\d\s().+-]+$/.test(query)) return null;
   const d = query.replace(/\D/g, '');
   return d.length >= 3 ? d : null;
@@ -243,6 +244,8 @@ export const pointOf = (points: [number, number][], house: number): { lon: numbe
 export const editCustomerHandler: Handler<Out<typeof editRow>> = async (req, tx: Tx) => {
   const p = req.params as In<typeof editRow> & { customerId: string };
   if (p.membership !== undefined) return refuse(409, 'rule_refused');
+  // F-1933, SD-15: an address edit may change the drive of days already planned, so their locks come before the customer row (section 5.3 step 6).
+  const days = p.streetId !== undefined || p.houseNumber !== undefined ? await lockAddressEdit(tx, p.customerId, req.demoNow) : [];
   const cur = (await tx.query<{ id: string; name: string; branch_id: string; zone: string; street_id: string; house_number: number; mobile: string | null; lon: number; lat: number }>(
     `SELECT id, name, branch_id, zone, street_id, house_number, mobile, lon, lat FROM world.customer WHERE id = $1 AND status = 'active' FOR UPDATE`, [p.customerId])).rows[0];
   if (!cur) return refuse(404, 'not_found');
@@ -287,7 +290,10 @@ export const editCustomerHandler: Handler<Out<typeof editRow>> = async (req, tx:
   if (set.length > 0) await tx.query(`UPDATE world.customer SET ${set.join(', ')} WHERE id = $1`, args);
   // SD-49: an address edit that moves the customer's point moves the point each of their jobs is driven to, so every track naming one of
   // those jobs, baked or live, goes; the route source routes the new point on its next read (P6-LIVE-ROUTING).
-  if (moved) await deleteTracksNaming(tx, (await tx.query<{ job_number: number }>('SELECT job_number FROM world.job WHERE customer_id = $1', [p.customerId])).rows.map((r) => r.job_number));
+  if (moved) {
+    await deleteTracksNaming(tx, (await tx.query<{ job_number: number }>('SELECT job_number FROM world.job WHERE customer_id = $1', [p.customerId])).rows.map((r) => r.job_number));
+    await planAddressEdit(tx, days);
+  }
   // FR-TEXT-17: a zone edit moves the reminder of every live future visit of the customer (the note under the zone Save says so).
   if (p.timeZone !== undefined && p.timeZone !== cur.zone) await replanCustomerReminders(tx, { customerId: p.customerId, now: req.demoNow });
   const after = (await tx.query<{ id: string; name: string; branch_id: string; zone: string }>('SELECT id, name, branch_id, zone FROM world.customer WHERE id = $1', [p.customerId])).rows[0] as { id: string; name: string; branch_id: string; zone: string };

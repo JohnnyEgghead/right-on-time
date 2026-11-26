@@ -23,7 +23,7 @@ export interface TextContext {
 
 /** scheduled_event.kind of the 6:00 PM reminder planner's event (section 6.4); its subject is the job number. */
 export const TEXT_REMINDER = 'text.reminder';
-/** FR-TEXT-2: the evening before the visit. */
+/** The reminder goes out at 6:00 PM, the evening before the visit, in the customer's zone (FR-TEXT-2). */
 export const REMINDER_TIME = '18:00';
 
 interface JobFacts {

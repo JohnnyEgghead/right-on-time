@@ -10,7 +10,7 @@ import { kit } from '../testing.ts';
 import type { Handler } from '../types.ts';
 
 const rescheduleToken = z.string().min(1).max(64);
-// A stand-in for API-118 (P5-INBOX builds the real row): a POST at the reschedule link path, served at the origin root (ROOT_CONTRACTS).
+// A stand-in for the reschedule link call (API-118): a POST at the reschedule link path, served at the origin root (ROOT_CONTRACTS).
 const confirm: ContractRow = defineContract({
   id: 'API-118', name: 'Confirm a new time', method: 'POST', path: '/r/{rescheduleToken}',
   request: z.object({ rescheduleToken }), response: z.object({ ok: z.boolean() }), errors: [], labels: [], examples: [],

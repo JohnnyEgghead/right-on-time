@@ -13,7 +13,7 @@ import {
 } from '@bw/api';
 import { chooseLanguage, type Language } from '@bw/i18n/src/language.ts';
 import {
-  FileItemStore, NotReadyError, SYNC_CALL_LIMIT_MS, TechOutbox, type AnsweredItem, type EntryInput, type FinishPayload, type OutboxState, type QueuedItem, type StoreDir,
+  FileItemStore, NotReadyError, SYNC_CALL_LIMIT_MS, TechOutbox, uploadLimitMs, type AnsweredItem, type EntryInput, type FinishPayload, type OutboxState, type QueuedItem, type StoreDir,
 } from '@bw/outbox/src/items/native.ts';
 import type { Instant } from '@bw/time';
 import { SessionStore, type SecretStore, type Session } from './auth/session-store.ts';
@@ -81,7 +81,7 @@ export interface AppState {
   damaged: string[];
 }
 
-/** F-985: what the phone still holds unsent, the waiting count's and SCR-TEC-09's number: the readable items and the damaged ones. */
+/** F-985: what the phone still holds unsent, the number in the waiting count and on the Waiting to send screen (SCR-TEC-09): the readable items and the damaged ones. */
 export const waitingTotal = (s: Pick<AppState, 'outbox' | 'damaged'>): number => s.outbox.waiting.length + s.damaged.length;
 
 /**
@@ -168,7 +168,7 @@ export class NativeApp {
   private async refreshSignedOut(): Promise<void> {
     const waiting = await this.store.waiting();
     const damaged = this.store.damaged();
-    // UD-20 needs the waiting technician's name only while something waits (F-1115).
+    // The sign-in screen locks the name to the waiting technician (UD-20), so the name is kept only while something waits (F-1115).
     if (waiting.length === 0 && damaged.length === 0) this.person.clear();
     this.set({ outbox: { ...IDLE_OUTBOX, ready: true, waiting }, damaged });
   }
@@ -192,7 +192,7 @@ export class NativeApp {
     const client = this.client(session, undefined, SYNC_CALL_LIMIT_MS);
     const engine = new TechOutbox({
       store: this.store,
-      transport: nativeTransport({ origin: session.origin, token: session.token, blobUri: (k) => this.store.blobUri(k), port: this.deps.upload }),
+      transport: nativeTransport({ origin: session.origin, token: session.token, blobUri: (k) => this.store.blobUri(k), port: this.deps.upload, limitMs: uploadLimitMs }),
       client,
       deviceNow: this.deps.deviceNow,
       bannerNow: this.deps.bannerNow,
@@ -258,7 +258,7 @@ export class NativeApp {
     return this.engine ? this.engine.demoNowMs() : Promise.resolve(null);
   }
 
-  /** The answered items the store keeps (SCR-TEC-09's kept results). */
+  /** The answered items the store keeps, newest first; the Waiting to send screen (SCR-TEC-09) lists those flagged, history only, or not added after a reset. */
   answered(): Promise<AnsweredItem[]> {
     return this.engine ? this.engine.answered() : this.store.answered();
   }
@@ -269,7 +269,7 @@ export class NativeApp {
     return this.engine.correctFinish(key, payload);
   }
 
-  // ---- server address (SCR-TEC-12) -----------------------------------------------------------------------------------------
+  // ---- checking and saving the server address on its screen (SCR-TEC-12) -----------------------------------------------------------------------------------------
 
   check(origin: string): Promise<ServerCheck> {
     return checkServer(origin, this.deps.fetch);

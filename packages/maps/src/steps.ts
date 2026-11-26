@@ -15,7 +15,7 @@
 // A route that breaks one throws {@link StepMappingError}; a maneuver type outside the table throws {@link UnknownManeuverError}
 // naming the type. The bake fails on either; the live client treats either as no route (SD-49 step 3).
 
-/** The 12 kinds of SD-49's table, API-104's `kind`. */
+/** The 12 kinds of step a route can have: the `kind` field of the Directions read (API-104; the table of SD-49). */
 export const STEP_KINDS = [
   'depart', 'turn', 'continue', 'new_name', 'merge', 'ramp', 'exit', 'fork', 'end_of_road', 'roundabout', 'uturn', 'arrive',
 ] as const;
@@ -55,7 +55,7 @@ export interface OsrmStep {
   maneuver: { type: string; modifier?: string; bearing_after?: number; exit?: number };
 }
 
-/** OSRM's `maneuver.type` to SD-49's kind. `depart`, `arrive`, the folded types and the uturn rule are handled before this table. */
+/** OSRM's `maneuver.type` to our step kind (the table of SD-49). `depart`, `arrive`, the folded types and the uturn rule are handled before this table. */
 const KIND_OF: Readonly<Record<string, StepKind>> = {
   turn: 'turn',
   'roundabout turn': 'turn',
@@ -80,7 +80,7 @@ export const KNOWN_TYPES: readonly string[] = ['depart', 'arrive', ...Object.key
 /** Kinds that carry no direction (SD-49 `direction`). */
 const NO_DIRECTION: ReadonlySet<StepKind> = new Set(['depart', 'arrive', 'roundabout', 'uturn']);
 
-/** A maneuver type outside SD-49's table: the bake fails naming it; the live client answers no route. */
+/** A maneuver type outside the step table (SD-49): the bake fails naming it; the live client answers no route. */
 export class UnknownManeuverError extends Error {
   readonly type: string;
   constructor(type: string, index: number) {
@@ -119,7 +119,7 @@ const sideOf = (modifier: string | undefined): StepSide | null => {
 const roadOf = (s: OsrmStep): string | null => (s.name ? s.name : s.ref ? s.ref : null);
 
 /** The kind of 1 OSRM step, `folded` for a type with no step of its own. Throws {@link UnknownManeuverError} outside the table. */
-export function kindOf(type: string, modifier: string | undefined, index: number): StepKind | 'folded' {
+function kindOf(type: string, modifier: string | undefined, index: number): StepKind | 'folded' {
   if (type === 'depart' || type === 'arrive') return type;
   if (FOLDED_TYPES.includes(type)) return 'folded';
   if (modifier === 'uturn') return 'uturn';
@@ -132,7 +132,7 @@ const e5 = (v: number): number => Math.round(v * 1e5);
 const sameVertex = (a: readonly [number, number], b: readonly [number, number]): boolean => e5(a[0]) === e5(b[0]) && e5(a[1]) === e5(b[1]);
 
 /**
- * OSRM's route steps (1 leg, `steps=true`) to SD-49's step objects.
+ * OSRM's route steps (1 leg, `steps=true`) to our step objects (the step mapping of SD-49).
  *
  * @param steps    the leg's `steps`, in driving order
  * @param vertices the track's polyline decoded (`decodePolyline`), so each `at` is that vertex itself

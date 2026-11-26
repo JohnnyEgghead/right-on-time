@@ -4,7 +4,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { buildTimeline, checkLoadDay, LOAD_DAY, seeded, squeeze, type LoadWorld, type Step } from './plan.ts';
-import { BOARD_EVENTS, REREAD_WAIT_MS, VAN_READ_MS } from './run.ts';
+import { boardDelaySample } from '@bw/api';
+import { BOARD_EVENTS, delayBodies, REREAD_WAIT_MS, VAN_READ_MS } from './run.ts';
 import { LOAD_DAY_RUNS, nearestRank, nfr01Passes, NFR_01_P95_LIMIT_S, p95WithLost, pool, runSetProblem, spread, type RunCounts, type RunShape } from './stats.ts';
 import { boardVersions, DelayTracker } from './tracker.ts';
 
@@ -216,6 +217,18 @@ describe('the load day and its timeline', () => {
     expect(new Set(events)).toEqual(BOARD_EVENTS);
     expect(page).toContain(`window.setTimeout(() => void flush(), ${REREAD_WAIT_MS})`);
     expect(VAN_READ_MS).toBe(10_000);
+  });
+});
+
+describe('the delay sample posts', () => {
+  // why: NFR-01 the load driver posts delay samples in the batch body that the contract of API-172 takes, never more than it allows in 1 request
+  it('are batches that the API-172 contract accepts, split at its sample limit, and skip a seq of 0', () => {
+    const seqs = Array.from({ length: 120 }, (_, i) => i);
+    const bodies = delayBodies(seqs);
+    expect(bodies.map((b) => b.samples.length)).toEqual([50, 50, 19]);
+    for (const b of bodies) expect(boardDelaySample.request.safeParse(b).success).toBe(true);
+    expect(bodies.flatMap((b) => b.samples.map((s) => s.seq))).toEqual(seqs.slice(1));
+    expect(delayBodies([0, -1])).toEqual([]);
   });
 });
 

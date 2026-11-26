@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Contract rows of the dispatch area. The lane that builds the area adds its API-<nn> rows here (defineContract from ../contract.ts)
-// and its examples; no other file needs editing.
+// and its examples; its handler and policy entry are in packages/api-server.
 // P2-SHELL (owner ruling c025a9ec): API-130, the top-bar search (CMP-07, FR-DISP-11).
 // P3-OFFICE-WRITES (BUILD_PLAN D-7: the engine lane owns the write rows): API-22 assign, API-24 reschedule, API-28 create,
 // API-136 to API-138 the blocks.
@@ -41,7 +41,7 @@ export const search = defineContract({
   examples: [{ name: 'signed out', input: { query: 'high', branch: 'columbus' }, expectStatus: 401 }],
 });
 
-/** An RFC 9557 time (UI-SPECIFICATION 12.1 item 5). */
+/** An RFC 9557 time: a timestamp string that carries its zone (UI-SPECIFICATION 12.1 item 5). */
 const wireTime = z.string().min(1);
 /** A wall time in the branch zone, HH:MM. */
 // F-260: job_number is a PostgreSQL integer (a larger number answered 500).
@@ -66,7 +66,7 @@ export const versionConflictDetail = z.object({
 });
 
 /** technician_no_room's members (F-1701, F-1803): the limit that refused the placement and that limit's number (UI-SPECIFICATION section 4.3). */
-export const noRoomDetail = z.object({ limit: z.enum(['installer_day', 'day', 'window']), max: z.number().int().nonnegative() });
+const noRoomDetail = z.object({ limit: z.enum(['installer_day', 'day', 'window']), max: z.number().int().nonnegative() });
 
 /** time_overlap's members (FR-DISP-34; OI-41): the block and the job whose planned time would overlap it. */
 export const overlapDetail = z.object({
@@ -166,7 +166,7 @@ export const editJob = defineContract({
     baseVersion: version,
   }),
   response: z.object({ job: writtenJob }),
-  // F-505: rule_refused for a closed job (12.1 item 9); F-507 item 3: window_full when the service crosses FR-BOOK-5's pools
+  // F-505: rule_refused for a closed job (12.1 item 9); F-507 item 3: window_full when the service crosses the capacity pools (install and not; FR-BOOK-5)
   // (SPECIFICATIONS 5.3 step 3); time_overlap when the new length reaches a block.
   errors: ['version_conflict', 'time_overlap', 'window_full', 'rule_refused'],
   errorDetails: { version_conflict: versionConflictDetail, time_overlap: overlapDetail, rule_refused: ruleRefusedDetail },
@@ -192,7 +192,7 @@ export const finishJobOffice = defineContract({
     baseVersion: version,
   }),
   response: z.object({ job: writtenJob, billing: z.object({ state: billingState }) }),
-  // rule_refused: a job already Done, No one home or Canceled (CTL-OFC-03-08's rule; F-505).
+  // rule_refused: a job already Done, No one home or Canceled (the rule of Finish visit, CTL-OFC-03-08; F-505).
   errors: ['parts_required', 'version_conflict', 'rule_refused'],
   errorDetails: { version_conflict: versionConflictDetail, rule_refused: ruleRefusedDetail },
   labels: [],
@@ -292,7 +292,7 @@ export const boardJob = z.object({
   window: z.object({ start: wireTime, end: wireTime }),
   technicianId: z.string().nullable(),
   plannedArrival: wireTime.nullable(),
-  /** SD-15's ETA (the arrival time once arrived); null with no technician. */
+  /** The ETA (SD-15; the arrival time once arrived); null with no technician. */
   eta: wireTime.nullable(),
   expectedMinutes: z.number().int(),
   status: jobStatus,
@@ -306,7 +306,7 @@ export const boardJob = z.object({
   technicianSkill: z.string().nullable(),
 });
 
-export const boardBlock = z.object({
+const boardBlock = z.object({
   blockId: z.string(), version, label: z.string(), place: z.string().nullable(), start: wireTime, end: wireTime,
 });
 
@@ -391,7 +391,7 @@ export const boardDay = defineContract({
 });
 
 /** A van's map state (FR-DISP-3): the status of its current job, else between jobs (SPECIFICATIONS rightNow's words). */
-export const vanStatus = z.enum(['on_the_way', 'on_site', 'between_jobs']);
+const vanStatus = z.enum(['on_the_way', 'on_site', 'between_jobs']);
 const lonLat = z.object({ lon: z.number(), lat: z.number() });
 /** F-817 (SPECIFICATIONS 7.4 API-21): a route line's key, the first 16 lowercase hex characters of the SHA-256 of its encoded polyline. */
 export const ROUTE_KEY = /^[0-9a-f]{16}$/;
@@ -423,7 +423,7 @@ export const vanPositions = defineContract({
       status: vanStatus,
       /** The job on the way or on site; null between jobs. */
       jobNumber: z.number().int().nullable(),
-      /** SD-15's ETA of that job (the arrival time once on site). */
+      /** The ETA of that job (SD-15; the arrival time once on site). */
       eta: wireTime.nullable(),
       /**
        * The leg of a van on the way, so the map draws the road, or a labeled straight line where no track was baked (FR-MAP-3). `key`
@@ -477,7 +477,7 @@ export const movePreview = defineContract({
   path: '/jobs/{jobNumber}/assignment-preview',
   request: z.object({ jobNumber: jobNumberParam, technicianId: z.uuid().nullable() }),
   response: z.object({
-    /** SD-15's planned arrival with the job on the technician's day (the FR-TEXT-5 baseline, GAP-6); null for Unassigned. */
+    /** The planned arrival (SD-15) with the job on the technician's day (the FR-TEXT-5 baseline, GAP-6); null for Unassigned. */
     arrivesAbout: wireTime.nullable(),
     insideWindow: z.boolean().nullable(),
     window: z.object({ start: wireTime, end: wireTime }),

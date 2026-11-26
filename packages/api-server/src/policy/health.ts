@@ -8,12 +8,12 @@ import { api, MANAGER, OFFICE, page, PUBLIC } from './entry.ts';
 export const healthPolicy: PolicyEntry[] = [
   api(healthz, PUBLIC),
   api(boardDelaySample, OFFICE),
-  api(officeAlerts, OFFICE), // CTL-CMP-07-06, SCR-OFC-28
-  api(systemHealth, MANAGER), // SCR-OFC-16
-  api(setTextSimulator, MANAGER), // CTL-OFC-16-02
-  api(checkNow, MANAGER), // CTL-OFC-16-12
-  api(setAlertSwitch, MANAGER), // CTL-OFC-16-21, -22
-  api(alertEmailLink, MANAGER), // CTL-OFC-16-23, CTL-OFC-28-04
-  api(dismissAlert, OFFICE), // CTL-OFC-16-28 (manager), CTL-OFC-28-05 (office, manager)
+  api(officeAlerts, OFFICE), // Read a day's office alerts, for the list the notification bell opens (CTL-CMP-07-06, SCR-OFC-28)
+  api(systemHealth, MANAGER), // Read the system health page, for managers (SCR-OFC-16)
+  api(setTextSimulator, MANAGER), // Set how the text simulator answers sends: up, all fail, fail 1 customer, or fail the next N; managers (CTL-OFC-16-02)
+  api(checkNow, MANAGER), // Run every alert check now, for managers (CTL-OFC-16-12)
+  api(setAlertSwitch, MANAGER), // Turn an alert switch on or off, for managers (CTL-OFC-16-21, -22)
+  api(alertEmailLink, MANAGER), // Make this manager's fresh one-time link to their unopened copy of an alert email; it replaces the earlier link (CTL-OFC-16-23, CTL-OFC-28-04)
+  api(dismissAlert, OFFICE), // Dismiss an alert, for managers and office staff (CTL-OFC-16-28 (manager), CTL-OFC-28-05 (office, manager))
   page('SCR-OFC-16', '/office/admin/health', MANAGER),
 ];

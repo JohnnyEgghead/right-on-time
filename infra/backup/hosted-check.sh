@@ -49,7 +49,7 @@ if [ "$same" != 1 ]; then say "STOP: deploy this commit first (bash infra/deploy
 
 say "== the bucket's Region from the Lightsail API (this Mac)"
 api_region=""
-if command -v aws >/dev/null 2>&1 && aws configure list-profiles 2>/dev/null | grep -qx brightwater; then
+if command -v aws >/dev/null 2>&1 && grep -qx brightwater < <(aws configure list-profiles 2>/dev/null); then
   bucket="$(sed -n 's/^BACKUP_BUCKET=//p' "$root/infra/hosted/hosted.env")"
   api_region="$(aws lightsail get-buckets --profile brightwater --region us-east-1 --bucket-name "$bucket" \
                   --query 'buckets[0].location.regionName' --output text 2>/dev/null || true)"

@@ -24,7 +24,7 @@ type Out<R extends { response: z.ZodType }> = z.output<R['response']>;
  * API-15 lists only these, each only when they can sign in (SIGNABLE). Owner ruling b66aaae8 (Nov 1, 2026; F-283): the start
  * page shows a short list, the approved frame's people, not every sample technician. This is the only place the set is kept.
  */
-export const START_PAGE_SIGN_INS: readonly string[] = [
+const START_PAGE_SIGN_INS: readonly string[] = [
   'maria.santos@brightwater.example',
   'luis.ortega@brightwater.example',
   'ryan.mitchell@brightwater.example',
@@ -134,7 +134,7 @@ const SIGNABLE = `sample AND status = 'active' AND password_hash IS NOT NULL`;
  * them, each only while they can sign in (SIGNABLE). Owner ruling b66aaae8 ("A short list", Nov 1, 2026): a Sign in as list shows
  * the approved frame's people, not every sample person with a password (F-281, F-317, F-1654). This is the only place the set is kept.
  */
-export const SIGN_IN_AS_LISTED: readonly string[] = [
+const SIGN_IN_AS_LISTED: readonly string[] = [
   'dana.ruiz@brightwater.example',
   'keisha.t@brightwater.example',
   'ana.gutierrez@brightwater.example',

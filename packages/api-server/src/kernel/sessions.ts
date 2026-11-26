@@ -38,7 +38,7 @@ export interface SessionStore {
   remove(tokenHash: Buffer): Promise<void>;
 }
 
-/** SD-8's limits: [idle, length]. */
+/** The idle and total length limits of a session by role and keep-signed-in choice (SD-8). */
 export function lifetimes(role: Role, keepSignedIn: boolean): { idle: Temporal.Duration; length: Temporal.Duration } {
   if (keepSignedIn) return { idle: Temporal.Duration.from({ hours: 30 * 24 }), length: Temporal.Duration.from({ hours: 90 * 24 }) };
   if (role === 'technician') return { idle: Temporal.Duration.from({ hours: 8 }), length: Temporal.Duration.from({ hours: 14 }) };

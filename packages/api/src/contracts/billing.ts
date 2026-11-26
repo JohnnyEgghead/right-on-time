@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Contract rows of the billing area. The lane that builds the area adds its API-<nn> rows here (defineContract from ../contract.ts)
-// and its examples; no other file needs editing.
-// P3-BILLING-WRITES (BUILD_PLAN D-7: the billing reads API-60, API-65 to API-67 and API-159 are P4-BILLING-UI's): the write
-// rows API-61 Send again, API-62 Correct a finish and send again, API-156 Retry now, API-157 Retry all, API-158 Mark fixed
-// and API-68 Set pretend billing mode (SPECIFICATIONS section 6.6 FR-BILL-5, FR-BILL-7, FR-BILL-10, FR-BILL-11).
+// Contract rows of the billing area. A new row is added here with defineContract (from ../contract.ts) and its examples;
+// its handler and policy entry are in packages/api-server.
+// The reads are API-60, API-65 to API-67 and API-159. The write rows are API-61 Send again, API-62 Correct a finish and
+// send again, API-156 Retry now, API-157 Retry all, API-158 Mark fixed and API-68 Set pretend billing mode
+// (SPECIFICATIONS section 6.6 FR-BILL-5, FR-BILL-7, FR-BILL-10, FR-BILL-11).
 import { z } from 'zod';
 import { defineContract, type ContractRow } from '../contract.ts';
 import { versionConflictDetail } from './dispatch.ts';

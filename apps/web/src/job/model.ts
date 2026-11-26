@@ -154,7 +154,7 @@ export const equipmentWord = (t: (key: MessageKey) => string, type: string): str
  * is 1 of those words (or the code itself, in any case) is sent as its code, so a Spanish page reads it in Spanish like a seeded one;
  * any other typed type is sent as typed.
  */
-export const EQUIPMENT_CODES = Object.keys(EQUIPMENT_WORD);
+const EQUIPMENT_CODES = Object.keys(EQUIPMENT_WORD);
 export const equipmentSuggestions = (t: (key: MessageKey) => string): { code: string; word: string }[] => EQUIPMENT_CODES.map((code) => ({ code, word: equipmentWord(t, code) }));
 export function equipmentTypeSent(t: (key: MessageKey) => string, typed: string): string {
   const x = typed.trim();

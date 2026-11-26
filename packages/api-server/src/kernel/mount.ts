@@ -9,9 +9,10 @@
 //   Origin check on a cookie-carrying write -> authorize (access code, then access) -> validate the request ->
 //   rate limit by login -> 1 transaction: token check, the handler -> validate and wrap the answer.
 // Only this file writes a response body for an API call, so no answer leaves without its envelope or Problem shape
-// (section 7.2), its labels, and the 11.5 headers. The 3 rows without an envelope: API-171's plain body (OI-46),
-// API-83's file (text/csv), which the kernel writes from the handler's text, and API-09's event stream (a stream row,
-// F-344: authorized like every row, then answered as text/event-stream from the handler's stream, with no transaction).
+// (section 7.2), its labels, and the 11.5 headers. The rows without an envelope: the health check's plain body
+// (API-171, OI-46), the text/csv files (the import problem list, API-83, is one), which the kernel writes from the handler's
+// text, the stored photo or signature file (API-175), and the event stream (API-09; a stream row, F-344: authorized
+// like every row, then answered as text/event-stream from the handler's stream, with no transaction).
 // F-1845: a server_error the kernel makes (a throw, or an answer outside the row's contract) logs the call's line at error
 // level with its cause code (KernelCause): the caller's answer is the same server_error as before.
 import {
@@ -50,9 +51,7 @@ export interface KernelDeps {
   accessKey: string;
   /** Link-token and one-time-link checks, 1 per kind the table uses; mount refuses a table entry with none. */
   tokens?: Partial<Record<TokenKind | 'one_time', TokenCheck>>;
-  /** The zone demo time is written in (the branches' zone). */
-  zone?: string;
-  /** The process's event bus, handed to a stream row's handler and to API-172's (the seq's emit time, SD-43). */
+  /** The process's event bus, handed to a stream row's handler and to the board delay sample's (API-172; the seq's emit time, SD-43). */
   events?: EventBusPort;
 }
 
@@ -73,7 +72,7 @@ export interface Router {
   owns(pathname: string, method?: string): boolean;
 }
 
-/** The zone demo time is written in when the deps name none (the branches' zone; handlers share it). */
+/** The zone demo time is written in (the branches' zone; handlers share it). */
 export const DEFAULT_ZONE = 'America/New_York';
 
 const MAX_BODY = 1 << 20;
@@ -90,7 +89,7 @@ const COOKIE_ALLOW: Readonly<Record<string, readonly string[]>> = { [ENTER_CODE]
 const API_PREFIX = '/api/';
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 /** The kernel stamps system.demo_clock.last_write_real at most once per this many real seconds (SD-12 idle reset). */
-export const WRITE_STAMP_EVERY_S = 10;
+const WRITE_STAMP_EVERY_S = 10;
 
 class Refusal {
   readonly code: ErrorCode;
@@ -185,11 +184,10 @@ async function selectRoute(group: readonly Route[], request: Request): Promise<R
 export function mount(table: readonly PolicyEntry[], handlers: Readonly<Record<string, Handler<unknown>>>, deps: KernelDeps): Router {
   checkTable(table, handlers, deps.tokens);
   const limiter = new RateLimiter(deps.clock);
-  const zone = deps.zone ?? DEFAULT_ZONE;
   const routes: Route[] = table
     .filter((e): e is ApiPolicyEntry => e.kind === 'api')
     .sort((a, b) => specificity(a.path) - specificity(b.path))
-    .map((entry) => ({ entry, compiled: compilePath(entry.path), guarded: wrap(entry, handlers[entry.contract]!, deps, limiter, zone) }));
+    .map((entry) => ({ entry, compiled: compilePath(entry.path), guarded: wrap(entry, handlers[entry.contract]!, deps, limiter) }));
   // 1 entry per route, except a shared route (checkTable admitted it), whose rows are chosen per request by selectRoute.
   const served = new Map<string, Route[]>();
   for (const r of routes) served.set(routeKey(r.entry), [...(served.get(routeKey(r.entry)) ?? []), r]);
@@ -234,7 +232,7 @@ function clientAddress(h: Headers, info: CallInfo): string {
  */
 type KernelCause = 'response_shape' | 'cookie_not_allowed' | (string & {});
 
-function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps, limiter: RateLimiter, zone: string): (call: Call) => Promise<Response> {
+function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps, limiter: RateLimiter): (call: Call) => Promise<Response> {
   const row = entry.row;
   const rules = rateRules(row);
   const byAddress = rules.filter((r) => r.scope === 'address');
@@ -278,7 +276,7 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
     };
     const readClock = async (): Promise<Instant> => {
       const [demoNow, worldEpoch] = await Promise.all([deps.clock.demoNow(), deps.clock.worldEpoch()]);
-      meta = { contract: entry.contract, worldEpoch, demoNow: toWire(demoNow, zone) };
+      meta = { contract: entry.contract, worldEpoch, demoNow: toWire(demoNow, DEFAULT_ZONE) };
       return demoNow;
     };
 
@@ -297,7 +295,7 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
         const demoNow = await readClock().catch(() => {
           clockRead = false;
           const epoch = Temporal.Instant.fromEpochMilliseconds(0);
-          meta = { contract: entry.contract, worldEpoch: 0, demoNow: toWire(epoch, zone) };
+          meta = { contract: entry.contract, worldEpoch: 0, demoNow: toWire(epoch, DEFAULT_ZONE) };
           return epoch;
         });
         if (!limited(limiter, entry.contract, byAddress, call.address)) return refuse('rate_limited');
@@ -404,7 +402,7 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
       ...(caller.kind === 'staff' ? { userId: caller.userId } : {}),
     };
     // F-1845: a server_error answer is an error-level line with its cause (a handler's own server_error refusal, such as
-    // API-171's stale heartbeat, has no further cause and logs server_error); every other answer is the info line it was.
+    // the health check's stale heartbeat (API-171), has no further cause and logs server_error); every other answer is the info line it was.
     if (errorCode === 'server_error') deps.log.error({ ...line, errorCode: cause ?? 'server_error' });
     else deps.log.info({ ...line, ...(errorCode ? { errorCode } : {}) });
     return res;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Contract rows of the map area. The lane that builds the area adds its API-<nn> rows here (defineContract from ../contract.ts)
-// and its examples; no other file needs editing.
+// and its examples; its handler and policy entry are in packages/api-server.
 //
 // P5-LIVEMAP: API-116 Live map data, the customer's live map link plus `/data` (UI-SPECIFICATION 12.2; SPECIFICATIONS SD-17, 6.4 Live map
 // ends at arrival, FR-TEXT-4, FR-TEXT-22, FR-TEXT-23, NFR-04). API-115 (the live map page itself, answering 200 page or 410 ended page at the

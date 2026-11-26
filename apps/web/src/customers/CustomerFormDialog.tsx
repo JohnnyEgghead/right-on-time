@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 'use client';
 // SCR-OFC-38 New customer and SCR-OFC-39 Edit customer: one form, two dialogs (frames mockups/pages/office-customer-search.html DK-90 and
-// office-customer.html DK-91). SCR-OFC-38 is hosted on SCR-OFC-05 and, from P4-NEWJOB, on SCR-OFC-04, so this component takes only
+// office-customer.html DK-91). The New customer dialog (SCR-OFC-38) opens on the customer search page (SCR-OFC-05) and the New job page (SCR-OFC-04), so this component takes only
 // what differs: the mode, the starting values, and what to do with the saved customer (`onSaved`). The street is picked from the
 // bundled street list (API-111) and only a picked street can be saved (FR-DISP-29, FR-BOOK-12, OA-73); the branch, ZIP code and map
 // position come from it on the server (SD-23). The mobile number is checked as 10 digits; texts need a mobile number (FR-TEXT-13).
@@ -16,7 +16,7 @@ import { Busy, call, Dialog, SelectField, TextField } from './ui.tsx';
 
 export type StreetHit = { streetId: string; name: string; city: string; zip: string; branch: string };
 
-export interface SavedCustomer {
+interface SavedCustomer {
   id: string;
 }
 

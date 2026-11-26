@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// F-1523: the slot samples sit at SD-17's maxima (the link host plus 8 characters, the Spanish window with its zone: 20 each).
+// F-1523: the links and the Spanish window in the samples are as long as their slots allow (SD-17: the link host plus /m/
+// or /r/ plus 8 characters, the Spanish window with its zone: 20 each).
 // SC-05: the 10 sample texts (the 4 STORY.md section 2 texts plus the R-reply, each in English and Spanish) each fit 1 GSM-7
 // message (FR-TEXT-9) and each Spanish text carries a passing review record from an agent other than its author (FR-LANG-4).
 import { readFileSync } from 'node:fs';

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The board's reads (P4-BOARD; UI-SPECIFICATION 12.2 API-20, API-30, API-131; SPECIFICATIONS SD-15, SD-26, FR-DISP-17):
+// The board's reads (UI-SPECIFICATION 12.2 API-20, API-30, API-131; SPECIFICATIONS SD-15, SD-26, FR-DISP-17):
 //   API-20  board day        1 branch day: the technicians working it with their jobs and blocks, the Unassigned row, the
 //                            day summary, the Needs attention lists and the flagged items. ETA and timing are SD-15's
 //                            etaDay over the baked tracks, the same function and drive minutes the ETA sweep uses
@@ -25,9 +25,9 @@ type BoardJob = BoardAnswer['unassigned'][number];
 type Attention = BoardAnswer['needsAttention']['late'][number];
 
 /** FR-DISP-13, OA-64: the on-time goal the board shows the 7-day rate against. */
-export const ON_TIME_GOAL = 0.9;
+const ON_TIME_GOAL = 0.9;
 /** The catalog key of the label the rate never shows without (FR-REP-4). */
-export const SIMULATED_LABEL_KEY = 'board.summary.simulated';
+const SIMULATED_LABEL_KEY = 'board.summary.simulated';
 
 /** The 2 letters of a row's avatar: the first letters of the first and last name. */
 export function initialsOf(name: string): string {

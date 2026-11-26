@@ -165,7 +165,7 @@ describe('the last place in a window (FR-BOOK-3, FR-BOOK-6): 2 bookings at once,
     const { keisha, ana } = world.staff;
     for (let round = 0; round < ROUNDS; round++) {
       const date = `2026-10-${12 + round}`; // Mon Oct 12 to Fri Oct 16: 2-hour days
-      await fill(date, 'two_hour 16:00', 9); // the 4-6 PM window holds 10 (FR-BOOK-6)
+      await fill(date, 'two_hour 16:00', 9); // the 4-6 PM window holds 10 jobs, so 9 leave room for exactly 1 more (FR-BOOK-6)
       const out = await race([
         () => send('POST', '/jobs', keisha, createBody(date, 'two_hour 16:00', world.customers[10 + round] as string)),
         () => send('POST', '/jobs', ana, createBody(date, 'two_hour 16:00', world.customers[20 + round] as string)),

@@ -19,7 +19,7 @@ describe('API-105 server check', () => {
     expect(PRODUCT_NAME).toBe('Right On Time');
   });
 
-  // why: FR-IOS-3 the check is the 1 call of SCR-TEC-12, a read: it refuses a write method
+  // why: FR-IOS-3 the check is the 1 call of the app's Server address screen (SCR-TEC-12), a read: it refuses a write method
   it('serves a GET only: a write to the path is no route', async () => {
     const k = kit(policyTable, { ...handlers }, { ACCESS_CODE_ON: true });
     expect((await k.call('POST', '/api/v1/server-info')).status).toBe(404);

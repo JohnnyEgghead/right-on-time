@@ -13,7 +13,7 @@ import {
   blobContentType, blobQuery, failureOf, jsonOrNull, uploadAnswer, wireItem, type Transport, type WireAnswer,
 } from '@bw/outbox/src/items/native.ts';
 
-export interface UploadInit {
+interface UploadInit {
   method: 'POST' | 'PUT';
   headers: Record<string, string>;
 }
@@ -37,15 +37,32 @@ export interface NativeTransportOptions {
   /** Where a waiting photo's or signature's bytes are (FileItemStore.blobUri). */
   blobUri: (key: string) => string | null;
   port: UploadPort;
+  /** The longest a call may wait for its answer, by the bytes it sends (uploadLimitMs); no limit when absent. */
+  limitMs?: (bytes: number) => number;
 }
 
 const ACCEPT = 'application/json, application/problem+json';
 
 /**
+ * Waits for `upload` at most `limitMs`: past it the wait rejects as a lost answer, and the upload itself is left alone, so the background task
+ * keeps going after the app is left and its answer, when it comes, changes nothing here (the item waits under its key and the next send's
+ * repeat is answered duplicate). `after` runs once the upload settles, whenever that is, never at the limit: the task still reads its file.
+ */
+function awaitUpload(upload: Promise<UploadResult>, limitMs: number | undefined, after: () => void): Promise<UploadResult> {
+  upload.then(after, after); // both ends handled: a rejection after the limit is never an unhandled one
+  if (limitMs === undefined) return upload;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`no answer within ${limitMs} ms`)), limitMs);
+  });
+  return Promise.race([upload, late]).finally(() => clearTimeout(timer));
+}
+
+/**
  * A fetch for the typed client that sends its request body from a file by a background upload. Only a call with a body comes here
  * (API-102). A rejected upload is no answer at all, so it surfaces as fetch's own TypeError: the send loop's "network".
  */
-export function uploadFetch(port: UploadPort): typeof fetch {
+export function uploadFetch(port: UploadPort, limitMs?: (bytes: number) => number): typeof fetch {
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const body = typeof init?.body === 'string' ? init.body : null;
     const method = init?.method;
@@ -54,11 +71,9 @@ export function uploadFetch(port: UploadPort): typeof fetch {
     const file = port.bodyFile(body);
     let r: UploadResult;
     try {
-      r = await port.upload(file.uri, String(input), { method, headers });
+      r = await awaitUpload(port.upload(file.uri, String(input), { method, headers }), limitMs?.(body.length), file.done);
     } catch (e) {
       throw new TypeError(`Network request failed: ${(e as Error).message}`);
-    } finally {
-      file.done();
     }
     const h = new Map(Object.entries(r.headers).map(([k, v]) => [k.toLowerCase(), v]));
     return { status: r.status, text: async () => r.body, headers: { get: (n: string) => h.get(n.toLowerCase()) ?? null } } as unknown as Response;
@@ -67,7 +82,7 @@ export function uploadFetch(port: UploadPort): typeof fetch {
 
 export function nativeTransport(opts: NativeTransportOptions): Transport {
   const auth = { authorization: `Bearer ${opts.token}` };
-  const items = createClient({ baseUrl: opts.origin, fetch: uploadFetch(opts.port), headers: auth });
+  const items = createClient({ baseUrl: opts.origin, fetch: uploadFetch(opts.port, opts.limitMs), headers: auth });
   return {
     async sendItems(batch) {
       try {
@@ -87,11 +102,13 @@ export function nativeTransport(opts: NativeTransportOptions): Transport {
       const url = `${opts.origin}${fillPath(servedPath(uploadBlob), { key: i.key })}?${q.toString()}`;
       let r: UploadResult;
       try {
-        r = await opts.port.upload(uri, url, { method: 'PUT', headers: { ...auth, accept: ACCEPT, 'content-type': blobContentType(i) } });
+        r = await awaitUpload(
+          opts.port.upload(uri, url, { method: 'PUT', headers: { ...auth, accept: ACCEPT, 'content-type': blobContentType(i) } }),
+          opts.limitMs?.(bytes.byteLength),
+          () => empty?.done(),
+        );
       } catch {
         return { ok: false, stop: 'network' };
-      } finally {
-        empty?.done();
       }
       return uploadAnswer(r.status, jsonOrNull(r.body));
     },

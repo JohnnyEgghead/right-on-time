@@ -10,9 +10,9 @@ import { api, OFFICE, page, PUBLIC } from './entry.ts';
 export const customersPolicy: PolicyEntry[] = [
   page('SCR-OFC-05', '/office/customers', OFFICE),
   page('SCR-OFC-06', '/office/customers/{customerId}', OFFICE),
-  api(searchCustomers, OFFICE), // CTL-OFC-05-01, -05-05 to -05-11, -05-17 to -05-20 (SCR-OFC-05), CTL-OFC-04-01 (SCR-OFC-04)
-  api(customerDetail, OFFICE), // SCR-OFC-06 and its dialogs, CTL-OFC-05-16 (the preview panel), CTL-OFC-39-01, CTL-OFC-40-01
-  api(editCustomer, OFFICE), // CTL-OFC-06-07 (the time zone), CTL-OFC-39-07 (SCR-OFC-39)
-  api(createCustomer, OFFICE), // CTL-OFC-38-08 (SCR-OFC-38)
-  api(searchStreets, PUBLIC), // CTL-OFC-38-03, CTL-OFC-39-03 (the street pickers), CTL-CUS-01-04
+  api(searchCustomers, OFFICE), // Search customers, from the Customers page and the new job page (CTL-OFC-05-01, -05-05 to -05-11, -05-17 to -05-20 (SCR-OFC-05), CTL-OFC-04-01 (SCR-OFC-04))
+  api(customerDetail, OFFICE), // Read 1 customer: SCR-OFC-06 and its dialogs, CTL-OFC-05-16 (the preview panel), CTL-OFC-39-01, CTL-OFC-40-01
+  api(editCustomer, OFFICE), // Edit a customer, with its time zone (CTL-OFC-06-07 (the time zone), CTL-OFC-39-07 (SCR-OFC-39))
+  api(createCustomer, OFFICE), // Create a customer, from the new customer dialog (CTL-OFC-38-08 (SCR-OFC-38))
+  api(searchStreets, PUBLIC), // Street picker search, for the customer dialogs and the booking site (CTL-OFC-38-03, CTL-OFC-39-03 (the street pickers), CTL-CUS-01-04)
 ];

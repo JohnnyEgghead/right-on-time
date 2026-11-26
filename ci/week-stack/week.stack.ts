@@ -10,7 +10,8 @@
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { engines } from '../pw-engines.ts';
-import { guardedContext } from '../page-walkers/origin-guard.ts';
+import { demoDayCases } from '../demo-day.ts';
+import { guardedContext, type GuardedContext } from '../page-walkers/origin-guard.ts';
 
 const base = process.env.BW_SHELL_STACK_URL;
 if (!base) throw new Error('BW_SHELL_STACK_URL is not set: run ci/shell-stack.sh');
@@ -184,6 +185,31 @@ describe.each(engines)('the week board on the Compose stack, %s', (_engine, type
         .toBe(String(before.days[col]!.unassigned - 1));
       await expect.poll(() => posted.length, { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
       expect(posted.every((s) => s === 204), `API-172 answered ${posted.join(',')}`).toBe(true);
+    });
+  });
+
+  describe('Week follows the demo day', () => {
+    let g: GuardedContext | null = null;
+    demoDayCases({
+      origin, list: '/api/v1/board/week', key: 'week',
+      path: '/office/board/week?branch=columbus',
+      pickedPath: '/office/board/week?branch=columbus&week=2026-11-02',
+      picked: '2026-11-02',
+      days: ['2026-10-05', '2026-10-12', '2026-10-19', '2026-10-26'],
+      page: async () => {
+        g = await guardedContext(browser, [origin], { viewport: { width: 1440, height: 900 } });
+        await g.context.addCookies([{ name: 'bw_session', value: session!, url: origin, httpOnly: true }]);
+        const p = await g.context.newPage();
+        await writeOrigin(p);
+        return p;
+      },
+      close: async () => g?.context.close(),
+      // The previous-week link is the shown Monday less 7 days.
+      shown: async (p) => {
+        const href = await p.locator('[data-ctl="CTL-OFC-34-02"]').getAttribute('href');
+        const prev = new URL(href ?? '#', origin).searchParams.get('week');
+        return prev === null ? '' : new Date(Date.parse(`${prev}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
+      },
     });
   });
 });

@@ -45,7 +45,7 @@ describe('step words, every kind and direction of SD-49 in both languages', () =
   });
 
   // why: FR-TECH-5
-  it('says the UI specification and the approved frames words for their sample steps', () => {
+  it('words the sample steps of the UI specification, all in English and 4 in Spanish', () => {
     expect(stepText({ ...base, kind: 'depart', heading: 'n', road: 'Cleveland Ave' }, en, ADDRESS)).toBe('Head north on Cleveland Ave');
     expect(stepText({ ...base, kind: 'turn', direction: 'right', road: 'E Schrock Rd' }, en, ADDRESS)).toBe('Turn right onto E Schrock Rd');
     expect(stepText({ ...base, kind: 'turn', direction: 'slight_right', road: 'X' }, en, ADDRESS)).toBe('Turn slightly right onto X');
@@ -62,7 +62,7 @@ describe('step words, every kind and direction of SD-49 in both languages', () =
     expect(stepText({ ...base, kind: 'arrive', side: 'right', road: 'Cobblestone Dr' }, en, ADDRESS)).toBe('Arrive at 2271 Cobblestone Dr, on the right');
     expect(stepText({ ...base, kind: 'arrive', side: null }, en, ADDRESS)).toBe('Arrive at 2271 Cobblestone Dr');
     expect(stepText({ ...base, kind: 'turn', direction: 'left', road: null }, en, ADDRESS)).toBe('Turn left');
-    // DK-117, the Spanish frame
+    // 4 sample steps in Spanish, in the words the design frame (DK-117) had before kit 0.12 drew another route
     expect(stepText({ ...base, kind: 'depart', heading: 'n', road: 'Cleveland Ave' }, es, ADDRESS)).toBe('Siga hacia el norte por Cleveland Ave');
     expect(stepText({ ...base, kind: 'turn', direction: 'right', road: 'E Schrock Rd' }, es, ADDRESS)).toBe('Gire a la derecha en E Schrock Rd');
     expect(stepText({ ...base, kind: 'turn', direction: 'left', road: 'Cobblestone Dr' }, es, ADDRESS)).toBe('Gire a la izquierda en Cobblestone Dr');

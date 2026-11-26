@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 'use client';
-// SCR-OFC-03's photos and signature image (F-707, F-727; UI-SPECIFICATION CTL-OFC-03-14 to -16, CTL-OFC-03-30): each stored file
+// The job page's photos and signature image (SCR-OFC-03; F-707, F-727; UI-SPECIFICATION CTL-OFC-03-14 to -16, CTL-OFC-03-30): each stored file
 // is read from the app's own origin by its item key (API-175), and one that fails to load says so ("Photo could not load",
 // "Signature could not load") instead of a broken image. The viewer is a dialog with the full image, alt text naming who took
 // it and when, Previous, Next and Close.

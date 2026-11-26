@@ -7,8 +7,7 @@
 // The office kit slices first: a page's own sheet comes after them, as its frame's does.
 import '../shell/css/office.ts';
 import '../../styles/page-office-call-list.css';
-import { ApiError, callList, createClient, readClock, recordCallOutcome } from '@bw/api';
-import { fromWire } from '@bw/time';
+import { ApiError, callList, createClient, recordCallOutcome } from '@bw/api';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Busy, Dialog } from '../board/Dialogs.tsx';
@@ -16,6 +15,7 @@ import { RescheduleJobDialog } from '../job/RescheduleJobDialog.tsx';
 import type { Shown } from '../job/model.ts';
 import { useAnnounce } from '../shell/Announcer.tsx';
 import { branchById } from '../shell/branches.ts';
+import { officeClock, useDemoDay } from '../shell/demo-day.ts';
 import { OfficeFrame } from '../shell/Frames.tsx';
 import { Icon } from '../shell/Icon.tsx';
 import { useT } from '../shell/intl.tsx';
@@ -26,7 +26,7 @@ import type { CallData, CallOutcome, FailedText, ReminderCall } from './model.ts
 import { useMessagesLive } from './useMessagesLive.ts';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const CALL_EVENTS = ['text.changed', 'job.changed', 'world.reset'] as const;
+const CALL_EVENTS = ['text.changed', 'job.changed'] as const;
 
 export function CallListScreen() {
   const t = useT();
@@ -36,8 +36,10 @@ export function CallListScreen() {
   const client = useMemo(() => createClient({ baseUrl: typeof window === 'undefined' ? '' : window.location.origin }), []);
   const branch = useBranch();
   const dateParam = params.get('date');
-  const [today, setToday] = useState<string | null>(null);
-  const date = dateParam && DATE.test(dateParam) ? dateParam : today;
+  // The demo clock's today (API-10): the day shown while the URL names none (UD-18).
+  const { day: today, readDay } = useDemoDay(officeClock);
+  const following = !(dateParam && DATE.test(dateParam));
+  const date = following ? today : dateParam;
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');
   const [data, setData] = useState<CallData | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -51,16 +53,6 @@ export function CallListScreen() {
   shown.current = { branch, date };
   const say = useRef(t);
   say.current = t;
-
-  useEffect(() => {
-    let alive = true;
-    void client.call(readClock, {}).then((r) => {
-      if (alive) setToday(fromWire(r.data.demoNow).toPlainDate().toString());
-    }).catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, [client]);
 
   const load = useCallback(async () => {
     if (branch === null || date === null) return;
@@ -82,7 +74,7 @@ export function CallListScreen() {
     void load();
   }, [load]);
 
-  const live = useMessagesLive(branch, CALL_EVENTS, () => void load());
+  const live = useMessagesLive(branch, CALL_EVENTS, () => void load(), { following, day: today, readDay });
 
   // The first row still to call shows its script (the frame's), else the first row.
   const rows = useMemo<(ReminderCall | FailedText)[]>(() => (data ? [...data.reminderCalls, ...data.failedTexts] : []), [data]);

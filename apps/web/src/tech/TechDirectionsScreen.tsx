@@ -116,7 +116,7 @@ export function TechDirectionsScreen({ jobNumber, from, fixedData, fixedOutbox, 
         words: t('tech.map.stopWords', { n: stop?.number ?? 0, state: t('tech.map.state.next'), customer: dest.customer, area: dest.address }),
       });
     }
-    // CTL-TEC-08-01: the marker at the next turn.
+    // The map marker at the next turn, with its words (CTL-TEC-08-01).
     if (turn) out.push({ id: 'turn', kind: 'turn', at: [turn.at[0], turn.at[1]], icon: turn.icon, words: `${turn.lead} ${turn.words}` });
     return out;
   }, [leg, dest, stop, turn, t]);

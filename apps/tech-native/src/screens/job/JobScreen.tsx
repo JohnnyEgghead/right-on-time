@@ -25,6 +25,7 @@ import { openDirections } from '../mapme/index.tsx';
 import { useMapMe } from '../mapme/use-mapme.ts';
 import { applyWaiting, canStartWay } from '../today/model.ts';
 import type { JobRoutes } from './nav.ts';
+import { owedSignatures } from './owed.ts';
 import { stripRest, THUMB } from './strip.ts';
 import { photoLabel as thumbLabel, photoSource, Thumb } from './Thumb.tsx';
 import { barSubText, Group, GHead, JobBar, Lnk, NoSignal, PButton, Row, SButton, Scroll, Tx, WaitChip, jc } from './ui.tsx';
@@ -134,7 +135,7 @@ export function JobScreen() {
     if (phone) void Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`);
   };
   const directions = () => {
-    // SCR-TEC-08's 1 param shape (mapme MapTab.tsx): the leg into this job, from the van's position (no `from`), as the Today card opens it.
+    // The params of the Directions screen (SCR-TEC-08; mapme MapTab.tsx): the leg into this job, from the van's position (no `from`), as the Today card opens it.
     if (driveTo !== null) openDirections(nav, driveTo);
   };
   const addNote = () => nav.navigate('JobNote', { jobNumber });
@@ -266,7 +267,15 @@ export function JobScreen() {
   );
   // Kit 0.10 (owner answer d6bfc18c, "Pin it", DK-58): the action slot is pinned in a bar just above the tab bar, so On my way (later
   // Arrived, Finish job) shows whatever the screen holds; the content above scrolls on its own. A state with none shows no bar.
-  const pin = ended ? null : (
+  // A finish that waits for its signature reads Done, and the person who left its screen has no other way back to it (the finish screen enters only the signature).
+  const owesSignature = ended && owedSignatures(state.outbox.waiting, (n) => jobData().copies.finish(n)).has(jobNumber);
+  const pin = ended ? (owesSignature ? (
+    <View {...lk('job.pin', s.pin)}>
+      <View {...lk('job.acts2', [s.acts2, big ? s.acts2Big : null])}>
+        <SButton id="job.finish" icon="check" iconStroke={2.6} label={t('tech.job.finish')} onPress={() => nav.navigate('Finish', { jobNumber })} />
+      </View>
+    </View>
+  ) : null) : (
         <View {...lk('job.pin', s.pin)}>
             {st.status === 'scheduled' && canStartWay(dayJobs, { jobNumber, status: st.status }) ? (
               <Pressable {...lk('job.omw', s.omw)} onPress={() => status('on_my_way')} accessibilityRole="button" accessibilityLabel={t('tech.job.onMyWay')}>

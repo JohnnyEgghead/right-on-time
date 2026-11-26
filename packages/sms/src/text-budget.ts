@@ -23,7 +23,7 @@ export const SLOTS = [
 ] as const;
 export type Slot = (typeof SLOTS)[number];
 
-/** SD-17 maxima in characters, [English, Spanish]. */
+/** The longest value each text slot may take, in characters, per language (SD-17). */
 export const SLOT_MAX: Record<Slot, Record<Lang, number>> = {
   weekday: { en: 3, es: 4 },
   date: { en: 6, es: 12 },

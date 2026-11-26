@@ -209,7 +209,7 @@ describe('deploy.sh --release (F-1611)', () => {
     expect(r.calls('docker')).toContain('--context ctx-release save bw-app:v1.0.0');
     expect(r.calls('ssh')).toContain('sudo bash /tmp/bw-deploy-stage/server-deploy.sh /tmp/bw-deploy-stage bw-app:v1.0.0');
     expect(res.out).toContain(`bw-app:v1.0.0 (${IMAGE_ID}) carries PUBLIC_COMMIT ${PUBLIC}, linux/amd64`);
-    expect(existsSync(path.join(r.dir, 'captured/backups-on'))).toBe(true); // P8-UNLOCK's deploy, F-388
+    expect(existsSync(path.join(r.dir, 'captured/backups-on'))).toBe(true); // the demo profile stages the marker that turns server backups on (F-388)
     // a re-run: the server holds that tag with that PUBLIC_COMMIT, so nothing is sent again
     rmSync(path.join(r.dir, 'calls/docker'));
     expect(r.run(['--release', 'v1.0.0', '--profile', 'demo']).status).toBe(0);
@@ -465,6 +465,20 @@ describe('deploy.sh sends the map files to the map folder, never /tmp (F-1646, F
   it('makes no .incoming when the server record holds every file', () => {
     const r = rig();
     writeFileSync(path.join(r.dir, 'held'), Object.entries(MAPS).map(([id, c]) => `${sha(c)}  ${id}\n`).join(''));
+    const res = r.run([]);
+    expect(res.status, res.out).toBe(0);
+    expect(res.out).toContain('0 to send, 0 bytes');
+    expect(r.calls('ssh').filter((l) => l.includes('.incoming'))).toEqual([]);
+  });
+
+  // why: F-1926 (the held check piped the record into grep -q; under pipefail grep leaving at its first match while printf was
+  // still writing made the pipeline fail, so a held file read as missing and was re-sent; push run 45040318626). A record bigger
+  // than the pipe buffer, with the real lines first, forces that on every run, so the old line fails here every time.
+  it('never re-sends a file the server record holds, whatever the size of the record (F-1926)', () => {
+    const r = rig();
+    const real = Object.entries(MAPS).map(([id, c]) => `${sha(c)}  ${id}\n`).join('');
+    const filler = Array.from({ length: 6000 }, (_, i) => `${String(i).padStart(64, '0')}  filler-${i}.bin\n`).join('');
+    writeFileSync(path.join(r.dir, 'held'), real + filler);
     const res = r.run([]);
     expect(res.status, res.out).toBe(0);
     expect(res.out).toContain('0 to send, 0 bytes');

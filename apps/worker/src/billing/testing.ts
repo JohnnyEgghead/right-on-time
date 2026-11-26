@@ -49,7 +49,7 @@ export interface BillingLink {
   stop(): Promise<void>;
 }
 
-export function billingLinkOver(
+function billingLinkOver(
   pool: pg.Pool,
   clock: DbClock,
   lane: ParallelLane<PreparedSend, SendOutcome>,

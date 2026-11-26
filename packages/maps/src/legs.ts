@@ -14,7 +14,7 @@ import type { WorldFixture } from '../../setup/src/fixture.ts';
 
 /** The demo week (FR-MAP-5): Mon, Sep 14 to Fri, Sep 18, 2026. */
 export const DEMO_WEEK = ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18'] as const;
-/** FR-DEMO-5's preset days: "6:00 PM reminder" (Sep 15), "Tomorrow 8:00 AM" (Sep 16), Sat Oct 31, Sun Nov 1, Sat Mar 13 2027, Sun Mar 14 2027. */
+/** The demo's preset days (FR-DEMO-5): "6:00 PM reminder" (Sep 15), "Tomorrow 8:00 AM" (Sep 16), Sat Oct 31, Sun Nov 1, Sat Mar 13 2027, Sun Mar 14 2027. */
 export const PRESET_DAYS = ['2026-09-15', '2026-09-16', '2026-10-31', '2026-11-01', '2027-03-13', '2027-03-14'] as const;
 /** The day whose every same-branch job pair is baked. */
 export const PAIR_DAY = '2026-09-15';

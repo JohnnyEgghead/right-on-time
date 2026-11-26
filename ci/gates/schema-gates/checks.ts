@@ -9,14 +9,14 @@ import { expectedForeignKeys, type SpecModel } from './spec-model.ts';
  * Tables the database holds that section 3 lists without columns: the migration ledger, which the stores table puts
  * in `system` ("..., migrations") and which the runner (packages/db/src/migrate.ts) owns.
  */
-export const PARITY_EXEMPT_TABLES: Readonly<Record<string, string>> = {
+const PARITY_EXEMPT_TABLES: Readonly<Record<string, string>> = {
   'system.schema_migration': 'section 3 stores table: system holds the migrations; written only by the migration runner',};
 
 const DOC_TO_PG: Readonly<Record<string, string>> = {
   timestamptz: 'timestamp with time zone',
   time: 'time without time zone',
 };
-export const pgTypeOf = (docType: string): string => DOC_TO_PG[docType] ?? docType;
+const pgTypeOf = (docType: string): string => DOC_TO_PG[docType] ?? docType;
 
 /** A column's stored type with domains and arrays resolved and any precision removed: timestamp(0) -> timestamp without time zone (F-149). */
 export const storedType = (c: { type: string; base?: string }): string =>

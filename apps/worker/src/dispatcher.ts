@@ -8,7 +8,7 @@
 //   - The claim, every write the handler makes (a text's attempt, its inbox row, the next event) and the done mark
 //     commit together. A crash or a handler error before commit leaves nothing, and the event is still `due`: the
 //     next pass runs it again from the start, so an event's effects happen exactly once.
-//   - Concurrent dispatchers (2 workers, or the replay of P3-REPLAY beside the normal loop) never run 1 event twice:
+//   - Concurrent dispatchers (2 workers, or the clock-jump replay beside the normal loop) never run 1 event twice:
 //     SKIP LOCKED hands a locked row to no one else, and a row marked done is never claimed again.
 //   - A handler that throws is left due and excluded for the rest of that pass, so 1 bad row never blocks the rows
 //     behind it; the next pass (1 s later) tries it again. Each failed run is 1 error line with the event's kind, id and
@@ -43,7 +43,7 @@ export interface DueEvent {
   payload: Record<string, unknown>;
 }
 
-export interface EventContext {
+interface EventContext {
   /** The event's transaction: every write of the handler joins it. */
   tx: Queryable;
   /** The demo time the event runs at: max(due_at, demo now). */
@@ -94,7 +94,7 @@ const eventLine = (event: Pick<DueEvent, 'id' | 'kind'>, now: Instant) => ({ eve
  * stops when the event leaves due. The give-up, its end record and the mark commit in 1 transaction that holds the row
  * (SKIP LOCKED: a second dispatcher that reaches the limit at the same time finds no row and gives nothing up twice).
  */
-export async function noteHandlerFailure(
+async function noteHandlerFailure(
   pool: Pool, event: DueEvent, ctx: { now: Instant; replayTarget?: Instant }, giveUps: GiveUps, log: Logger, cause: unknown,
 ): Promise<boolean> {
   const line = eventLine(event, ctx.now);
@@ -473,10 +473,10 @@ export interface Dispatcher {
   /** Run 1 pass now through demo now, in both lanes, until neither has anything due or in flight, and report it. */
   drain(): Promise<DrainReport>;
   /**
-   * Run every event due through `through` in both lanes, each at max(due_at, demoNow) (P3-REPLAY's replay: the clock
+   * Run every event due through `through` in both lanes, each at max(due_at, demoNow) (the replay of a forward clock jump: the clock
    * paused at the old time; `replayTarget` is the jump's target, handed to each handler). Ends only when both lanes
    * are empty through `through`, or at the first claim after the world leaves `epoch` (F-635). The caller passes the
-   * epoch it read with or before its bound (the replay does), and F-642 makes it required.
+   * epoch it read with or before its bound (the replay does), and it is required (F-642).
    */
   drainThrough(opts: { through: Instant; demoNow: Instant; replayTarget?: Instant; epoch: number }): Promise<DrainReport>;
   stop(): Promise<void>;

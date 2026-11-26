@@ -307,6 +307,7 @@ echo "$*" >> "${reached}"
     return { status: r.status, reached: existsSync(reached), stderr: r.stderr };
   };
   const aws = (...a: string[]) => g('aws', '--profile', 'brightwater', '--region', 'us-east-1', ...a);
+  // why: P8-RESTORE-DRILL the guard refuses every write on the hosted server and the bucket, so a drill cannot change the hosted setup
   it('refuses every write on the hosted server and the bucket, and anything not on its list', () => {
     const refused = [
       ['s3', 'cp', 'x', 's3://brightwater-backup-use1/x'],
@@ -382,11 +383,13 @@ echo "$*" >> "${reached}"
       expect(r.reached, a.join(' ')).toBe(true);
     }
   });
+  // why: P8-RESTORE-DRILL the drill's calls go to the 1 profile and Region it names, so a call for another account or Region is refused
   it('refuses another profile or Region', () => {
     expect(g('aws', '--profile', 'default', '--region', 'us-east-1', 'lightsail', 'get-instances').status).toBe(97);
     expect(g('aws', '--profile', 'brightwater', '--region', 'us-west-2', 'lightsail', 'get-instances').status).toBe(97);
     expect(g('aws', 'lightsail', 'get-instances').status).toBe(97);
   });
+  // why: P8-RESTORE-DRILL the guard lets the reads and the drill copies' own writes through to the real tool, or the drill could do nothing
   it('passes the reads and the drill copies own writes to the real tool', () => {
     for (const a of [
       ['sts', 'get-caller-identity'],
@@ -400,6 +403,7 @@ echo "$*" >> "${reached}"
       expect(r.reached, a.join(' ')).toBe(true);
     }
   });
+  // why: P8-RESTORE-DRILL ssh may reach the drill copies only, and the log of those calls holds no address
   it('lets ssh reach the copies only, and logs no address', () => {
     expect(g('ssh', '-i', 'k', 'admin@203.0.113.5', 'true').reached).toBe(true);
     const other = g('ssh', '-i', 'k', 'admin@203.0.113.9', 'true');
@@ -421,6 +425,7 @@ echo "$*" >> "${reached}"
     expect(hosted.reached).toBe(false);
   });
   const listing = ['-n', '-i', '/keys/hosted.pem', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', hostedHost, LIST_CMD];
+  // why: P8-RESTORE-DRILL the 1 ssh call the hosted server answers is the exact read-only bucket listing, nothing else
   it('lets ssh reach the hosted server for the exact READ-ONLY bucket listing only', () => {
     const ok = g('ssh', ...listing);
     expect(ok.status).toBe(0);
@@ -499,6 +504,7 @@ echo "$*" >> "${reached}"
     }
     expect(readFileSync(path.join(state, 'calls.log'), 'utf8')).toMatch(/ run ssh copy1 sudo docker version --format \{\{\.Server\.Version\}\}\n/);
   });
+  // why: P8-RESTORE-DRILL the record names the hosted target as <hosted>, so a saved record never carries its real name
   it('writes the hosted target as <hosted>, never its name', () => {
     const calls = readFileSync(path.join(state, 'calls.log'), 'utf8');
     expect(calls).toMatch(/ run ssh hosted READ-ONLY sudo env AWS_PAGER= aws s3api list-objects-v2 /);

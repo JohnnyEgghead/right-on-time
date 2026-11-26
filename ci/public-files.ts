@@ -164,7 +164,7 @@ function cellValues(line: string): string[] {
   return line.split('|').slice(1, -1).map((c) => c.trim().replace(/[`*]/g, '').toLowerCase());
 }
 
-/** The README items of FR-DIST-7, and the reset protection setting beside demo mode (OI-29). */
+/** The items the README must carry (FR-DIST-7), and the reset protection setting beside demo mode (OI-29). */
 export function checkReadme(root: string): Problem[] {
   const problems: Problem[] = [];
   const bad = (message: string) => problems.push({ check: 'readme-items', message });
@@ -193,7 +193,7 @@ export function checkReadme(root: string): Problem[] {
   return problems;
 }
 
-/** copying-ios-present (FR-DIST-4). */
+/** The COPYING.iOS file must be present: it carries the App Store permission (copying-ios-present, FR-DIST-4). */
 export function checkCopying(root: string): Problem[] {
   const file = path.join(root, 'COPYING.iOS');
   const bad = (message: string): Problem[] => [{ check: 'copying-ios-present', message }];

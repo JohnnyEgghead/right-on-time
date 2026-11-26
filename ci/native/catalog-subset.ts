@@ -21,7 +21,7 @@ import ts from 'typescript';
 import { isMain } from '../is-main.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..', '..');
-export const ENTRY = 'apps/tech-native/index.ts';
+const ENTRY = 'apps/tech-native/index.ts';
 export const OUT = 'apps/tech-native/src/ui/catalog-native.json';
 const FULL_CATALOG = 'packages/i18n/src/catalog.ts';
 
@@ -38,7 +38,7 @@ export const DATA_KEYS: Record<string, string> = {
 };
 
 /** The files that pass a non-literal id to formatMessage, and why each is safe: intl.tsx is the t() wrapper (its key is typed MessageKey); Forgot.tsx reads the key of RESULT, a table of MessageKey literals (forgot-model.ts). */
-export const FORMAT_ID_FILES: readonly string[] = ['apps/tech-native/src/ui/intl.tsx', 'apps/tech-native/src/screens/Forgot.tsx'];
+const FORMAT_ID_FILES: readonly string[] = ['apps/tech-native/src/ui/intl.tsx', 'apps/tech-native/src/screens/Forgot.tsx'];
 
 export interface Finding { file: string; line: number; what: string }
 export interface Derivation { keys: string[]; files: string[]; findings: Finding[] }
@@ -54,7 +54,7 @@ function isFile(p: string): boolean {
 }
 
 /** A specifier's file, for relative and @bw/* workspace imports; null for a package outside the workspace or a non-code file. */
-export function resolveSpec(fromFile: string, spec: string, root: string = ROOT): string | null {
+function resolveSpec(fromFile: string, spec: string, root: string = ROOT): string | null {
   let base: string;
   if (spec.startsWith('.')) base = path.resolve(path.dirname(fromFile), spec);
   else if (spec.startsWith('@bw/')) {

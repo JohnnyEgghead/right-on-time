@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The text slot formatter (SPECIFICATIONS section 6.4, SD-17; REQUIREMENTS FR-TEXT-9 slot table, FR-TEXT-10, FR-TEXT-18):
 // the one place a visit's weekday, date, window, service, technician, arrival time and links become the words a
-// template prints. Every label is GSM-7 basic set only and within SD-17's maxima; text-budget-check (G-CI8) enumerates
-// these same functions over every value, so a label that could break a text fails CI, never a customer.
+// template prints. Every label a template prints is GSM-7 basic set only and within the longest
+// length each slot may take (SD-17); text-budget-check (G-CI8) enumerates these same functions over every value, so a
+// label that could break a text fails CI, never a customer.
 import { formatTime, Temporal, zoned, zoneAbbreviation, type Instant, type Zone } from '@bw/time';
 import { catalogTexts, type TextCatalog, type TextLanguage } from './render.ts';
 import type { VisitDayLabels } from './reply.ts';
@@ -32,7 +33,7 @@ export function dateLabel(catalogs: TextCatalogs, lang: TextLanguage, month: num
   return lang === 'en' ? `${m} ${day}` : `${day} de ${m}`;
 }
 
-/** P3-TEXTS's slot formatter for the R-reply (reply.ts VisitDayLabels). */
+/** The weekday and date labels of a visit day, from the catalogs, in the shape the R reply wants (reply.ts VisitDayLabels). */
 export function visitDayLabels(catalogs: TextCatalogs): VisitDayLabels {
   return (localDate, lang) => {
     const d = Temporal.PlainDate.from(localDate);
@@ -84,7 +85,7 @@ export function serviceLabel(catalogs: TextCatalogs, lang: TextLanguage, textLab
 export type LinkKind = 'map' | 'reschedule';
 const LINK_PATH: Record<LinkKind, string> = { map: 'm', reschedule: 'r' };
 
-/** A link as a text writes it: the text link host, no scheme, SD-17's shapes: bw.j7l.io/m/7Hk2Ab9Q (20 characters). */
+/** A link as a text writes it: the text link host, no scheme, in the shapes SD-17 gives: bw.j7l.io/m/7Hk2Ab9Q (20 characters). */
 export function textLink(host: string, kind: LinkKind, token: string): string {
   return `${host}/${LINK_PATH[kind]}/${token}`;
 }

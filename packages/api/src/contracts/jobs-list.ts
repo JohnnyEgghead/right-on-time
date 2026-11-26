@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // API-133 Jobs list and API-134 Jobs export (UI-SPECIFICATION 12.2; SPECIFICATIONS section 6.2 "Jobs list", SD-31; FR-DISP-24, FR-DISP-14,
-// NFR-05): SCR-OFC-30's one read and its spreadsheet. The search text arrives in the request body only (a POST; never a URL or a log).
+// NFR-05): the Jobs page's one read (SCR-OFC-30) and its spreadsheet. The search text arrives in the request body only (a POST; never a URL or a log).
 // Additive over the row's printed fields: `today` (the demo clock's local date, so the page groups Today and Upcoming without reading
 // the device clock), `technicianId` (the filter's value beside the name), `billingTries` and `billedAt` (the Billing cell's words), `filters` (the selects' options), and `asOf` (the demo time of the read, the page's "Updated").
 import { z } from 'zod';
 import { defineContract } from '../contract.ts';
 import { localDate } from './shapes.ts';
 
-/** An RFC 9557 time (UI-SPECIFICATION 12.1 item 5). */
+/** An RFC 9557 time: a timestamp string that carries its zone (UI-SPECIFICATION 12.1 item 5). */
 const wireTime = z.string().min(1);
 
 export const JOB_TABS = ['all', 'unassigned', 'at-risk', 'late', 'not-in-billing'] as const;
@@ -74,7 +74,7 @@ export const jobsList = defineContract({
       billingTries: z.number().int(),
       /** When the job reached billing (in_billing or marked_fixed); otherwise null. */
       billedAt: wireTime.nullable(),
-      /** UD-52. */
+      /** Whether the job belongs in the Needs attention group: open and late, at risk, unassigned, or flagged while scheduled (UD-52). */
       needsAttention: z.boolean(),
     })),
     /** What the Technician and Service selects offer: each technician of the branch and each service type. */

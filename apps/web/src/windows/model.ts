@@ -15,7 +15,7 @@ export type T = (key: MessageKey, values?: Record<string, string | number>) => s
 /** FR-BOOK-17: a limit is a whole number from 0 to this (the contract's own bound). */
 export const LIMIT_MAX = 999;
 /** CTL-OFC-12-11: 2 weeks from the week that holds today. */
-export const CALENDAR_DAYS = 14;
+const CALENDAR_DAYS = 14;
 
 export const spanLabel = (s: Span): string => windowLabel(timeParts(s.start), timeParts(s.end));
 

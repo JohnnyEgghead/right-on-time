@@ -278,7 +278,7 @@ describe.each(engines)('the new job page on the Compose stack, %s', (engine, typ
       await p.locator(`${SCREEN} .days [data-date="${room.date}"]`).click();
       await p.locator(`${SCREEN} .wins [data-window-id="${room.windowId}"]`).click();
       await see(p.locator(`${SCREEN} [data-ctl="CTL-OFC-04-19"]`)).containsText(msg('newjob.notice.texts', { name: 'Lucia', language: 'Spanish' }));
-      // API-30's answer for this customer, day and window: the page lists exactly its technicians with room, in SD-26's order.
+      // API-30's answer for this customer, day and window: the page lists exactly its technicians with room, in the suggestion order of SD-26: technicians with the skill before those without; among the skilled, room first, then primary before secondary skill, drive minutes, load ratio, name.
       const suggest = (await api('keisha', 'GET', `/technicians/room?branch=columbus&date=${room.date}&windowId=${room.windowId}&serviceId=furnace_tune_up&customerId=${id}`)).body.data as Json;
       const list = suggest.technicians as Json[];
       expect(list.map((t) => t.id)).toEqual(sd26(list, suggest.serviceSkill));
@@ -403,7 +403,7 @@ describe.each(engines)('the new job page on the Compose stack, %s', (engine, typ
     const n = made.body.data.job.jobNumber as number;
     const none = psql(`SELECT c.name FROM world.customer c WHERE c.branch_id = 'columbus' AND c.status = 'active' AND c.name ~ '^[A-Z][a-z]+ [A-Z][a-z]+$'
       AND NOT EXISTS (SELECT 1 FROM world.membership m WHERE m.customer_id = c.id) ORDER BY c.name LIMIT 1`);
-    // SCR-OFC-03: CTL-OFC-03-10.
+    // The office job page's membership line (SCR-OFC-03, CTL-OFC-03-10).
     let o = await open(browser, `/office/jobs/${n}`, '.r1-screen[data-screen="SCR-OFC-03"] .jh h1');
     try {
       await see(o.page.locator('[data-ctl="CTL-OFC-03-10"]')).containsText('Comfort Club member');
@@ -502,6 +502,23 @@ describe.each(engines)('the new job page on the Compose stack, %s', (engine, typ
       if (n) await cancelJob(n);
     }
   });
+
+  // why: FR-DEMO-2, UD-18 the page follows the demo clock across midnight (F-1978): the day picked is tomorrow, then today, and its notice stops promising a reminder
+  it('follows the demo clock across midnight: the day picked turns from tomorrow to today and its notice drops the reminder', async () => {
+    psql(`UPDATE system.demo_clock SET demo_anchor = ${q('2026-09-15T23:59:15-04:00')}, real_anchor = now(), paused = false, rate = 1 WHERE id = 1`);
+    const o = await open(browser, `/office/jobs/new?customer=${harold()}`, `${SCREEN} .cust`);
+    try {
+      const p = o.page;
+      await p.locator(`${SCREEN} .svcs [role="radio"]`, { hasText: msg('service.furnace_tune_up.screen') }).click();
+      await p.locator(`${SCREEN} .days [data-date="2026-09-16"]`).click();
+      const notice = p.locator(`${SCREEN} [data-ctl="CTL-OFC-04-19"]`);
+      await expect.poll(() => notice.innerText()).toContain('the evening before'); // Sep 16 is tomorrow
+      // The page asks the clock again on its 30 s tick once its own running time has passed midnight (about 45 s from the open).
+      await expect.poll(() => notice.innerText(), { timeout: 120_000 }).not.toContain('the evening before');
+    } finally {
+      await close(o);
+    }
+  }, 240_000);
 
   // why: F-805 (2 quick service picks: API-29's older answer arrives last and does not replace the newest service's days)
   it('keeps the newest service\'s days when the older API-29 answer lands last', async () => {

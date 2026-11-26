@@ -22,7 +22,7 @@ import {
 
 export type JobsState = 'loading' | 'ready' | 'error';
 
-export interface JobsHandlers {
+interface JobsHandlers {
   tab?: (tab: JobTab) => void;
   query?: (text: string) => void;
   /** Enter in the search box: read now, without the typing pause. */

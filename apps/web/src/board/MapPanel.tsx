@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 'use client';
-// SCR-OFC-02's map panel (P4-BOARD-MAP; DK-85 office-board.html): the live vans count (CTL-OFC-02-23), Hide map (-22), Vans / Jobs /
+// The Dispatch board's map panel (SCR-OFC-02; P4-BOARD-MAP; DK-85 office-board.html): the live vans count (CTL-OFC-02-23), Hide map (-22), Vans / Jobs /
 // Both (-24), All skills (-30), the vans menu (-31), CMP-05 with its van and job markers (-12, -26) and legend (-25), the
 // selected van card with Open job and Call (-13, -14, -27), and the job list tabs (-28) over Needs attention (-15) and the
 // job rows (-29). The panel holds no state of its own beyond its open menu: BoardScreen owns the choices and the reads.
@@ -18,7 +18,7 @@ import {
 } from './model.ts';
 
 /** The panel's map opens on the whole branch area (the frame's crop), at the zoom its 372 px box fits it. */
-export const PANEL_ZOOM = 9.4;
+const PANEL_ZOOM = 9.4;
 
 const JOB_MARKER = 'job-';
 const VAN_MARKER = 'van-';

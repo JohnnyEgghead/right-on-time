@@ -251,7 +251,8 @@ export function useConflictText() {
   return (c: Conflict, s: ConflictSubject, again = false): string => {
     const w = conflictWords(c);
     const by = 'name' in w.who ? w.who.name : t(w.who.key);
-    if (w.at === null) return t('board.conflict.unknown');
+    // Without the other branch's start there is no time to name: the sentence would read "moved this block to  at ...".
+    if (w.at === null || (s.kind === 'block' && s.theirs === null)) return t('board.conflict.unknown');
     const first = again ? 'false' : 'true';
     if (s.kind === 'block') return t('board.conflict.block', { by, start: s.theirs ?? '', at: w.at, mine: s.mine, first });
     return t('board.conflict.job', { by, change: w.change, to: c.technician ?? t('board.conflict.unassignedRow'), at: w.at, mine: s.mine, first });
@@ -293,7 +294,7 @@ export function ConflictDialog({ subject, message, again, resending, onAnyway, o
 export interface BlockForm { technicianId: string; label: string; place: string; start: string; end: string }
 export type BlockErrors = Partial<Record<'label' | 'place' | 'end', MessageKey>>;
 
-/** SCR-OFC-31 (CTL-OFC-31-01 to 06), add or change mode. */
+/** The time block dialog, in add or change mode (SCR-OFC-31, CTL-OFC-31-01 to 06). */
 export function BlockDialog({ mode, form, technicians, dateText, errors, overlap, saving, changed, onChange, onSave, onClose, inline, focus }: {
   mode: 'add' | 'change'; form: BlockForm; technicians: readonly { id: string; name: string }[]; dateText: string; errors: BlockErrors;
   overlap: string | null; saving: boolean; changed: boolean; onChange: (f: BlockForm) => void; onSave: () => void; onClose: () => void; inline?: boolean;

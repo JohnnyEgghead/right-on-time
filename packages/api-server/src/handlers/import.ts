@@ -277,7 +277,7 @@ const SHOW: Record<In<typeof likelyDuplicates>['status'], Pair['status'] | null>
 export const likelyDuplicatesHandler: Handler<Out<typeof likelyDuplicates>> = async (req, tx) => {
   const q = req.params as In<typeof likelyDuplicates>;
   const after = q.cursor === undefined ? null : decodeCursor(q.cursor);
-  if (q.cursor !== undefined && (after === null || !UUID.test(after.id))) return refuse('validation_failed'); // F-260: the id is bound as ::uuid
+  if (q.cursor !== undefined && (after === null || !UUID.test(after.id))) return refuse('validation_failed'); // a cursor id that is not a UUID is refused, because the id is bound as ::uuid (F-260)
   const counts = await tx.query<{ status: string; n: string }>(
     `SELECT p.status, count(*) AS n FROM world.duplicate_pair p WHERE ${ON_REVIEW_PAGE} GROUP BY p.status`);
   const c = (s: string) => Number(counts.rows.find((r) => r.status === s)?.n ?? 0);
@@ -351,7 +351,7 @@ const mergeOf = (m: MergeRow): Merge => ({
 export const mergesHandler: Handler<Out<typeof merges>> = async (req, tx) => {
   const q = req.params as In<typeof merges>;
   const after = q.cursor === undefined ? null : decodeCursor(q.cursor);
-  if (q.cursor !== undefined && (after === null || !UUID.test(after.id))) return refuse('validation_failed'); // F-260: the id is bound as ::uuid
+  if (q.cursor !== undefined && (after === null || !UUID.test(after.id))) return refuse('validation_failed'); // a cursor id that is not a UUID is refused, because the id is bound as ::uuid (F-260)
   // Find a merge by either record's name, folded as customer.name_search is (the top-bar search's rule, @bw/db).
   const name = q.name ? foldStreetName(q.name) : '';
   // Newest first (uuidv7 ids follow creation order): an office merge or a re-merge lists above the run's exact merges.

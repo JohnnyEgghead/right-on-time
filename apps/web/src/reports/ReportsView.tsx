@@ -69,10 +69,10 @@ function Pick({ ctl, label, valueText, value, onChange, disabled, children }: {
   );
 }
 
-function Sim({ tile }: { tile?: boolean }) {
+function Sim() {
   const t = useT();
   return (
-    <div className={tile ? 'sim bw-rp-tilesim' : 'sim'} data-ctl="CTL-OFC-11-01">
+    <div className="sim" data-ctl="CTL-OFC-11-01">
       <span className="chip test">{t('reports.label.simulated')}</span>
       <span>{t('reports.label.explain')}</span>
     </div>
@@ -279,7 +279,7 @@ function Tip({ ui, chart }: { ui: ReportsUi; chart: ChartId }) {
   ) : null;
 }
 
-export function ReportsBody({ state, filters, ui, on }: { state: ReportsState; filters: Filters; ui: ReportsUi; on: ReportsHandlers }) {
+function ReportsBody({ state, filters, ui, on }: { state: ReportsState; filters: Filters; ui: ReportsUi; on: ReportsHandlers }) {
   const t = useT();
   const lang = t.lang;
   const d = state.kind === 'ready' ? state.data : null;

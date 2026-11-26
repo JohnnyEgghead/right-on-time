@@ -50,7 +50,7 @@ function confirm(running: string, want: string): { status: number; out: string }
 }
 
 describe('infra/deploy/server-deploy.sh', () => {
-  // why: F-95
+  // why: F-95 - the confirm step added for F-95 runs only while server-deploy.sh parses
   it('parses as bash', () => {
     expect(() => execFileSync('bash', ['-n', sdPath])).not.toThrow();
   });
@@ -137,7 +137,7 @@ describe('infra/deploy/server-deploy.sh', () => {
     const compose = parse(readFileSync(path.join(root, 'infra/compose.yaml'), 'utf8')) as { services: Record<string, { profiles?: string[] }> };
     expect(compose.services.routing, 'routing is a Compose service').toBeDefined();
     expect(compose.services.routing!.profiles, 'routing is held back by no profile').toBeUndefined();
-    // F-1295's exclusion is gone: nothing in compose_up names, filters or skips a service
+    // No service is excluded (F-1295): nothing in compose_up names, filters or skips a service
     expect(fn('compose_up')).not.toMatch(/routing|config --services|grep -v/);
   });
 
@@ -169,7 +169,7 @@ describe('infra/deploy/server-deploy.sh', () => {
     expect(timers(true)).toEqual([
       'enable --now brightwater-certbot-renew.timer', 'enable --now brightwater-backup.timer', 'enable --now brightwater-restore-test.timer',
     ]);
-    // only deploy.sh --profile demo (P8-UNLOCK's) stages the marker
+    // only deploy.sh --profile demo stages the marker
     expect(readFileSync(path.join(root, 'infra/deploy/deploy.sh'), 'utf8')).toMatch(/^\[ "\$profile" != demo \] \|\| : > "\$stage\/backups-on"$/m);
   });
 

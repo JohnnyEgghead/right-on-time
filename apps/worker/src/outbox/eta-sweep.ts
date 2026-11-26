@@ -2,11 +2,11 @@
 // The eta.sweep handler (SPECIFICATIONS section 2 background-work table, SD-15; REQUIREMENTS FR-TEXT-5, UC-05, OA-53):
 // every 5 demo minutes it recomputes the ETA and timing of today's open jobs (computed, never stored, except as texted)
 // and writes the late text of section 6.4: 1 text per visit when the ETA is 20 or more minutes after the last arrival
-// time texted, else after the planned arrival. ETA and drive minutes are @bw/domain's etaDay over SD-49's route source
+// time texted, else after the planned arrival. ETA and drive minutes are @bw/domain's etaDay over the route source (SD-49)
 // (routedDrive: the stored tracks, baked or live, else a live route), so they agree with the planner's planned arrivals.
 // The successor event is written 5 demo minutes after the run, only when no other eta.sweep is due, so the chain converges to exactly 1 due event (the alert.check
 // chain's rule, F-444): the first event is the seed's (packages/setup/src/world-seed.ts) and the worker never starts one.
-// During a clock jump's replay the successor collapses to the jump's target (F-538, alert.check's F-435 rule, shared in
+// During a clock jump's replay the successor collapses to the jump's target (F-538; alert.check's rule, F-435, shared in
 // ../clock/chain.ts): a replay runs the sweep at its own due time and once at the target, never once per skipped 5 minutes.
 import type { Queryable } from '@bw/db';
 import { etaDay, ETA_SWEEP_EVERY_MINUTES, isLateEnoughToText, type EtaStatus, type EtaStop } from '@bw/domain';

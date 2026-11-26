@@ -117,7 +117,7 @@ final class WaitingUITests: XCTestCase {
     XCTAssertTrue(gone("note.value"), "the note sheet did not close")
   }
 
-  // ---- FR-TECH-7 -------------------------------------------------------------------------------------------------------------------
+  // ---- the waiting count and the 24 hour banner on the Today screen (FR-TECH-7) -------------------------------------------------------------------------------------------------------------------
 
   // why: FR-TECH-7, FR-TECH-4 3 items entered with no signal show 3 waiting; the device's real time 25 hours on for the oldest, with the demo clock unchanged and it unsent, shows the banner; each is then sent once
   func test1WaitingCountAndThe24HourBanner() throws {
@@ -151,7 +151,7 @@ final class WaitingUITests: XCTestCase {
     mark("WAITED-SENT")
   }
 
-  // ---- F-1095 (c) ------------------------------------------------------------------------------------------------------------------
+  // ---- a finish the server refused is fixed and sent once (F-1095 c) ------------------------------------------------------------------------------------------------------------------
 
   // why: FR-TECH-6, FR-TECH-4, F-1095 a finish the server refuses (parts_required) is listed on SCR-TEC-09 with its message, opens SCR-TEC-07 with the message, and is finished again and sent once
   func test2ServerRefusedFinishIsFixedAndSentOnce() throws {

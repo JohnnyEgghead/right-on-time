@@ -24,7 +24,7 @@ import type { Detail } from './types.ts';
 import { call } from './ui.tsx';
 
 /** The edit dialog's starting values from the page's read (CTL-OFC-39-01 to -05). */
-export function formOf(d: Detail): CustomerForm {
+function formOf(d: Detail): CustomerForm {
   return {
     name: d.name,
     mobile: d.contact.mobile ?? '',

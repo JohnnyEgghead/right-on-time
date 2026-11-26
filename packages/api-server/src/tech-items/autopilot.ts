@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The autopilot of the sample day (SPECIFICATIONS SD-21, owner-confirmed OA-78; FR-DEMO-8's moving vans): 1 seeded
+// The autopilot of the sample day (SPECIFICATIONS SD-21, owner-confirmed OA-78; the moving vans of the demo, FR-DEMO-8): 1 seeded
 // `autopilot.step` event is 1 technician item (On my way, Arrived, Finished or No one home) applied through the same
 // item path as the technician's own (applyItem), as that technician, at the event's time. A step is skipped, and does
 // nothing, when a person touched the job (`touched_by_person`) or the job is not in the status the step expects. The
 // event id is the item's key, so a rerun of the event is answered `duplicate` by the ledger and applies nothing twice.
-// The worker's dispatcher calls this from its `autopilot.step` handler (apps/worker/src/autopilot).
+// The worker's dispatcher calls this from its `autopilot.step` handler (apps/worker/src/outbox/autopilot.ts).
 import type { Queryable } from '@bw/db';
 import type { TextContext } from '@bw/outbox';
 import { realNow, type Instant } from '@bw/time';
@@ -16,7 +16,7 @@ export const AUTOPILOT_STEP = 'autopilot.step';
 export type AutopilotStepName = 'on_my_way' | 'arrived' | 'finished' | 'no_one_home';
 
 /** The seed's payload (packages/setup/src/world-seed.ts): ids and codes only (NFR-05). */
-export interface AutopilotPayload {
+interface AutopilotPayload {
   jobNumber: number;
   technicianId: string;
   step: AutopilotStepName;
@@ -25,7 +25,7 @@ export interface AutopilotPayload {
 }
 
 /** The status a step expects the job to be in (SD-21: "the job is not in the step's expected prior status"). */
-export const PRIOR_STATUS: Record<AutopilotStepName, string> = {
+const PRIOR_STATUS: Record<AutopilotStepName, string> = {
   on_my_way: 'scheduled', arrived: 'on_the_way', finished: 'on_site', no_one_home: 'on_site',
 };
 
@@ -37,7 +37,7 @@ export interface AutopilotOutcome {
 const STEPS = new Set<string>(Object.keys(PRIOR_STATUS));
 
 /** The stored event payload as a step this code can run, or null. */
-export function parsePayload(p: Record<string, unknown>): AutopilotPayload | null {
+function parsePayload(p: Record<string, unknown>): AutopilotPayload | null {
   if (!Number.isInteger(p['jobNumber']) || typeof p['technicianId'] !== 'string' || typeof p['step'] !== 'string' || !STEPS.has(p['step'])) return null;
   return p as unknown as AutopilotPayload;
 }

@@ -72,7 +72,7 @@ public class BwLookModule: Module {
       let hidden = field.isSecureTextEntry || field.textContentType == .password || field.textContentType == .newPassword || field.textContentType == .oneTimeCode
       d["text"] = hidden ? "" : (field.text ?? "")
     } else if let area = firstSubview(view, UITextView.self) {
-      // A multiline text input (SCR-TEC-05's note): UIKit's text view, its font and color as for a field (P6-NATIVE-JOB).
+      // A multiline text input (the note field of the Add note screen, SCR-TEC-05): UIKit's text view, its font and color as for a field.
       if let f = area.font { d["font"] = face(f) }
       if let c = rgba(area.textColor, t) { d["color"] = c }
       d["text"] = area.text ?? ""

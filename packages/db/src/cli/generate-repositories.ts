@@ -14,7 +14,7 @@ import { startPgServer } from '../testing/pg-server.ts';
 export const REPOSITORIES_DIR = path.resolve(import.meta.dirname, '..', 'repositories');
 
 /**
- * The 8 history logs of the section 3 stores table, and P4-BOARD's block change log (owner ruling 8ef38e83, migration 0015):
+ * The 8 history logs of the section 3 stores table, and the time-block change log (P4-BOARD; owner ruling 8ef38e83, migration 0015):
  * role app may insert and read, never update or delete.
  */
 export const APPEND_ONLY = new Set([

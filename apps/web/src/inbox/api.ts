@@ -27,10 +27,8 @@ export async function callPage<R extends ContractRow>(row: R, input: Record<stri
 
 export type InboxData = z.output<typeof inboxMessages.response>;
 export type InboxMessage = InboxData['messages'][number];
-export type ReplyAnswer = z.output<typeof inboxReply.response>;
 export type RescheduleData = z.output<typeof reschedulePage.response>;
 export type RescheduleDay = RescheduleData['days'][number];
-export type RescheduleWindow = RescheduleDay['windows'][number];
 export type MovedVisit = z.output<typeof rescheduleVisit.response>;
 
 type T = (key: MessageKey, values?: Record<string, string | number>) => string;

@@ -24,7 +24,7 @@ export interface ShownRoute { leg: Leg; branch: string; steps: RouteStep[]; at: 
 /** A read of the route: answered, the job is no longer this technician's (404 not_found: Job moved), or failed with signal. */
 export type RouteRead = ({ kind: 'leg' } & ShownRoute) | { kind: 'moved' } | { kind: 'failed' };
 
-/** The states of SCR-TEC-08 (UI-SPECIFICATION v0.15; content from DK-113's web frames, ruling D5b-1). */
+/** The states of the Directions screen (SCR-TEC-08), worded as in the web frames (DK-113). */
 export type StepsPhase = 'loading' | 'route' | 'approximate' | 'offlineSaved' | 'offline' | 'failed' | 'moved' | 'none';
 
 /**
@@ -58,7 +58,7 @@ export function stepIcon(step: Pick<RouteStep, 'kind' | 'direction'>): StepIcon 
   return 'arrowUp';
 }
 
-/** 1 row of the Steps list (CTL-TEC-08-06). */
+/** 1 row of the Steps list: its arrow, words and distance, and whether the van is on it (CTL-TEC-08-06). */
 export interface StepRow {
   index: number;
   icon: StepIcon;
@@ -153,5 +153,5 @@ export function isRestOf(shown: ShownRoute, next: ShownRoute): boolean {
  */
 export const streetOf = (address: string): string => address.split(',')[0]?.trim() ?? address;
 
-/** The step meters add up to the leg's length (SD-49's guarantee), so the list and the drive line agree: the sum the screen states. */
+/** The step meters add up to the leg's length (a guarantee of the step mapping, SD-49), so the list and the drive line agree: the sum the screen states. */
 export const stepsMeters = (steps: readonly RouteStep[]): number => steps.reduce((n, s) => n + s.distanceMeters, 0);

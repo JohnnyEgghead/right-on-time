@@ -7,7 +7,7 @@
     {
       "id": "columbus.pmtiles",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "columbus.pmtiles",
       "kind": "pmtiles",
       "bytes": 45485685,
@@ -24,7 +24,7 @@
     {
       "id": "dayton.pmtiles",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "dayton.pmtiles",
       "kind": "pmtiles",
       "bytes": 17506155,
@@ -41,7 +41,7 @@
     {
       "id": "springfield.pmtiles",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "springfield.pmtiles",
       "kind": "pmtiles",
       "bytes": 3834694,
@@ -58,7 +58,7 @@
     {
       "id": "tracks.ndjson",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "tracks.ndjson",
       "kind": "tracks",
       "bytes": 21599694,
@@ -67,7 +67,7 @@
     {
       "id": "ohio.osrm.cell_metrics",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.cell_metrics",
       "kind": "routing",
       "bytes": 672279552,
@@ -76,7 +76,7 @@
     {
       "id": "ohio.osrm.cells",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.cells",
       "kind": "routing",
       "bytes": 5476864,
@@ -85,7 +85,7 @@
     {
       "id": "ohio.osrm.cnbg",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.cnbg",
       "kind": "routing",
       "bytes": 53070336,
@@ -94,7 +94,7 @@
     {
       "id": "ohio.osrm.cnbg_to_ebg",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.cnbg_to_ebg",
       "kind": "routing",
       "bytes": 53081600,
@@ -103,7 +103,7 @@
     {
       "id": "ohio.osrm.datasource_names",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.datasource_names",
       "kind": "routing",
       "bytes": 69632,
@@ -112,7 +112,7 @@
     {
       "id": "ohio.osrm.ebg",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.ebg",
       "kind": "routing",
       "bytes": 294647808,
@@ -121,7 +121,7 @@
     {
       "id": "ohio.osrm.ebg_nodes",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.ebg_nodes",
       "kind": "routing",
       "bytes": 78616576,
@@ -130,7 +130,7 @@
     {
       "id": "ohio.osrm.edges",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.edges",
       "kind": "routing",
       "bytes": 85948928,
@@ -139,7 +139,7 @@
     {
       "id": "ohio.osrm.enw",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.enw",
       "kind": "routing",
       "bytes": 77398016,
@@ -148,7 +148,7 @@
     {
       "id": "ohio.osrm.fileIndex",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.fileIndex",
       "kind": "routing",
       "bytes": 228100660,
@@ -157,7 +157,7 @@
     {
       "id": "ohio.osrm.geometry",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.geometry",
       "kind": "routing",
       "bytes": 401031168,
@@ -166,7 +166,7 @@
     {
       "id": "ohio.osrm.icd",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.icd",
       "kind": "routing",
       "bytes": 43312640,
@@ -175,7 +175,7 @@
     {
       "id": "ohio.osrm.maneuver_overrides",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.maneuver_overrides",
       "kind": "routing",
       "bytes": 6144,
@@ -184,7 +184,7 @@
     {
       "id": "ohio.osrm.mldgr",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.mldgr",
       "kind": "routing",
       "bytes": 308195840,
@@ -193,7 +193,7 @@
     {
       "id": "ohio.osrm.names",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.names",
       "kind": "routing",
       "bytes": 2738176,
@@ -202,7 +202,7 @@
     {
       "id": "ohio.osrm.nbg_nodes",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.nbg_nodes",
       "kind": "routing",
       "bytes": 140370432,
@@ -211,7 +211,7 @@
     {
       "id": "ohio.osrm.partition",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.partition",
       "kind": "routing",
       "bytes": 51612160,
@@ -220,7 +220,7 @@
     {
       "id": "ohio.osrm.properties",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.properties",
       "kind": "routing",
       "bytes": 6144,
@@ -229,7 +229,7 @@
     {
       "id": "ohio.osrm.ramIndex",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.ramIndex",
       "kind": "routing",
       "bytes": 914432,
@@ -238,7 +238,7 @@
     {
       "id": "ohio.osrm.restrictions",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.restrictions",
       "kind": "routing",
       "bytes": 4096,
@@ -247,7 +247,7 @@
     {
       "id": "ohio.osrm.timestamp",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.timestamp",
       "kind": "routing",
       "bytes": 3584,
@@ -256,7 +256,7 @@
     {
       "id": "ohio.osrm.tld",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.tld",
       "kind": "routing",
       "bytes": 7168,
@@ -265,7 +265,7 @@
     {
       "id": "ohio.osrm.tls",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.tls",
       "kind": "routing",
       "bytes": 10752,
@@ -274,7 +274,7 @@
     {
       "id": "ohio.osrm.turn_duration_penalties",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.turn_duration_penalties",
       "kind": "routing",
       "bytes": 24557056,
@@ -283,7 +283,7 @@
     {
       "id": "ohio.osrm.turn_penalties_index",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.turn_penalties_index",
       "kind": "routing",
       "bytes": 147323904,
@@ -292,7 +292,7 @@
     {
       "id": "ohio.osrm.turn_weight_penalties",
       "repo": "JohnnyEgghead/right-on-time",
-      "tag": "v1.0.3",
+      "tag": "v1.0.4",
       "asset": "ohio.osrm.turn_weight_penalties",
       "kind": "routing",
       "bytes": 24557056,

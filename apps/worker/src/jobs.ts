@@ -47,18 +47,18 @@ export type JobStarter = (deps: WorkerDeps, started: readonly RunningJob[]) => R
 
 /** Each scheduled_event kind and the factory of its handler. */
 export const eventHandlers: readonly (readonly [kind: string, make: (deps: WorkerDeps) => EventHandler])[] = [
-  // P3-OUTBOX: a text's numbered try (SPECIFICATIONS section 5.2 step 3), through the gateway composed at start-up.
+  // A text's numbered try (SPECIFICATIONS section 5.2 step 3), through the gateway composed at start-up.
   [TEXT_TRY, (d) => tryTextHandler({ gateway: textGatewayFrom(), clock: d.clock, catalogs })],
-  // P3-ALERTS: every alert rule of SD-30, every 5 demo minutes (the scheduler job keeps 1 due).
+  // Every alert rule the checks own (SD-30), run every 5 demo minutes: the seed writes the first alert.check event and each run the next (F-444).
   [ALERT_CHECK, (d) => alertCheckHandler({ clock: d.clock, backupTarget: d.settings.BACKUP_TARGET, log: d.log })],
-  // P3-TEXTS: the 6:00 PM reminder of the evening before a visit, in the customer's zone (section 6.4; FR-TEXT-2).
+  // The 6:00 PM reminder of the evening before a visit, in the customer's zone (section 6.4; FR-TEXT-2).
   [TEXT_REMINDER, (d) => reminderHandler({ catalogs, linkHost: d.settings.TEXT_LINK_HOST })],
-  // P3-POSITIONS: the ETA sweep every 5 demo minutes and its late text (SD-15; FR-TEXT-5), and the sample day's autopilot steps (SD-21).
+  // The ETA sweep every 5 demo minutes and its late text (SD-15; FR-TEXT-5), and the sample day's autopilot steps (SD-21).
   [ETA_SWEEP, (d) => etaSweepHandler({ catalogs, linkHost: d.settings.TEXT_LINK_HOST }, d.log)],
   [AUTOPILOT_STEP, (d) => autopilotStepHandler({ catalogs, linkHost: d.settings.TEXT_LINK_HOST })],
 ];
 
-export function handlersFor(deps: WorkerDeps): EventHandlers {
+function handlersFor(deps: WorkerDeps): EventHandlers {
   return Object.fromEntries(eventHandlers.map(([kind, make]) => [kind, make(deps)]));
 }
 
@@ -84,21 +84,21 @@ export function giveUpsFor(deps: WorkerDeps): GiveUps {
 
 /** The dispatcher's parallel claim lanes, each with its kinds (never also in eventHandlers). */
 export const eventLanes: readonly ((deps: WorkerDeps) => ParallelLane)[] = [
-  // P3-BILLING: billing.send and billing.retry (section 6.6), BILLING_CONCURRENCY wide, below the pool (F-357).
+  // billing.send and billing.retry (section 6.6), BILLING_CONCURRENCY wide, below the pool (F-357).
   billingLaneFor,
 ];
 
 export const jobs: readonly JobStarter[] = [
-  // P3-OUTBOX: the event dispatcher (section 5.2 step 7), every second, for every kind in eventHandlers (the serial
+  // The event dispatcher (section 5.2 step 7), every second, for every kind in eventHandlers (the serial
   // lane) and every lane of eventLanes.
   (d) => startDispatcher({ pool: d.pool, clock: d.clock, log: d.log, handlers: handlersFor(d), giveUps: giveUpsFor(d), lanes: eventLanes.map((make) => make(d)) }),
-  // P3-BILLING: the healer, every 30 s: a retry for any item that wants a send and holds no due event (invariant 2).
+  // The healer, every 30 s: a retry for any item that wants a send and holds no due event (invariant 2).
   (d) => startBillingHealer(d),
-  // P3-ALERTS: the worker heartbeat /healthz reads (every 10 s real). The alert.check chain needs no job (F-444).
+  // The worker heartbeat /healthz reads (every 10 s real). The alert.check chain needs no job (F-444).
   (d) => startAlertJobs(d),
-  // P3-IMPORT-WORKER: the import runner (section 2), at start-up and whenever an office run is waiting (F-258).
+  // The import runner (section 2), at start-up and whenever an office run is waiting (F-258).
   (d) => startImportJob(d),
-  // P3-REPLAY: the clock job (section 5.2 step 6, SD-12): a jump's replay through the dispatcher above, the reset
+  // The clock job (section 5.2 step 6, SD-12): a jump's replay through the dispatcher above, the reset
   // confirmer, the idle and nightly resets and Cleanup.
   (d, started) => startClockJobs({ ...d, dispatcher: dispatcherOf(started) }),
 ];

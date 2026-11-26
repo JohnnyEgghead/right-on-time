@@ -43,6 +43,8 @@ export interface TodayViewProps {
   newDay?: boolean;
   /** CTL-TEC-02-03: the drive minutes of the next job's route (API-104); null: not known (offline, or the route is approximate), and the button says only Directions. */
   driveMinutes?: number | null;
+  /** The jobs whose finish waits for its signature: each draws the Finish link back to the finish screen (CTL-TEC-02-06). */
+  owedSignatures?: ReadonlySet<number>;
   onRefresh?: () => void;
   onOpen?: (kind: SheetKind, job: LocalJob) => void;
 }
@@ -88,13 +90,16 @@ export function press(fn: (() => void) | undefined) {
   };
 }
 
-function DoneRow({ j, zone, t }: { j: LocalJob; zone: string; t: ClientT }) {
+function DoneRow({ j, zone, t, owesSignature }: { j: LocalJob; zone: string; t: ClientT; owesSignature: boolean }) {
   const stamp = j.endedAt ?? j.localAt;
   const at = stamp ? timeOf(stamp, zone, t.lang) : '';
   return (
     <div className="done" data-ctl="CTL-TEC-02-01" data-job={j.jobNumber}>
       <span className="num"><Icon name="check" sw={3} /></span>
-      <div><a className="rl" href={`/tech/jobs/${j.jobNumber}`}><span><b translate="no">{surname(j.customer.name)}</b> - {j.area}</span></a></div>
+      <div>
+        <a className="rl" href={`/tech/jobs/${j.jobNumber}`}><span><b translate="no">{surname(j.customer.name)}</b> - {j.area}</span></a>
+        {owesSignature ? <a className="lnk" href={`/tech/jobs/${j.jobNumber}/finish`} data-ctl="CTL-TEC-02-06">{t('tech.today.finish')}</a> : null}
+      </div>
       <span className="t">
         {j.status === 'no_one_home' ? t('tech.today.noOneHomeAt', { time: at }) : t('tech.today.doneAt', { time: at })}
         {j.pending || j.sent ? <> <Waiting pending={j.pending} sent={j.sent} /></> : null}
@@ -200,7 +205,7 @@ function NextCard({ j, jobs, zone, t, onOpen, driveMinutes = null }: { j: LocalJ
   );
 }
 
-/** The header (DK-107 .apphead): title, the date with the van and the progress, CMP-10's count, and the demo clock with Refresh. */
+/** The header (DK-107 .apphead): title, the date with the van and the progress, the waiting count (CMP-10), and the demo clock with Refresh. */
 export function TodayHeader({ day, jobs, loading, online, fixed, clock, onRefresh, t }: Pick<TodayViewProps, 'day' | 'jobs' | 'loading' | 'online' | 'fixed' | 'clock' | 'onRefresh'> & { t: ClientT }) {
   const f = fixed ? { fixed } : {};
   const clk = <DemoStrip variant="header" offline={!online} {...(clock !== undefined ? { initial: clock } : {})} {...(fixed ? { reader: false as const } : {})} />;
@@ -237,7 +242,7 @@ function Empty({ icon, children }: { icon: IconName; children: ReactNode }) {
 }
 
 /** The list under the header, for every state SCR-TEC-02 shows. */
-export function TodayList({ day, jobs, loading, online, savedAt, failed, failedAt, notice, fixed, info, driveMinutes, newDay, onRefresh, onOpen }: TodayViewProps) {
+export function TodayList({ day, jobs, loading, online, savedAt, failed, failedAt, notice, fixed, info, driveMinutes, newDay, owedSignatures, onRefresh, onOpen }: TodayViewProps) {
   const t = useT();
   const f = fixed ? { fixed } : {};
   if (loading) {
@@ -277,7 +282,7 @@ export function TodayList({ day, jobs, loading, online, savedAt, failed, failedA
       {day && jobs.length === 0 ? <Empty icon="calendar">{t('tech.today.none')}</Empty> : null}
       {day && jobs.length > 0 && !next ? <Empty icon="check">{t('tech.today.allDone', { n: jobs.length })}</Empty> : null}
       {day && !online && savedAt ? <div className="sec">{t('tech.today.updated', { time: timeOf(savedAt, zone, t.lang) })}</div> : null}
-      {done.map((j) => <DoneRow key={j.jobNumber} j={j} zone={zone} t={t} />)}
+      {done.map((j) => <DoneRow key={j.jobNumber} j={j} zone={zone} t={t} owesSignature={owedSignatures?.has(j.jobNumber) ?? false} />)}
       {next ? <NextCard j={next} jobs={jobs} zone={zone} t={t} onOpen={onOpen} driveMinutes={driveMinutes ?? null} /> : null}
       {later.length > 0 ? <div className="sec">{t('tech.today.later')}</div> : null}
       {later.map((j) => <LaterRow key={j.jobNumber} j={j} t={t} />)}

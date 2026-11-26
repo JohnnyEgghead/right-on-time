@@ -49,9 +49,9 @@ function dayBounds(date: string, zone: string): { from: string; to: string } {
 }
 
 /** The SQL conditions of the filters for the texts side (alias t, c) and the replies side (alias m, c), after the day and branch. */
-function filterSql(f: Filters, firstParam: number): { texts: string; replies: string; params: unknown[]; textsOn: boolean; repliesOn: boolean } {
+function filterSql(f: Filters): { texts: string; replies: string; params: unknown[]; textsOn: boolean; repliesOn: boolean } {
   const params: unknown[] = [];
-  const next = (v: unknown) => { params.push(v); return `$${firstParam + params.length - 1}`; };
+  const next = (v: unknown) => { params.push(v); return `$${3 + params.length}`; };
   let texts = '';
   let replies = '';
   let textsOn = true;
@@ -128,7 +128,7 @@ const cursorOf = (dir: 'o' | 'n', row: { at: string; id: string }): string => `$
 /** The day's rows for the filters, newest first: the texts and replies merged by time (CTL-OFC-08-11), paged by a keyset cursor. */
 async function logRows(tx: Tx, f: Filters, zone: string, page: { cursor: Cursor | null; limit: number | null }) {
   const { from, to } = dayBounds(f.date, zone);
-  const fs = filterSql(f, 4);
+  const fs = filterSql(f);
   const base = [f.branch, from, to, ...fs.params];
   const older = page.cursor?.dir === 'n' ? false : true;
   const after = page.cursor ? (c: string, alias: string) => ` AND (${alias}.${c}, ${alias}.id) ${older ? '<' : '>'} ($${base.length + 1}::timestamptz, $${base.length + 2}::uuid)` : () => '';
@@ -153,7 +153,7 @@ async function logRows(tx: Tx, f: Filters, zone: string, page: { cursor: Cursor 
   return { merged, more: page.limit !== null && merged.length > page.limit };
 }
 
-/** The next-day totals for a date D (SPECIFICATIONS section 6.4, FR-TEXT-13): API-40's nextReminders and API-42's dayTotals. */
+/** The next-day totals for a date D (SPECIFICATIONS section 6.4, FR-TEXT-13): the text log's nextReminders (API-40) and the call list's dayTotals (API-42). */
 export async function dayTotals(tx: Tx, branch: string, zone: string, date: string) {
   const visitDay = addDays(date, 1);
   const r = await tx.query<{ visits: number; texts: number }>(
@@ -220,7 +220,7 @@ export const textLogHandler: Handler<LogAnswer> = async (req, tx) => {
     : olderQuery
       ? { newer: cursor ? cursorOf('n', first) : null, older: more ? cursorOf('o', last) : null }
       : { newer: more ? cursorOf('n', first) : null, older: cursorOf('o', last) };
-  const fs = filterSql(p, 4);
+  const fs = filterSql(p);
   const { from, to } = dayBounds(p.date, zone);
   const nText = fs.textsOn
     ? (await tx.query<{ n: number }>(`SELECT count(*)::int AS n FROM world.outbox_text t JOIN world.customer c ON c.id = t.customer_id
@@ -264,7 +264,7 @@ const statusFactsOf = (r: TextOut, zone: string): StatusFacts => ({
   otherZone: r.heldUntil ? fromWire(r.heldUntil).timeZoneId !== zone : false,
 });
 
-export const textLogExportHandler: Handler<string> = async (req, tx) => {
+const textLogExportHandler: Handler<string> = async (req, tx) => {
   const p = req.params as In<typeof textLogExport>;
   const zone = await zoneOf(tx, p.branch);
   if (zone === null) return refuse(404, 'not_found');
@@ -302,7 +302,7 @@ async function attemptsOf(tx: Tx, textId: string, zone: string) {
   return r.rows.map((a) => ({ number: a.number, at: wireOf(a.at, zone), result: a.result, reasonKey: a.reason === null ? null : `text_attempt.${a.reason}` }));
 }
 
-export const textDetailHandler: Handler<Out<typeof textDetail>> = async (req, tx) => {
+const textDetailHandler: Handler<Out<typeof textDetail>> = async (req, tx) => {
   const { textId } = req.params as In<typeof textDetail>;
   const r = await tx.query<DetailDbRow>(
     `SELECT t.id, t.kind, t.customer_id, c.name AS customer, t.language, t.encoding, t.body, t.status, t.reason_key, t.held_until, t.tries, t.next_try_at,
@@ -354,7 +354,7 @@ export const textDetailHandler: Handler<Out<typeof textDetail>> = async (req, tx
 
 // API-144 and API-145 -----------------------------------------------------------------------------------------------
 
-export const tryTextNowHandler: Handler<Out<typeof tryTextNow>> = async (req, tx) => {
+const tryTextNowHandler: Handler<Out<typeof tryTextNow>> = async (req, tx) => {
   const { textId } = req.params as In<typeof tryTextNow>;
   if (req.caller.kind !== 'staff') throw new Error('an office write reached its handler without a signed-in caller');
   const exists = await tx.query<{ branch_id: string }>(
@@ -377,7 +377,7 @@ export const tryTextNowHandler: Handler<Out<typeof tryTextNow>> = async (req, tx
   };
 };
 
-export const addToCallListHandler: Handler<Out<typeof addToCallList>> = async (req, tx) => {
+const addToCallListHandler: Handler<Out<typeof addToCallList>> = async (req, tx) => {
   const { textId } = req.params as In<typeof addToCallList>;
   if (req.caller.kind !== 'staff') throw new Error('an office write reached its handler without a signed-in caller');
   const r = await tx.query<{ status: string; customer_id: string; job_number: number | null; branch_id: string; zone: string }>(
@@ -409,7 +409,7 @@ interface EntryDbRow {
   text_id: string | null; text_kind: string | null; added_by_name: string | null; added_at: Date | null; failed_at: Date | null;
 }
 
-export const callListHandler: Handler<Out<typeof callList>> = async (req, tx) => {
+const callListHandler: Handler<Out<typeof callList>> = async (req, tx) => {
   const p = req.params as In<typeof callList>;
   const zone = await zoneOf(tx, p.branch);
   if (zone === null) return refuse(404, 'not_found');
@@ -475,7 +475,7 @@ export const callListHandler: Handler<Out<typeof callList>> = async (req, tx) =>
   };
 };
 
-export const recordCallOutcomeHandler: Handler<Out<typeof recordCallOutcome>> = async (req, tx) => {
+const recordCallOutcomeHandler: Handler<Out<typeof recordCallOutcome>> = async (req, tx) => {
   const p = req.params as In<typeof recordCallOutcome>;
   if (req.caller.kind !== 'staff') throw new Error('an office write reached its handler without a signed-in caller');
   let e = (await tx.query<{ id: string; outcome: string | null; added_at: Date; branch_id: string }>(

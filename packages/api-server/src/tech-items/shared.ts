@@ -17,7 +17,7 @@ import { demoTimeAtRealMs, entryRealMs, placeItem, type ClockMoveRow } from '@bw
 import { Temporal, toWire, type Instant } from '@bw/time';
 
 /** pg_advisory_xact_lock class of the item keys ('ti'); the billing link uses 0x6269. */
-export const ITEM_LOCK_CLASS = 0x7469;
+const ITEM_LOCK_CLASS = 0x7469;
 
 export type ItemResult = 'applied' | 'duplicate' | 'flagged' | 'history_only' | 'world_reset';
 export type MessageValues = Record<string, string | number | null>;
@@ -110,12 +110,12 @@ export async function recordItem(tx: Queryable, ctx: ItemContext, f: ItemFacts, 
 const keepable = (entry: ItemEntry): string => JSON.stringify(entry, (_k, v) => (typeof v === 'string' ? v.replaceAll('\u0000', '\ufffd') : v));
 
 /** What a technician entered, as API-102 carried it (section 3 tech_item.payload): a finish's lines, or a note's text; a refused photo or signature, the name of its kept file (F-1168); none for a status item. */
-export type ItemEntry =
+type ItemEntry =
   | { parts: { partId: string; quantity: number }[]; noPartsUsed: boolean; laborMinutes: number; workDone: string[] }
   | { text: string }
   | { file: string };
 
-export function entryOf(f: ItemFacts): ItemEntry | null {
+function entryOf(f: ItemFacts): ItemEntry | null {
   const q = f as ItemFacts & { finish?: { parts: { partId: string; quantity: number }[]; noPartsUsed: boolean; laborMinutes: number; workDone: string[] }; text?: string };
   if (f.kind === 'finished' && q.finish) return { parts: q.finish.parts, noPartsUsed: q.finish.noPartsUsed, laborMinutes: q.finish.laborMinutes, workDone: q.finish.workDone };
   if (f.kind === 'note' && typeof q.text === 'string') return { text: q.text };

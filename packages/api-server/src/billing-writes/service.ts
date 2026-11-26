@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The billing area's office writes (UI-SPECIFICATION 12.2 API-61, API-62, API-156, API-157; SPECIFICATIONS section 6.6
-// FR-BILL-3, FR-BILL-7, FR-BILL-10, OA-57, OA-61). Each is the web face of a service P3-BILLING built and exported from
-// bw-worker's `./billing` (sendAgain, resendCorrected, retryNow, retryAll), run inside the handler's 1 transaction (SD-6):
+// FR-BILL-3, FR-BILL-7, FR-BILL-10, OA-57, OA-61). Each is the web face of a service that
+// bw-worker exports from `./billing` (sendAgain, resendCorrected, retryNow, retryAll), run inside the handler's 1 transaction (SD-6):
 // the queue change, its billing.send event, the job's billing_state, the job_change row and the notice commit together
 // or not at all. A refusal throws BillingRefused (or the office write service's WriteRefused for the version gate) and
 // the kernel rolls the transaction back.

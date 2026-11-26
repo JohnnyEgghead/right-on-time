@@ -41,6 +41,7 @@ const feedOf = (locale: 'en' | 'es'): string => {
 };
 
 describe('F-1752 the office text row in the job feed', () => {
+  // why: FR-TEXT-20 an office text shows in the job's feed as 1 row that names who sent it and its status word, in both languages
   it.each([
     ['en', 'Office text sent by Dana Whitfield', 'Delivered'],
     ['es', 'Texto de la oficina enviado por Dana Whitfield', 'Entregado'],

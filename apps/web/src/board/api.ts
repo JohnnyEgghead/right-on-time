@@ -57,7 +57,7 @@ function refusalOf(e: unknown): Refusal {
   return { ok: false, code: 'offline', status: 0, detail: {} };
 }
 
-/** A client whose requests outlive the page (fetch keepalive): SD-43's send when the page is hidden. */
+/** A client whose requests outlive the page (fetch keepalive): the board delay samples (SD-43) are sent with it when the page is hidden. */
 export const keepaliveClient = (): ApiClient => createClient({ baseUrl: '', fetch: (url, init) => fetch(url, { ...init, keepalive: true }) });
 
 export function boardApi(client: ApiClient = createClient({ baseUrl: '' }), kept: ApiClient = keepaliveClient()): BoardApi {

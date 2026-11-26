@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // API-132 Board week (UI-SPECIFICATION 12.2; SPECIFICATIONS SD-27 and section 6.1 "Week board"; FR-DISP-23, FR-BOOK-18):
-// SCR-OFC-34's one read. Monday to Saturday of the week for one branch: the days (mode, booked of capacity, peak, what the
+// The Week board page's one read (SCR-OFC-34). Monday to Saturday of the week for one branch: the days (mode, booked of capacity, peak, what the
 // booking site still accepts, the Saturday half-day's span, and for a 4-hour day who switched it and why), the technicians'
 // cells, the Unassigned counts and the unassigned jobs. Additive over the row's printed fields: `today` (the demo clock's
 // local date, so the page marks Today and Done without reading the device clock), `technicians[].primarySkill` (the word
@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { defineContract } from '../contract.ts';
 import { isMonday, localDate, localTime } from './shapes.ts';
 
-/** An RFC 9557 time (UI-SPECIFICATION 12.1 item 5). */
+/** An RFC 9557 time: a timestamp string that carries its zone (UI-SPECIFICATION 12.1 item 5). */
 const wireTime = z.string().min(1);
 
 

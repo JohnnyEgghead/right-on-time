@@ -27,7 +27,7 @@ export type GuardedContext = {
   assertNoOutsideRequests: () => void;
 };
 
-export function isAllowed(url: string, allowedOrigins: string[]): boolean {
+function isAllowed(url: string, allowedOrigins: string[]): boolean {
   if (LOCAL_SCHEMES.some((s) => url.startsWith(s))) return true;
   // A WebSocket URL is judged by the http(s) origin it upgrades from.
   const u = new URL(url.replace(/^ws(s?):/, 'http$1:'));

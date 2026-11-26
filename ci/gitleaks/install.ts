@@ -19,7 +19,7 @@ export interface Pin {
 }
 
 const here = import.meta.dirname;
-export const PIN_FILE = path.join(here, 'pin.json');
+const PIN_FILE = path.join(here, 'pin.json');
 export const DEFAULT_DIR = path.resolve(here, '..', '..', '.build', 'tools');
 
 export function loadPin(file = PIN_FILE): Pin {

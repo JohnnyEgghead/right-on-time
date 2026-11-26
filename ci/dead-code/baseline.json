@@ -1,0 +1,494 @@
+{
+ "_doc": "The exports and files ci/dead-code.ts lets stand, by file and symbol, each with why. Written by its --accept and --prune.",
+ "files": {},
+ "exports": {
+  "apps/pbs/src/store.ts": {
+   "PAGE_SIZE": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/Probe.tsx": {
+   "PROBE_ON": "Used in its own file, and another file names it; there when this check began.",
+   "Probe": "Another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/ServerAddress.tsx": {
+   "serverState": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/SignInRig.tsx": {
+   "RigSignIn": "Another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/job/JobScreen.tsx": {
+   "STATUS_WORD": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/job/model.ts": {
+   "dateShort": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/job/photo.ts": {
+   "STEPS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/job/ui.tsx": {
+   "s": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/mapme/model.ts": {
+   "Bbox": "Used in its own file, and another file names it; there when this check began.",
+   "SnapshotJob": "Used in its own file, and another file names it; there when this check began.",
+   "wireMs": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/mapme/parts.tsx": {
+   "TextSizeProvider": "Another file names it; there when this check began."
+  },
+  "apps/tech-native/src/screens/mapme/reads.ts": {
+   "Saved": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/tech-native/src/testing.ts": {
+   "Call": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/tech-native/src/ui/text-size.tsx": {
+   "BIG_TEXT_SCALE": "Used in its own file, and another file names it; there when this check began.",
+   "isBigText": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/accounts/EmailScreen.tsx": {
+   "LINK_SLOT": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/accounts/UsersScreen.tsx": {
+   "NO_FILTERS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/accounts/preview-fixtures.ts": {
+   "CHANGED": "Another file names it; there when this check began.",
+   "USERS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/auth/StartScreen.tsx": {
+   "TechSignIn": "Another file names it; there when this check began."
+  },
+  "apps/web/src/auth/sign-in-list.ts": {
+   "TechSignIn": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/board/BoardPreview.tsx": {
+   "SOLO_SCREEN": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/board/Timeline.tsx": {
+   "TimelineOptions": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/board/api.ts": {
+   "Answer": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/board/preview-fixtures.ts": {
+   "SAMPLE_DAY": "Another file names it; there when this check began."
+  },
+  "apps/web/src/booking/BookingScreen.tsx": {
+   "OnlineAvailabilityAnswer": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/booking/BookingView.tsx": {
+   "WindowRow": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/booking/api.ts": {
+   "Answer": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/bookmenu/model.ts": {
+   "Square": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/clock/ClockScreen.tsx": {
+   "Part": "Another file names it; there when this check began."
+  },
+  "apps/web/src/clock/state.ts": {
+   "Part": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/customers/CustomerFormDialog.tsx": {
+   "usDigits": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/customers/CustomerView.tsx": {
+   "initialsOf": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/import/HistoryScreen.tsx": {
+   "Part": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/inbox/Preview.tsx": {
+   "fetchPreview": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/inbox/api.ts": {
+   "Language": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/job/JobPreview.tsx": {
+   "SOLO_SCREEN": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/job/model.ts": {
+   "CLOSED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/newjob/NewJobView.tsx": {
+   "offeredDays": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/newjob/api.ts": {
+   "Answer": "Used in its own file, and another file names it; there when this check began.",
+   "Created": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/newjob/model.ts": {
+   "skillWord": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/reports/model.ts": {
+   "branchLabel": "No code uses it; a written review names it, so it was not deleted."
+  },
+  "apps/web/src/shell/DemoStrip.tsx": {
+   "READ_EVERY_MS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/shell/OfficeTopBar.tsx": {
+   "Role": "Used in its own file, and another file names it; there when this check began.",
+   "SEARCH_DEBOUNCE_MS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/shell/Panels.tsx": {
+   "STATUS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/tech/TechAppFrame.tsx": {
+   "SW_SCOPE": "Used in its own file, and another file names it; there when this check began.",
+   "TABS": "Used in its own file, and another file names it; there when this check began.",
+   "TabBar": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/tech/TechSignIn.tsx": {
+   "APP_VERSION": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/tech/data.ts": {
+   "READ_EVERY_MS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/tech/engine.ts": {
+   "EntryInput": "Another file names it; there when this check began."
+  },
+  "apps/web/src/tech/job/model.ts": {
+   "dateShort": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/tech/job/photo.ts": {
+   "LONGEST_SIDE": "Used in its own file, and another file names it; there when this check began.",
+   "QUALITY": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/tech/model.ts": {
+   "SnapshotJob": "Used in its own file, and another file names it; there when this check began.",
+   "initialsOf": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/tech/preview-day.ts": {
+   "PARTS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/tech/today/TodayView.tsx": {
+   "Waiting": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/tech/transport.ts": {
+   "failureOf": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/technicians/TechniciansPreview.tsx": {
+   "SOLO_SCREEN": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/technicians/api.ts": {
+   "OffDayJob": "Used in its own file, and another file names it; there when this check began.",
+   "Refusal": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/technicians/model.ts": {
+   "filtersSet": "Another file names it; there when this check began.",
+   "waitingTotal": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/week/WeekView.tsx": {
+   "dayText": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/web/src/week/week-model.ts": {
+   "dayTotals": "Another file names it; there when this check began."
+  },
+  "apps/worker/src/alerts/check.ts": {
+   "failureOf": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/worker/src/billing/link.ts": {
+   "billingSubject": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/worker/src/billing/testing.ts": {
+   "BillingLink": "Used in its own file, and another file names it; there when this check began.",
+   "FinishInput": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/worker/src/clock/cleanup.ts": {
+   "DELAY_SAMPLE_KEEP_HOURS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/worker/src/clock/index.ts": {
+   "CLEANUP_MIN_AGE_MS": "Another file names it; there when this check began.",
+   "ConfirmerState": "Used in its own file, and another file names it; there when this check began.",
+   "REPLAY_BATCH": "Another file names it; there when this check began.",
+   "RESET_CONFIRM_ALERT_AFTER": "Another file names it; there when this check began.",
+   "ReplayState": "Used in its own file, and another file names it; there when this check began.",
+   "autoResetStep": "Used in its own file, and another file names it; there when this check began.",
+   "cleanup": "Used in its own file, and another file names it; there when this check began.",
+   "confirmStep": "Used in its own file, and another file names it; there when this check began.",
+   "idleDue": "Another file names it; there when this check began.",
+   "nightlyDue": "Another file names it; there when this check began.",
+   "nightlyInstant": "Another file names it; there when this check began.",
+   "replayStep": "Used in its own file, and another file names it; there when this check began."
+  },
+  "apps/worker/src/jobs.ts": {
+   "jobs": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/gates/G-CI4/lib.ts": {
+   "RULE": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/gates/G-CI4/realnow-sites.ts": {
+   "Site": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/gates/G-CI7/lib.ts": {
+   "ROLES": "Used in its own file, and another file names it; there when this check began.",
+   "ROOT": "Used in its own file, and another file names it; there when this check began.",
+   "union": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/gates/import-target-counts/targets.ts": {
+   "Reason": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/gates/schema-gates/spec-model.ts": {
+   "Store": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/gitleaks/install.ts": {
+   "DEFAULT_DIR": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/accounts-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/auth-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/billing-cases.ts": {
+   "B": "Used in its own file, and another file names it; there when this check began.",
+   "K": "Used in its own file, and another file names it; there when this check began.",
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began.",
+   "P1": "Used in its own file, and another file names it; there when this check began.",
+   "P2": "Used in its own file, and another file names it; there when this check began.",
+   "STATE_CASES": "Used in its own file, and another file names it; there when this check began.",
+   "WidthFrom": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/board-cases.ts": {
+   "LEFT_OUT": "Another file names it; there when this check began.",
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/booking-cases.ts": {
+   "LEFT_OUT": "Another file names it; there when this check began.",
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/bookmenu-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/clock-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/customer-actions-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/customers-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/health-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/import-cases.ts": {
+   "LEFT_OUT": "Another file names it; there when this check began.",
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/job-cases.ts": {
+   "LEFT_OUT": "Another file names it; there when this check began.",
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began.",
+   "hosted": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/jobs-cases.ts": {
+   "NOT_COMPARED": "Another file names it; there when this check began."
+  },
+  "ci/look-values/livemap-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/messages-cases.ts": {
+   "C": "Used in its own file, and another file names it; there when this check began.",
+   "CHROME": "Used in its own file, and another file names it; there when this check began.",
+   "FOOT": "Used in its own file, and another file names it; there when this check began.",
+   "L": "Used in its own file, and another file names it; there when this check began.",
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began.",
+   "STATE_CASES": "Used in its own file, and another file names it; there when this check began.",
+   "cap": "Used in its own file, and another file names it; there when this check began.",
+   "within": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/native-compare.ts": {
+   "SHELL_CASES": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/newjob-cases.ts": {
+   "LEFT_OUT": "Another file names it; there when this check began.",
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/reports-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/tech-map-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/technicians-cases.ts": {
+   "LEFT_OUT": "Another file names it; there when this check began.",
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/look-values/week-cases.ts": {
+   "NOT_COMPARED": "Another file names it; there when this check began."
+  },
+  "ci/look-values/windows-cases.ts": {
+   "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/native/catalog-subset.ts": {
+   "Finding": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/page-walkers/browser-log.ts": {
+   "Entry": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/privacy-scan/scan.ts": {
+   "Hit": "Used in its own file, and another file names it; there when this check began.",
+   "Population": "Used in its own file, and another file names it; there when this check began.",
+   "scanDir": "Used in its own file, and another file names it; there when this check began."
+  },
+  "ci/secret-scan/scan.ts": {
+   "Hit": "Used in its own file, and another file names it; there when this check began.",
+   "scanDir": "Used in its own file, and another file names it; there when this check began.",
+   "scanTree": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/billing-writes/service.ts": {
+   "readItem": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/account-email.ts": {
+   "LINK_SLOT": "Used in its own file, and another file names it; there when this check began.",
+   "branchName": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/accounts.ts": {
+   "INVITE_HOURS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/board.ts": {
+   "onTimeRate": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/booking.ts": {
+   "onlineDays": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/health-page.ts": {
+   "HandlerContext": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/health.ts": {
+   "DELAY_SAMPLE_KEEP_HOURS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/messages.ts": {
+   "dayTotals": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/reports.ts": {
+   "percentOf": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/tech-today.ts": {
+   "PREVIEW_LINK": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/techItems.ts": {
+   "applyItem": "Another file names it; there when this check began.",
+   "applyItems": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/handlers/vans.ts": {
+   "routeKey": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/office-writes/dispatch-rules.ts": {
+   "MAX_TIME_OFF_DAYS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/tech-items/apply.ts": {
+   "FinishInput": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/tech-items/blob.ts": {
+   "BlobKind": "Used in its own file, and another file names it; there when this check began.",
+   "blobFile": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api-server/src/tech-items/shared.ts": {
+   "ItemResult": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/api/src/contracts/technicians.ts": {
+   "USER_STATUSES": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/db/src/seed/reference-data.ts": {
+   "BranchId": "Used in its own file, and another file names it; there when this check began.",
+   "MOCKUP_FITS": "Used in its own file, and another file names it; there when this check began.",
+   "Skill": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/generator/src/checks.ts": {
+   "pct": "Used in its own file, and another file names it; there when this check began.",
+   "sha256": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/generator/src/generate.ts": {
+   "quota": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/i18n/src/provider.tsx": {
+   "Catalogs": "Another file names it; there when this check began."
+  },
+  "packages/outbox/src/items/dexie-store.ts": {
+   "DEFAULT_DB_NAME": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/outbox/src/items/index.ts": {
+   "ANSWERED_KEPT": "Another file names it; there when this check began.",
+   "ANSWERED_RESULTS": "Another file names it; there when this check began.",
+   "AnsweredResult": "Another file names it; there when this check began.",
+   "BLOB_KINDS": "Another file names it; there when this check began.",
+   "BlobKind": "Another file names it; there when this check began.",
+   "CallFailure": "Another file names it; there when this check began.",
+   "CallStop": "Another file names it; there when this check began.",
+   "ClockOffset": "Another file names it; there when this check began.",
+   "DEFAULT_DB_NAME": "Another file names it; there when this check began.",
+   "DexieStoreOptions": "Another file names it; there when this check began.",
+   "EntryInput": "Another file names it; there when this check began.",
+   "FileItemStore": "Another file names it; there when this check began.",
+   "ITEMS_PER_SEND": "Another file names it; there when this check began.",
+   "ItemBody": "Another file names it; there when this check began.",
+   "ItemKind": "Another file names it; there when this check began.",
+   "ItemResult": "Another file names it; there when this check began.",
+   "ItemStamp": "Another file names it; there when this check began.",
+   "ItemStore": "Another file names it; there when this check began.",
+   "LastTry": "Another file names it; there when this check began.",
+   "SendOptions": "Another file names it; there when this check began.",
+   "SendReport": "Another file names it; there when this check began.",
+   "StatusKind": "Another file names it; there when this check began.",
+   "StoreDir": "Another file names it; there when this check began.",
+   "StoreWriteError": "Another file names it; there when this check began.",
+   "TEMP_PREFIX": "Another file names it; there when this check began.",
+   "hasOldItem": "Another file names it; there when this check began.",
+   "isBlobKind": "Another file names it; there when this check began.",
+   "jsonOrNull": "Another file names it; there when this check began.",
+   "newItemKey": "Another file names it; there when this check began.",
+   "offsetFromClock": "Another file names it; there when this check began.",
+   "oldItemCount": "Another file names it; there when this check began.",
+   "sendWaiting": "Another file names it; there when this check began.",
+   "stampEntry": "Another file names it; there when this check began."
+  },
+  "packages/outbox/src/items/model.ts": {
+   "BLOB_KINDS": "Another file names it; there when this check began.",
+   "StatusKind": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/outbox/src/items/native.ts": {
+   "ANSWERED_KEPT": "Another file names it; there when this check began.",
+   "ANSWERED_RESULTS": "Another file names it; there when this check began.",
+   "AnsweredResult": "Another file names it; there when this check began.",
+   "BLOB_KINDS": "Another file names it; there when this check began.",
+   "BlobKind": "Another file names it; there when this check began.",
+   "CallFailure": "Another file names it; there when this check began.",
+   "CallStop": "Another file names it; there when this check began.",
+   "ClockOffset": "Another file names it; there when this check began.",
+   "EngineDeps": "Another file names it; there when this check began.",
+   "ITEMS_PER_SEND": "Another file names it; there when this check began.",
+   "ItemBody": "Another file names it; there when this check began.",
+   "ItemKind": "Another file names it; there when this check began.",
+   "ItemResult": "Another file names it; there when this check began.",
+   "ItemStamp": "Another file names it; there when this check began.",
+   "ItemStore": "Another file names it; there when this check began.",
+   "LastTry": "Another file names it; there when this check began.",
+   "SendOptions": "Another file names it; there when this check began.",
+   "SendReport": "Another file names it; there when this check began.",
+   "StatusKind": "Another file names it; there when this check began.",
+   "hasOldItem": "Another file names it; there when this check began.",
+   "isBlobKind": "Another file names it; there when this check began.",
+   "newItemKey": "Another file names it; there when this check began.",
+   "offsetFromClock": "Another file names it; there when this check began.",
+   "oldItemCount": "Another file names it; there when this check began.",
+   "stampEntry": "Another file names it; there when this check began.",
+   "uploadLimitMs": "Another file names it; there when this check began."
+  },
+  "packages/outbox/src/items/send.ts": {
+   "CallStop": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/setup/src/fixture.ts": {
+   "FixtureCustomer": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/setup/src/world-seed.ts": {
+   "BOOKER_PINS": "Used in its own file, and another file names it; there when this check began."
+  },
+  "packages/testkit/src/load/run.ts": {
+   "readClock": "Used in its own file, and another file names it; there when this check began.",
+   "resetWorld": "Used in its own file, and another file names it; there when this check began."
+  }
+ }
+}

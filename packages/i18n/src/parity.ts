@@ -30,7 +30,7 @@ type MessageFormatElement = ReturnType<IntlMessageFormat['getAst']>[number];
  * The ICU arguments of a message (F-148): each argument name with its type, a select with its option keys, a tag with its
  * name, found at any depth. A plural's option keys are left out because the languages' plural categories differ (es has many).
  */
-export function icuArguments(message: string): string[] {
+function icuArguments(message: string): string[] {
   const out = new Set<string>();
   const walk = (els: readonly MessageFormatElement[]): void => {
     for (const el of els) {

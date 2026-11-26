@@ -19,7 +19,7 @@ export const USERS = [
   { email: 'keisha.t@brightwater.example', name: 'Keisha Thompson', role: 'office', title: 'Dispatcher', employee: null, sample: true, status: 'active' },
   { email: 'maria.santos@brightwater.example', name: 'Maria Santos', role: 'technician', title: null, employee: '40712', sample: true, status: 'active' },
   { email: 'derek.simmons@brightwater.example', name: 'Derek Simmons', role: 'technician', title: null, employee: null, sample: true, status: 'invited' },
-  // P4-ACCOUNTS: a staff member who is not a sample person, for UC-19's reset with demo mode off (ci/auth-stack/accounts.stack.ts); her
+  // A staff member who is not a sample person, for the password reset (UC-19) with demo mode off (ci/auth-stack/accounts.stack.ts); her
   // password derives from the seed as a sample person's does, and she is in no sample list.
   { email: 'nina.ford@brightwater.example', name: 'Nina Ford', role: 'office', title: 'Dispatcher', employee: null, sample: false, status: 'active' },
 ] as const;

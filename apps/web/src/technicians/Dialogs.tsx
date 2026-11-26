@@ -15,7 +15,7 @@ import { HoursEditor, opensEditor } from './HoursEditor.tsx';
 import { firstName, jobsText, MAX_TIME_OFF_DAYS, skillWord, spanDays, toggleSkill, weekProblem, weekRows, type SkillWords, type TechData, type TechRow, type TechSkill, type WorkWeek } from './model.ts';
 
 /** The workweek a new technician starts with (CTL-OFC-41-06). */
-export const DEFAULT_WEEK: WorkWeek = { start: '08:00', end: '17:30', days: [1, 2, 3, 4, 5], saturdays: 'none' };
+const DEFAULT_WEEK: WorkWeek = { start: '08:00', end: '17:30', days: [1, 2, 3, 4, 5], saturdays: 'none' };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -26,7 +26,7 @@ function Refused({ text }: { text: string | null }) {
 
 /** Harness previews only: the state a dialog opens in (typed values, a busy write, the added line), so each frame state is drawn fixed. */
 export interface AddStart { name?: string; email?: string; vanId?: string | null; skills?: TechSkill[]; saving?: boolean; added?: { name: string; email: string; link: string }; used?: boolean; focus?: boolean; hoursOpen?: boolean }
-export interface TimeOffStart { from?: string; to?: string; note?: string; saving?: boolean }
+interface TimeOffStart { from?: string; to?: string; note?: string; saving?: boolean }
 
 interface AddProps {
   api: TechApi;
@@ -41,7 +41,7 @@ interface AddProps {
   inline?: boolean;
 }
 
-/** SCR-OFC-41 Add technician. */
+/** The dialog that adds a new technician to a branch (SCR-OFC-41). */
 export function AddTechnicianDialog(p: AddProps) {
   const t = useT();
   const [name, setName] = useState(p.start?.name ?? '');
@@ -189,7 +189,7 @@ interface TimeOffProps {
   inline?: boolean;
 }
 
-/** SCR-OFC-42 Add time off. */
+/** The dialog that adds time off for a technician (SCR-OFC-42). */
 export function AddTimeOffDialog(p: TimeOffProps) {
   const t = useT();
   const [from, setFrom] = useState(p.start?.from ?? '');

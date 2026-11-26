@@ -4,11 +4,12 @@
 // shown branch and week, re-reads it in place on the events the screen lists (EVT-01, EVT-02, EVT-05, EVT-06, EVT-09, EVT-10) and,
 // after each such re-read, posts API-172 once with the event's seq (OI-48, SD-43). The one write is the day's mode menu (CTL-OFC-34-15):
 // it opens SCR-OFC-24 on this screen and switches the day with API-91; the grid re-reads on EVT-09 (F-781).
-import { ApiError, boardDelaySample, boardWeek, bookingSettings, createClient, createResourceCache, readClock, setDayMode, subscribeEvents, type ResourceCache, type z } from '@bw/api';
+import { ApiError, boardDelaySample, boardWeek, bookingSettings, createClient, createResourceCache, setDayMode, subscribeEvents, type ResourceCache, type z } from '@bw/api';
 import { formatTime, fromWire, type Language } from '@bw/time';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAnnounce } from '../shell/Announcer.tsx';
+import { dayMoved, officeClock, useDemoDay } from '../shell/demo-day.ts';
 import { OfficeFrame } from '../shell/Frames.tsx';
 import { useT } from '../shell/intl.tsx';
 import type { LiveState } from '../shell/Panels.tsx';
@@ -30,7 +31,9 @@ export function WeekScreen() {
   const weekRaw = params.get('week');
   const weekParam = weekParamMonday(weekRaw);
   const dateParam = params.get('date') ?? weekRaw;
-  const [week, setWeek] = useState<string | null>(weekParam);
+  // The week: the URL's, else the one that holds the demo clock's today (API-10, FR-DEMO-2, UD-18).
+  const { day: today, failed: noClock, readDay } = useDemoDay(officeClock);
+  const week = weekParam ?? (today === null ? null : mondayOf(today));
   const [data, setData] = useState<WeekData | null>(null);
   const [state, setState] = useState<WeekState>('loading');
   const [live, setLive] = useState<LiveState>('reconnecting');
@@ -42,28 +45,21 @@ export function WeekScreen() {
   const dataRef = useRef<WeekData | null>(null);
   const [switchDlg, setSwitchDlg] = useState<{ settings: Settings; dlg: DialogUi } | null>(null);
 
-  // The week: the URL's, else the one that holds the demo clock's today (API-10, FR-DEMO-2).
   useEffect(() => {
-    if (weekParam) {
-      setWeek(weekParam);
-      return;
-    }
-    if (!client) return;
-    let alive = true;
-    void client.call(readClock, {}).then((r) => {
-      if (alive) setWeek(mondayOf(fromWire(r.data.demoNow).toPlainDate().toString()));
-    }).catch(() => {
-      if (alive) setState('error');
-    });
-    return () => {
-      alive = false;
-    };
-  }, [weekParam, client]);
+    if (week === null && noClock) setState('error');
+  }, [week, noClock]);
+  const shown = useRef({ branch, week });
+  shown.current = { branch, week };
+  const readWeek = useCallback(async () => {
+    const day = await readDay();
+    return day === null ? null : mondayOf(day);
+  }, [readDay]);
 
   const read = useCallback(async (): Promise<boolean> => {
     if (!client || !cache.current || !branch || !week) return false;
     try {
       const answer = await client.call(boardWeek, { branch, week });
+      if (shown.current.branch !== branch || shown.current.week !== week) return false; // an answer for a week or branch no longer shown is dropped
       cache.current.seed(boardWeek, { branch, week }, answer.data, answer.envelope?.meta.worldEpoch ?? 0);
       setChanged(changedCells(dataRef.current, answer.data));
       dataRef.current = answer.data;
@@ -76,7 +72,7 @@ export function WeekScreen() {
       }
       return true;
     } catch {
-      setState('error');
+      if (shown.current.branch === branch && shown.current.week === week) setState('error');
       return false;
     }
   }, [client, branch, week, t.lang]);
@@ -96,16 +92,23 @@ export function WeekScreen() {
     // F-885: the finished re-reads' samples are held and leave in batches (SD-43); a hidden page's batch is sent with keepalive.
     const kept = keepaliveClient();
     const samples = delaySampler((batch, keepalive) => (keepalive ? kept : client).call(boardDelaySample, { samples: batch }));
+    let open = true;
     let pending: number[] = [];
+    let clockEvent = false;
     let running = false;
+    // The clock first (F-1930): a week that moved is read by the first read above, and the old one not again.
+    const moved = () => dayMoved({ following: weekParam === null, day: week, readDay: readWeek });
     const drain = async () => {
       if (running) return;
       running = true;
-      while (pending.length > 0) {
+      while (open && pending.length > 0) {
         // 1 sample per seq the re-read covers (F-606), so a burst's slowest event is sampled.
         const seqs = pending;
+        const first = clockEvent;
         pending = [];
-        if (await read()) samples.hold(seqs);
+        clockEvent = false;
+        if (first && (await moved())) continue;
+        if (open && (await read())) samples.hold(seqs);
       }
       running = false;
     };
@@ -114,17 +117,21 @@ export function WeekScreen() {
         if (!WEEK_EVENTS.includes(e.name)) return;
         if (e.name === 'world.reset') cache.current?.observeEpoch(Number(e.ids.worldEpoch));
         else if (!eventIsForBranch(e, branch)) return;
+        if (e.name === 'clock.changed' || e.name === 'world.reset') clockEvent = true;
         pending.push(e.seq);
         void drain();
       },
-      onReconnect: () => void read(),
+      onReconnect: () => void moved().then((m) => {
+        if (open && !m) void read();
+      }),
       onState: (s) => setLive(s === 'live' ? 'live' : s === 'closed' ? 'paused' : 'reconnecting'),
     });
     return () => {
+      open = false;
       handle.close();
       samples.close();
     };
-  }, [client, branch, week, read]);
+  }, [client, branch, week, weekParam, read, readWeek]);
 
   // CTL-OFC-34-15 opens SCR-OFC-24 for the day (UI-SPECIFICATION CTL-OFC-34-15): API-90 for that 1 day gives the dialog its windows and its kept count.
   const openSwitch = useCallback(async (date: string) => {

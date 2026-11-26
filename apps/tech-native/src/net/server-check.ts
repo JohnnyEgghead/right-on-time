@@ -7,7 +7,7 @@ import { createClient, envelopeSchema, serverInfo } from '@bw/api';
 export type ServerCheck = { kind: 'reachable'; version: string } | { kind: 'unreachable' } | { kind: 'not_this_product' };
 
 /** How long Check connection waits for an answer before it says the address does not answer. */
-export const CHECK_WAIT_MS = 10_000;
+const CHECK_WAIT_MS = 10_000;
 
 export async function checkServer(origin: string, doFetch: typeof fetch = fetch, waitMs = CHECK_WAIT_MS): Promise<ServerCheck> {
   const ctl = new AbortController();

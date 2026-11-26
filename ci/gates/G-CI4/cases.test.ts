@@ -33,7 +33,7 @@ describe('no-system-clock on the committed cases', () => {
   });
 
   for (const c of cases) {
-    // why: FR-DEMO-2
+    // why: FR-DEMO-2 - a committed bad case fails the clock rule and a clean case passes it
     it(`${c.expect === 'fail' ? 'fails' : 'passes'} ${c.name} (as ${c.as})`, async () => {
       const out = await lintClockText(c.body, c.as);
       expect(out.fatal).toEqual([]);
@@ -77,7 +77,7 @@ describe('the realNow call-site listing on the committed cases', () => {
   });
 
   for (const c of cases) {
-    // why: FR-DEMO-2
+    // why: FR-DEMO-2 - a bad realNow case reports a problem and a good one lists its call sites by tag
     it(`${c.expect === 'fail' ? 'fails' : 'lists'} ${c.name}`, () => {
       const scan = scanSource(c.body, c.as);
       if (c.expect === 'fail') {

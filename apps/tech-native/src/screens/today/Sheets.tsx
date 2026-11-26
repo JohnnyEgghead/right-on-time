@@ -27,7 +27,7 @@ import { arrivalSmall, firstName, PREVIEW_LINK, windowLabel, type Drive } from '
 import { tone } from './palette.ts';
 
 /** What Today knows of the job for the On my way sheet (CTL-TEC-03-01, -04, -05). */
-export interface OmwDetail {
+interface OmwDetail {
   language: 'en' | 'es';
   window: { start: string; end: string };
   preview: { text: string; arrival: string } | null;

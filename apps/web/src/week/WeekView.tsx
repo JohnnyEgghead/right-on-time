@@ -66,10 +66,9 @@ function Bar({ pct, full }: { pct: number; full?: boolean }) {
   );
 }
 
-function Fill({ pct, className }: { pct: number; className?: string }) {
+function Fill({ pct }: { pct: number }) {
   return (
     <i
-      {...(className ? { className } : {})}
       ref={(el) => {
         if (el) el.style.width = `${pct}%`;
       }}

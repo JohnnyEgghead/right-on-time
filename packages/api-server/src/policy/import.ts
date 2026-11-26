@@ -12,13 +12,13 @@ export const importPolicy: PolicyEntry[] = [
   page('SCR-OFC-13', '/office/admin/import', OFFICE),
   page('SCR-OFC-14', '/office/admin/import/duplicates', OFFICE),
   page('SCR-OFC-15', '/office/admin/import/history', OFFICE),
-  api(startDryRun, OFFICE), // CTL-OFC-13-04 (SCR-OFC-13)
-  api(importRun, OFFICE), // CTL-OFC-13-05, -06, -09 (SCR-OFC-13), CTL-OFC-25-01 (SCR-OFC-25)
-  api(importRuns, OFFICE), // CTL-OFC-15-01 (SCR-OFC-15), CTL-OFC-13-08, -10 (SCR-OFC-13)
-  api(problemList, OFFICE), // CTL-OFC-13-07 (SCR-OFC-13)
-  api(startRealRun, OFFICE), // CTL-OFC-25-02 (SCR-OFC-25)
-  api(likelyDuplicates, OFFICE), // CTL-OFC-13-02 (SCR-OFC-13), CTL-OFC-14-01, -02, -06, -08, -11 (SCR-OFC-14)
-  api(decidePair, OFFICE), // CTL-OFC-14-04, -05, -09, -10 (SCR-OFC-14)
-  api(merges, OFFICE), // CTL-OFC-15-03, -04, -06 (SCR-OFC-15)
-  api(undoMerge, OFFICE), // CTL-OFC-26-02 (SCR-OFC-26)
+  api(startDryRun, OFFICE), // Start an import dry run (CTL-OFC-13-04 (SCR-OFC-13))
+  api(importRun, OFFICE), // Read 1 import run and its report (CTL-OFC-13-05, -06, -09 (SCR-OFC-13), CTL-OFC-25-01 (SCR-OFC-25))
+  api(importRuns, OFFICE), // List the import runs shown on the import pages (CTL-OFC-15-01 (SCR-OFC-15), CTL-OFC-13-08, -10 (SCR-OFC-13))
+  api(problemList, OFFICE), // Download an import run's problem rows as a CSV file (CTL-OFC-13-07 (SCR-OFC-13))
+  api(startRealRun, OFFICE), // Start the real import run; refused once a real run is done in this world (CTL-OFC-25-02 (SCR-OFC-25))
+  api(likelyDuplicates, OFFICE), // List the likely duplicate customers to review (CTL-OFC-13-02 (SCR-OFC-13), CTL-OFC-14-01, -02, -06, -08, -11 (SCR-OFC-14))
+  api(decidePair, OFFICE), // Decide what to do with 1 likely duplicate pair (CTL-OFC-14-04, -05, -09, -10 (SCR-OFC-14))
+  api(merges, OFFICE), // List the customer merges shown on the import pages (CTL-OFC-15-03, -04, -06 (SCR-OFC-15))
+  api(undoMerge, OFFICE), // Undo 1 customer merge: an office write on 1 merge (CTL-OFC-26-02 (SCR-OFC-26))
 ];

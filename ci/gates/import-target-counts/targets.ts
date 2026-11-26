@@ -7,7 +7,7 @@
 //   truth    "the truth file's own counts equal the table"
 // A table it cannot read is TableError (the gate exits 2: it cannot judge), never a pass.
 
-export const PROBLEM_PHRASES = {
+const PROBLEM_PHRASES = {
   'visit with no customer': 'visit_no_customer',
   'missing ZIP code': 'missing_zip',
   'bad phone number': 'bad_phone',

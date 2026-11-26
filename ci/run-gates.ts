@@ -32,8 +32,7 @@
 // Also writes the flat verdict the dashboard reads (jl-dev contracts/ci-verdict, BM-100): a full run (--all) writes
 // .build/ci-verdict.json, a partial run (merge set, --records) writes .build/ci-only-verdict.json so a quick run never
 // overwrites the full verdict. The gate map declares no by-design or hygiene category, so those two lists are [].
-// Env (for tests): CI_ROOT, CI_GATES_FILE, CI_VERDICT_OUT, CI_FLAT_VERDICT_OUT, CI_ONLY_VERDICT_OUT,
-// CI_TIME_CHECK_CMD ("" turns it off), CI_GATE_HISTORY (the scope base history, default .build/ci-time.jsonl).
+// Env (for tests): CI_ROOT, CI_GATES_FILE, CI_FLAT_VERDICT_OUT, CI_TIME_CHECK_CMD ("" turns it off).
 // A gate with onlyWhenChanged globs (F-408; the push set --all only) runs when a matching file differs from the sha of the last
 // recorded run (push, nightly or full) that ran it green, else it is recorded unchanged (neither pass nor fail). Doubt runs it.
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
@@ -92,12 +91,12 @@ const scope = mode === 'all' ? 'push' : mode === 'checkpoint' ? 'nightly' : mode
 
 const root = process.env.CI_ROOT ? path.resolve(process.env.CI_ROOT) : repoRoot();
 const gatesFile = process.env.CI_GATES_FILE ?? path.join(root, 'ci', 'gates.json');
-const verdictOut = process.env.CI_VERDICT_OUT ?? path.join(root, '.build', 'ci', 'ci-verdict.json');
+const verdictOut = path.join(root, '.build', 'ci', 'ci-verdict.json');
 const wavePath = process.env.CI_FLAT_VERDICT_OUT ?? path.join(root, '.build', 'ci-verdict.json');
-const onlyPath = process.env.CI_ONLY_VERDICT_OUT ?? path.join(root, '.build', 'ci-only-verdict.json');
+const onlyPath = path.join(root, '.build', 'ci-only-verdict.json');
 const flatOut = mode === 'all' || mode === 'nightly' || mode === 'checkpoint' ? wavePath : onlyPath;
 // F-408: the committed history of recorded runs (push, nightly or full) (ci-time-check rows: sha + per-gate status) a scoped gate takes its base from.
-const historyFile = process.env.CI_GATE_HISTORY ?? path.join(root, '.build', 'ci-time.jsonl');
+const historyFile = path.join(root, '.build', 'ci-time.jsonl');
 
 // F-22 c, F-108: a start-up error (exit 2) must not leave the previous run's verdict in place as a pass. A usage
 // error comes first, before the mode is known, so it removes every verdict path; any other run removes its own two.

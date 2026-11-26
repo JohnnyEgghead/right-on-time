@@ -202,7 +202,7 @@ export function inventory(all: Pkg[], shipped: Pkg[], policy: Policy, verified: 
   for (const p of [...never].sort((a, b) => key(a).localeCompare(key(b)))) lines.push(`never-shipped ${key(p)}: ${p.license.trim() || '(none)'}`);
   const copyleftNever = never.filter((p) => !satisfies(p.license, (id) => !isCopyleft(id)) && parse(p.license) !== null);
   lines.push(`license-inventory: never-shipped tools carrying copyleft (allowed, OA-81): ${copyleftNever.length}`);
-  // The build-verified licenses of SPECIFICATIONS section 14.
+  // Each build-verified license (SPECIFICATIONS section 14) gets a report line, or a failure when its record does not hold.
   for (const v of verified) {
     const found = all.filter((p) => p.name === v.package);
     if (v.kind === 'vendored') {

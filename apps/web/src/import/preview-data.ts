@@ -49,7 +49,7 @@ const EX_ES: Partial<Record<string, readonly [string | null, string | null]>> = 
 const N: Record<string, number> = { visit_no_customer: 418, missing_zip: 214, bad_phone: 187, visit_date_unreadable: 124, equipment_no_address: 154, customer_name_blank: 87 };
 
 /** `words`: the reason's catalog words in the page language, passed in by the route (API-81 adds them). */
-export function reportRun(words: (reason: string) => string, lang: 'en' | 'es' = 'en'): RunAnswer {
+function reportRun(words: (reason: string) => string, lang: 'en' | 'es' = 'en'): RunAnswer {
   return {
     kind: 'dry_run', status: 'done', stage: 'write', percent: 100, failure: null,
     report: {
@@ -66,7 +66,7 @@ export function reportRun(words: (reason: string) => string, lang: 'en' | 'es' =
 }
 
 export const runsReal: RunsAnswer = { runs: [DRY, REAL, SETUP_DRY], realRun: REAL_RUN };
-export const runsNoReal: RunsAnswer = { runs: [DRY, SETUP_DRY], realRun: null };
+const runsNoReal: RunsAnswer = { runs: [DRY, SETUP_DRY], realRun: null };
 export const runsNone: RunsAnswer = { runs: [], realRun: null };
 
 export const dryData = (words: (reason: string) => string, over: Partial<DryRunData> = {}, lang: 'en' | 'es' = 'en'): DryRunData => ({

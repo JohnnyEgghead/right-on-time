@@ -84,7 +84,7 @@ export function useJob(jobNumber: number, fixed?: JobView): { view: JobView; me:
   useEffect(() => {
     if (sent.length > 0) void load();
   }, [sent, load]);
-  return { view: fixed ?? view, me, reload: () => void load() };
+  return { view: fixed ?? view, me, reload: load };
 }
 
 /** The parts list for the finish screen: the app's one read loop's copy (data.ts TechReads; bw.tech.parts with no signal, UD-35). */
@@ -105,7 +105,7 @@ export async function driveMinutes(reads: Pick<TechReads, 'leg'>, toJob: number)
 
 /**
  * CTL-TEC-04-04 (FR-TECH-13): the drive minutes of the route from the van to this job (F-1369), from API-104 (GET /tech/route?toJob, no fromJob,
- * P5-TWA-MAP-ME's row, read through the app's route reader). Null while unknown, with no signal, or for an approximate
+ * the read Today makes too, and Directions when it has no starting job, through the app's route reader). Null while unknown, with no signal, or for an approximate
  * route (no baked track): the button then reads Directions with no minutes.
  */
 export function useDriveMinutes(toJob: number | null, fixed?: number | null): number | null {

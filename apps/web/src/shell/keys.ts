@@ -11,7 +11,7 @@ export interface KeyTarget {
 const TEXT_INPUT_TYPES = new Set(['', 'text', 'search', 'email', 'tel', 'url', 'password', 'number', 'date', 'time']);
 
 /** True when the focused element takes typed text, so "/" must stay in it. */
-export function isTextField(t: KeyTarget | null | undefined): boolean {
+function isTextField(t: KeyTarget | null | undefined): boolean {
   if (!t) return false;
   if (t.isContentEditable) return true;
   const tag = t.tagName.toUpperCase();

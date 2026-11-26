@@ -7,9 +7,9 @@ import { dayLabel, type InboxMessage } from './api.ts';
 
 type T = (key: MessageKey, values?: Record<string, string | number>) => string;
 
-export const STAMP_GAP_MINUTES = 15;
+const STAMP_GAP_MINUTES = 15;
 
-export interface Stamp { day: string | null; time: string }
+interface Stamp { day: string | null; time: string }
 export type ThreadItem = { kind: 'stamp'; stamp: Stamp } | { kind: 'message'; message: InboxMessage };
 
 const dayOf = (wire: string): string => wire.slice(0, 10);

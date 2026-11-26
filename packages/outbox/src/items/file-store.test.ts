@@ -356,8 +356,8 @@ describe('the send loop over the file store converges to the server\'s ledger (I
     const second = await sendWaiting(relaunched, srv.t, { userId: MARIA, nowMs: clock });
     expect(second.stopped).toBeNull();
     expect(await keys(relaunched)).toEqual([]);
-    // The photo went first and committed; the stop kept the 2 notes from being sent at all, so they apply now.
-    expect(second.answered.map((a) => [a.key, a.result])).toEqual([[items[1]!.key, 'duplicate'], [items[0]!.key, 'applied'], [items[2]!.key, 'applied']]);
+    // The photo went first and committed, its answer lost; it stepped aside, so the 2 notes were sent and committed too: all 3 answer duplicate now.
+    expect(second.answered.map((a) => [a.key, a.result])).toEqual([[items[1]!.key, 'duplicate'], [items[0]!.key, 'duplicate'], [items[2]!.key, 'duplicate']]);
     expect([...srv.ledger.values()]).toEqual([1, 1, 1]);
     // a third send has nothing to send: the waiting list equals the ledger's complement (empty)
     const third = await sendWaiting(new FileItemStore(nodeDir(d.root)), srv.t, { userId: MARIA, nowMs: clock });

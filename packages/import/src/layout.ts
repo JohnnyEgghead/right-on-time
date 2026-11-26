@@ -22,8 +22,8 @@ export type ExportFile = (typeof EXPORT_FILES)[number];
 
 type Record_<C extends readonly string[]> = { [K in C[number]]: string } & { rowNumber: number };
 export type CustomerCsvRow = Record_<typeof CUSTOMER_COLUMNS>;
-export type VisitCsvRow = Record_<typeof VISIT_COLUMNS>;
-export type EquipmentCsvRow = Record_<typeof EQUIPMENT_COLUMNS>;
+type VisitCsvRow = Record_<typeof VISIT_COLUMNS>;
+type EquipmentCsvRow = Record_<typeof EQUIPMENT_COLUMNS>;
 
 /** The 3 files' text, as read from the export folder. */
 export type ExportFiles = Record<ExportFile, string>;

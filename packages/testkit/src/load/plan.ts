@@ -4,10 +4,10 @@
 // their places in the day, squeezed by 1 stated factor, so the run keeps the day's own morning and afternoon shape. A share of
 // the jobs is first moved to another technician by a dispatcher. Same seed, same world: same timeline.
 
-/** REQUIREMENTS section 5.2. */
+/** The size of the load day: 600 jobs, 3 branches, 14 dispatchers and 85 technicians (REQUIREMENTS section 5.2). */
 export const LOAD_DAY = { jobs: 600, branches: 3, dispatchers: 14, technicians: 85 } as const;
 
-export interface WorldJob {
+interface WorldJob {
   jobNumber: number;
   branch: string;
   technicianId: string;
@@ -16,8 +16,8 @@ export interface WorldJob {
   plannedMs: number;
   expectedMinutes: number;
 }
-export interface WorldTechnician { id: string; branch: string; token: string }
-export interface WorldDispatcher { id: string; branch: string; token: string }
+interface WorldTechnician { id: string; branch: string; token: string }
+interface WorldDispatcher { id: string; branch: string; token: string }
 export interface LoadWorld {
   /** The manager session that resets the world between runs. */
   managerToken: string;
@@ -40,7 +40,7 @@ export interface TimelineOptions {
 }
 
 /** The day the timeline squeezes: the drive to the day's first stop to the end of its last visit. */
-export const DRIVE_MINUTES = 20;
+const DRIVE_MINUTES = 20;
 
 /** mulberry32: a small seeded generator, so a timeline repeats exactly. */
 export function seeded(seed: number): () => number {

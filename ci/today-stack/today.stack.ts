@@ -149,7 +149,7 @@ describe.each(engines)('the web technician app on the Compose stack, %s', (engin
   let access: Cookie[] = [];
   const entered = (): BrowserContextOptions => (access.length > 0 ? { storageState: { cookies: access, origins: [] } } : {});
 
-  /** The access code (the first time on this engine; then its cookie), then SCR-TEC-01's form (CTL-TEC-01-01 to -04). */
+  /** The access code (the first time on this engine; then its cookie), then the sign-in form (SCR-TEC-01; CTL-TEC-01-01 to -04). */
   async function signIn(login: string, password: string, options: BrowserContextOptions = {}): Promise<Page> {
     const g = await guardedContext(browser, [origin], { ...PHONE, ...options, ...entered() });
     contexts.push(g.context);
@@ -213,7 +213,7 @@ describe.each(engines)('the web technician app on the Compose stack, %s', (engin
     expect(head).toMatch(new RegExp(`0 of ${day.jobs.length} done`));
     // FR-DEMO-1, F-938: the header shows the demo time, and no demo strip sits above it.
     await expect.poll(() => page.locator('.apphead [data-ctl="CTL-CMP-01-01"] b').textContent()).toMatch(/^Tue, Sep 15, \d{1,2}:\d{2} (AM|PM) EDT$/);
-    // F-1020 f: the label is Demo clock
+    // the header label reads Demo clock (F-1020 f)
     expect(await page.locator('.apphead [data-ctl="CTL-CMP-01-01"]').textContent()).toMatch(/^\s*Demo clock\s/);
     expect(await page.locator('.r1-demobar').count()).toBe(0);
   });

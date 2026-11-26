@@ -10,7 +10,7 @@ import { countBody, enqueueText } from '@bw/outbox';
 import { Temporal, toWire } from '@bw/time';
 import { appendJobChange, WriteRefused, type WriteContext } from './service.ts';
 
-export const OFFICE_TEXT_CHANGE = 'office_text';
+const OFFICE_TEXT_CHANGE = 'office_text';
 
 export interface OfficeTextSent {
   id: string;

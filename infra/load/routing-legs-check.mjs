@@ -6,6 +6,7 @@
 // and the SHA-256 the burst file carries (bursts made before F-1327 carry none: null). Exits 1 when any burst's set differs, or a burst
 // that carries a SHA-256 names another list.
 //   node infra/load/routing-legs-check.mjs <legs list> <burst file> [<burst file> ...] > <check.json>
+// Kept as evidence, nothing calls it: its output is cited in the measured record that set the routing service's memory limit, as proof that each route burst asked for the same legs.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';

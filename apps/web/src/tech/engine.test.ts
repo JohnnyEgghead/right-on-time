@@ -8,7 +8,7 @@ import { createClient, PROBLEM_TYPE_PREFIX } from '@bw/api';
 import { DexieItemStore, type QueuedItem } from '@bw/outbox/src/items/index.ts';
 import { Temporal } from '@bw/time';
 import { describe, expect, it } from 'vitest';
-import { NotReadyError, TechOutbox, type EngineDeps } from './engine.ts';
+import { FinishLeave, signatureOwed, NotReadyError, TechOutbox, type EngineDeps } from './engine.ts';
 import { webTransport, wireItem } from './transport.ts';
 
 const ORIGIN = 'http://phone.test';
@@ -347,3 +347,103 @@ describe('a sync never rejects (F-1849)', () => {
   });
 });
 
+describe('F-1932 the finish and its signature leave as 2 entries', () => {
+  const payload = { parts: [], noPartsUsed: true, laborMinutes: 30, workDone: ['Tune-up'] };
+  const input = { jobNumber: 24831, baseVersion: 3, payload, refusedKey: null, signature: jpegOf(64) };
+
+  // why: FR-TECH-14, F-1932 a signature that is not kept after its finish was is not lost: the retry enters the signature and no second finish
+  it('enters only the signature again when the signature was not kept', async () => {
+    const w = world();
+    await w.engine.sync();
+    w.setOnline(false);
+    const put = w.store.put.bind(w.store);
+    let puts = 0;
+    w.store.put = (item, blob) => ((puts += 1) === 2 ? Promise.reject(new Error('no space left')) : put(item, blob));
+    const leaving = new FinishLeave(w.engine);
+    await expect(leaving.leave(input)).rejects.toThrow('no space left');
+    expect((await w.store.waiting()).map((i) => i.kind)).toEqual(['finished']);
+    expect(leaving.owed).toBe(true);
+    await leaving.leave(input);
+    expect((await w.store.waiting()).map((i) => i.kind)).toEqual(['finished', 'signature']);
+    expect(leaving.owed).toBe(false);
+  });
+
+  // why: F-1025, F-1932 a refused finish is corrected under its own key on every try that finds it refused, and never entered beside it
+  it('corrects a refused finish under its key and then enters the signature', async () => {
+    const calls: string[] = [];
+    let refuse = 1;
+    const leaving = new FinishLeave({
+      enter: async (i) => {
+        calls.push(i.body.kind);
+        if (refuse-- > 0) throw new Error('no space left');
+        return {} as QueuedItem;
+      },
+      correctFinish: async (key) => {
+        calls.push(`correct ${key}`);
+        return {} as QueuedItem;
+      },
+    });
+    await expect(leaving.leave({ ...input, refusedKey: 'k1' })).rejects.toThrow('no space left');
+    await leaving.leave(input);
+    expect(calls).toEqual(['correct k1', 'signature', 'signature']);
+  });
+});
+
+describe('F-1975 a kept entry is not reported as lost when only the list read after it fails', () => {
+  const payload = { parts: [], noPartsUsed: true, laborMinutes: 30, workDone: ['Tune-up'] };
+
+  // why: FR-TECH-14, F-1975 an entry the store kept resolves with that entry when the list read after it fails, so the screen does not enter it twice
+  it('enter resolves with the kept item when the waiting list read fails, and the item stays kept', async () => {
+    const w = world();
+    await w.engine.sync();
+    w.setOnline(false);
+    const waiting = w.store.waiting.bind(w.store);
+    w.store.waiting = async () => { throw new DOMException('the store is full', 'QuotaExceededError'); };
+    const item = await w.engine.enter({ jobNumber: 24830, baseVersion: 3, body: { kind: 'arrived' } });
+    w.store.waiting = waiting;
+    expect((await w.store.waiting()).map((i) => i.key)).toEqual([item.key]);
+  });
+
+  // why: F-1025, F-1975 a refused finish corrected in the store resolves with the corrected item when the list read after it fails
+  it('correctFinish resolves with the corrected item when the waiting list read fails', async () => {
+    const w = world();
+    await w.engine.sync();
+    w.setOnline(false);
+    const finish = await w.engine.enter({ jobNumber: 24831, baseVersion: 3, body: { kind: 'finished', payload } });
+    await w.store.recordTry([finish.key], { atRealMs: 1, outcome: 'refused', code: 'parts_required' });
+    await w.engine.refresh();
+    const waiting = w.store.waiting.bind(w.store);
+    w.store.waiting = async () => { throw new DOMException('the store is full', 'QuotaExceededError'); };
+    const fixed = { ...payload, laborMinutes: 45 };
+    const item = await w.engine.correctFinish(finish.key, fixed);
+    w.store.waiting = waiting;
+    expect([item.key, ((item as { payload?: typeof payload }).payload as typeof payload).laborMinutes]).toEqual([finish.key, 45]);
+    expect((((await w.store.waiting())[0] as { payload?: typeof payload }).payload as typeof payload).laborMinutes).toBe(45);
+  });
+});
+
+describe('F-1976 a screen opened again still owes the signature of a kept finish', () => {
+  const payload = { parts: [], noPartsUsed: true, laborMinutes: 30, workDone: ['Tune-up'] };
+  const input = { jobNumber: 24831, baseVersion: 3, payload, refusedKey: null, signature: jpegOf(64) };
+
+  // why: FR-TECH-14, F-1976 a finish waits and its signature does not: the new screen enters only the signature and no second finish
+  it('signatureOwed reads the outbox, and a resumed FinishLeave enters only the signature', async () => {
+    const w = world();
+    await w.engine.sync();
+    w.setOnline(false);
+    const put = w.store.put.bind(w.store);
+    let puts = 0;
+    w.store.put = (item, blob) => ((puts += 1) === 2 ? Promise.reject(new Error('no space left')) : put(item, blob));
+    await expect(new FinishLeave(w.engine).leave(input)).rejects.toThrow('no space left');
+    const waiting = await w.store.waiting();
+    expect(signatureOwed(waiting, 24831, true)).toBe(true);
+    expect(signatureOwed(waiting, 24831, false)).toBe(false);
+    expect(signatureOwed(waiting, 24830, true)).toBe(false);
+    const again = new FinishLeave(w.engine);
+    again.resume();
+    expect(again.owed).toBe(true);
+    await again.leave(input);
+    expect((await w.store.waiting()).map((i) => i.kind)).toEqual(['finished', 'signature']);
+    expect(signatureOwed(await w.store.waiting(), 24831, true)).toBe(false);
+  });
+});

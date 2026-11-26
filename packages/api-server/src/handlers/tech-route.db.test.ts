@@ -58,7 +58,7 @@ describe('API-163 My route', () => {
     expect(d.stops[1]).toMatchObject({ customer: expect.any(String), address: expect.stringMatching(/^\d+ .+, .+$/), window: { start: expect.stringContaining('08:00'), end: expect.stringContaining('10:00') } });
   });
 
-  // why: FR-TECH-13 the leg into each stop is the baked track's drive minutes (last second / 60, rounded up) and length, or the approximate line with SD-22's minutes and no length
+  // why: FR-TECH-13 the leg into each stop is the baked track's drive minutes (last second / 60, rounded up) and length, or the approximate line with the approximate minutes (SD-22) and no length
   it('takes each leg from its baked track, else the approximate line', async () => {
     const d = await read<Day>(await w.get('/tech/day-route', w.techs[0]));
     const leg = (job: number) => d.legs.find((l) => l.toJob === job)!;

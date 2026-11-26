@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// SCR-TEC-01's preview states (harness build only): the frame's default and its other tiles (DK-106 mockups/pages/tech-signin.html).
+// The Technician sign-in page's preview states (SCR-TEC-01; harness build only): the frame's default and its other tiles (DK-106 mockups/pages/tech-signin.html).
 import type { SamplePerson } from '../auth/SignInScreen.tsx';
 import type { ClockAnswer } from '../shell/clock.ts';
 import { APP_INFO, CLOCK_RUNNING } from '../shell/preview-fixtures.ts';

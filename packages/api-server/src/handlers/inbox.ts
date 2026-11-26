@@ -25,7 +25,7 @@ const notFound = { ok: false as const, status: 404, code: 'not_found' as const }
 const gone = (officePhone: string) => ({ ok: false as const, status: 410, code: 'gone' as const, detail: { officePhone } });
 
 /** Online booking and the customer's reschedule offer the next 21 days after today (SD-27); a day closes at 5:00 PM the day before (FR-BOOK-9). */
-export const RESCHEDULE_HORIZON_DAYS = 21;
+const RESCHEDULE_HORIZON_DAYS = 21;
 const CUTOFF_TIME = '17:00';
 /** A window shows its places left when its room is 3 or less (SD-27, GAP-23). */
 const FEW_LEFT = 3;
@@ -47,7 +47,7 @@ async function customerByInbox(tx: Tx, token: string): Promise<CustomerRow | nul
 const hostPattern = (host: string): RegExp => new RegExp(`${host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/(m|r)/([0-9A-Za-z]{8})(?![0-9A-Za-z])`, 'g');
 
 /** The links of a text body as paths on the running server (FR-TEXT-18): the live map `/m/<token>` and the reschedule page `/r/<token>`. */
-export function linksOf(body: string, linkHost: string): Out<typeof inboxMessagesRow>['messages'][number]['links'] {
+function linksOf(body: string, linkHost: string): Out<typeof inboxMessagesRow>['messages'][number]['links'] {
   return [...body.matchAll(hostPattern(linkHost))].map((m) => ({
     kind: m[1] === 'm' ? ('live_map' as const) : ('reschedule' as const),
     path: `/${m[1]}/${m[2]}`,
@@ -56,7 +56,7 @@ export function linksOf(body: string, linkHost: string): Out<typeof inboxMessage
 }
 
 /** API-120: the customer's thread, in time order (CTL-INB-01-02), or only what is newer than `after` (the 5 s refresh). */
-export const inboxMessagesHandler: Handler<Out<typeof inboxMessagesRow>> = async (req, tx: Tx, hctx) => {
+const inboxMessagesHandler: Handler<Out<typeof inboxMessagesRow>> = async (req, tx: Tx, hctx) => {
   const p = req.params as In<typeof inboxMessagesRow>;
   const c = await customerByInbox(tx, p.inboxToken);
   if (!c) return notFound;
@@ -82,7 +82,7 @@ export const inboxMessagesHandler: Handler<Out<typeof inboxMessagesRow>> = async
 };
 
 /** API-121: a reply (C, R or free text). FR-TEXT-13: no reply controls for a customer with no mobile phone or with texts off, and the server refuses the same. */
-export const inboxReplyHandler: Handler<Out<typeof inboxReplyRow>> = async (req, tx: Tx, hctx) => {
+const inboxReplyHandler: Handler<Out<typeof inboxReplyRow>> = async (req, tx: Tx, hctx) => {
   const p = req.params as In<typeof inboxReplyRow>;
   const c = await customerByInbox(tx, p.inboxToken);
   if (!c) return notFound;
@@ -154,7 +154,7 @@ async function onlineDays(tx: Tx, j: LinkJob, now: Instant): Promise<Out<typeof 
 }
 
 /** API-117: the current visit and the days and windows the customer may move it to; 410 when the link has ended. */
-export const reschedulePageHandler: Handler<Out<typeof reschedulePageRow>> = async (req, tx: Tx) => {
+const reschedulePageHandler: Handler<Out<typeof reschedulePageRow>> = async (req, tx: Tx) => {
   const { rescheduleToken } = req.params as In<typeof reschedulePageRow>;
   const j = await linkJob(tx, rescheduleToken);
   if (!j) return notFound;
@@ -164,9 +164,9 @@ export const reschedulePageHandler: Handler<Out<typeof reschedulePageRow>> = asy
 
 /**
  * API-118: the customer's move. It goes through rescheduleJob (which cancels the visit's unsent confirmations in this transaction),
- * then sends the new confirmation and moves the reminder, as API-24's handler does (SD-45, F-782). The link ends with the move (SD-17).
+ * then sends the new confirmation and moves the reminder, as the office reschedule's handler does (API-24; SD-45, F-782). The link ends with the move (SD-17).
  */
-export const rescheduleVisitHandler: Handler<Out<typeof rescheduleVisitRow>> = async (req, tx: Tx, hctx): Promise<ApiResult<Out<typeof rescheduleVisitRow>>> => {
+const rescheduleVisitHandler: Handler<Out<typeof rescheduleVisitRow>> = async (req, tx: Tx, hctx): Promise<ApiResult<Out<typeof rescheduleVisitRow>>> => {
   const p = req.params as In<typeof rescheduleVisitRow>;
   const j = await linkJob(tx, p.rescheduleToken, true);
   if (!j) return notFound;

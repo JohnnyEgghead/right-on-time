@@ -20,7 +20,7 @@ type Pool = ReturnType<typeof createPool>;
 export const RESET_CONFIRM_ALERT_AFTER = 12;
 /** SD-12 and section 2: the confirmer runs every 5 real seconds. */
 export const RESET_CONFIRM_EVERY_MS = 5_000;
-export const RESET_WAITING_SUBJECT = 'billing_reset';
+const RESET_WAITING_SUBJECT = 'billing_reset';
 
 export class ConfirmerState {
   /** Failed calls in a row for the current unconfirmed epoch. */

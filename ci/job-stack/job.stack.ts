@@ -9,7 +9,7 @@
 //   The On the way rulings (owner rulings 4241980e, 2142ce69 "End the link", d0c0a033 "Back to Scheduled", 7ccb76ec call 8): the
 //   stack's worker is stopped while a technician's On my way is applied and the office acts, so the on-the-way text is still unsent
 //   (queued) when Reassign, Reschedule or Cancel visit runs; started again, it delivers no on-the-way text for those jobs. The new
-//   technician's API-100 half of Back to Scheduled is P5-TWA-TODAY's (F-703; API-100 is not built): only API-20 is read here.
+//   technician's API-100 half of Back to Scheduled is covered by the technician Today suite (F-703): only API-20 is read here.
 //   Last, once, after every engine's cases (the shared clock only moves forward): Maria arrives on Harold's job with his page open,
 //   and the clock moves to 9:30 PM for the quiet-hours hold.
 import { spawnSync } from 'node:child_process';
@@ -128,16 +128,21 @@ async function writeOrigin(p: Page): Promise<void> {
 }
 
 interface Open { page: Page; g: GuardedContext }
-interface OpenAs { before?: (p: Page) => unknown; who?: keyof typeof people; lang?: Lang }
-async function open(browser: Browser, n: number, { before, who = 'keisha', lang = 'en' }: OpenAs = {}): Promise<Open> {
+/** live: the page's event stream (API-09) has answered before open() returns, so a change made next reaches the page as a push (F-908: a change made before the stream is subscribed is never replayed, Last-Event-ID is ignored). */
+interface OpenAs { before?: (p: Page) => unknown; who?: keyof typeof people; lang?: Lang; live?: boolean }
+async function open(browser: Browser, n: number, { before, who = 'keisha', lang = 'en', live = false }: OpenAs = {}): Promise<Open> {
   const g = await guardedContext(browser, [origin], { viewport: { width: 1440, height: 1100 } });
   await g.context.addCookies([{ name: 'bw_session', value: people[who]!, url: origin, httpOnly: true }, { name: 'bw_lang', value: lang, url: origin }]);
   const page = await g.context.newPage();
   await writeOrigin(page);
   if (before) await before(page);
+  const stream = live ? page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/api/v1/events'), { timeout: 60_000 }) : undefined;
+  stream?.catch(() => undefined);
   const res = await page.goto(`${origin}/office/jobs/${n}`, { waitUntil: 'load' });
   expect(res?.status()).toBe(200);
   await page.waitForSelector(`${SCREEN} .jh h1`, { timeout: 60_000 });
+  // The server subscribes the caller to its bus before it answers (packages/api-server/src/events/stream.ts), so the answer is the ready signal.
+  if (stream) await stream;
   return { page, g };
 }
 const close = (o: Open) => o.g.context.close();
@@ -429,7 +434,7 @@ describe.each(engines)('the job page on the Compose stack, %s', (engine, type) =
 
   // why: F-702, FR-TEXT-15, UC-17 (SCR-OFC-03's Live row: EVT-03 moves a text's status word with no reload); F-1838 (F-704 made an office text's row read "Office text sent by <name>" with the status word in its small line, so the row is matched by those 2 parts)
   it('moves an office text to Delivered in Texts and activity with no reload', async () => {
-    const o = await open(browser, HAROLD);
+    const o = await open(browser, HAROLD, { live: true });
     try {
       const p = o.page;
       const lead = msg('job.feed.kind.office_text', { by: '' }).trim();
@@ -449,16 +454,10 @@ describe.each(engines)('the job page on the Compose stack, %s', (engine, type) =
   // why: F-697, FR-DISP-6, UD-6 (a dialog sends the version it opened on: another person's save opens SCR-OFC-19, and nothing is overwritten unasked)
   it('2 people on Edit details: the second save opens SCR-OFC-19, Keep leaves their words, Save anyway saves mine, a third change updates the message', async () => {
     const n = await freshJob();
-    // F-855: the job-changed toast on page a needs its event stream connected before page b saves, so each page reports when its stream answered.
-    const streams = [0, 1].map(() => {
-      let done: () => void = () => undefined;
-      const ready = new Promise<void>((resolve) => { done = resolve; });
-      return { ready, before: (pg: Page) => { pg.on('response', (res) => { if (new URL(res.url()).pathname.endsWith('/api/v1/events')) done(); }); } };
-    });
-    const a = await open(browser, n, { before: streams[0]!.before });
-    const b = await open(browser, n, { who: 'dana', before: streams[1]!.before });
+    // F-855, F-908: each page's event stream must have answered before the other page saves.
+    const a = await open(browser, n, { live: true });
+    const b = await open(browser, n, { who: 'dana', live: true });
     try {
-      await Promise.race([Promise.all(streams.map((x) => x.ready)), new Promise((_, no) => setTimeout(() => no(new Error('an event stream did not connect within 30 s')), 30_000))]);
       const p = a.page;
       const mine = 'Mine: rattles at start';
       const theirs = 'Theirs: the customer called about a gas smell';
@@ -511,7 +510,7 @@ describe.each(engines)('the job page on the Compose stack, %s', (engine, type) =
     { action: 'finish', ctl: '03-08', label: 'Finish anyway', word: 'finish' },
   ] as const)('$action: another person\'s change opens SCR-OFC-19, and $label makes the change', async ({ action, ctl, label, word }) => {
     const n = await freshJob();
-    const o = await open(browser, n);
+    const o = await open(browser, n, { live: true });
     try {
       const p = o.page;
       await p.locator(`${SCREEN} .jh [data-ctl="CTL-OFC-${ctl}"]`).click();
@@ -557,7 +556,7 @@ describe.each(engines)('the job page on the Compose stack, %s', (engine, type) =
     const n = await freshJob();
     const parts = (await api('keisha', 'GET', '/parts')).body.data.parts as Json[];
     const lines = { parts: [{ partId: parts[0].partId, quantity: 2 }], noPartsUsed: false };
-    const o = await open(browser, n);
+    const o = await open(browser, n, { live: true });
     let list: Open | undefined;
     try {
       await setBilling('reject_next_n', 8);
@@ -703,7 +702,7 @@ describe.each(engines)('the job page on the Compose stack, %s', (engine, type) =
         // Back to Scheduled clears the trip (owner ruling d0c0a033); a canceled visit keeps when its trip began, as history.
         if (action !== 'cancel') expect(after.onTheWayAt, action).toBeNull();
         if (action === 'reassign') {
-          // Back to Scheduled for the new technician in API-20 (the API-100 half is P5-TWA-TODAY's, F-703).
+          // Back to Scheduled for the new technician in API-20 (the API-100 half is covered by the technician Today suite, F-703).
           const b = await board();
           const row = (b.technicians as Json[]).find((t) => t.jobs.some((j: Json) => j.jobNumber === job.jobNumber));
           expect(row?.id).toBeDefined();
@@ -786,7 +785,7 @@ describe('after every engine: Maria arrives, and the clock reaches 9:30 PM', () 
 
   // why: FR-DISP-25, NFR-04 (after arrival the panel shows no van position, and API-135 has none to give)
   it('takes the panel and the map off Harold\'s open page when Maria arrives, and the feed names Arrived', async () => {
-    const o = await open(browser, HAROLD);
+    const o = await open(browser, HAROLD, { live: true });
     try {
       const p = o.page;
       await p.locator(`${SCREEN} [data-ctl="CTL-OFC-03-25"] .tech`).waitFor({ timeout: 30_000 });

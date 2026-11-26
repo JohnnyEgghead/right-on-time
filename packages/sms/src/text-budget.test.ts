@@ -31,7 +31,7 @@ describe('text-budget-check (FR-TEXT-9)', () => {
   });
 
   for (const arm of ARMS) {
-    // why: FR-TEXT-9
+    // why: FR-TEXT-9 each arm fails the budget check with the failure kind it names
     it(`fails ${arm.name}`, () => {
       for (const c of arm.cases) {
         const r = runTextBudgetCheck(c);

@@ -101,7 +101,7 @@ describe('API-100 Today', () => {
 
   // why: FR-TEXT-4 (SPECIFICATIONS job.status: assignJob on an on_the_way or on_site job sets it back to scheduled for the new technician; owner ruling d0c0a033; F-1020 d)
   it('reads a job the office reassigned from On site as Scheduled in the new technician\'s list, and drops it from the old one', async () => {
-    await makeRoom(); // F-1046
+    await makeRoom(); // F-1046: the case passes in any order
     const n = await w.newJob({ tech: maria, status: 'on_site' });
     expect((await today(maria)).jobs.find((x) => x.jobNumber === n)?.status).toBe('on_site');
     const version = (await w.rows<{ version: number }>('SELECT version FROM world.job WHERE job_number = $1', [n]))[0]!.version;

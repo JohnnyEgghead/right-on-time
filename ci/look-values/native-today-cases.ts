@@ -74,7 +74,7 @@ const fieldPairs = (n: 'login' | 'password', nth: number, inp: string): NativePa
   { frame: `.fld:nth-of-type(${nth}) ${inp} .v`, native: `signin.${n}.value`, kind: 'face' },
 ];
 
-/** SCR-EML-03's result box in a tile (F-1107): the box, its icon and its words (the address in the frame is a sample one). */
+/** The result box of the Forgot password page (SCR-EML-03) in a tile (F-1107): the box, its icon and its words (the address in the frame is a sample one). */
 const resultPairs = (boxSel: string): NativePair[] => [
   box(boxSel, 'forgot.result', { data: DATA, sum: 'the icon and the message' }),
   icon(`${boxSel} .ic`, 'forgot.result.icon'),

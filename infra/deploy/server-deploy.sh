@@ -50,7 +50,7 @@ MANAGED=(compose.yaml nginx placeholder .env setup.sh certbot-renew.sh renewal-s
 # The host timers this script installs from systemd/ (each with its .service); the certbot one is kept enabled, the backup ones per BACKUP_TIMERS.
 TIMERS=(brightwater-certbot-renew brightwater-backup brightwater-restore-test)
 # F-388 (owner ruling 1c7bcc42, "Move hosted half to phase 8": no hosted backups until then): the 2 backup timers are installed
-# but turned on only by a deploy that asks for them, P8-UNLOCK's (deploy.sh --profile demo stages $STAGE/backups-on). Any other
+# but turned on only by a deploy that asks for them (deploy.sh --profile demo stages $STAGE/backups-on). Any other
 # deploy leaves them off, and turns off a pair an earlier deploy had enabled.
 BACKUP_TIMERS=(brightwater-backup brightwater-restore-test)
 
@@ -248,7 +248,8 @@ wait_healthy() {
 # running_image <service>: the image tag the running container of a Compose service was created from.
 running_image() {
   local cid
-  cid=$(cd "$DEST" && docker compose ps -q "$1" 2>/dev/null | head -n 1) || return 1
+  cid=$(cd "$DEST" && docker compose ps -q "$1" 2>/dev/null) || return 1
+  cid=${cid%%$'\n'*}
   [ -n "$cid" ] || return 1
   docker inspect --format '{{.Config.Image}}' "$cid"
 }

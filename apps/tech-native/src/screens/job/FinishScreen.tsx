@@ -7,6 +7,7 @@
 // work-done lines, which go to billing) and the signature as its own photo-like item (SD-32's PNG, never sent to billing,
 // FR-TECH-14) through the shared engine. A finish the server refused for want of parts (F-1025, parts_required) reopens here with the
 // message and what was sent, and its correction replaces it under its own key.
+import { FinishLeave, signatureOwed } from '@bw/outbox/src/items/native.ts';
 import { useNavigation, useRoute, type NavigationProp, type ParamListBase, type RouteProp } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { AccessibilityInfo, findNodeHandle, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
@@ -47,6 +48,8 @@ export function FinishScreen() {
   const [msg, setMsg] = useState<Msg>(null);
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
+  // F-1932: what of this screen's own finish is kept, for the retry after an entry that was not.
+  const [leaving] = useState(() => new FinishLeave(app));
   const [editLabor, setEditLabor] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const lines = useRef<(ComponentRef<typeof TextInput> | null)[]>([]);
@@ -71,14 +74,15 @@ export function FinishScreen() {
   });
 
   /** Every change is kept on the phone at once (CTL-TEC-07-10, -11, -14); a failed write says so. */
-  const keep = useCallback((next: FinishDraft) => {
-    setD(next);
+  const keep = useCallback((draft: FinishDraft) => {
+    const next = leaving.entriesOf(d, draft, refused !== null);
     try {
       copies.saveFinish(next);
     } catch {
       setMsg('sig');
     }
-  }, [copies]);
+    setD(next);
+  }, [copies, leaving, refused, d]);
 
   const labor = useMemo(() => {
     if (d.hours !== null && d.minutes !== null) return { hours: d.hours, minutes: d.minutes };
@@ -95,8 +99,13 @@ export function FinishScreen() {
           : hasParts ? 'finish-part'
             : msg === null && !d.noPartsUsed && d.workDone.length === 1 && d.workDone[0] !== '' ? 'finish-editing' : null;
   useLookDump(look);
-  // A finish already waiting on the phone closes the screen to the job; never while this screen's own finish is leaving.
-  const closeNow = view.kind === 'job' && finishWaits(jobNumber, state.outbox.waiting) && !refused && msg !== 'server' && !saving;
+  // A finish already waiting on the phone closes the screen to the job; never while this screen's own finish is leaving or its signature is not kept yet (owed).
+  // A screen opened again after its finish was kept and its signature was not (F-1976) still owes the signature: the finish is not entered twice.
+  const owedAgain = refused === null && signatureOwed(state.outbox.waiting, jobNumber, isSigned);
+  useEffect(() => {
+    if (owedAgain) leaving.resume();
+  }, [owedAgain, leaving]);
+  const closeNow = view.kind === 'job' && finishWaits(jobNumber, state.outbox.waiting) && !refused && msg !== 'server' && !saving && !leaving.owed && !owedAgain;
   useEffect(() => {
     if (closeNow) nav.goBack();
   }, [closeNow, nav]);
@@ -146,13 +155,8 @@ export function FinishScreen() {
     if (!c.ok || saving) return;
     setSaving(true);
     try {
-      // F-1025: a refused finish is corrected under its own key (the server wrote nothing for it), never a second finish beside it.
-      if (refused) await app.correctFinish(refused.key, c.payload);
-      else await app.enter({ jobNumber, baseVersion: job.job.version, body: { kind: 'finished', payload: c.payload } });
-      if (d.signature && isSigned) {
-        const png = signaturePng(d.signature.strokes, d.signature.width, d.signature.height);
-        await app.enter({ jobNumber, baseVersion: null, body: { kind: 'signature', contentType: 'image/png' }, blob: png });
-      }
+      const signature = d.signature && isSigned ? signaturePng(d.signature.strokes, d.signature.width, d.signature.height) : null;
+      await leaving.leave({ jobNumber, baseVersion: job.job.version, payload: c.payload, refusedKey: refused?.key ?? null, signature });
       copies.forgetFinish(jobNumber);
       back();
     } catch {

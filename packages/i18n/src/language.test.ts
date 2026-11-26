@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { chooseLanguage } from './language.ts';
 
-// UI-SPECIFICATION section 13.2, row by row.
+// The language rules, row by row: staff, booking and public pages, customer text pages, and the native app (UI-SPECIFICATION section 13.2).
 describe('chooseLanguage', () => {
   // why: FR-LANG-1
   it('staff use the profile language', () => {

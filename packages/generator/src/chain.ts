@@ -15,9 +15,9 @@ export interface VisitScript {
 
 export interface ChainVisit {
   jobNumber: number;
-  /** SD-15's planned arrival. */
+  /** The visit's planned arrival, as the day's plan sets it (SD-15). */
   plannedArrival: number;
-  /** SD-15's drive minutes of the leg from the stop before (the depot for the first visit). */
+  /** The drive minutes of the leg from the stop before (SD-15; the depot for the first visit). */
   driveMinutes: number;
   script: VisitScript;
 }
@@ -30,7 +30,7 @@ export interface ChainedVisit {
 }
 
 /**
- * The step times of 1 technician-day's scripted visits, in SD-15's order. `ready` is when the technician can first leave:
+ * The step times of 1 technician-day's scripted visits, in the order of the day's plan (SD-15). `ready` is when the technician can first leave:
  * the shift start (the only value any caller passes; sample-day.ts passes `shiftStart`).
  *
  * A visit starts at the later of its planned arrival and what the stop before leaves room for, and arrives its scripted

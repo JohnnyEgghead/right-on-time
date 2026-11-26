@@ -29,7 +29,7 @@ const win = (id: string, from: number, to: number, date: string, state: 'open' |
   windowId: id, start: wireAt(from, date), end: wireAt(to, date), state, placesLeft,
 });
 /** The picked day's 5 windows as the frames draw them: 8-10 Full, 10-12, 12-2 with 2 left, 2-4 Full, 4-6 Open. */
-export const PICKED_WINDOWS = (date: string): OnlineWindow[] => [
+const PICKED_WINDOWS = (date: string): OnlineWindow[] => [
   win('w08', 8, 10, date, 'full', null), win('w10', 10, 12, date, 'open', null), win('w12', 12, 14, date, 'open', 2), win('w14', 14, 16, date, 'full', null), win('w16', 16, 18, date, 'open', null),
 ];
 const OPEN_WINDOWS = (date: string): OnlineWindow[] => [8, 10, 12, 14, 16].map((h) => win(`w${String(h).padStart(2, '0')}`, h, h + 2, date, 'open', null));

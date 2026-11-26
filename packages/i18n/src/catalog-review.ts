@@ -17,7 +17,7 @@ import type { CatalogMap } from './catalog-format.ts';
 
 export const RUBRIC = ['usted', 'accents', 'ampm', 'natural'] as const;
 
-export interface ReviewRecord {
+interface ReviewRecord {
   /** Hash of the value reviewed (valueHash). */
   h: string;
   /** The reviewing agent, "<model>/<task>". */
@@ -33,7 +33,7 @@ export interface ReviewFile {
   reviews: Record<string, ReviewRecord>;
 }
 
-export type IssueKind =
+type IssueKind =
   | 'rubric-mismatch'
   | 'no-record'
   | 'stale'
@@ -46,7 +46,7 @@ export type IssueKind =
   | 'pending-has-record'
   | 'pending';
 
-export interface Issue {
+interface Issue {
   kind: IssueKind;
   key: string;
   detail: string;
@@ -110,7 +110,7 @@ const ZERO = /^0{40}$/;
 /** The model a commit message names: its first "Co-Authored-By:" line anywhere in the message (not only git's trailer block, which
  * this repo's messages often miss). "Claude Opus 5.5 <noreply@anthropic.com>" gives "Claude Opus 5.5". No such line gives
  * "unattributed": the author id is then "unattributed/<task>" and only the task part is compared (see isSelfReview). */
-export const UNATTRIBUTED = 'unattributed';
+const UNATTRIBUTED = 'unattributed';
 export function modelOf(message: string): string {
   const m = /^Co-Authored-By:[ \t]*(.*)$/im.exec(message);
   const name = m ? (m[1] as string).replace(/<[^>]*>/, '').trim() : '';
@@ -133,7 +133,7 @@ export function taskOf(subject: string, sha: string): string {
 }
 
 /** Parse `git blame --line-porcelain` of the catalog: key to the sha of the commit that last wrote its line. */
-export function keyCommitsFromBlame(porcelain: string): Map<string, string> {
+function keyCommitsFromBlame(porcelain: string): Map<string, string> {
   const out = new Map<string, string>();
   let sha = '';
   for (const line of porcelain.split('\n')) {

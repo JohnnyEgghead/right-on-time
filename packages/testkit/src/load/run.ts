@@ -7,7 +7,7 @@
 import { randomUUID } from 'node:crypto';
 import { loadavg } from 'node:os';
 import { monitorEventLoopDelay } from 'node:perf_hooks';
-import { connectEventStream, type EventStreamHandle, type StreamEvent } from '@bw/api';
+import { connectEventStream, DELAY_SAMPLES_MAX, type EventStreamHandle, type StreamEvent } from '@bw/api';
 import type { ItemKind, LoadWorld, Step } from './plan.ts';
 import { PageProber, type PageProbeOptions, type PageRun } from './pages.ts';
 import { endStateOf, spread, type EndState, type RunCounts, type Spread } from './stats.ts';
@@ -18,6 +18,17 @@ export const BOARD_EVENTS: ReadonlySet<string> = new Set(['job.changed', 'board.
 /** BoardScreen.tsx: the wait from an event to its re-read, and the map panel's read interval. */
 export const REREAD_WAIT_MS = 50;
 export const VAN_READ_MS = 10_000;
+
+/**
+ * The bodies of the delay sample posts for the seqs of 1 finished re-read, in the batch shape the board page sends: each sample
+ * is posted as soon as the re-read finishes, so it was held for 0 ms, and 1 request carries at most DELAY_SAMPLES_MAX samples.
+ */
+export function delayBodies(seqs: readonly number[]): { samples: { seq: number; heldMs: number }[] }[] {
+  const samples = seqs.filter((seq) => seq > 0).map((seq) => ({ seq, heldMs: 0 }));
+  const bodies: { samples: { seq: number; heldMs: number }[] }[] = [];
+  for (let i = 0; i < samples.length; i += DELAY_SAMPLES_MAX) bodies.push({ samples: samples.slice(i, i + DELAY_SAMPLES_MAX) });
+  return bodies;
+}
 /** A dispatcher's refusals the day allows for: the target technician has no room or a block in the way. */
 /** A failed send is tried again by the phone; the script gives up after this many tries, 1 s apart. */
 const ITEM_TRIES = 5;
@@ -201,8 +212,8 @@ class Board {
     this.#pending = [];
     await this.read();
     if (this.#stopped) return;
-    await Promise.allSettled(seqs.filter((s) => s > 0).map(async (seq) => {
-      const r = await this.calls.send('POST', '/board-delay-samples', { seq });
+    await Promise.allSettled(delayBodies(seqs).map(async (body) => {
+      const r = await this.calls.send('POST', '/board-delay-samples', body);
       await r.text();
     }));
   }

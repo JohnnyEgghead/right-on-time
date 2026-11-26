@@ -58,7 +58,7 @@ export interface HealthHandlers {
   onSwitch?: (type: string, which: 'bell' | 'managersEmail', value: boolean) => void;
   /** Open this manager's copy of an alert's email (F-660). */
   onEmail?: (alertId: string) => void;
-  /** Dismiss an alert (API-176, CTL-OFC-16-28). */
+  /** Called with an alert id when the person dismisses that alert (API-176, CTL-OFC-16-28). */
   onDismiss?: (alertId: string) => void;
   onRetry?: () => void;
 }
@@ -106,7 +106,7 @@ function Spark({ d, asOf }: { d: Health['delay']; asOf: string }) {
   );
 }
 
-function Switch({ on, label, ctl, onChange, disabled }: { on: boolean; label: string; ctl: string; onChange?: (v: boolean) => void; disabled?: boolean }) {
+function Switch({ on, label, ctl, onChange }: { on: boolean; label: string; ctl: string; onChange?: (v: boolean) => void }) {
   const key = (e: KeyboardEvent<HTMLSpanElement>) => {
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
@@ -114,11 +114,11 @@ function Switch({ on, label, ctl, onChange, disabled }: { on: boolean; label: st
     }
   };
   return (
-    <span className={on ? 'sw on' : 'sw'} role="switch" aria-checked={on} aria-label={label} aria-disabled={disabled || undefined} tabIndex={0} data-ctl={ctl} onClick={() => onChange?.(!on)} onKeyDown={key} />
+    <span className={on ? 'sw on' : 'sw'} role="switch" aria-checked={on} aria-label={label} tabIndex={0} data-ctl={ctl} onClick={() => onChange?.(!on)} onKeyDown={key} />
   );
 }
 
-export function HealthBody({ state, ui, on }: { state: HealthState; ui: HealthUi; on: HealthHandlers }) {
+function HealthBody({ state, ui, on }: { state: HealthState; ui: HealthUi; on: HealthHandlers }) {
   const t = useT();
   const head = (d: Health | null) => (
     <div className="ah">

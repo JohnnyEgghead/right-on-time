@@ -27,7 +27,7 @@ import { dateNumbers, timeParts, windowLabel } from '../week/week-model.ts';
 
 export type WindowsState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: Settings };
 
-/** SCR-OFC-24's own state: what is being switched, the typed reason, and whether the write is running. */
+/** The state of the Switch a day's windows dialog (SCR-OFC-24): what is being switched, the typed reason, and whether the write is running. */
 export interface DialogUi {
   mode: 'four_hour' | 'two_hour';
   date: string;
@@ -155,7 +155,7 @@ function WindowsTable({ data, ui, on }: { data: Settings; ui: WindowsUi; on: Win
   );
 }
 
-/** CTL-OFC-12-02: the fixed rules, in words. */
+/** The fixed booking and text rules shown on the Arrival windows admin page, written out in words (CTL-OFC-12-02). */
 function Rules({ data }: { data: Settings }) {
   const t = useT();
   const r = data.rules;
@@ -344,7 +344,7 @@ export function PickedBody({ data, ui, on }: { data: Settings; ui: WindowsUi; on
   return day ? <PickedDay data={data} day={day} ui={ui} on={on} /> : null;
 }
 
-export function CalendarBody({ data, ui, on }: { data: Settings; ui: WindowsUi; on: WindowsHandlers }) {
+function CalendarBody({ data, ui, on }: { data: Settings; ui: WindowsUi; on: WindowsHandlers }) {
   const t = useT();
   const picked = pickedOf(data.days, ui.picked, data.today);
   const dows = [1, 2, 3, 4, 5, 6, 7];
@@ -363,7 +363,7 @@ export function CalendarBody({ data, ui, on }: { data: Settings; ui: WindowsUi; 
 }
 
 /** The page below the admin menu: the header with the branch tabs, Discard and Save changes, then the 3 panels. */
-export function WindowsBody({ state, ui, on, branch }: { state: WindowsState; ui: WindowsUi; on: WindowsHandlers; branch: string }) {
+function WindowsBody({ state, ui, on, branch }: { state: WindowsState; ui: WindowsUi; on: WindowsHandlers; branch: string }) {
   const t = useT();
   const ready = state.kind === 'ready' ? state.data : null;
   const d = ready ? draftState(ready.windows, ui.draft) : null;

@@ -205,7 +205,7 @@ describe('I2 an item leaves only on its key\'s answer (UI-SPECIFICATION 4.5 rule
   });
   // why: FR-TECH-4, UC-03 no signal, a 5xx or a lost session leaves every item waiting for the next send
   it('keeps every item through a network error, a 5xx and a signed-out answer, and stops the send at the first', async () => {
-    for (const stop of ['network', 'server_error', 'signed_out', 'forbidden'] as const) {
+    for (const stop of ['server_error', 'signed_out', 'forbidden'] as const) {
       const s = store(`stop-${stop}`);
       const ph = photo();
       await s.put(ph, BYTES);
@@ -245,6 +245,66 @@ describe('I2 an item leaves only on its key\'s answer (UI-SPECIFICATION 4.5 rule
   // why: F-1746 an upload's time limit grows with its bytes, so a 10 MB photo on a slow line (32 KB/s) still finishes and an empty body ends like a read
   it('limits an upload to the call limit plus its bytes at 32 KB/s', () => {
     expect([uploadLimitMs(0), uploadLimitMs(10 * 1024 * 1024)]).toEqual([SYNC_CALL_LIMIT_MS, SYNC_CALL_LIMIT_MS + 327_680]);
+  });
+  // why: F-1764 a photo with no answer must not hold the notes behind it, and it stays waiting under its key for the next send
+  it('sends the notes and statuses past a photo that got no answer, keeps the photo, and stops for the network only when they fail too', async () => {
+    const s = store();
+    const ph = photo();
+    const [a, b] = [note(), note()];
+    for (const i of [ph, a, b]) await s.put(i, i === ph ? BYTES : undefined);
+    const { t, calls } = transport(all, () => ({ ok: false, stop: 'network' }));
+    const r = await sendWaiting(s, t, { userId: MARIA, nowMs: clock });
+    expect(calls).toEqual([`blob ${ph.key} ${BYTES.byteLength}`, `items ${a.key},${b.key}`]);
+    expect([r.stopped, r.answered.map((x) => x.key)]).toEqual([null, [a.key, b.key]]);
+    expect((await s.waiting()).map((i) => [i.key, i.lastTry?.outcome])).toEqual([[ph.key, 'network']]);
+    const down = transport(() => ({ ok: false, stop: 'network' }), () => ({ ok: false, stop: 'network' }));
+    const s2 = store('down');
+    for (const i of [ph, a, b]) await s2.put(i, i === ph ? BYTES : undefined);
+    const r2 = await sendWaiting(s2, down.t, { userId: MARIA, nowMs: clock });
+    expect([r2.stopped, r2.waitingAfter, (await s2.waiting()).map((i) => i.lastTry?.outcome)]).toEqual(['network', 3, ['network', 'network', 'network']]);
+  });
+  // why: F-1764 a photo alone with no answer still ends the send for the network, so the screen says No signal
+  it('stops for the network when the only waiting item is a photo with no answer', async () => {
+    const s = store();
+    await s.put(photo(), BYTES);
+    const { t } = transport(all, () => ({ ok: false, stop: 'network' }));
+    expect((await sendWaiting(s, t, { userId: MARIA, nowMs: clock })).stopped).toBe('network');
+  });
+  // why: F-1765 a 413 whose no-bytes follow-up got no answer stays on the photo, so the next send sends no bytes at once and the bytes never go again
+  it('keeps a 413 across a network stop of the no-bytes try and sends no bytes at once on the next send', async () => {
+    const s = store();
+    const ph = photo();
+    await s.put(ph, BYTES);
+    const calls: string[] = [];
+    let line: 'up' | 'down' = 'down';
+    const t: Transport = {
+      sendItems: async () => ({ ok: true, answers: [] }),
+      uploadBlob: async (i, bytes) => {
+        calls.push(`blob ${bytes.byteLength}`);
+        if (bytes.byteLength > 0) return { ok: false, stop: null, status: 413, code: 'http_413' };
+        return line === 'down' ? { ok: false, stop: 'network' } : { ok: true, answer: ok(i.key, 'flagged', { code: 'validation_failed' }) };
+      },
+    };
+    await sendWaiting(s, t, { userId: MARIA, nowMs: clock });
+    expect((await s.waiting()).map((i) => [i.lastTry?.outcome, i.lastTry?.code])).toEqual([['network', 'http_413']]);
+    await sendWaiting(s, t, { userId: MARIA, nowMs: clock }); // still down: no bytes again, the 413 stays
+    expect((await s.waiting()).map((i) => i.lastTry?.code)).toEqual(['http_413']);
+    line = 'up';
+    const r = await sendWaiting(s, t, { userId: MARIA, nowMs: clock });
+    expect(calls).toEqual([`blob ${BYTES.byteLength}`, 'blob 0', 'blob 0', 'blob 0']);
+    expect(r.answered.map((x) => x.key)).toEqual([ph.key]);
+  });
+  // why: F-1765 an item stored by the shape before this change still opens and sends, and one stored refused with the 413 sends no bytes at once
+  it('opens an item stored with the earlier last-try shape and sends bytes first, or no bytes when it holds the 413', async () => {
+    const s = store('old-shape');
+    const [plain, big] = [photo(), photo()];
+    await s.put({ ...plain, lastTry: { atRealMs: 1, outcome: 'network' } }, BYTES);
+    await s.put({ ...big, lastTry: { atRealMs: 1, outcome: 'refused', code: 'http_413' } }, BYTES);
+    const again = store('old-shape');
+    expect((await again.waiting()).map((i) => i.lastTry?.outcome)).toEqual(['network', 'refused']);
+    const { t, calls } = transport(all);
+    await sendWaiting(again, t, { userId: MARIA, nowMs: clock });
+    expect(calls).toEqual([`blob ${plain.key} ${BYTES.byteLength}`, `blob ${big.key} 0`]);
   });
   // why: F-1035 the no-bytes try is made once: when it fails too the photo waits with that failure, and the next send starts over
   it('keeps a photo refused with 413 when its no-bytes upload fails too, with that failure as its last try', async () => {

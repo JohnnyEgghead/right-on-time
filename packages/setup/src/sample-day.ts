@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// 1 seeded technician-day of the demo week: SD-15's plan, then the script chained on it (SD-21; owner answer 36d87aec "Chain
+// 1 seeded technician-day of the demo week: its planned arrivals (SD-15), then the script chained on it (SD-21; owner answer 36d87aec "Chain
 // each visit"). The world seed runs this with the real points and drive minutes, and the census test runs it over the
 // generated fixture, so both read the same rule. Pure: times are epoch milliseconds.
 import { planDay, type DriveMinutes, type PlannedStop, type Point } from '@bw/domain';

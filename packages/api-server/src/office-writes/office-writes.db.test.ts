@@ -142,7 +142,7 @@ describe('the version gate and Move it anyway (FR-DISP-2, FR-DISP-6; D15)', () =
     const third = await created({ date: '2026-09-21', window: 'two_hour 08:00' });
     const full = await assign(third.jobNumber, 'Greg Hoffman', 1);
     const fullProblem = await problem(full); // a Response body is read once (F-1803)
-    expect([full.status, fullProblem.code]).toEqual([409, 'technician_no_room']); // 2 in a 2-hour window (SD-27)
+    expect([full.status, fullProblem.code]).toEqual([409, 'technician_no_room']); // the technician already has 2 jobs in this 2-hour window, the most 1 technician may hold (SD-27)
     expect(fullProblem).toMatchObject({ limit: 'window', max: 2 }); // F-1701: the refusal names the window's limit
     // Chris Yoder works Monday to Thursday; Fri Sep 25 is not his day.
     const friday = await created({ date: '2026-09-25', window: 'two_hour 08:00' });
@@ -274,7 +274,7 @@ describe('blocks (FR-DISP-34; OA-72, OA-74, OA-75)', () => {
     const sixth = await create({ date, window: 'two_hour 10:00', technician: 'Kevin Doyle' });
     const sixthProblem = await problem(sixth); // a Response body is read once (F-1803)
     expect([sixth.status, sixthProblem.code]).toEqual([409, 'technician_no_room']);
-    expect(sixthProblem).toMatchObject({ limit: 'day', max: 5 }); // F-1701: the day's limit, with its number
+    expect(sixthProblem).toMatchObject({ limit: 'day', max: 5 }); // the refusal names the day's limit and its number (F-1701)
   });
 
   // why: F-1701 the owner moved a job to the installer and the refusal did not say why; an installer's day full is named installer_day with max 1, on a move and on a create
@@ -337,7 +337,7 @@ describe('reschedule (SD-45; FR-BOOK-3)', () => {
   it('refuses a full window, a past day, a Sunday, a window the day does not offer, and a stale version', async () => {
     const job = await created({ date: '2026-09-28', window: 'two_hour 12:00' });
     const code = async (r: Promise<Response>) => { const x = await r; return [x.status, (await problem(x)).code]; };
-    expect(await code(reschedule(job.jobNumber, '2026-09-15', 'two_hour 08:00', 1))).toEqual([409, 'window_full']); // filled above (FR-BOOK-6)
+    expect(await code(reschedule(job.jobNumber, '2026-09-15', 'two_hour 08:00', 1))).toEqual([409, 'window_full']); // the window was filled by the jobs booked above (FR-BOOK-6)
     expect(await code(reschedule(job.jobNumber, '2026-09-14', 'two_hour 08:00', 1))).toEqual([409, 'day_past']);
     expect(await code(reschedule(job.jobNumber, '2026-09-20', 'two_hour 08:00', 1))).toEqual([409, 'day_closed']);
     expect(await code(reschedule(job.jobNumber, '2026-09-28', 'four_hour 08:00', 1))).toEqual([409, 'rule_refused']);

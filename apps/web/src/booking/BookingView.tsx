@@ -19,7 +19,7 @@ export type StreetState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'resu
 export type AvailState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ready'; data: OnlineAvailabilityAnswer } | { kind: 'error' };
 
 /** SCR-CUS-02 Window just taken: the answer's open windows beside the page, in place of the details (CTL-CUS-02-01 to CTL-CUS-02-06). */
-export interface TakenProps {
+interface TakenProps {
   filled: { date: string; windowId: string; start: string; end: string };
   options: Nearest[];
   /** The picked option, `<date>|<windowId>`. */
@@ -84,7 +84,7 @@ const STEP_KEYS: Record<StepNumber, { name: MessageKey; short: MessageKey }> = {
 };
 
 /** CTL-CUS-01-17: the intro under the title; a picked 4-hour day says 4-hour. */
-export function Intro({ four }: { four: boolean }) {
+function Intro({ four }: { four: boolean }) {
   const t = useT();
   return <p data-ctl="CTL-CUS-01-17">{t(four ? 'booking.intro.four' : 'booking.intro.two')}</p>;
 }
@@ -339,11 +339,10 @@ function Summary({ p }: { p: ViewProps }) {
   );
 }
 
-function Continue({ p, last }: { p: ViewProps; last?: boolean }) {
+function Continue({ p }: { p: ViewProps }) {
   const t = useT();
   const ok = stepComplete(p.step, p.draft);
   const why = p.step === 2 ? t('booking.street.pick') : p.step === 3 ? t('booking.day.pickFirst') : p.step === 4 ? t('booking.window.pick') : null;
-  if (last) return null;
   return (
     <>
       <div className="contb">
@@ -355,11 +354,11 @@ function Continue({ p, last }: { p: ViewProps; last?: boolean }) {
   );
 }
 
-function Box({ n, p, title, small, children, id, cls }: { n: StepNumber; p: ViewProps; title: MessageKey; small?: ReactNode; children: ReactNode; id?: string; cls?: string }) {
+function Box({ n, p, title, small, children, cls }: { n: StepNumber; p: ViewProps; title: MessageKey; small?: ReactNode; children: ReactNode; cls?: string }) {
   const t = useT();
   const finished = n < p.step && !p.taken;
   return (
-    <section className={cls ? `box ${cls}` : 'box'} {...(id ? { id } : {})} aria-labelledby={`bw-h${n}`}>
+    <section className={cls ? `box ${cls}` : 'box'} aria-labelledby={`bw-h${n}`}>
       <h2 id={`bw-h${n}`}><span className="n">{n}</span>{t(title)}{small}{finished ? <button type="button" className="chg" data-ctl="CTL-CUS-01-02" aria-label={t('booking.change.step', { name: t(STEP_KEYS[n].name) })} onClick={() => p.on.change(n)}>{t('booking.change')}</button> : null}</h2>
       {children}
     </section>

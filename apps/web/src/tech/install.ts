@@ -17,7 +17,7 @@ export function installKind(userAgent: string, hasPrompt: boolean): InstallKind 
   return 'other';
 }
 
-export const INSTALL_SEEN_KEY = 'bw.tech.installSeen';
+const INSTALL_SEEN_KEY = 'bw.tech.installSeen';
 
 /** CTL-TEC-11-03 stops the page showing in this browser; a browser that keeps nothing shows it each time. */
 export function installSeen(storage: Pick<Storage, 'getItem'> | null): boolean {

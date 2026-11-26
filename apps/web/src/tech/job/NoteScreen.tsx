@@ -26,7 +26,7 @@ import { IDLE, useJob, type JobView } from './useJob.ts';
 
 const CHIP: Record<JobStatus, string> = { scheduled: 'sched', on_the_way: 'way', on_site: 'site', done: 'done', no_one_home: 'done', canceled: 'done' };
 /** DK-111's job header on the note and waiting screens: back to the job, the customer, the status chip and the service line. */
-export function NoteHeader({ job, outbox, fixed, clock }: { job: JobCopy; outbox: OutboxState; fixed?: OutboxState; clock?: ClockAnswer }) {
+function NoteHeader({ job, outbox, fixed, clock }: { job: JobCopy; outbox: OutboxState; fixed?: OutboxState; clock?: ClockAnswer }) {
   const t = useT();
   const st = shownStatus(job, outbox.waiting);
   const service = t(job.job.serviceLabelKey as MessageKey);
@@ -100,7 +100,7 @@ export function NoteScreen({ jobNumber, fixed }: NoteScreenProps) {
     </TechAppFrame>
   );
   if (view.kind !== 'job') {
-    return frame(<div className="apphead"><div className="hrow"><a className="bk" href={jobHref(jobNumber)} aria-label={t('tech.note.backToJob')} data-ctl="CTL-TEC-04-01"><Icon name="back" /></a><h1>{t('tech.job.number', { job: jobNumber })}</h1></div></div>,
+    return frame(<div className="apphead"><div className="hrow"><a className="bk" href={jobHref(jobNumber)} aria-label={t('tech.note.backToJob')} data-ctl="CTL-TEC-04-01"><Icon name="back" /></a><h1>{t('tech.job.number', { job: jobNumber })}</h1></div><HeadClock online={outbox.online} {...(fixed ? { fixed: fixed.clock } : {})} /></div>,
       view.kind === 'loading' ? <div className="card"><span className="r1-skel" /></div> : <div className="r1p-empty"><Icon name="signal" /><span>{t(view.kind === 'not_yours' ? 'tech.job.notYours' : 'tech.job.notOnPhone')}</span></div>);
   }
   const job = view.job;

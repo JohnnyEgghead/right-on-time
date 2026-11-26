@@ -82,7 +82,7 @@ const api = (p: Page, method: string, path: string, body?: unknown) =>
   );
 
 /**
- * The access code by API-01 from the gate page (the gate's own screen is P2-AUTH's suite's): a click on a page WebKit has not
+ * The access code by API-01 from the gate page (the gate screen itself is covered by the auth stack suite): a click on a page WebKit has not
  * hydrated yet would submit the form natively (seen on the Linux WebKit run), so the code goes by the call, then the start page.
  */
 async function enterCode(p: Page): Promise<void> {

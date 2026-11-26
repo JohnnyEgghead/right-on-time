@@ -24,7 +24,7 @@ export interface DemoStripProps {
   variant?: 'desktop' | 'phone' | 'header';
   /** "header" only: the app has no signal; the clock says so (DK-107 .r1p-clk .ns). */
   offline?: boolean;
-  /** CTL-CMP-02-03: the demo time the world was reset to, shown after EVT-06. */
+  /** The demo time the world was reset to, shown after a world reset event (CTL-CMP-02-03, EVT-06). */
   resetTo?: string | null;
   /** Tests and previews: a reader other than the page's own origin; false: never read (a fixed preview state). */
   reader?: Reader | false;

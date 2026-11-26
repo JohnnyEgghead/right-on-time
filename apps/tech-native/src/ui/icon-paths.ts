@@ -36,7 +36,7 @@ export const NATIVE_ICON_PATHS = {
   sheet: '<rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M4.5 9h15M4.5 14.5h15M10 9v11.5"/>',
   chevDown: '<path d="M6 9l6 6 6-6"/>',
   bell: '<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
-  // SCR-TEC-08's straight-on step (P6-NATIVE-STEPS), the web app's.
+  // The arrow for a straight-on step in the Directions Steps list (SCR-TEC-08), the web app's.
   arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   ...TODAY_ICON_PATHS,
 } as const;

@@ -20,8 +20,8 @@ import { atLocal, localDateOf, Temporal, type Instant } from '@bw/time';
 
 type Pool = ReturnType<typeof createPool>;
 
-export const NIGHTLY_ZONE = 'America/New_York';
-export const NIGHTLY_TIME = '03:00';
+const NIGHTLY_ZONE = 'America/New_York';
+const NIGHTLY_TIME = '03:00';
 /** How long after 3:00 AM a missed nightly reset still runs (a worker restarted in the night). */
 export const NIGHTLY_WINDOW_MINUTES = 60;
 /** SD-12 / section 2: the idle watcher looks every 1 real minute. */

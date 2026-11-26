@@ -21,7 +21,7 @@ export const ACCESS_KEY = 'k'.repeat(43);
  */
 export const NO_PBS_URL = 'http://127.0.0.1:9';
 
-export class RecordingDb implements KernelDb {
+class RecordingDb implements KernelDb {
   readonly log: string[] = [];
   fail = false;
   /** The worker's last beat as the health check reads it (null: no row yet); the kit's real clock is 2026-11-01T12:00:00Z. */

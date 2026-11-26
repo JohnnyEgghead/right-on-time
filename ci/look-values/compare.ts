@@ -40,7 +40,7 @@ export const PROPERTIES = [
   'height',
 ] as const;
 export type LookProperty = (typeof PROPERTIES)[number];
-export type LookValues = Record<LookProperty, string>;
+type LookValues = Record<LookProperty, string>;
 
 export interface SelectorPair {
   /** Selector in the app page. */
@@ -75,7 +75,7 @@ export interface CompareOptions {
   browser?: Browser;
 }
 
-export interface Difference {
+interface Difference {
   pair: string;
   /** Position among the selector's matches; set only when the selector matches more than 1 element. */
   index?: number;

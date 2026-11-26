@@ -4,7 +4,7 @@
 import { forbidden, notFound, redirect } from 'next/navigation';
 import { pageOutcome, type PageOutcome } from './outcome.ts';
 
-export class PageFailed extends Error {
+class PageFailed extends Error {
   constructor(code?: string) {
     super(`page read failed${code ? `: ${code}` : ''}`);
     this.name = 'PageFailed';
@@ -13,7 +13,7 @@ export class PageFailed extends Error {
 
 /**
  * Throws for the 4 outcomes that replace the whole page; returns the outcome otherwise ('code-needed' is shown by the
- * access-code gate P2-AUTH builds; 'region-error' leaves the page up with CMP-12 in the failed region).
+ * access-code gate; 'region-error' leaves the page up with CMP-12 in the failed region).
  */
 export function enforce(problem: { code?: string; status?: number }, returnPath: string): PageOutcome {
   const outcome = pageOutcome(problem);

@@ -18,7 +18,7 @@ import path from 'node:path';
 import { parse } from 'yaml';
 import { isMain } from './is-main.ts';
 
-/** The 2 runner label sets of SD-38. Compared as sets, case-insensitively (as GitHub matches labels). */
+/** The label sets of the owner's 2 self-hosted runners (SD-38). Compared as sets, case-insensitively (as GitHub matches labels). */
 export const RUNNER_LABELS = {
   linux: ['self-hosted', 'linux'],
   mac: ['self-hosted', 'mac'],

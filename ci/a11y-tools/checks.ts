@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: NFR-06 (P8-A11Y-TOOLS: the tools-run web checks of UI-SPECIFICATION 14.1 items 11, 12 and 13)
+// Kept as evidence: run-web.ts beside this file uses these checks to make the tool-run part of the accessibility checklist.
 // The 3 checks, as page-side source strings run through Playwright, and the planted fixtures that prove each fires:
 //   reflow-320  14.1 item 11: at 320 CSS px the page does not scroll sideways, no box lies past the edge outside a scroll region of its own,
 //               and no text is clipped (overflow-pass's clipped-text measure). A region with overflow-x auto or scroll is the item's 2-dimension exception.

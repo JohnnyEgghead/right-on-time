@@ -18,7 +18,7 @@ import { textLink } from './slots.ts';
 
 export type ReplyHandling = 'confirmed' | 'reschedule_sent' | 'not_understood';
 
-/** The weekday and date labels of a visit day in a language (SD-17 maxima); P3-TEXTS's slot formatter. */
+/** The weekday and date labels of a visit day in a language (SD-17 maxima); slots.ts visitDayLabels is the real one. */
 export type VisitDayLabels = (localDate: string, lang: TextLanguage) => { weekday: string; date: string };
 
 export interface ReplyInput {
@@ -54,7 +54,7 @@ interface JobRow {
 
 const JOB_COLUMNS = 'job_number, date, zone, branch_id, version, confirmed_at, status, window_start';
 
-/** SD-46's target visit, or null. */
+/** The visit a C or an R reply is about: the customer's earliest scheduled visit dated today or later in the job's own zone, or null (SD-46; an R with none falls back to the most recent job). */
 export async function replyTarget(tx: Queryable, customerId: string, now: Instant): Promise<JobRow | null> {
   const { rows } = await tx.query<JobRow>(
     `SELECT ${JOB_COLUMNS} FROM world.job WHERE customer_id = $1 AND status = 'scheduled' ORDER BY window_start, job_number`,

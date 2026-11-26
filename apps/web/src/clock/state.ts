@@ -20,7 +20,7 @@ export interface ClockUi {
   dialogMessage: string | null;
   /** Preview: the dialog is drawn inside its tile. */
   inline?: boolean;
-  /** CTL-CMP-02-03: the demo time the world was reset to, after EVT-06. */
+  /** The demo time the world was reset to, kept after a world reset event (CTL-CMP-02-03, EVT-06). */
   resetTo?: string | null;
 }
 export const IDLE_UI: ClockUi = { date: '2026-09-15', time: '18:05', busy: null, refused: null, dialog: false, resetting: false, dialogMessage: null };

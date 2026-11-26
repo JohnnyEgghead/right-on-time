@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 'use client';
-// SCR-TEC-02's frame in the web technician app (SURF-TWA): the shell P5-TWA-OUTBOX built (src/tech/TechAppFrame.tsx: the item
-// engine, the service worker, CMP-09 and CMP-10), with the header DK-107 draws (title, the date with the van and the day's
-// progress, CMP-10's waiting count, the demo clock inside the header with Refresh; F-938) and the list P5-TWA-TODAY fills
+// The Today screen's frame (SCR-TEC-02) in the web technician app (SURF-TWA): the shell in src/tech/TechAppFrame.tsx (the item
+// engine, the service worker, CMP-09 and CMP-10), with its header (title, the date with the van and the day's
+// progress, CMP-10's waiting count, the demo clock inside the header with Refresh; F-938; DK-107) and its list
 // (today/TodayView.tsx). A confirm sheet (SCR-TEC-03, -13, -14) opens over it. The live container is today/TodayScreen.tsx; the
 // preview routes pass the same props fixed. The kit slices before the page's own sheet, in the frame's order (its own rules last).
 import '../shell/css/phone.ts';

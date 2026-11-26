@@ -8,10 +8,23 @@ You make sure every visit has a technician and an arrival window, and that every
 
 ## Before you start
 
-1. Get the address of the app, your work email and your password from your trainer.
+1. Get the address of the app, your work email and your password from your trainer. Your trainer makes your sign-in just before you start (see "Your sign-in" below).
 2. Open the address in a web browser on a computer.
 3. Know that the app uses made-up data. Nothing you do reaches a real customer.
 4. Write down your start time.
+
+## Your sign-in
+
+Your trainer makes your office sign-in on the demo, as a manager. Every reset of the demo erases it, so your trainer makes it after the last reset and before you start. If the sign-in page says your sign-in and password do not match, a reset may have erased your account. Ask your trainer to make it again.
+
+Trainer steps, in the office app signed in as a manager:
+
+1. Click "Admin", then click "Demo clock". Under "Reset the demo world", click the button that starts "Reset to". In the question "Reset the demo world?", click "Reset the world".
+2. Click "Admin", then click "Users and roles". Click "Invite user".
+3. Type the person's name in "Name" and their email in "Email". Pick "Manager". Pick the branch.
+4. Click "Send invite". Click "Open the invite email". The email is in the on-screen inbox. Nothing is really sent.
+5. Click "Set your password". Type a password of 10 or more characters in "New password". Click "Save password".
+6. Give the person the address of the app, the email and the password.
 
 ## The screens you use
 

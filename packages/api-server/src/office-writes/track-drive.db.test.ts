@@ -3,7 +3,7 @@
 // SD-15: drive minutes between 2 stops = the baked track's last cumulative second / 60, rounded up, else SD-22's approximate
 // minutes. On real PostgreSQL 18 with a loaded track for a Sep 15 same-branch pair: a settle plans the second job's arrival from
 // the track's minutes, the ETA of a van that leaves on time equals that planned arrival, the dispatch suggestion measures the
-// same minutes (F-425), and with the track row removed the settle plans from SD-22's minutes. Run by gate G-CI7 with the other
+// same minutes (F-425), and with the track row removed the settle plans from the approximate minutes (SD-22). Run by gate G-CI7 with the other
 // api-server database tests.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { approximateDriveMinutes } from '@bw/domain';

@@ -53,7 +53,7 @@ const PANEL = [
   // Only the job rows: the frame's flagged row carries sample words the product's flagged message does not (its height follows them).
   '.att .row:not(:last-child)', '.att .row:not(:last-child) .chip', '.att .row:not(:last-child) .tx', '.att .row:not(:last-child) .tx b', '.att .row:not(:last-child) .tx small',
 ];
-/** CMP-05's parts and the legend, whose app classes differ from the frame's page classes. */
+/** The parts of the map component (CMP-05) and the legend, whose app classes differ from the frame's page classes. */
 const mapParts = (appRoot: string, frameRoot: string): SelectorPair[] => [
   ['.bw-map-panel', '.mapbox'], ['.bw-map-panel .zm', '.mapbox .zoom'], ['.bw-map-panel .zm button', '.mapbox .zoom span'], ['.bw-map-panel .osm', '.mapbox .osm'],
   ['.bw-mkey', '.mkey'], // F-816: the frame's 4 words of each legend; the words the owner added (Nov 7) are not drawn yet (doc batch), so they are read by the stack.

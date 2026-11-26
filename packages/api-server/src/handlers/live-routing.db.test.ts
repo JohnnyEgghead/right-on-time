@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: FR-MAP-3, FR-TECH-5, FR-TECH-13, FR-DEMO-8 (P6-LIVE-ROUTING: SD-49's route source on the real database, through the production kernel)
-// SD-49 on PostgreSQL 18 as bw_web, with a routing service the test drives (FakeRouting: the live mapping runs on an OSRM-shaped answer):
-//   1. a leg no row covers is routed, stored as 1 live row, and answered from it by API-104, API-163 and the planned arrival of an assignment;
+// The route source (SD-49) on PostgreSQL 18 as bw_web, with a routing service the test drives (FakeRouting: the live mapping runs on an OSRM-shaped answer):
+//   1. a leg no row covers is routed, stored as 1 live row, and answered from it by Directions (API-104), the Map
+//      tab's route (API-163) and the planned arrival of an assignment;
 //   2. while the service is down the leg is approximate and nothing is stored; once it answers, the next read routes;
 //   3. a stalled service answers approximate within the 3 s budget plus the read's own time;
 //   4. the barrier: 2 concurrent readers of 1 new pair store exactly 1 row, in both interleavings of their writes, and through the kernel;
@@ -246,11 +247,16 @@ describe('a write that moves the point a job is driven to', () => {
       method: 'PATCH', body: JSON.stringify({ houseNumber: c!.house_number + 1 }), headers: { 'content-type': 'application/json', cookie: w.keisha.cookie, origin: ORIGIN },
     }), { address: '203.0.113.9' });
     expect(r.status, await r.clone().text()).toBe(200);
-    expect(await rows(`to_ref = '${j2}' OR from_ref = '${j2}'`)).toEqual([]);
+    // F-1933: the edit plans the day again after it deletes (SD-15), so a row naming the job now is one its own plan routed to the new point.
     const moved = await pointOf(j2);
+    const at = [Math.round(moved.lon * 1e5) / 1e5, Math.round(moved.lat * 1e5) / 1e5];
+    for (const x of await rows(`to_ref = '${j2}' OR from_ref = '${j2}'`)) {
+      expect(x.build_id).toBe('live');
+      expect(decodePolyline(x.polyline).at(x.to_ref === String(j2) ? -1 : 0)).toEqual(at);
+    }
     const again = await read<Route>(await w.get(`/tech/route?fromJob=${j1}&toJob=${j2}`, a));
     expect(again.leg.to).toEqual({ lon: moved.lon, lat: moved.lat });
-    expect(again.leg.track!.at(-1)).toEqual([Math.round(moved.lon * 1e5) / 1e5, Math.round(moved.lat * 1e5) / 1e5]);
+    expect(again.leg.track!.at(-1)).toEqual(at);
   });
 
   // why: FR-MAP-3 a reader that routed the old point while the edit holds the customer row stores nothing, so no row outlives its point

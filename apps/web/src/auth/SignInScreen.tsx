@@ -14,6 +14,7 @@ import { useT } from '../shell/intl.tsx';
 import { LanguageSwitch } from '../shell/LanguageSwitch.tsx';
 import type { ClockAnswer } from '../shell/clock.ts';
 import { createReader, type Reader } from '../shell/reads.ts';
+import { resetEndedSession } from './reset-reason.ts';
 import { safeReturn } from './return-path.ts';
 import { Screen } from '../shell/Surface.tsx';
 
@@ -27,7 +28,7 @@ export interface SamplePerson {
 }
 /** `hidden`: API-04 answered access_code_required, so the list is not shown until the code is entered (CTL-OFC-01-05, OI-28). */
 export type PeopleList = 'loading' | 'error' | 'hidden' | SamplePerson[];
-export type SignInMessage = 'bad' | 'off' | 'returned' | 'set' | 'limited' | 'failed' | 'unsaved' | null;
+export type SignInMessage = 'bad' | 'off' | 'returned' | 'set' | 'limited' | 'failed' | 'unsaved' | 'reset' | null;
 
 export interface SignInScreenProps {
   /** Where to go after signing in: a path on this origin (the page gate's `return`), or none. */
@@ -83,6 +84,10 @@ export function SignInScreen({ returnTo = null, returned = false, passwordSet = 
     if (preview || reader === false) return;
     void read().read<AppInfo>('API-02').then((r) => {
       if (r.ok) setInfo(r.data);
+    });
+    // A reset ended the session of a person who lands here: say so in place of the plain "signed out" line. A first visit shows nothing.
+    void resetEndedSession(read()).then((yes) => {
+      if (yes) setMessage((m) => (m === null || m === 'returned' ? 'reset' : m));
     });
   }, [preview, reader, read]);
   const demo = info?.demoMode === true;
@@ -152,10 +157,10 @@ export function SignInScreen({ returnTo = null, returned = false, passwordSet = 
   };
 
   const formBusy = busy && pressed === null;
-  const calm = message === 'returned' || message === 'set';
+  const calm = message === 'returned' || message === 'set' || message === 'reset';
   const msgIcon = message === 'set' ? 'check' : calm ? 'info' : 'alert';
   const msgText: Record<NonNullable<SignInMessage>, string> = {
-    bad: t('auth.signin.bad'), off: t('auth.signin.off'), returned: t('auth.signin.returned'), set: t('auth.signin.passwordSet'), limited: t('auth.error.limited'), failed: t('auth.signin.failed'), unsaved: t('auth.signin.unsaved'),
+    bad: t('auth.signin.bad'), off: t('auth.signin.off'), returned: t('auth.signin.returned'), reset: t('alert.world_reset'), set: t('auth.signin.passwordSet'), limited: t('auth.error.limited'), failed: t('auth.signin.failed'), unsaved: t('auth.signin.unsaved'),
   };
   const b = (chunks: ReactNode[]) => <b>{chunks}</b>;
 

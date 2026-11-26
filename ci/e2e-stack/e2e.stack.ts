@@ -19,7 +19,7 @@ import { deflateSync, crc32 } from 'node:zlib';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { Browser, BrowserContext, BrowserType, Cookie, Page } from 'playwright';
+import type { Browser, BrowserContext, BrowserType, Cookie, Page, Request } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { guardedContext, guardedPersistentContext, type GuardedContext } from '../page-walkers/origin-guard.ts';
 import { engines } from '../pw-engines.ts';
@@ -77,9 +77,9 @@ async function until<T>(what: string, read: () => Promise<T> | T, cond: (v: T) =
 }
 
 /**
- * F-1735: the phone's API requests (sent, answered, failed) and the item engine's state every 5 s, kept in memory and added to the error
- * only when the step fails, so a red names where the send stopped (a call that never answered, an engine that never started a sync, or
- * one that never ended). A green run prints nothing.
+ * The phone's API, page (document) and service worker requests (sent, answered, failed) and the item engine's state every 5 s, kept in
+ * memory and added to the error only when the step fails, so a red names where it stopped (a call that never answered, a page that never
+ * drew, an engine that never started a sync, or one that never ended). A green run prints nothing. `around` always stops the trail.
  */
 function phoneTrail(ctx: BrowserContext, page: Page, origin: string) {
   const t0 = Date.now();
@@ -89,11 +89,12 @@ function phoneTrail(ctx: BrowserContext, page: Page, origin: string) {
     if (lines.length > 300) lines.shift();
   };
   const at = (u: string) => u.replace(origin, '').replace(/[?].*$/, '');
-  const api = (u: string) => u.startsWith(`${origin}/api/`);
-  const onReq = (r: { url(): string; method(): string }) => { if (api(r.url())) note(`sent ${r.method()} ${at(r.url())}`); };
-  const onFin = (r: { url(): string; method(): string }) => { if (api(r.url())) note(`answered ${r.method()} ${at(r.url())}`); };
-  const onFail = (r: { url(): string; method(): string; failure(): { errorText: string } | null }) => {
-    if (api(r.url())) note(`failed ${r.method()} ${at(r.url())} ${r.failure()?.errorText ?? ''}`);
+  const kept = (r: Request) => r.url().startsWith(origin) && (r.url().startsWith(`${origin}/api/`) || r.resourceType() === 'document' || r.serviceWorker() !== null);
+  const kind = (r: Request) => (r.serviceWorker() !== null ? 'worker ' : r.resourceType() === 'document' ? 'page ' : '');
+  const onReq = (r: Request) => { if (kept(r)) note(`sent ${kind(r)}${r.method()} ${at(r.url())}`); };
+  const onFin = (r: Request) => { if (kept(r)) note(`answered ${kind(r)}${r.method()} ${at(r.url())}`); };
+  const onFail = (r: Request) => {
+    if (kept(r)) note(`failed ${kind(r)}${r.method()} ${at(r.url())} ${r.failure()?.errorText ?? ''}`);
   };
   ctx.on('request', onReq);
   ctx.on('requestfinished', onFin);
@@ -117,7 +118,7 @@ function phoneTrail(ctx: BrowserContext, page: Page, origin: string) {
       try {
         return await run();
       } catch (e) {
-        if (e instanceof Error) e.message += `\nphone trail (F-1735):\n${lines.join('\n')}`;
+        if (e instanceof Error) e.message += `\nphone trail:\n${lines.join('\n')}`;
         throw e;
       } finally {
         stop();
@@ -236,11 +237,14 @@ async function freshWorld(browser: Browser): Promise<void> {
     // The reset has a cool-down (FR-DEMO-6): wait it out rather than fail on it.
     await until('the reset cool-down to end', () => clock(dana.g.context), (c) => c.resetAvailableInSeconds === 0 && !c.replay.running, 600_000);
     await dana.page.locator('[data-ctl="CTL-OFC-17-06"]').click();
+    // The reset's own answer comes before the page closes: a closed page can cut the request, and then no reset happens.
+    const answered = dana.page.waitForResponse((r) => r.url().endsWith('/api/v1/clock/resets') && r.request().method() === 'POST', { timeout: 60_000 });
     await dana.page.locator('button[data-ctl="CTL-OFC-27-02"]').click();
+    expect((await answered).status(), 'the reset is accepted').toBe(202);
   } finally {
     await closeAll(dana.g);
   }
-  // The reset removes the sessions of the old world: sign in again to read the clock.
+  // A new context holds no sign-in, so it signs in again to read the clock (a reset does not end sign-ins).
   const again = await office(browser, 'dana');
   try {
     await until('the world to be back at Tue, Sep 15, 7:00 AM and running', () => clock(again.g.context), (c) => c.demoNow.startsWith('2026-09-15T07:0') && !c.paused && !c.replay.running, 240_000);
@@ -452,34 +456,36 @@ describe.skipIf(plant).each(engines)('the 7-step happy path on %s', (engine, typ
       for (const p of list) if (await w.caches.match(`${w.location.origin}${p}`)) held.push(p);
       return held.length;
     }, pages), (n) => n === pages.length, 90_000);
-    // F-1735: what the phone did from here, kept and printed only if the items do not send (the nightly WebKit red left no trace of it).
+    // What the phone did from here, kept and printed only if a step below fails, so a red leaves a trace.
     const trail = phoneTrail(phone.context, maria, origin);
-    await maria.reload({ waitUntil: 'load' });
-    await maria.waitForSelector('[data-ctl="CTL-TEC-04-02"] h1', { timeout: 60_000 });
-    trail.note('signal off');
-    await phone.context.setOffline(true);
-    await maria.locator('[data-ctl="CTL-TEC-04-09"]').click();
-    await maria.waitForSelector('[data-ctl="CTL-TEC-05-01"]', { timeout: 30_000 });
-    await maria.locator('[data-ctl="CTL-TEC-05-01"]').fill(note);
-    await maria.locator('[data-ctl="CTL-TEC-05-02"]').click();
-    await maria.waitForSelector(`.note[data-kind="technician"]:has-text("${note}") .r1p-wait`, { timeout: 30_000 });
-    await maria.locator('[data-ctl="CTL-TEC-04-12"]').click();
-    await maria.waitForSelector('[data-ctl="CTL-TEC-06-01"]', { timeout: 30_000 });
-    await maria.locator('input[type="file"]').setInputFiles({ name: 'basement.png', mimeType: 'image/png', buffer: noisePng(64, 48) });
-    await maria.waitForSelector('[data-ctl="CTL-TEC-06-02"] img', { timeout: 60_000 });
-    await maria.locator('button[data-ctl="CTL-TEC-06-03"]').click();
-    await maria.waitForSelector('[data-ctl="CTL-TEC-04-02"] h1', { timeout: 30_000 });
-    // Nothing reached the office while the phone had no signal.
-    const during = await api(keisha.g.context, 'GET', `/jobs/${s.job}`);
-    expect(JSON.stringify(during.data)).not.toContain(note);
-    // Signal returns: the waiting items send by themselves.
-    trail.note('signal on');
-    await phone.context.setOffline(false);
-    await trail.around(() => until('both items to send', async () => {
-      const seen = JSON.stringify((await api(keisha.g.context, 'GET', `/jobs/${s.job}`)).data);
-      return seen.includes(note);
-    }, (v) => v, 120_000));
-    await until('the photo to reach the job', async () => ((await api(keisha.g.context, 'GET', `/jobs/${s.job}`)).data.photos ?? []).length, (n) => n >= 1, 120_000);
+    await trail.around(async () => {
+      await maria.reload({ waitUntil: 'load' });
+      await maria.waitForSelector('[data-ctl="CTL-TEC-04-02"] h1', { timeout: 60_000 });
+      trail.note('signal off');
+      await phone.context.setOffline(true);
+      await maria.locator('[data-ctl="CTL-TEC-04-09"]').click();
+      await maria.waitForSelector('[data-ctl="CTL-TEC-05-01"]', { timeout: 30_000 });
+      await maria.locator('[data-ctl="CTL-TEC-05-01"]').fill(note);
+      await maria.locator('[data-ctl="CTL-TEC-05-02"]').click();
+      await maria.waitForSelector(`.note[data-kind="technician"]:has-text("${note}") .r1p-wait`, { timeout: 30_000 });
+      await maria.locator('[data-ctl="CTL-TEC-04-12"]').click();
+      await maria.waitForSelector('[data-ctl="CTL-TEC-06-01"]', { timeout: 30_000 });
+      await maria.locator('input[type="file"]').setInputFiles({ name: 'basement.png', mimeType: 'image/png', buffer: noisePng(64, 48) });
+      await maria.waitForSelector('[data-ctl="CTL-TEC-06-02"] img', { timeout: 60_000 });
+      await maria.locator('button[data-ctl="CTL-TEC-06-03"]').click();
+      await maria.waitForSelector('[data-ctl="CTL-TEC-04-02"] h1', { timeout: 30_000 });
+      // Nothing reached the office while the phone had no signal.
+      const during = await api(keisha.g.context, 'GET', `/jobs/${s.job}`);
+      expect(JSON.stringify(during.data)).not.toContain(note);
+      // Signal returns: the waiting items send by themselves.
+      trail.note('signal on');
+      await phone.context.setOffline(false);
+      await until('both items to send', async () => {
+        const seen = JSON.stringify((await api(keisha.g.context, 'GET', `/jobs/${s.job}`)).data);
+        return seen.includes(note);
+      }, (v) => v, 120_000);
+      await until('the photo to reach the job', async () => ((await api(keisha.g.context, 'GET', `/jobs/${s.job}`)).data.photos ?? []).length, (n) => n >= 1, 120_000);
+    });
     await expect.poll(() => maria.locator('.r1p-wait').count(), { timeout: 60_000 }).toBe(0);
     s.headlineBefore = ((await api(dana.g.context, 'GET', `/reports${LIVE_WEEK_QUERY}`)).data.headline.noOneHome.visits as number) ?? 0;
   });
@@ -487,9 +493,11 @@ describe.skipIf(plant).each(engines)('the 7-step happy path on %s', (engine, typ
   // why: NFR-12, SC-07 step 6 Maria finishes the job with its parts and the pretend billing system gets 1 invoice for it, with the work done and its part
   it('6. finishes with parts; the pretend billing system holds 1 invoice', async () => {
     // The same phone, still signed in (a session without Stay signed in lives as long as the app is open).
-    const { maria } = s;
-    await maria.goto(`${origin}/tech/jobs/${s.job}/finish`, { waitUntil: 'load' });
-    await maria.waitForSelector('[data-ctl="CTL-TEC-07-06"]', { timeout: 60_000 });
+    const { phone, maria } = s;
+    await phoneTrail(phone.context, maria, origin).around(async () => {
+      await maria.goto(`${origin}/tech/jobs/${s.job}/finish`, { waitUntil: 'load' });
+      await maria.waitForSelector('[data-ctl="CTL-TEC-07-06"]', { timeout: 60_000 });
+    });
     const find = maria.locator('[data-ctl="CTL-TEC-07-02"] input');
     await find.fill(PART);
     await maria.locator(`#bw-part-res [role="option"][data-part="${PART}"]`).click();

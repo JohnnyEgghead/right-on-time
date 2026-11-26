@@ -2,17 +2,16 @@
 // The new job page's calls (SPECIFICATIONS section 4.1: page code calls only @bw/api), each through its contract row. A Problem answer
 // comes back as { ok: false } with its code and members (time_overlap's block, rule_refused's key); a network failure as `offline`.
 import {
-  ApiError, createClient, createJob, customerDetail, officeAvailability, readClock, searchCustomers, services, suggestTechnicians,
+  ApiError, createClient, createJob, customerDetail, officeAvailability, searchCustomers, services, suggestTechnicians,
   type ApiClient, type AvailabilityAnswer, type ContractRow, type ServicesAnswer, type SuggestedTechniciansAnswer,
 } from '@bw/api';
-import { fromWire } from '@bw/time';
 import type { CustomerPage, Detail } from '../customers/types.ts';
 import type { Refusal } from '../job/model.ts';
 
 export type Answer<T> = { ok: true; data: T } | Refusal;
 
-/** What API-28 sends (CTL-OFC-04-09). */
-export interface NewJobInput {
+/** What the new job call (API-28) sends: the customer, service and visit details (CTL-OFC-04-09). */
+interface NewJobInput {
   customerId: string;
   serviceId: string;
   equipmentId: string | null;
@@ -38,8 +37,6 @@ export interface NewJobApi {
   suggest(q: { branch: string; date: string; windowId: string; serviceId: string; customerId: string }): Promise<Answer<SuggestedTechniciansAnswer>>;
   /** API-28. */
   create(input: NewJobInput): Promise<Answer<Created>>;
-  /** API-10: the demo clock's day, or null when the read fails (the page then shows dates and the general notice). */
-  today(): Promise<string | null>;
 }
 
 async function call<T>(client: ApiClient, row: ContractRow, input: Record<string, unknown>): Promise<Answer<T>> {
@@ -64,6 +61,5 @@ export function newJobApi(client: ApiClient = createClient({ baseUrl: '' })): Ne
     availability: (q) => call(client, officeAvailability, { ...q, from: '2000-01-01', to: '2999-12-31', channel: 'office' }),
     suggest: (q) => call(client, suggestTechnicians, q),
     create: (input) => call(client, createJob, { ...input }),
-    today: () => client.call(readClock, {}).then((r) => fromWire(r.data.demoNow).toPlainDate().toString(), () => null),
   };
 }

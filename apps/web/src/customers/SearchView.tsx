@@ -17,7 +17,7 @@ import {
 import type { CustomerPage, Detail, JobHit, SearchHit } from './types.ts';
 
 export type SearchPhase = 'empty' | 'searching' | 'results' | 'none' | 'error';
-/** CTL-OFC-05-15's read (API-133): the jobs found, or that the read failed; null while there is nothing to show. */
+/** The read behind the Also found in jobs line (CTL-OFC-05-15, API-133): the jobs found, or that the read failed; null while there is nothing to show. */
 export type JobsFound = { kind: 'found'; rows: readonly JobHit[] } | { kind: 'failed' } | null;
 export type PreviewState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: Detail } | { kind: 'none' };
 
@@ -73,7 +73,7 @@ const count = (n: number, lang: string) => n.toLocaleString(lang === 'es' ? 'es-
 function serviceWord(t: ClientT, serviceId: string): string {
   return t(`service.${serviceId}.screen` as MessageKey);
 }
-export function lastVisitText(t: ClientT, v: NonNullable<SearchHit['lastVisit']>): { date: string; service: string } {
+function lastVisitText(t: ClientT, v: NonNullable<SearchHit['lastVisit']>): { date: string; service: string } {
   return { date: dateLong(t, v.date), service: v.serviceId ? serviceWord(t, v.serviceId) : v.service };
 }
 const STATUS_KEY = { scheduled: 'customers.status.scheduled', on_the_way: 'customers.status.on_the_way', on_site: 'customers.status.on_site' } as const;

@@ -17,8 +17,6 @@ export interface JobRoutes extends ParamListBase {
   JobStatus: StatusSheetParams;
 }
 
-export type JobNav = NavigationProp<JobRoutes>;
-
 /** SCR-TEC-04 for a job from any tab (F-1072 item 2: CTL-TEC-15-02, CTL-TEC-15-10, CTL-TEC-08-04): Job sits on Today's stack, over Today. */
 export const openJob = (nav: NavigationProp<ParamListBase>, jobNumber: number): void =>
   nav.navigate('Today', { screen: 'Job', params: { jobNumber }, initial: false });

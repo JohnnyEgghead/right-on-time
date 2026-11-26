@@ -53,7 +53,7 @@ export async function syncWithRetry(fn: () => Promise<void>, delaysMs: readonly 
 }
 
 /** The wait between the background tries once every start-up try has failed (F-316). */
-export const RECOVER_EVERY_MS = 10_000;
+const RECOVER_EVERY_MS = 10_000;
 
 export interface SyncState {
   /** Settles when the start-up tries are over (done or given up); a call waits on it. */
@@ -216,7 +216,7 @@ export function createWebKernel(opts: WebKernelOptions): WebKernel {
  * Store the access code's scrypt hash as the 1 active system.access_code row. A row that already verifies is left alone
  * (a restart rewrites nothing and the web processes agree); a changed code replaces it. The row is the whole table.
  */
-export async function syncAccessCode(db: Queryable, code: string, clock: Pick<DbClock, 'realNow'>): Promise<void> {
+async function syncAccessCode(db: Queryable, code: string, clock: Pick<DbClock, 'realNow'>): Promise<void> {
   const current = (await db.query<{ code_hash: string }>('SELECT code_hash FROM system.access_code WHERE active LIMIT 1')).rows[0];
   if (current && (await verifyPassword(code, current.code_hash))) return;
   const hash = await hashPassword(code);

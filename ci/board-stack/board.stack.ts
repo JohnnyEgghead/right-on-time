@@ -6,11 +6,11 @@
 // The suite shares 1 world and 1 clock: each engine picks its own jobs and makes its own blocks, and the clock only moves
 // forward: 7:00 AM for the board on both engines, then 9:45 AM and 10:30 AM for the map panel (P4-BOARD-MAP), then 2:00 PM
 // for the late and at-risk words and the drop preview of a late job, then 5:45 PM and 6:05 PM for the vans past the shift end.
-// F-1745: the checks that need a moving van run first at 9:45 AM, each engine's right after its own jump there, so the second
-// engine's start is late only by the first engine's moving-van checks, never by its whole 9:45 AM block.
+// The checks that need a moving van run first in the 9:45 AM part: each engine's moving-van check starts by 9:50 AM and before any
+// other 9:45 AM test. The clock only moves forward, so the first engine makes the jump to 9:45 AM and the second engine makes none.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import type { Browser, BrowserContextOptions, Page } from 'playwright';
+import type { Browser, BrowserContextOptions, Page, Route } from 'playwright';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { planDay, trackedDriveMinutes } from '../../packages/domain/src/planner.ts';
 import { decodePolyline, encodePolyline } from '../../packages/maps/src/tracks.ts';
@@ -146,6 +146,20 @@ function blockRow(b: Json): { tech: Json; h: number } {
   throw new Error('no row has a free half hour and another an hour later');
 }
 
+/** Holds the first write whose path matches until `release()`: `reached` settles when the page's request is at the door. */
+function holdWrite(p: Page, path: RegExp): { reached: Promise<void>; release: () => void } {
+  let release: () => void = () => undefined;
+  let reach: () => void = () => undefined;
+  const gate = new Promise<void>((r) => { release = r; });
+  const reached = new Promise<void>((r) => { reach = r; });
+  void p.route((u) => path.test(u.pathname.replace('/api/v1', '')), async (r) => {
+    reach();
+    await gate;
+    return r.fallback();
+  });
+  return { reached, release };
+}
+
 /** Press on an element's center and move over a point in steps (a pointer drag), without releasing. */
 async function dragOver(p: Page, from: string, to: { x: number; y: number }): Promise<void> {
   const b = (await p.locator(from).first().boundingBox())!;
@@ -229,7 +243,7 @@ const MOVING_BY = '2026-09-15T09:50:00-04:00[America/New_York]';
 const demoNow = async (): Promise<string> => (await api('dana', 'GET', '/clock')).body.data.demoNow as string;
 /** F-1745: how many of the other 9:45 AM tests (either engine's) have run; a moving-van check runs before all of them. */
 let otherNineFortyFiveRan = 0;
-/** F-817: a route line's key, as SPECIFICATIONS 7.4 API-21 defines it. */
+/** A route line's key: the first 16 hex digits of the SHA-256 of its polyline (F-817; API-21). */
 const lineKey = (polyline: string) => createHash('sha256').update(polyline).digest('hex').slice(0, 16);
 const TEN_THIRTY ='2026-09-15T10:30:00-04:00[America/New_York]';
 const vans = async (): Promise<Json[]> => (await api('keisha', 'GET', '/vans?branch=columbus')).body.data.vans;
@@ -555,6 +569,8 @@ describe.each(engines)('the day board on the Compose stack, %s', (engine, type) 
       expect(seeded, 'the seeded Pickup block').toBeDefined();
       await expect(a.page.locator(`button[data-block="${seeded.blockId}"]`).textContent()).resolves.toContain('Supply house');
       await expect(a.page.locator(`#bd${seeded.blockId}`).textContent()).resolves.toBe(spanOf(seeded.start, seeded.end));
+      // The block is cut to its width, so its full words are on its title.
+      await expect(a.page.locator(`button[data-block="${seeded.blockId}"]`).getAttribute('title')).resolves.toBe(`Pickup, ${seeded.place}, ${spanOf(seeded.start, seeded.end)}`);
       const jobsTile = async () => (await a.page.locator('[data-ctl="CTL-OFC-02-06"] .tile .num').first().textContent())?.trim();
       const jobsBefore = await jobsTile();
       await a.page.locator('[data-ctl="CTL-OFC-02-32"]').click();
@@ -744,6 +760,133 @@ describe.each(engines)('the day board on the Compose stack, %s', (engine, type) 
     } finally {
       await close(o);
       await api('keisha', 'DELETE', `/time-blocks/${made.blockId}`);
+    }
+  });
+
+  // why: FR-DISP-34 a refused job drop leaves open the dialog the person opened while the drop's write was on its way
+  it('keeps an Add block dialog open when a job drop that was opened over is refused for overlapping a block', async () => {
+    const found = await jobLandingOnFreeTime(await board());
+    expect(found, 'a scheduled job, a row with room for it, and a free half hour where it would land there').toBeDefined();
+    const { job, tech, at } = found!;
+    const created = await api('keisha', 'POST', '/time-blocks', { technicianId: tech.id, date: '2026-09-15', label: 'Supply run', place: 'Supply house', start: hhmm(at), end: hhmm(at + 0.5) });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const made = created.body.data.block;
+    const o = await open(browser, 'keisha', 'en');
+    const held = holdWrite(o.page, /\/jobs\/\d+\/assignment$/);
+    try {
+      await ready(o.page);
+      await o.page.waitForSelector(`button[data-job="${job.jobNumber}"]`);
+      await dragOver(o.page, `button[data-job="${job.jobNumber}"]`, await laneAt(o.page, tech.id, at));
+      await o.page.mouse.up();
+      await held.reached;
+      await o.page.locator('[data-ctl="CTL-OFC-02-32"]').click();
+      const dlg = o.page.locator('[data-screen="SCR-OFC-31"]');
+      await dlg.waitFor({ timeout: 15_000 });
+      held.release();
+      const toast = o.page.locator('[data-ctl="CTL-CMP-11-01"]');
+      await toast.waitFor({ timeout: 20_000 });
+      expect((await toast.textContent()) ?? '').toMatch(/^That would overlap .+'s Supply run, /);
+      expect(await dlg.count(), 'the Add block dialog opened during the drop').toBe(1);
+    } finally {
+      held.release();
+      await close(o);
+      await api('keisha', 'DELETE', `/time-blocks/${made.blockId}`);
+    }
+  });
+
+  // why: FR-DISP-34 a refused block drop, for overlapping a job or for a block deleted meanwhile, leaves open the dialog opened while its write was on its way
+  it.each([['overlaps a job'], ['was deleted by someone else']] as const)('keeps an Add block dialog open when a block drop is refused because the block %s', async (why) => {
+    const { tech, h } = blockRow(await board());
+    const created = await api('keisha', 'POST', '/time-blocks', { technicianId: tech.id, date: '2026-09-15', label: 'Supply run', place: 'Supply house', start: hhmm(h), end: hhmm(h + 0.5) });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const made = created.body.data.block;
+    const o = await open(browser, 'keisha', 'en');
+    const held = holdWrite(o.page, /\/time-blocks\/[^/]+\/move$/);
+    try {
+      await ready(o.page);
+      const block = o.page.locator(`button[data-block="${made.blockId}"]`);
+      const box = (await block.boundingBox())!;
+      // Over a job of the same row, or an hour along the free half hour that the block was made with.
+      const over = tech.jobs.find((j: Json) => j.status === 'scheduled' && j.plannedArrival);
+      const hour = why === 'overlaps a job' ? hourOf(over.plannedArrival) + 0.1 : h + 1;
+      if (why === 'overlaps a job') expect(over, 'a scheduled job on the block\'s row').toBeDefined();
+      const target = await laneAt(o.page, tech.id, hour);
+      await dragOver(o.page, `button[data-block="${made.blockId}"]`, { x: target.x + box.width / 2 + 0.5, y: target.y });
+      await o.page.mouse.up();
+      await held.reached;
+      if (why !== 'overlaps a job') expect((await api('keisha', 'DELETE', `/time-blocks/${made.blockId}`)).status).toBeLessThan(300);
+      await o.page.locator('[data-ctl="CTL-OFC-02-32"]').click();
+      const dlg = o.page.locator('[data-screen="SCR-OFC-31"]');
+      await dlg.waitFor({ timeout: 15_000 });
+      held.release();
+      if (why === 'overlaps a job') await o.page.locator('[data-ctl="CTL-CMP-11-01"]').waitFor({ timeout: 20_000 });
+      else await o.page.waitForSelector(`button[data-block="${made.blockId}"]`, { state: 'detached', timeout: 20_000 });
+      expect(await dlg.count(), 'the Add block dialog opened during the drop').toBe(1);
+    } finally {
+      held.release();
+      await close(o);
+      await api('keisha', 'DELETE', `/time-blocks/${made.blockId}`);
+    }
+  });
+
+  // why: FR-DISP-6, FR-DISP-34 a move from the Reassign dialog, the Change block dialog or Move it anyway that succeeds closes the dialog it came from
+  it('closes the Reassign dialog, the Change block dialog and the conflict dialog when their move is written', async () => {
+    const found = await jobLandingOnFreeTime(await board());
+    expect(found, 'a scheduled job and a row with room for it').toBeDefined();
+    const { job, tech } = found!;
+    const o = await open(browser, 'keisha', 'en');
+    let madeId = '';
+    try {
+      await ready(o.page);
+      // Reassign: pick the row and save.
+      await o.page.locator(`button[data-job="${job.jobNumber}"]`).click();
+      await o.page.locator('[data-ctl="CTL-OFC-29-03"]').click();
+      const reassign = o.page.locator('[data-screen="SCR-OFC-18"]');
+      await reassign.locator('[data-ctl="CTL-OFC-18-01"] [role="radio"]', { hasText: tech.name }).click();
+      await reassign.locator('[data-ctl="CTL-OFC-18-02"]:not([aria-disabled="true"])').click();
+      await o.page.waitForSelector('[data-screen="SCR-OFC-18"]', { state: 'detached', timeout: 20_000 });
+      expect(allJobs(await board()).find((j) => j.jobNumber === job.jobNumber).technicianId, 'the Reassign move was written').toBe(tech.id);
+
+      // Change block: a block on the row, a new start, save.
+      const row = blockRow(await board());
+      const created = await api('keisha', 'POST', '/time-blocks', { technicianId: row.tech.id, date: '2026-09-15', label: 'Supply run', place: 'Supply house', start: hhmm(row.h), end: hhmm(row.h + 0.5) });
+      expect(created.status, JSON.stringify(created.body)).toBe(201);
+      madeId = created.body.data.block.blockId;
+      await o.page.waitForSelector(`button[data-block="${madeId}"]`, { timeout: 15_000 });
+      await o.page.locator(`button[data-block="${madeId}"]`).click();
+      await o.page.locator('[data-ctl="CTL-OFC-32-02"]').click();
+      const change = o.page.locator('[data-screen="SCR-OFC-31"]');
+      await change.locator('#blk-start').fill(hhmm(row.h + 1));
+      await change.locator('#blk-end').fill(hhmm(row.h + 1.5));
+      await change.locator('[data-ctl="CTL-OFC-31-05"]').click();
+      await o.page.waitForSelector('[data-screen="SCR-OFC-31"]', { state: 'detached', timeout: 20_000 });
+      const placed = (await board()).technicians.find((t: Json) => t.id === row.tech.id).blocks.find((x: Json) => x.blockId === madeId);
+      expect(hhmm(hourOf(placed.start)), 'the Change block move was written').toBe(hhmm(row.h + 1));
+
+      // Move it anyway: someone else changes the job first, then the drop meets the conflict and the answer is Move it anyway.
+      const now = allJobs(await board()).find((j) => j.jobNumber === job.jobNumber);
+      const rows = (await board()).technicians.filter((t: Json) => t.id !== tech.id && t.capacity > t.jobs.length + 1);
+      const [other, target] = rows as [Json, Json];
+      expect(target, 'two rows with room, one for the rival move and one for the drop').toBeDefined();
+      // The page still holds the job's version from its last read: hold its board reads so the rival move is not drawn first.
+      let readsOpen: () => void = () => undefined;
+      const readsHeld = new Promise<void>((r) => { readsOpen = r; });
+      await o.page.route((u) => u.pathname === '/api/v1/board', async (r) => {
+        await readsHeld;
+        return r.fallback();
+      });
+      const rival = await api('dana', 'POST', `/jobs/${job.jobNumber}/assignment`, { technicianId: other.id, baseVersion: now.version });
+      expect(rival.status, JSON.stringify(rival.body)).toBeLessThan(300);
+      await dragOver(o.page, `button[data-job="${job.jobNumber}"]`, await laneAt(o.page, target.id, 15));
+      await o.page.mouse.up();
+      await o.page.waitForSelector('[data-screen="SCR-OFC-19"]', { timeout: 20_000 });
+      readsOpen();
+      await o.page.locator('[data-screen="SCR-OFC-19"] [data-ctl="CTL-OFC-19-02"]').click();
+      await o.page.waitForSelector('[data-screen="SCR-OFC-19"]', { state: 'detached', timeout: 20_000 });
+      expect(allJobs(await board()).find((j) => j.jobNumber === job.jobNumber).technicianId, 'Move it anyway was written').toBe(target.id);
+    } finally {
+      await close(o);
+      if (madeId) await api('keisha', 'DELETE', `/time-blocks/${madeId}`);
     }
   });
 
@@ -945,8 +1088,394 @@ describe.each(engines)('the day board on the Compose stack, %s', (engine, type) 
   });
 });
 
-// The clock's first move: every test above ran at 7:00 AM on both engines. F-1745: the 2 checks that need a moving van run here,
-// each engine's right after its own jump to 9:45 AM, before either engine's other 9:45 AM tests.
+/** A demo time as API-10 writes it, in ms from the midnight that ends Tue, Sep 15 in Columbus (EDT, UTC-4). */
+const aroundMidnight = (ms: number) => `${new Date(Date.UTC(2026, 8, 16) + ms).toISOString().slice(0, -1)}-04:00[America/New_York]`;
+/** 7:00 AM on Sep 15, 10:00 AM on Sep 16 and 10:00 AM on Sep 17. */
+const SEP_15 = -17 * 3_600_000;
+const SEP_16 = 10 * 3_600_000;
+const SEP_17 = 34 * 3_600_000;
+
+/**
+ * 1 page whose server day is the test's own: its API-10 and API-20 are the real answers, with the demo time the test says and that
+ * time's day, and its event stream (API-09) opens only when the test opens it. The shared clock never moves, and no other test's
+ * event reaches the page.
+ */
+interface OwnDay {
+  /** The server's demo time now, in ms from that midnight. */
+  demo: () => number;
+  paused: boolean;
+  clockFails: boolean;
+  /** The status the board read answers; null: the real board. */
+  boardFails: number | null;
+  /** While set, an API-10 answer waits for it. */
+  holdClock: Promise<void> | null;
+  /** While set, an API-20 answer for Columbus waits for it. */
+  holdBoard: Promise<void> | null;
+  /** How many board reads `boardFails` still fails before the real board answers again; null: all of them. */
+  failTimes: number | null;
+  /** The requests the page has sent: board reads, clock reads, event streams. */
+  boards: number;
+  clocks: number;
+  streams: number;
+  /** Board reads sent and not yet answered. */
+  waiting: number;
+  openStream: () => void;
+}
+type OwnPage = Open & { day: OwnDay };
+async function openOwnDay(browser: Browser, start: Partial<OwnDay> = {}): Promise<OwnPage> {
+  const held: (() => void)[] = [];
+  let opens = 0;
+  const day: OwnDay = {
+    demo: () => SEP_15, paused: true, clockFails: false, boardFails: null, holdClock: null, holdBoard: null, failTimes: null, boards: 0, clocks: 0, streams: 0, waiting: 0,
+    openStream: () => {
+      const next = held.shift();
+      if (next) next();
+      else opens += 1;
+    },
+    ...start,
+  };
+  const refused = (status: number) => ({
+    status, contentType: 'application/problem+json', body: JSON.stringify({ type: 'about:blank', title: 'refused', status, code: status === 404 ? 'not_found' : 'server_error' }),
+  });
+  const o = await open(browser, 'keisha', 'en', undefined, async (p) => {
+    // The page may be gone by the time an answer is ready: that answer has nowhere to land.
+    const answer = (path: string, how: (r: Route) => Promise<void>) => p.route((u) => u.pathname === `/api/v1/${path}`, (r) => how(r).catch(() => undefined));
+    await answer('clock', async (r) => {
+      day.clocks += 1;
+      if (day.holdClock) await day.holdClock;
+      if (day.clockFails) return r.fulfill(refused(500));
+      const response = await r.fetch();
+      const json = await response.json();
+      Object.assign(json.data, { demoNow: aroundMidnight(day.demo()), paused: day.paused, rate: 1 });
+      return r.fulfill({ response, json });
+    });
+    await answer('board', async (r) => {
+      // readWindow's own reads name a day: they take the same way through this route and are not counted.
+      if (!r.request().url().includes('date=today')) return r.fulfill({ response: await r.fetch() });
+      day.boards += 1;
+      day.waiting += 1;
+      try {
+        if (day.holdBoard && r.request().url().includes('branch=columbus')) await day.holdBoard;
+        const failing = day.boardFails !== null && (day.failTimes === null || day.failTimes > 0);
+        if (failing && day.failTimes !== null) day.failTimes -= 1;
+        // The real server's own 404 (a branch it does not have), as failRead sends it: a made-up body fails the client's problem schema and takes the offline path (F-1948).
+        if (failing && day.boardFails === 404) return await r.fulfill({ response: await r.fetch({ url: r.request().url().replace('branch=columbus', 'branch=nowhere') }) });
+        if (failing) return await r.fulfill(refused(day.boardFails!));
+        const response = await r.fetch({ url: r.request().url().replace('date=today', `date=${aroundMidnight(day.demo()).slice(0, 10)}`) });
+        const json = await response.json();
+        json.data.today = true;
+        return await r.fulfill({ response, json });
+      } finally {
+        day.waiting -= 1;
+      }
+    });
+    // An opened stream is live, says nothing and ends; the page asks for the next one about 1 s later.
+    await answer('events', async (r) => {
+      day.streams += 1;
+      if (opens > 0) opens -= 1;
+      else await new Promise<void>((go) => { held.push(go); });
+      return r.fulfill({ status: 200, contentType: 'text/event-stream', body: ': open\n\n' });
+    });
+  });
+  return { ...o, day };
+}
+const dayLabel = (p: Page) => p.locator('[data-ctl="CTL-OFC-02-04"]');
+const showsDay = (p: Page, text: string) => expect.poll(() => dayLabel(p).locator('b').textContent(), { timeout: 45_000 }).toContain(text);
+/** The board is drawn with the demo time beside its date, so the page holds its first clock answer too. */
+const timeShown = async (p: Page) => {
+  await ready(p);
+  await expect.poll(() => dayLabel(p).textContent(), { timeout: 30_000 }).toContain('Today, live');
+};
+/** A window 1 read cannot fill: 12 board reads the page sends for this test, one after the other. A page that reads back to back reads many times in it. */
+const readWindow = (p: Page) => p.evaluate(async () => {
+  for (let n = 0; n < 12; n += 1) await (await fetch('/api/v1/board?branch=columbus&date=2026-09-15')).text();
+});
+/** Waits until the page has read the board past `from`, then for the window: the number of reads past `from`. */
+async function readsPast(o: OwnPage, from: number): Promise<number> {
+  await expect.poll(() => o.day.boards, { timeout: 45_000 }).toBeGreaterThan(from);
+  await readWindow(o.page);
+  return o.day.boards - from;
+}
+/** A server clock that runs from `start` at its first answer. An answer over 1 s later is 2 s further on, so the page's clock is never ahead of it. */
+function runsFrom(start: number): () => number {
+  let t0: number | null = null;
+  return () => {
+    t0 ??= performance.now();
+    const ran = performance.now() - t0;
+    return start + ran + (ran > 1_000 ? 2_000 : 0);
+  };
+}
+/** Opens the page on Sep 15 with its first clock answers held until the board is drawn, so the board is on Sep 15 before its clock runs. */
+async function openThenRun(browser: Browser, demo: (day: OwnDay) => () => number, boardFails: number | null = null): Promise<OwnPage & { from: number }> {
+  let release: () => void = () => undefined;
+  const o = await openOwnDay(browser, { paused: false, holdClock: new Promise((go) => { release = go; }) });
+  await ready(o.page);
+  await showsDay(o.page, 'Sep 15');
+  const from = o.day.boards;
+  Object.assign(o.day, { demo: demo(o.day), boardFails, holdClock: null });
+  release();
+  return { ...o, from };
+}
+
+describe.each(engines)('the day board\'s reads on a date change on the Compose stack, %s', (engine, type) => {
+  let browser: Browser;
+  beforeAll(async () => {
+    browser = await type.launch({ headless: true });
+  });
+  afterAll(async () => {
+    await browser?.close();
+  });
+  const count = (what: string, reads: number) => console.log(`board reads, ${engine}, ${what}: ${reads}`);
+
+  // why: FR-DISP-1, FR-DEMO-2 a board that missed a jump to the next day reads the board at most once more for it, not back to back for as long as it stays open
+  it('reads the board at most once more when a missed clock jump puts it on a new date', async () => {
+    const o = await openOwnDay(browser);
+    try {
+      await timeShown(o.page);
+      await showsDay(o.page, 'Sep 15');
+      const from = o.day.boards;
+      o.day.demo = () => SEP_16;
+      o.day.openStream(); // the stream's first answer reads the board once
+      const reads = await readsPast(o, from);
+      count('after a missed clock jump (1 is the stream\'s own)', reads);
+      expect(reads).toBeLessThanOrEqual(2);
+      await showsDay(o.page, 'Sep 16');
+    } finally {
+      await close(o);
+    }
+  });
+
+  // why: FR-DISP-1, FR-DEMO-2 a clock that does not answer neither sets off endless board reads nor keeps a later date from its own read
+  it('reads the board once more for each new date while the clock does not answer', async () => {
+    const o = await openOwnDay(browser);
+    try {
+      await timeShown(o.page);
+      await showsDay(o.page, 'Sep 15');
+      let from = o.day.boards;
+      Object.assign(o.day, { clockFails: true, demo: () => SEP_16 });
+      o.day.openStream();
+      const reads = await readsPast(o, from);
+      count('on a new date while the clock does not answer (1 is the stream\'s own)', reads);
+      expect(reads).toBe(2);
+      await showsDay(o.page, 'Sep 16');
+      from = o.day.boards;
+      o.day.demo = () => SEP_17;
+      o.day.openStream(); // a reconnect reads the board, its clock read failed or not
+      expect(await readsPast(o, from), 'a second new date').toBe(2);
+      await showsDay(o.page, 'Sep 17');
+    } finally {
+      await close(o);
+    }
+  });
+
+  // why: FR-DISP-1, FR-DEMO-2 a board that reconnects learns the time before it reads the day, so a jump it missed costs 1 board read
+  it('reads the clock before the board on a reconnect', async () => {
+    const o = await openOwnDay(browser);
+    let release: () => void = () => undefined;
+    try {
+      o.day.openStream();
+      await timeShown(o.page);
+      // The second stream request: the first stream opened, set off its board read, and ended.
+      await expect.poll(() => o.day.streams, { timeout: 30_000 }).toBeGreaterThanOrEqual(2);
+      await expect.poll(() => o.day.waiting, { timeout: 30_000 }).toBe(0);
+      const from = o.day.boards;
+      const clocks = o.day.clocks;
+      Object.assign(o.day, { demo: () => SEP_16, holdClock: new Promise<void>((go) => { release = go; }) });
+      o.day.openStream();
+      await expect.poll(() => o.day.clocks, { timeout: 30_000 }).toBeGreaterThan(clocks);
+      await readWindow(o.page);
+      count('on a reconnect, before the clock has answered', o.day.boards - from);
+      expect(o.day.boards - from, 'board reads before the clock answered').toBe(0);
+      o.day.holdClock = null;
+      release();
+      expect(await readsPast(o, from)).toBe(1);
+      await showsDay(o.page, 'Sep 16');
+    } finally {
+      release();
+      await close(o);
+    }
+  });
+
+  // why: FR-DEMO-2 while Today is chosen, the board moves to the new date with 1 read when the demo clock passes midnight
+  it('moves to the new date when the demo clock passes midnight', async () => {
+    const o = await openThenRun(browser, () => runsFrom(-3_000));
+    try {
+      await showsDay(o.page, 'Sep 16');
+      await readWindow(o.page);
+      expect(o.day.boards - o.from).toBe(1);
+    } finally {
+      await close(o);
+    }
+  });
+
+  // why: FR-DEMO-2 a page clock ahead of the server's (it missed a pause) passes midnight early: the board asks once, and still moves at the server's own midnight
+  it('asks once at an early midnight and still follows the real one', async () => {
+    // The page's clock runs from 3 s before midnight; the server's stands at 4 s before, and runs on from the page's next clock read.
+    const o = await openThenRun(browser, (day) => {
+      const first = day.clocks;
+      const server = runsFrom(-4_000);
+      return () => (day.clocks > first ? server() : -3_000);
+    });
+    try {
+      const clocks = o.day.clocks;
+      await expect.poll(() => o.day.boards, { timeout: 45_000 }).toBeGreaterThan(o.from);
+      if (o.day.clocks === clocks) {
+        await readWindow(o.page);
+        count('while the page\'s clock is past midnight and the server\'s is not', o.day.boards - o.from);
+        expect(o.day.boards - o.from).toBe(1);
+      }
+      await showsDay(o.page, 'Sep 16');
+      await readWindow(o.page);
+      count('over an early midnight and the real one', o.day.boards - o.from);
+      expect(o.day.boards - o.from).toBe(2);
+    } finally {
+      await close(o);
+    }
+  });
+
+  // why: F-1947, FR-DISP-1 a branch chosen while the board is being read shows that branch's rows, and the answer for the branch just left does not land
+  it('shows the new branch\'s rows when the branch is chosen during a board read', async () => {
+    const o = await openOwnDay(browser);
+    let release: () => void = () => undefined;
+    try {
+      await timeShown(o.page);
+      const names = async (branch: string) => ((await api('keisha', 'GET', `/board?branch=${branch}&date=2026-09-15`)).body.data.technicians as Json[]).map((x) => x.name as string);
+      const [columbus, dayton] = [await names('columbus'), await names('dayton')];
+      const rows = () => o.page.locator('[data-screen="SCR-OFC-02"] .tl-row').allTextContents().then((t) => t.join(' '));
+      o.day.holdBoard = new Promise<void>((go) => { release = go; });
+      o.day.openStream(); // the stream's first answer reads Columbus's board, which waits
+      await expect.poll(() => o.day.waiting, { timeout: 30_000 }).toBe(1);
+      await o.page.locator('[data-ctl="CTL-CMP-07-04"] select').selectOption('dayton');
+      await expect.poll(rows, { timeout: 30_000, message: 'Dayton rows while the Columbus read waits' }).toContain(dayton[0]!);
+      release();
+      await expect.poll(() => o.day.waiting, { timeout: 30_000 }).toBe(0);
+      await readWindow(o.page);
+      const text = await rows();
+      for (const n of dayton) expect(text).toContain(n);
+      for (const n of columbus) expect(text, 'a Columbus technician under Dayton').not.toContain(n);
+    } finally {
+      release();
+      await close(o);
+    }
+  });
+
+  // why: F-1947, FR-DISP-1 a job drop begun under the branch just left that answers after the branch is chosen reads nothing for the old branch: the new branch's rows stay, whether its read is still on its way or already drawn
+  it.runIf(engine === 'chromium').each(['while the new branch is read', 'after the new branch is drawn'])('a write of the branch just left answers %s and the new branch\'s rows stay', async (when) => {
+    const pick = (await jobLandingOnFreeTime(await board()))!;
+    const o = await openOwnDay(browser);
+    let releaseWrite: () => void = () => undefined;
+    let releaseDayton: () => void = () => undefined;
+    try {
+      await timeShown(o.page);
+      const names = async (branch: string) => ((await api('keisha', 'GET', `/board?branch=${branch}&date=2026-09-15`)).body.data.technicians as Json[]).map((x) => x.name as string);
+      const [columbus, dayton] = [await names('columbus'), await names('dayton')];
+      const rows = () => o.page.locator('[data-screen="SCR-OFC-02"] .tl-row').allTextContents().then((t) => t.join(' '));
+      const heldWrite = new Promise<void>((go) => { releaseWrite = go; });
+      const heldDayton = new Promise<void>((go) => { releaseDayton = go; });
+      let status = 0;
+      let asked = 0;
+      let done = 0;
+      const boards: string[] = [];
+      await o.page.route(`${origin}/api/v1/**`, async (r) => {
+        const u = new URL(r.request().url());
+        if (/\/assignment$/.test(u.pathname)) {
+          asked += 1;
+          await heldWrite;
+          return r.fallback(); // not continue(): fallback keeps the Origin header the outside-origin guard needs
+        }
+        if (u.pathname.endsWith('/board') && u.search.includes('date=today')) {
+          boards.push(u.searchParams.get('branch')!);
+          if (u.search.includes('branch=dayton') && when === 'while the new branch is read') await heldDayton;
+        }
+        return r.fallback();
+      });
+      o.page.on('response', (r) => {
+        if (/\/assignment$/.test(new URL(r.url()).pathname)) { status = r.status(); done += 1; }
+      });
+      const pressed = `button[data-job="${pick.job.jobNumber}"]`;
+      await o.page.waitForSelector(pressed);
+      await dragOver(o.page, pressed, await laneAt(o.page, pick.tech.id, pick.at));
+      await o.page.waitForSelector(`[data-row="${pick.tech.id}"] .dragtip .ok`, { timeout: 15_000 });
+      await o.page.mouse.up();
+      await expect.poll(() => asked, { timeout: 15_000 }).toBe(1);
+      await o.page.locator('[data-ctl="CTL-CMP-07-04"] select').selectOption('dayton');
+      if (when === 'after the new branch is drawn') await expect.poll(rows, { timeout: 30_000 }).toContain(dayton[0]!);
+      else await expect.poll(() => boards.includes('dayton'), { timeout: 30_000 }).toBe(true);
+      releaseWrite();
+      await expect.poll(() => done, { timeout: 30_000 }).toBe(1);
+      expect(status, 'the held write was accepted').toBe(200);
+      // Nothing answers "no read started", so the late read of the old code gets a fixed time to show itself before the new branch's read is let go.
+      await new Promise((go) => setTimeout(go, 3_000));
+      releaseDayton();
+      await readWindow(o.page);
+      await expect.poll(rows, { timeout: 30_000 }).toContain(dayton[0]!);
+      const text = await rows();
+      for (const n of dayton) expect(text).toContain(n);
+      for (const n of columbus) expect(text, 'a Columbus technician under Dayton').not.toContain(n);
+    } finally {
+      releaseWrite();
+      releaseDayton();
+      await close(o);
+    }
+  });
+
+  // why: F-1949, FR-DEMO-2 a board whose clock read failed after its own clock passed midnight early asks again at the next tick and follows the server's midnight
+  it('follows the server\'s midnight after a failed clock read at an early midnight', async () => {
+    const o = await openThenRun(browser, () => () => -3_000);
+    try {
+      await timeShown(o.page);
+      o.day.clockFails = true; // the page's clock passes midnight in 3 s: its clock read fails, so the pair of reads is used up
+      expect(await readsPast(o, o.from), 'reads at the early midnight').toBe(1);
+      Object.assign(o.day, { clockFails: false, demo: () => SEP_16 });
+      await showsDay(o.page, 'Sep 16');
+    } finally {
+      await close(o);
+    }
+  });
+
+  // why: F-1949, FR-DEMO-2 a board read that fails while the offline bar is already up, with the date changing during it, is read once more and then follows the new date
+  it('reads once more when the date changes during a board read that then fails', async () => {
+    const o = await openThenRun(browser, () => runsFrom(-25_000));
+    let release: () => void = () => undefined;
+    try {
+      await timeShown(o.page);
+      Object.assign(o.day, { boardFails: 500, failTimes: 1 });
+      o.day.openStream(); // this read fails, and the offline bar is up
+      await expect.poll(() => o.day.boards, { timeout: 30_000 }).toBeGreaterThan(o.from);
+      await expect.poll(() => o.day.waiting, { timeout: 30_000 }).toBe(0);
+      Object.assign(o.day, { boardFails: 500, failTimes: 1, holdBoard: new Promise<void>((go) => { release = go; }) });
+      o.day.openStream(); // this read waits while the clock passes midnight, and fails when it is let go
+      await expect.poll(() => o.day.waiting, { timeout: 30_000 }).toBe(1);
+      await expect.poll(() => o.day.demo(), { timeout: 45_000 }).toBeGreaterThan(0);
+      // The page notices the new day at its next 30 s tick.
+      await new Promise((go) => setTimeout(go, 32_000));
+      release();
+      await showsDay(o.page, 'Sep 16');
+    } finally {
+      release();
+      await close(o);
+    }
+  });
+
+  // why: FR-DISP-1, FR-DEMO-2 a board read that fails at midnight is not tried again without end, and the next good read moves the board to the new date
+  it.each([500, 404])('does not read without end when the board answers %i at midnight', async (status) => {
+    const o = await openThenRun(browser, () => runsFrom(-3_000), status);
+    try {
+      const reads = await readsPast(o, o.from);
+      count(`when the board answers ${status} at midnight`, reads);
+      expect(reads).toBe(1);
+      o.day.boardFails = null;
+      o.day.openStream();
+      await showsDay(o.page, 'Sep 16');
+    } finally {
+      await close(o);
+    }
+  });
+});
+
+// The clock's first move: every test above ran at 7:00 AM on both engines. The 2 checks that need a moving van run here, before
+// any other 9:45 AM test of either engine. The first engine's group makes the jump to 9:45 AM; the second engine's group makes none,
+// because the clock only moves forward.
 describe.each(engines)('the moving van at 9:45 AM on the Compose stack, %s', (engine, type) => {
   let browser: Browser;
   beforeAll(async () => {
@@ -1203,11 +1732,11 @@ describe.each(engines)('the map panel at 10:30 AM on the Compose stack, %s', (en
       const live = (await vans()).filter((v) => v.position !== null).length;
       const jobs = allJobs(await board()).length;
       expect(await o.page.locator('[data-ctl="CTL-OFC-02-23"]').textContent()).toBe(`${live} vans, live`);
-      expect(await o.page.locator('.bw-mkey[data-map-legend="vans"]').textContent()).toBe('On siteOn the wayBetween jobsNext stopLate or at risk'); // F-816
+      expect(await o.page.locator('.bw-mkey[data-map-legend="vans"]').textContent()).toBe('On siteOn the wayBetween jobsNext stopLate or at risk'); // the 5 van key words the product shows: the design frame's 4 and Between jobs (F-816)
       await pick('Jobs');
       await expect.poll(() => count('job')).toBe(jobs);
       expect(await count('van')).toBe(0);
-      expect(await o.page.locator('.bw-mkey[data-map-legend="jobs"]').textContent()).toBe('Scheduled jobOn the way jobOn site jobClosed jobLate jobAt risk jobUnassigned job'); // F-816
+      expect(await o.page.locator('.bw-mkey[data-map-legend="jobs"]').textContent()).toBe('Scheduled jobOn the way jobOn site jobClosed jobLate jobAt risk jobUnassigned job'); // the 7 job key words the product shows: the frame's 4 and On the way, On site and Closed job (F-816)
       await pick('Both');
       await expect.poll(() => count('van')).toBe(live);
       expect(await count('job')).toBe(jobs);
@@ -1539,7 +2068,7 @@ describe.each(engines)('the map panel at 10:30 AM on the Compose stack, %s', (en
   it('reads the panel in Spanish, with no policy error from the built app', async () => {
     const o = await open(browser, 'keisha', 'es');
     const errors: string[] = [];
-    // F-437's error is an eval refused to a script. WebKit itself logs a refused stylesheet for each bare select under this policy
+    // The error under test is an eval refused to a script (F-437). WebKit itself logs a refused stylesheet for each bare select under this policy
     // (measured on a page of 1 select), which no page code causes, and the listeners go on after the first load so no canceled read counts.
     await o.page.goto('about:blank');
     o.page.on('console', (m) => {

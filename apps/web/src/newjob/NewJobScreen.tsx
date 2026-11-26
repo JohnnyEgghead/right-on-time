@@ -15,6 +15,7 @@ import { Dialog } from '../customers/ui.tsx';
 import { firstName, windowText } from '../customers/model.ts';
 import { OfficeFrame } from '../shell/Frames.tsx';
 import { BRANCHES } from '../shell/branches.ts';
+import { officeClock, useDemoDay } from '../shell/demo-day.ts';
 import { useT } from '../shell/intl.tsx';
 import { newJobApi, type NewJobApi } from './api.ts';
 import type { Shown } from '../job/model.ts';
@@ -51,7 +52,8 @@ export function NewJobScreen({ customerId, date, api: given }: NewJobScreenProps
   const searchSeq = useRef(0);
   const customerSeq = useRef(0);
   const daysSeq = useRef(0);
-  const [today, setToday] = useState<string | null>(null);
+  // The demo clock's day (CTL-OFC-04-13, CTL-OFC-04-19), followed across midnight as every page does (F-1978).
+  const { day: today } = useDemoDay(officeClock);
 
   const detail = customer.kind === 'picked' ? customer.detail : null;
   const edit = (patch: Partial<Picks>) => {
@@ -65,11 +67,6 @@ export function NewJobScreen({ customerId, date, api: given }: NewJobScreenProps
     void api.services().then((r) => setServices(r.ok ? r.data.services : 'error'));
   }, [api]);
   useEffect(loadServices, [loadServices]);
-
-  // API-10 once: the demo clock's day (CTL-OFC-04-13, CTL-OFC-04-19).
-  useEffect(() => {
-    void api.today().then(setToday);
-  }, [api]);
 
   // API-35: the picked customer (a result, the New customer dialog's, or the page's `customer`).
   const pick = useCallback((id: string) => {

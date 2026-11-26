@@ -48,7 +48,7 @@ export function MsgBox({ kind, icon, children, role, ctl }: { kind: 'okbox' | 'i
   );
 }
 
-/** CMP-12's loading skeleton, at the widths the frame tile gives it. */
+/** The loading skeleton of an email page's body, at the widths the frame tile gives it. */
 /** `widths`: a width class per bar (bw-w-40 and the like, styles/app; inline styles are refused by the page CSP), or null. */
 export function Skeleton({ widths }: { widths: (string | null)[] }) {
   return (

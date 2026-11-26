@@ -26,7 +26,7 @@ describe('shell reads through @bw/api', () => {
     const urls: string[] = [];
     const client = createClient({ baseUrl: 'http://x', fetch: async (u) => (urls.push(String(u)), answer(200, ENVELOPE)()) });
     const r = await createReader({ client, rows: [readClock] }).read('API-10');
-    expect(r).toEqual({ ok: true, data: ENVELOPE.data });
+    expect(r).toEqual({ ok: true, data: ENVELOPE.data, epoch: ENVELOPE.meta.worldEpoch });
     expect(urls).toEqual(['http://x/api/v1/clock']);
   });
 

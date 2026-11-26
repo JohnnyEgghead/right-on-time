@@ -67,5 +67,5 @@ export function menuPageFor(name: string): MenuPageData | null {
   return Object.prototype.hasOwnProperty.call(MENU_PAGES, name) ? MENU_PAGES[name as MenuSlug] : null;
 }
 
-/** The 5 routes in menu order (UI-SPECIFICATION 2.3). */
+/** The 5 booking menu page routes, in menu order (UI-SPECIFICATION 2.3). */
 export const MENU_ROUTES: readonly string[] = (Object.keys(MENU_PAGES) as MenuSlug[]).map((s) => `/book/${s}`);

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The chain census as it reads the written world (owner answer 36d87aec, F-513): the consecutive scripted visits of each
-// technician-day, in SD-15's order, from the seeded autopilot.step rows. Read by setup.db.test.ts (the fresh setup, no
-// tracks) and ci/board-stack/board.stack.ts (the stack's setup, the real tracks). `source` is the events table to read.
+// technician-day, in the order of the day's plan (SD-15), from the seeded autopilot.step rows. Read by setup.db.test.ts
+// (the fresh setup, on the baked tracks only when MAPS_DIR is set) and ci/board-stack/board.stack.ts (the stack's setup,
+// the real tracks). `source` is the events table to read.
 export const chainCensusSql = (source = 'world.scheduled_event'): string => `
   WITH step AS (
     SELECT (payload->>'jobNumber')::int AS n, payload->>'step' AS step, due_at FROM ${source} WHERE kind = 'autopilot.step'

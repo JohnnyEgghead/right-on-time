@@ -410,4 +410,65 @@ describe.each(engines)('The text inbox and Change your visit time on %s', (engin
       await close(o);
     }
   }, 180_000);
+
+  /** The inbox with the page's timers in the case's hands, its polls counted and, when `answer.status` is set, answered with that problem. */
+  async function counted(answer: { status: number | null }): Promise<{ o: Open; p: Page; reads: () => number; beat: () => Promise<void>; window: () => Promise<void> }> {
+    const o = await openLink(browser, `/inbox/${pick[0]!.token}`);
+    const p = o.page;
+    let n = 0;
+    await p.route(`${origin}/api/v1/inbox/*/messages`, async (r) => {
+      n += 1;
+      if (answer.status === null) return r.continue();
+      // not found is the server's own answer, for a link it does not know
+      if (answer.status === 404) return r.fulfill({ response: await r.fetch({ url: `${origin}/api/v1/inbox/${'x'.repeat(pick[0]!.token.length)}/messages` }) });
+      return r.fulfill({ status: answer.status, contentType: 'application/problem+json', body: '{}' });
+    });
+    await p.clock.install();
+    await p.reload({ waitUntil: 'load' });
+    await p.locator(`${INBOX} [data-ctl="CTL-INB-01-05"]`).first().waitFor({ timeout: 60_000 });
+    return {
+      o, p, reads: () => n,
+      beat: () => p.clock.runFor(5_000), // 1 poll period (GAP-7: the inbox asks every 5 s)
+      // 12 API reads sent one after the other: a read the page asked for before them has gone out by their end.
+      window: () => p.evaluate(`(async () => { for (let i = 0; i < 12; i += 1) await (await fetch('/api/v1/app-info')).text(); })()`) as Promise<void>,
+    };
+  }
+
+  // why: F-1935 a link that answers not found is final so the page asks no more, on its timer or when it is shown again
+  it('asks no more once the link answers not found', async () => {
+    const answer: { status: number | null } = { status: null };
+    const c = await counted(answer);
+    try {
+      answer.status = 404;
+      const before = c.reads();
+      await c.beat();
+      await expect.poll(c.reads).toBeGreaterThan(before);
+      await c.p.locator(`${INBOX} [data-ctl="CTL-INB-01-02"]`).waitFor({ state: 'detached' });
+      const stopped = c.reads();
+      for (let i = 0; i < 3; i += 1) await c.beat();
+      await c.p.evaluate(`window.dispatchEvent(new Event('focus'))`);
+      await c.window();
+      console.log(`F-1935 (${engine}): reads over 3 poll periods and a focus after not found: ${c.reads() - stopped}`);
+      expect(c.reads() - stopped).toBe(0);
+    } finally {
+      await close(c.o);
+    }
+  }, 120_000);
+
+  // why: F-1935, F-968 only a not-found answer is final: after any other failed read the page asks again each period and shows the thread when the server is back
+  it('asks again each period after any other failed read', async () => {
+    const answer: { status: number | null } = { status: null };
+    const c = await counted(answer);
+    try {
+      answer.status = 500;
+      for (let i = 0; i < 3; i += 1) {
+        const before = c.reads();
+        await c.beat();
+        await expect.poll(c.reads).toBeGreaterThan(before);
+      }
+      expect(await c.p.locator(`${INBOX} [data-ctl="CTL-INB-01-02"]`).count()).toBe(1);
+    } finally {
+      await close(c.o);
+    }
+  }, 120_000);
 });

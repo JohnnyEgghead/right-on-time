@@ -250,7 +250,7 @@ final class JobUITests: XCTestCase {
     openJob()
     let row = el("job.note.\(id)")
     XCTAssertTrue(row.waitForExistence(timeout: 30), "the office note is not on SCR-TEC-04")
-    // The time as SCR-TEC-04 writes it in the job's zone: exact when API-140 answered in that zone, else its form.
+    // The time as the Job screen (SCR-TEC-04) writes it in the job's zone: exact when the office note's save (API-140) answered in that zone, else its form.
     XCTAssertTrue(row.label.hasPrefix("\(words). Office note - \(author) - "), row.label)
     if at.contains("-04:00") { XCTAssertTrue(row.label.hasSuffix(" - \(clock(at))"), "\(row.label) vs \(clock(at))") }
     XCTAssertNotNil(row.label.range(of: #" - \d{1,2}:\d{2} (AM|PM)$"#, options: .regularExpression), row.label)
@@ -263,7 +263,7 @@ final class JobUITests: XCTestCase {
     XCTAssertEqual(el("job.call").label, "Call Harold")
     for id in ["job.cnote.text", "job.eq.b", "job.hist.b"] { XCTAssertTrue(el(id).exists, "\(id) not shown") }
     // CTL-TEC-04-04 Directions, shown on a job that is today and not yet On site (F-1369: the drive from the van to this job), with the
-    // route's minutes (API-104); the screen it opens, SCR-TEC-08, is P6-NATIVE-MAP-ME's (StepsUITests test7 taps it).
+    // route's minutes (API-104); StepsUITests test7 taps it and checks the screen it opens, Directions (SCR-TEC-08).
     XCTAssertTrue(el("job.dir").exists, "Directions not shown")
     XCTAssertTrue(el("job.dir").label.hasPrefix("Directions"), el("job.dir").label)
     mark("DIRECTIONS \(el("job.dir").label)")
@@ -291,7 +291,7 @@ final class JobUITests: XCTestCase {
     // Back leaves SCR-TEC-08 (to the job it was opened from, on Today's stack); the job screen is opened again if Back went to Today.
     if !label(el("job.bar.title"), is: "Harold Jenkins", within: 5) { openJob() }
     mark("JOB-MORE-ITEMS-TAPPED add-note add-photo directions")
-    // CTL-TEC-04-10, -11: the photo, its viewer and Close.
+    // The photo on the job opens its viewer, and Close shuts the viewer (CTL-TEC-04-10, -11).
     let sent = app.buttons.matching(NSPredicate(format: "value BEGINSWITH 'sent '")).firstMatch
     XCTAssertTrue(sent.waitForExistence(timeout: 10), "no photo on the job")
     sent.tap()
@@ -301,7 +301,7 @@ final class JobUITests: XCTestCase {
     XCTAssertTrue(gone(el("viewer.alt")))
     settle()
     mark("JOB")
-    // CTL-TEC-04-01 Back to Today.
+    // The Back button returns to Today (CTL-TEC-04-01).
     tapWhenReady("job.bar.back")
     XCTAssertTrue(el("probe.openJob").waitForExistence(timeout: 10))
   }
@@ -399,7 +399,7 @@ final class JobUITests: XCTestCase {
     XCTAssertTrue(label(el("fin.part.n"), is: "1", within: 5), "quantity under 1")
     tapWhenReady("fin.part.remove")
     XCTAssertTrue(gone(el("fin.part.name")))
-    // CTL-TEC-07-05 No parts used on and off.
+    // The No parts used switch goes on and off (CTL-TEC-07-05).
     let noParts = app.switches["fin.noparts.toggle"]
     XCTAssertTrue(noParts.waitForExistence(timeout: 5))
     noParts.tap()
@@ -417,7 +417,7 @@ final class JobUITests: XCTestCase {
     second.typeText("Replaced the filter")
     tapWhenReady("fin.line.remove.1")
     XCTAssertTrue(gone(second))
-    // CTL-TEC-07-07 labor.
+    // The labor row takes hours and minutes (CTL-TEC-07-07).
     tapWhenReady("fin.labor.row")
     replace(el("fin.labor.hours"), with: "2")
     el("fin.ghead.labor").tap() // the number pad has no return key: the keyboard goes before the next field

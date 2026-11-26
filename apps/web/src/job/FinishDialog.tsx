@@ -20,7 +20,7 @@ export interface FinishDialogProps {
   /** Finish mode: the job as the page read it (its version). Correction mode reads its own (API-23). */
   job?: Job | null;
   onClose: () => void;
-  /** SCR-OFC-19's Keep their change: closes and re-reads (default: onClose). */
+  /** Keep their change, in the Someone else changed this job dialog (SCR-OFC-19): closes and re-reads (default: onClose). */
   onKeep?: () => void;
   /** After the write succeeded: the page re-reads (finish) or the billing list re-reads and says so (correction). */
   onDone: (how: 'finished' | 'sentAgain' | 'noLongerWaiting') => void;

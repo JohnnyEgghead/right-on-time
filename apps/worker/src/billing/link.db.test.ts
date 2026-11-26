@@ -265,7 +265,8 @@ describe('Mark fixed', () => {
 describe('the event dispatcher billing lane (apps/worker/src/jobs.ts eventLanes)', () => {
   const log = createLogger({ process: 'worker', write: () => undefined });
   /** The clock row's world epoch, read fresh (the dispatcher binds each drain to it, F-635). */
-  const epochNow = async () => (await w.admin().query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1')).rows[0]!.world_epoch;
+  // F-1923: through the worker pool (db.admin() is 1 shared connection that refuses an overlapping query, and the timer pass reads it too).
+  const epochNow = async () => (await w.worker().query<{ world_epoch: number }>('SELECT world_epoch FROM system.demo_clock WHERE id = 1')).rows[0]!.world_epoch;
   /** The worker's real dispatcher with the billing lane only; its timer is held off, so each drain is explicit. */
   function dispatcherWith(lane: ParallelLane<PreparedSend, SendOutcome>, now: Temporal.Instant) {
     return startDispatcher({ pool: w.worker(), clock: { demoNow: async () => now, worldEpoch: epochNow }, handlers: {}, lanes: [lane], log, intervalMs: 3_600_000 });

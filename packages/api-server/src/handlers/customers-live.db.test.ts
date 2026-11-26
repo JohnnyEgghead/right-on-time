@@ -2,9 +2,9 @@
 // The customer page's edits and history against the writes that act on them live (P4-CUSTOMERS; F-668 member 2, F-670), on
 // the real database through the production web kernel (createWebKernel as bw_web) and, for the reminder, the worker as
 // main.ts starts it (job registry, bw_worker, DbClock on the clock row):
-// - API-36 sets Spanish texts, and the technician's On my way (API-102, P3-TEXTS sendOnTheWay) is then sent in Spanish;
-// - API-36 turns texts off, and the reminder of his next visit then goes on the call list (fireReminder through the worker);
-// - API-35's history carries what a technician's finish wrote (work_done_line) and the old system's work-done cell.
+// - the customer edit (API-36) sets Spanish texts, and the technician's On my way (API-102, P3-TEXTS sendOnTheWay) is then sent in Spanish;
+// - the customer edit (API-36) turns texts off, and the reminder of his next visit then goes on the call list (fireReminder through the worker);
+// - the customer page's history (API-35) carries what a technician's finish wrote (work_done_line) and the old system's work-done cell.
 // The visit is made through the office's own write, API-28, which plans its reminder (dispatch-writes.ts planReminder): no test
 // calls the planner. Run by gate G-CI7 step 3 (ci/gates/G-CI7/vitest.db.config.ts).
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';

@@ -101,7 +101,7 @@ export function pool(runs: readonly RunCounts[]): Pooled {
 }
 
 /**
- * NFR-01's verdict on a pooled result: the full count of runs, nothing lost, and the p95 under the limit. The count is section
+ * The verdict on the board's change delay (NFR-01) on a pooled result: the full count of runs, nothing lost, and the p95 under the limit. The count is section
  * 5.2's 20 unless an owner ruling sets another (P4-LOAD: 5, ruling b6666cfd); the output file records which count it used.
  */
 export function nfr01Passes(p: Pooled, runsRequired: number = LOAD_DAY_RUNS): boolean {
@@ -142,11 +142,11 @@ export const OFFICE_PROFILE = { mbps: 50, rttMs: 20 } as const;
 export interface PageCounts {
   coldMs: readonly number[];
   warmMs: readonly number[];
-  /** Every failed load, cold and warm: NFR-03's page errors. */
+  /** Every failed load, cold and warm: the page errors the load day counts (NFR-03). */
   errors: number;
   /**
    * F-1494: the failed cold loads, the only failures NFR-02's cold p95 ranks (a failed warm load is not a cold load). A run file made
-   * before F-1494 has no split: all its failures are ranked as cold, as they were measured.
+   * before failures were split by kind (F-1494) has no split: all its failures are ranked as cold, as they were measured.
    */
   coldErrors?: number;
   warmErrors?: number;
@@ -196,7 +196,7 @@ export function poolPages(runs: readonly PageCounts[]): PooledPages {
   };
 }
 
-/** NFR-02's verdict: the required runs, no failed load, and the cold p95 under 2 s (the stricter of the 2; warm is recorded beside it). */
+/** The page load verdict (NFR-02): the required runs, no failed load, and the cold p95 under 2 s (the stricter of the 2; warm is recorded beside it). */
 export function nfr02Passes(p: PooledPages, runsRequired: number = LOAD_DAY_RUNS): boolean {
   return p.runs >= runsRequired && p.samples > 0 && p.errors === 0 && p.p95S < NFR_02_P95_LIMIT_S;
 }
@@ -220,7 +220,7 @@ export function endStateOf(expected: ReadonlyMap<number, number>, seen: Readonly
   return s;
 }
 
-/** What NFR-03 reads from 1 run beside the delay counts. */
+/** What the load day's verdict on errors and lost updates (NFR-03) reads from 1 run beside the delay counts: its van read errors, page errors and end state check. */
 export interface Nfr03Run extends RunCounts { vanReadErrors: number; pageErrors: number; endState: EndState; endStateErrors: number }
 
 export interface Nfr03 {

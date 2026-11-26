@@ -39,7 +39,7 @@ export interface PgNotifyBusOptions {
 }
 
 /** The default liveness interval: the stream's heartbeat (SPECIFICATIONS 4.3: an SSE comment every 15 s). */
-export const LIVENESS_MS = 15_000;
+const LIVENESS_MS = 15_000;
 
 /** SD-43: how long each seq's emit time is kept. */
 export const EMIT_KEEP_MS = 60_000;

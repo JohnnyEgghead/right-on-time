@@ -14,9 +14,9 @@ export interface FixtureJob {
   /** The branch of an Unassigned job (its customer's); absent on every other job. */
   branch?: string;
 }
-export type FixtureCall = { at: string; visitRef: string } | { at: string; jobNumber: number };
-export interface FixtureMembership { customer: string; since: string; renews: string; benefitsKey: string }
-export interface FixtureScriptRow {
+type FixtureCall = { at: string; visitRef: string } | { at: string; jobNumber: number };
+interface FixtureMembership { customer: string; since: string; renews: string; benefitsKey: string }
+interface FixtureScriptRow {
   jobNumber: number; onMyWayLeadMinutes: number; arrivalDelayMinutes: number; outcome: 'finished' | 'no_one_home'; workMinutes: number; partsCount: number;
 }
 export interface WorldFixture {

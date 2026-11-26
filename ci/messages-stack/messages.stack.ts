@@ -10,7 +10,8 @@ import { readFileSync } from 'node:fs';
 import http from 'node:http';
 import type { Browser, BrowserContextOptions, Page } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { guardedContext } from '../page-walkers/origin-guard.ts';
+import { demoDayCases } from '../demo-day.ts';
+import { guardedContext, type GuardedContext } from '../page-walkers/origin-guard.ts';
 import { engines } from '../pw-engines.ts';
 
 const base = process.env.BW_MESSAGES_STACK_URL;
@@ -312,4 +313,63 @@ describe.each(engines.map((e, i) => [...e, i] as const))('messages on the stack,
     expect(attempts(id)).toBe(1);
     await log.g.context.close();
   }, 360_000);
+
+  // why: FR-TEXT-13, FR-DEMO-2 the Call list tab's count follows the day shown: a count that comes back late for a day no longer shown is dropped (F-1977)
+  it('keeps the Call list count of the day shown when the count of the day before it comes back late', async () => {
+    const OTHER = addDays(DAY, 20); // no visits, so its list is empty
+    const count = async (d: string) => (await api<{ count: number }>('GET', `/call-list?branch=columbus&date=${d}`)).data.count;
+    const [onDay, onOther] = [await count(DAY), await count(OTHER)];
+    expect(onDay, 'the 2 days must differ in their call counts for this case to tell them apart').not.toBe(onOther);
+    const log = await open(`/office/messages?branch=columbus&date=${OTHER}`);
+    const badge = log.p.locator('[data-ctl="CTL-OFC-08-02"] .n');
+    await log.p.waitForSelector('.fbar');
+    // The count read for DAY is held; the page then moves back to OTHER, whose own count is read at once.
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((r) => { release = r; });
+    let heldCalls = 0;
+    let otherCalls = 0;
+    await log.p.route('**/api/v1/call-list?*', async (route) => {
+      const asked = new URL(route.request().url()).searchParams.get('date');
+      if (asked === OTHER) otherCalls += 1;
+      if (asked === DAY) {
+        heldCalls += 1;
+        await held;
+      }
+      await route.continue();
+    });
+    await log.p.locator('[data-ctl="CTL-OFC-08-03"] input').fill(DAY);
+    await until('the held count read for the first day', () => heldCalls, (n) => n > 0, 40);
+    await log.p.locator('[data-ctl="CTL-OFC-08-03"] input').fill(OTHER);
+    // The page is on the other day again and has read its count (the badge alone cannot tell: it still shows that count while the first day is held).
+    await log.p.waitForURL((u) => u.searchParams.get('date') === OTHER);
+    await until('the count read of the day shown', () => otherCalls, (n) => n > 0, 40);
+    release();
+    await sleep(1500);
+    const shownCount = (await badge.count()) === 0 ? '' : norm(await badge.innerText());
+    expect(shownCount, 'the late count of the other day must not replace the count of the day shown').toBe(String(onOther));
+    await log.g.context.close();
+  }, 120_000);
+
+  /** A signed-in page the demo-day cases load themselves. */
+  const followed = (path: string, list: string, ctl: string) => {
+    let g: GuardedContext | null = null;
+    return {
+      origin, list, key: 'date' as const,
+      path: `${path}?branch=columbus`,
+      pickedPath: `${path}?branch=columbus&date=2026-10-20`,
+      picked: '2026-10-20',
+      days: ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08'] as const,
+      page: async () => {
+        g = await guardedContext(browser, [origin], DESKTOP);
+        await g.context.addCookies([{ name: 'bw_session', value: session!, url: origin }]);
+        const p = await g.context.newPage();
+        await writeOrigin(p);
+        return p;
+      },
+      close: async () => g?.context.close(),
+      shown: (p: Page) => p.locator(`[data-ctl="${ctl}"] input`).inputValue(),
+    };
+  };
+  describe('Messages follows the demo day', () => demoDayCases(followed('/office/messages', '/api/v1/text-searches', 'CTL-OFC-08-03')));
+  describe('Call list follows the demo day', () => demoDayCases(followed('/office/messages/call-list', '/api/v1/call-list', 'CTL-OFC-09-01')));
 });

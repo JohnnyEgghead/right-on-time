@@ -12,7 +12,7 @@
 //   - An applied file whose bytes changed, or that is gone, stops the run (MigrationDriftError): forward-only means a
 //     change is a new file. A pending file numbered below an applied one stops it too (MigrationOrderError).
 //   - Ledger rows newer than every file are tolerated: that is the previous release running against the next
-//     release's schema during a rollback, which SD-40's 1-release backward compatibility exists to allow.
+//     release's schema during a rollback, which the 1-release backward compatibility (SD-40) exists to allow.
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -21,7 +21,7 @@ import { createClient, type Queryable } from './client.ts';
 export const MIGRATIONS_DIR = path.resolve(import.meta.dirname, '..', 'migrations');
 const FILE_NAME = /^(\d{4})_([a-z0-9_]+)\.sql$/;
 /** Advisory lock key: the bytes "bw-migr" as an integer, unique to this runner. */
-export const MIGRATION_LOCK_KEY = 0x62772d6d696772n;
+const MIGRATION_LOCK_KEY = 0x62772d6d696772n;
 
 export interface Migration {
   version: string;

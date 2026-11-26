@@ -318,7 +318,7 @@ describe.each(engines)('System health and the bell on %s', (engine, type) => {
     const alertRow = m.page.locator('#alerts .al', { hasText: b!.name });
     const opener = alertRow.locator('a[data-ctl="CTL-OFC-16-23"]');
     await opener.waitFor({ timeout: 30_000 });
-    expect(JSON.stringify((await health()).alerts)).not.toContain('/email/'); // no read holds a link (F-660)
+    expect(JSON.stringify((await health()).alerts)).not.toContain('/email/'); // the alerts the health read returns hold no email link (F-660)
     const [mail] = await Promise.all([m.page.waitForEvent('popup'), opener.click()]);
     await mail.waitForSelector('[data-ctl="CTL-EML-01-02"]', { timeout: 30_000 }); // the page's read spends the link; closing at the URL would not
     await mail.close();

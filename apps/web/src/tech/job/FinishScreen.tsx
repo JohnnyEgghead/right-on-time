@@ -20,6 +20,7 @@ import { NoSignalCard } from '../SyncStrip.tsx';
 import { TechAppFrame } from '../TechAppFrame.tsx';
 import { HeadClock } from './HeadClock.tsx';
 import type { ClockAnswer } from '../../shell/clock.ts';
+import { FinishLeave, signatureOwed } from '../engine.ts';
 import { techOutbox, useOwnOutbox } from '../useOutbox.ts';
 import {
   addPart, checkFinish, clockWords, demoWire, draftFromRefused, emptyFinish, findParts, finishWaits, laborFrom, laborMinutes, laborWords, refusedFinish,
@@ -73,6 +74,8 @@ export function FinishScreen({ jobNumber, fixed }: FinishScreenProps) {
   const [msg, setMsg] = useState<'parts' | 'labor' | 'server' | 'sig' | null>(fixed?.msg ?? null);
   const [confirming, setConfirming] = useState(fixed?.confirming ?? false);
   const [saving, setSaving] = useState(false);
+  // F-1932: what of this screen's own finish is kept, for the retry after an entry that was not.
+  const [leaving] = useState(() => new FinishLeave({ enter: (i) => techOutbox().enter(i), correctFinish: (k, p) => techOutbox().correctFinish(k, p) }));
   const cstep = useRef<HTMLDivElement>(null);
   const finBtn = useRef<HTMLButtonElement>(null);
   useModalFocus(cstep, { active: confirming, returnTo: finBtn, onEscape: () => { if (!saving) setConfirming(false); } });
@@ -112,12 +115,21 @@ export function FinishScreen({ jobNumber, fixed }: FinishScreenProps) {
     }
   });
 
+  // A screen opened again after its finish was kept and its signature was not (F-1976) still owes the signature: the finish is not entered twice.
+  // It waits for the kept draft and the outbox before it decides, or it would close before the draft says a signature is owed.
+  const settled = loaded && outbox.ready;
+  const owedAgain = !fixed && settled && refused === null && signatureOwed(outbox.waiting, jobNumber, d.signature !== null);
+  useEffect(() => {
+    if (owedAgain) leaving.resume();
+  }, [owedAgain, leaving]);
+
   /** Every change is kept on the phone at once (CTL-TEC-07-10, -11, -14); a failed write says so on the signature. */
-  const keep = useCallback((next: FinishDraft) => {
+  const keep = useCallback((draft: FinishDraft) => {
+    const next = leaving.entriesOf(d, draft, refused !== null);
     setD(next);
     if (fixed || !loaded) return;
     void jobStore().saveFinish(next).catch(() => setMsg('sig'));
-  }, [fixed, loaded]);
+  }, [fixed, loaded, leaving, refused, d]);
 
   const fixedOut = fixed ? (fixed.outbox ?? IDLE) : undefined;
   const frame = (header: React.ReactNode, body: React.ReactNode, bottom?: React.ReactNode, after?: React.ReactNode) => (
@@ -153,8 +165,10 @@ export function FinishScreen({ jobNumber, fixed }: FinishScreenProps) {
   }
   const job = view.job;
   const service = t(job.job.serviceLabelKey as MessageKey);
-  // A finish already waiting on the phone closes the screen to the job; never while this screen's own finish is leaving (saving).
-  if (finishWaits(jobNumber, outbox.waiting) && !refused && msg !== 'server' && !fixed && !saving) {
+  // A finish already waiting on the phone closes the screen to the job; never while this screen's own finish is leaving (saving) or its
+  // signature is not kept yet (owed).
+  if (finishWaits(jobNumber, outbox.waiting) && !refused && msg !== 'server' && !fixed && !saving && !leaving.owed && !owedAgain) {
+    if (!settled) return frame(head(t('tech.finish.title'), ''), <div className="card"><span className="r1-skel" /></div>);
     go(jobHref(jobNumber));
     return null;
   }
@@ -184,11 +198,7 @@ export function FinishScreen({ jobNumber, fixed }: FinishScreenProps) {
     if (!c.ok || fixed) return;
     setSaving(true);
     try {
-      const e = techOutbox();
-      // F-1025: a refused finish is corrected under its own key (the server wrote nothing for it), never a second finish beside it.
-      if (refused) await e.correctFinish(refused.key, c.payload);
-      else await e.enter({ jobNumber, baseVersion: job.job.version, body: { kind: 'finished', payload: c.payload } });
-      if (d.signature) await e.enter({ jobNumber, baseVersion: null, body: { kind: 'signature', contentType: 'image/png' }, blob: d.signature.png });
+      await leaving.leave({ jobNumber, baseVersion: job.job.version, payload: c.payload, refusedKey: refused?.key ?? null, signature: d.signature?.png ?? null });
       await jobStore().forgetFinish(jobNumber).catch(() => undefined);
       go(jobHref(jobNumber, '?finished=1'));
     } catch {

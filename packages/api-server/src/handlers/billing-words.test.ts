@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The words of the billing pages that the page and the server must say alike (P4-BILLING-UI fix pass): API-66's line facts against the
+// The words of the billing pages that the page and the server must say alike: the pretend billing invoice's line facts (API-66) against the
 // link's composer and the catalog (F-593), and the Fixed table's row words, which the page and the export API-159 both use (F-591).
 import { describe, expect, it } from 'vitest';
 import { DISCOUNT_LABEL, laborLabel, lineWordsOf, MEMBER_RATE_PERCENT, SERVICE_INVOICE_LABELS } from '@bw/domain';

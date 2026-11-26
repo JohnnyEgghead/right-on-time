@@ -15,7 +15,7 @@ import path from 'node:path';
 import { isMain } from '../is-main.ts';
 import { parse } from 'yaml';
 
-export const STACK_SERVICES = ['db', 'pbs', 'proxy', 'web', 'worker'] as const;
+const STACK_SERVICES = ['db', 'pbs', 'proxy', 'web', 'worker'] as const;
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);

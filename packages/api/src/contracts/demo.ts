@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Contract rows of the demo area. The lane that builds the area adds its API-<nn> rows here (defineContract from ../contract.ts)
-// and its examples; no other file needs editing.
-// P2-SHELL (owner ruling c025a9ec): API-10, the read of the demo clock (CMP-01, CMP-02). The moves (API-11 to API-14:
-// jump, pause, reset) are P3-REPLAY's. W16 integration (F-344): API-09, the event stream (P3-EVENTS), joins the table here.
+// Contract rows of the demo area. A new row is added here with defineContract (from ../contract.ts) and its examples;
+// its handler and policy entry are in packages/api-server.
+// API-10 is the read of the demo clock (CMP-01, CMP-02). The presets read (API-11) and the moves (API-12 jump, API-13 pause or resume, API-14 reset) are in ./clock.ts.
+// API-09, the event stream, joins the table here (F-344).
 import { z } from 'zod';
 import { defineContract, type ContractRow } from '../contract.ts';
 import { clockContracts } from './clock.ts';

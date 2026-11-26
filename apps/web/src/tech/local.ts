@@ -27,7 +27,7 @@ export const KEYS = {
   profile: `${PREFIX}profile`,
 } as const;
 
-/** The key P5-TWA-TODAY's own saved day used before there was one saved day (F-1018); forgotten like the rest, never read. */
+/** The key the Today screen's own saved day used, before the app's screens shared 1 saved day (F-1018); forgotten like the rest, never read. */
 const LEGACY_DAY_KEY = 'bw.tech.today.v1';
 
 function read<T>(key: string): T | null {

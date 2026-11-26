@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// API-80 to API-88 on the real database (PostgreSQL 18, the migrated schema, P2-SEED's reference seed, the real
+// The import area's calls (API-80 to API-88) on the real database (PostgreSQL 18, the migrated schema, P2-SEED's reference seed, the real
 // generator output from seed 20260915), through the production kernel (createWebKernel: the real policy table,
 // handlers, SQL sessions and clock) as the web process's login bw_web, with principals whose sessions the real session
 // layer created. The worker's part of a run (SPECIFICATIONS section 2 "Import runner") is @bw/import runPendingImport,
@@ -101,7 +101,7 @@ interface Report {
 }
 interface Run { kind: string; status: string; stage: string; percent: number; report: Report | null; failure: string | null }
 
-/** The report's numbers in the shape of the FR-IMP-6 table, read from REQUIREMENTS (ci/gates/import-target-counts/targets.ts). */
+/** The report's numbers in the shape of the import target table (FR-IMP-6), read from REQUIREMENTS (ci/gates/import-target-counts/targets.ts). */
 const asTargets = (r: Report) => ({
   ...r, problems: { total: r.problems.total, byReason: Object.fromEntries(r.problems.byReason.map((x) => [x.reason, x.count])) },
 });
@@ -208,7 +208,7 @@ describe('API-83 problem list (FR-IMP-2)', () => {
     expect(lines[0]).toBe(PROBLEM_LIST_COLUMNS.join(','));
     const rows = lines.slice(1, -1);
     expect(rows).toHaveLength(TARGETS.problems.total);
-    // every row names 1 of the 6 reasons, and each reason's count equals the FR-IMP-6 table
+    // every row names 1 of the 6 reasons, and each reason's count equals the import target table (FR-IMP-6)
     const reasons = rows.map((l) => (/^(?:customers|visits|equipment)\.csv,\d+,([a-z_]+),/.exec(l) ?? [])[1]);
     for (const [reason, count] of Object.entries(TARGETS.problems.byReason)) expect(reasons.filter((x) => x === reason).length, reason).toBe(count);
     // the first row is the first stored problem of customers.csv, with its example as stored
@@ -319,7 +319,7 @@ describe('API-85 likely duplicates (FR-IMP-3, FR-IMP-9, FR-IMP-11)', () => {
   it('lists the 428 likely pairs page by page, with progress, why each was listed, and the merge preview', async () => {
     const first = await data<Dupes>(await get('/import/duplicates', 'office'));
     expect(first.progress).toEqual({ listed: TARGETS.duplicates.likely, checked: 0, left: TARGETS.duplicates.likely, merged: 0, keptSeparate: 0, skipped: 0 });
-    expect(first.pairs).toHaveLength(50); // the default page (SPECIFICATIONS 7.1) of To check
+    expect(first.pairs).toHaveLength(50); // the default page of 50 rows of the To check list (SPECIFICATIONS 7.1)
     expect(first.next).not.toBeNull();
     pairs = await allPairs('all');
     expect(pairs).toHaveLength(TARGETS.duplicates.likely);

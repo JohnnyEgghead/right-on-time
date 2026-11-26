@@ -81,7 +81,7 @@ describe.each(engines)('shell look on %s', (engine, type) => {
         setup: async (page, which) => {
           if (which === 'frame') return tagFrames(page);
           if (c.maps) {
-            // CMP-05 needs its map files: answered from .build/data/maps, then the page loads again with them.
+            // The map component (CMP-05) needs its map files: answered from .build/data/maps, then the page loads again with them.
             expect(mapFilesPresent(), 'the map files are missing: run pnpm run setup:maps').toBe(true);
             await serveMapFiles(page.context());
             await page.reload({ waitUntil: 'load' });

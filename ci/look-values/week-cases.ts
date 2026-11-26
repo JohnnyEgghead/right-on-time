@@ -90,8 +90,6 @@ export const NOT_COMPARED: Record<string, string> = {
   'the Day and Week controls': 'the frame draws the Day side as a span; the app draws a radio, whose box is the same and whose click is held by the Playwright suite',
 };
 
-export const WEEK_CAPTIONS = [`${W}Success`, `${W}Loading`, `${W}No technicians`, `${W}Error`, `${W}Live`];
-
 /** The captions of the frame that no case compares (empty when every state has a case). */
 export function uncovered(frameCaptions: readonly string[]): string[] {
   const covered = new Set(WEEK_CASES.flatMap((c) => c.captions));

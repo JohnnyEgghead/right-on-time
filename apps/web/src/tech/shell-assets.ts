@@ -47,7 +47,7 @@ export interface ShellAsset {
 let worker: Buffer | null = null;
 
 /** F-979: the id of the running build (Next writes it to <distDir>/BUILD_ID at build): every deploy has a new one. */
-export function buildId(webDir = path.resolve(import.meta.dirname, '..', '..')): string {
+function buildId(webDir = path.resolve(import.meta.dirname, '..', '..')): string {
   for (const dir of ['.next', '.next-preview']) {
     try {
       return readFileSync(path.join(webDir, dir, 'BUILD_ID'), 'utf8').trim().replace(/[^A-Za-z0-9_-]/g, '');

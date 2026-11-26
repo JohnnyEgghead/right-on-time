@@ -43,7 +43,7 @@ const van = z.object({ id: z.uuid(), number: z.string(), vehicle: z.string() });
 const technicianRow = z.object({
   id: z.uuid(),
   name: z.string(),
-  /** As stored, for example (614) 555-0112 (UI-SPECIFICATION 12.2 API-31). */
+  /** The phone number as stored, for example (614) 555-0112 (UI-SPECIFICATION 12.2 API-31). */
   phone: z.string(),
   branch: z.string(),
   van: van.nullable(),

@@ -48,12 +48,12 @@ const stamp = (n: number, hhmm: string) => ({
   key: `00000000-0000-4000-8000-0000000001${String(n).padStart(2, '0')}`, worldEpoch: 1, deviceTime: z(hhmm), offsetSavedReal: z('07:00'), sinceSaveMs: 0,
   demoTime: z(hhmm), enteredRealMs: 0, jobNumber: 24830, baseVersion: 3, userId: 'u-maria',
 });
-export const W_NOTE1: QueuedItem = { ...stamp(1, '10:58'), kind: 'note', payload: { text: 'Flame sensor cleaned' } };
+const W_NOTE1: QueuedItem = { ...stamp(1, '10:58'), kind: 'note', payload: { text: 'Flame sensor cleaned' } };
 export const W_PHOTO: QueuedItem = { ...stamp(2, '11:01'), kind: 'photo', contentType: 'image/jpeg', baseVersion: null };
-export const W_NOTE2: QueuedItem = { ...stamp(3, '11:04'), kind: 'note', payload: { text: 'Hose cracked at trap' } };
-export const W_NOTE3: QueuedItem = { ...stamp(4, '11:07'), kind: 'note', payload: { text: 'Replaced 6 ft of condensate hose. Heat exchanger looks clean, no cracks.' } };
+const W_NOTE2: QueuedItem = { ...stamp(3, '11:04'), kind: 'note', payload: { text: 'Hose cracked at trap' } };
+const W_NOTE3: QueuedItem = { ...stamp(4, '11:07'), kind: 'note', payload: { text: 'Replaced 6 ft of condensate hose. Heat exchanger looks clean, no cracks.' } };
 
-export const W_FINISH: QueuedItem = { ...stamp(5, '12:49'), kind: 'finished', payload: { parts: [], noPartsUsed: false, laborMinutes: 45, workDone: [] } };
+const W_FINISH: QueuedItem = { ...stamp(5, '12:49'), kind: 'finished', payload: { parts: [], noPartsUsed: false, laborMinutes: 45, workDone: [] } };
 
 const base: OutboxState = { ready: true, waiting: [], online: true, sending: false, oldCount: 0, lastSent: [], signedOut: false };
 export const OUT = {

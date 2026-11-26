@@ -45,7 +45,7 @@ const ids = async (db: Queryable, sql: string, values: unknown[] = []) => (await
 export async function seedReference(db: Queryable, opts: SeedOptions): Promise<SeedResult> {
   const technicians = opts.roster ?? planTechnicians(readRoster());
 
-  // 1. Branches (section 3 branch; FR-MAP-1, FR-DISP-20).
+  // 1. Branches: Columbus, Dayton and Springfield, each with its depot, office phone and map file (section 3 branch; FR-MAP-1, FR-DISP-20).
   for (const b of BRANCHES) {
     await db.query(
       `INSERT INTO world.branch (id, name_key, zone, office_phone, depot_lon, depot_lat, map_file)
@@ -138,7 +138,7 @@ export async function seedReference(db: Queryable, opts: SeedOptions): Promise<S
     );
   }
 
-  // 6b. The open invites of the Invited users (F-273; the approved users page: Derek Simmons "Invite sent Sep 14", SD-29's link good 7 demo days):
+  // 6b. The open invites of the Invited users (F-273; the approved users page: Derek Simmons "Invite sent Sep 14", the link good 7 demo days, SD-29):
   //     1 unused password_token each, so Resend invite has a link to retire. The hash is derived from the seed and the email, never a token anyone
   //     was shown (only a hash is stored); a second run finds the same hash and adds nothing.
   for (const p of plans.filter((x) => x.status === 'invited')) {

@@ -31,7 +31,7 @@ export const BRANCH_MAPS: Record<BranchId, BranchMap> = {
 export const isBranchId = (v: unknown): v is BranchId => typeof v === 'string' && (BRANCH_IDS as readonly string[]).includes(v);
 
 /** A marker's state: a van's status (the legend's first 3 and Late or at risk), a job's, or a technician's stop. */
-export type MarkerState = 'site' | 'way' | 'free' | 'late' | 'sched' | 'risk' | 'unas' | 'closed' | 'done' | 'next' | 'later';
+type MarkerState = 'site' | 'way' | 'free' | 'late' | 'sched' | 'risk' | 'unas' | 'closed' | 'done' | 'next' | 'later';
 
 export interface MapMarker {
   id: string;
@@ -112,7 +112,7 @@ export function boundedMinZoom(width: number, height: number, bbox: Bbox): numbe
 export const OSM_COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright';
 
 /** Where the bundled glyph and sprite files are answered (map-assets.ts), under the page's origin. */
-export const MAP_ASSET_PATH = '/map-assets';
+const MAP_ASSET_PATH = '/map-assets';
 
 /** The symbol layers that carry each kind of name, by Protomaps layer id (the counts the component reports). */
 export const NAME_LAYERS = {

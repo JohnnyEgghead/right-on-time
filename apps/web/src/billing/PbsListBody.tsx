@@ -14,7 +14,7 @@ import { Spinner } from './BillingBody.tsx';
 
 export type PbsInvoices = z.infer<typeof pbsInvoices.response>;
 export type PbsModeView = z.infer<typeof pbsMode.response>;
-export const MODES = ['up', 'not_answering', 'down', 'reject_next_n'] as const;
+const MODES = ['up', 'not_answering', 'down', 'reject_next_n'] as const;
 export type Mode = (typeof MODES)[number];
 
 export interface PbsListBodyProps {

@@ -85,7 +85,7 @@ export async function compressPhoto(file: Blob): Promise<Compressed> {
   return { ok: false, reason: 'unreadable', bytes: new Uint8Array(await file.arrayBuffer()), type: file.type || 'application/octet-stream' };
 }
 
-/** A JPEG or PNG by its first bytes (SD-32's 2 types). */
+/** A JPEG (photo) or PNG (signature) by its first bytes (the 2 types of SD-32). */
 export function isJpegOrPng(b: Uint8Array): boolean {
   const jpeg = b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
   const png = b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47;

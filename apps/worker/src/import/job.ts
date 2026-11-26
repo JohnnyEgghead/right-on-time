@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The worker's import runner job (SPECIFICATIONS section 2 background-work table: "Import runner | API-80, API-84,
 // setup"; section 6.7; F-258). API-80 and API-84 only REQUEST a run (a row marked running, committed by the handler);
-// this job EXECUTES it with @bw/import runPendingImport, whose run lock and pick-up rules are P2-IMPORT's:
+// this job EXECUTES it with @bw/import runPendingImport, whose run lock and pick-up rules belong to @bw/import (P2-IMPORT):
 //   - at start-up, so a row a dead executor left running is picked up (its next attempt; 3 in all, then failed:
 //     owner ruling dc73cb08, counted by runPendingImport);
 //   - then whenever a request is waiting (a cheap read every IMPORT_POLL_MS real milliseconds), 1 run at a time;

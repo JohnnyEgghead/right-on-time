@@ -71,9 +71,13 @@ ENGINE_READY_S=90
 APT_PINS='git=1:2.39.5-0+deb12u3 ca-certificates=20230311+deb12u1 python3=3.11.2-1+b1 python3.11=3.11.2-6+deb12u9 curl=7.88.1-10+deb12u15 systemd=252.39-1~deb12u2'
 PNPM_VERSION='12.14.0'
 CTX="${WAVE_DOCKER_CONTEXT:-spectre}"
-INSTALL_ALLOWANCE_S=1200   # apt, pnpm install, browser download (2 times the measured allowance), inside the whole-run cap
-# F-460: F-409 moved the install into the image build, which runs BEFORE the whole-run timer starts, so the whole-run cap
-# does not cover it. Each pre-run step has its own cap through bounded(): RED naming the step, process tree killed.
+INSTALL_ALLOWANCE_S=1200   # the offline pnpm install, the browser check, and the stack images' pull and build, inside the whole-run cap
+# F-2000: the prep, from the engine's start to the exec that runs ci.sh: the engine wait, the docker CLI copy and the tree shipped over ssh (about
+# 3.2 GB with the map and routing files). It runs before the whole-run cap's timer starts, but the engine's and the CI container's own expiries count
+# from their start, so each also covers this limit, and a longer prep is RED before the exec. 534 s measured (nightly 8d66a046, 503 s of it the ship).
+PREP_CAP_S=1200
+# F-460: the apt, pnpm store and browser installs moved into the image build (F-409), which runs BEFORE the whole-run timer starts, so the
+# whole-run cap does not cover them. Each CI image step (inspect, build, list, prune, count) has its own cap through bounded(): RED naming the step, process tree killed.
 CI_BUILD_CAP_S=1500        # cold image build: 2 times the slower measured cold build (714 s)
 JUNIT_COPY_CAP_S=120       # F-997 b: the junit folder copied out after the container finished
 SPECTRE_CALL_CAP_S=60      # image inspect, image list, image count: each is a local metadata read on Spectre
@@ -412,6 +416,15 @@ record_test_times() {
 # G-CI2 (killed at 300 s) ran. With 1 the kernel drops the core: the process ends at once ("Page crashed"), nothing is written.
 core_limit_ok() { awk '/^Max core file size/ { n++; ok = ($5 == "1" && $6 == "1") } END { exit !(n == 1 && ok) }'; }
 
+# F-2000: prep_ok <seconds>: 0 when the prep (the engine's start to the exec) fit inside PREP_CAP_S, so the whole-run cap fires before the
+# container's and the engine's own expiries; else a named RED. In nightly 8d66a046 the container's sleep (then CAP + 120 from its start) ended
+# the exec 13847 s in, inside the 14260 s cap, after a 534 s prep: no ci.sh exit line, no cap line and no verdict.
+prep_ok() {
+  if [ "$1" -le "$PREP_CAP_S" ] 2>/dev/null; then echo "prep: ${1}s from the engine's start to the exec (limit ${PREP_CAP_S}s, F-2000)"; return 0; fi
+  echo "RED: the prep took ${1}s, over its ${PREP_CAP_S}s limit, so the container's own expiry could end the run inside the whole-run cap (F-2000)" >&2
+  return 1
+}
+
 HALVES=0
 SETUP_ONLY=0
 if [ "${1:-}" = "--setup-only" ]; then SETUP_ONLY=1; shift; fi
@@ -436,6 +449,9 @@ case "${1:-}" in
     [ "$#" -eq 4 ] || { echo "usage: wave-run.sh --time-check <verdict> <all|nightly|gates> <history>" >&2; exit 2; }
     time_check "$2" "$3" "$4"; exit $? ;;
   --core-limit-check) core_limit_ok; exit $? ;;
+  --prep-check)
+    [ "$#" -eq 2 ] || { echo "usage: wave-run.sh --prep-check <seconds>" >&2; exit 2; }
+    prep_ok "$2"; exit $? ;;
   --halves-selftest)
     # Test hook (ruling item 3): the real mac half and the real wait loop against a stand-in container half (see below the MAC_ONLY block).
     [ "$#" -eq 3 ] || { echo "usage: wave-run.sh --halves-selftest <container secs> <container rc>" >&2; exit 2; }
@@ -623,18 +639,20 @@ img_count="$(bounded "$SPECTRE_CALL_CAP_S" "CI image count" quiet docker --conte
 echo "ci-image: ready in $(( $(date +%s) - IMG_T0 ))s; images kept: $(printf '%s' "$img_count" | grep -c .)"
 
 # 2. The run's own engine and the CI container (F-126), each expiring by itself past the cap (timeout, sleep), so
-#    a lost client cannot leave them running. The engine outlives the CI container by 60 s.
+#    a lost client cannot leave them running. The engine outlives the CI container by 60 s. F-2000: both expiries count from
+#    here, and the cap's timer from the exec, so each also covers the prep's limit (PREP_CAP_S, checked before the exec).
 STARTED=1
+PREP_T0=$(date +%s)
 for v in "${VOLS[@]}"; do
   docker --context "$CTX" volume create --label "$RUN_LABEL" "$v" >/dev/null || { echo "RED: could not create volume $v" >&2; exit 1; }
 done
 docker --context "$CTX" run -d --name "$ENGINE" --label "$RUN_LABEL" --privileged -e DOCKER_TLS_CERTDIR= \
   -v "$NAME-sock:/var/run/dind" -v "$NAME-work:/work" -v "$NAME-engine-storage:/var/lib/docker" \
-  --entrypoint timeout "$ENGINE_IMAGE" "$((CAP + 180))" dockerd-entrypoint.sh dockerd --host="$ENGINE_SOCK" >/dev/null \
+  --entrypoint timeout "$ENGINE_IMAGE" "$((PREP_CAP_S + CAP + 180))" dockerd-entrypoint.sh dockerd --host="$ENGINE_SOCK" >/dev/null \
   || { echo "RED: could not start the run's engine $ENGINE" >&2; exit 1; }
 docker --context "$CTX" run -d --name "$NAME" --label "$RUN_LABEL" --network "container:$ENGINE" --ulimit core=1 \
   -v "$NAME-sock:/var/run/dind" -v "$NAME-work:/work" -e DOCKER_HOST="$ENGINE_SOCK" \
-  --entrypoint sleep "$CI_IMG" "$((CAP + 120))" >/dev/null || { echo "RED: could not start the container" >&2; exit 1; }
+  --entrypoint sleep "$CI_IMG" "$((PREP_CAP_S + CAP + 120))" >/dev/null || { echo "RED: could not start the container" >&2; exit 1; }
 # Every gate runs through docker exec, which takes the container's limits: read them the same way (F-1165).
 docker --context "$CTX" exec "$NAME" cat /proc/self/limits | core_limit_ok \
   || { echo "RED: the CI container's core file limit is not 1 byte, so a browser crash would pipe its core to Windows (F-1165)" >&2; exit 1; }
@@ -698,6 +716,7 @@ echo "ci.sh --all exit $rc"
 exit $rc'
 
 # 3. Run with the whole-run cap. The watchdog removes the container and the engine (not only the client) when it fires.
+prep_ok "$(( $(date +%s) - PREP_T0 ))" || exit 1
 docker --context "$CTX" exec -e BW_WAVE_CONTAINER=1 -e BW_CI_ARGS="${BW_CI_ARGS:-}" -e BW_SETUP_ONLY="$SETUP_ONLY" -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright "$NAME" bash -c "$INNER" 2>&1 | tee "$OUT/wave-container.log" &
 EXEC_PID=$!
 T0=$(date +%s)

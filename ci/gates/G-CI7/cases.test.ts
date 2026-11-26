@@ -27,7 +27,7 @@ const noPlan = absent('docs/BUILD_PLAN.md');
 const inv = readInventory();
 const spec = noUiSpec ? '' : readUiSpec();
 
-/** The plant: a probe row shaped like SPECIFICATIONS 7.4's board-delay sample (API-172, now real), entered in the shared contract with no policy entry. */
+/** The plant: a probe row shaped like the board-delay endpoint (API-172), entered in the shared contract with no policy entry. */
 const planted = defineContract({
   id: 'API-173', name: 'Board delay probe', method: 'POST', path: '/board-delay-probes', request: z.object({ seq: z.number().int() }),
   response: z.undefined(), successStatus: [204], errors: [], labels: [], examples: [{ name: 'office posts', input: { seq: 1 }, expectStatus: 204 }],
@@ -105,7 +105,7 @@ describe('G-CI7 must-fail cases', () => {
     const locked = policyTable.map((e): PolicyEntry => (e.kind === 'api' && e.contract === 'API-171' ? api(health, roles('manager')) : e));
     const h = await harness(locked, { ...handlers });
     expect((await apiProblems(locked, spec, h.call)).problems[0]).toMatch(/^API-171: policy access/);
-    // The reports row (API-50, managers only by its 12.2 callers, built by P4-REPORTS) planted open to everyone: the router lets the technician in.
+    // The reports row (API-50, managers only, by the access of the screens that call it, UI-SPECIFICATION 12.2 and 2.4) planted open to everyone: the router lets the technician in.
     const open = policyTable.map((e): PolicyEntry => (e.kind === 'api' && e.contract === 'API-50' ? api(reports, { kind: 'public' }) : e));
     const h2 = await harness(open, { ...handlers });
     const { problems } = await apiProblems(open, spec, h2.call);

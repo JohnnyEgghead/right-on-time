@@ -142,7 +142,7 @@ describe('G-CI1: the 36 cells of the offline conflict table, from the typed cons
   for (const action of ITEM_ACTIONS) {
     for (const column of CHANGE_COLUMNS) {
       const verdict = OFFLINE_CONFLICT_TABLE[action][column];
-      // why: FR-TECH-6, invariant 1
+      // why: FR-TECH-6, invariant 1 - each cell of the offline conflict table gets its verdict (apply or flag) from the server
       it(`(${action}, ${column}) -> ${verdict}`, async () => {
         const n = await w.newJob({ tech: maria });
         await change(column, n);

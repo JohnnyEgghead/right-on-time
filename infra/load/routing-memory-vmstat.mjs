@@ -3,6 +3,7 @@
 // server-vmstat.log: `vmstat -t 5`), averaged per file. Columns are read by the header's names (us sy id wa st), never by position, so
 // idle and steal cannot swap. Every data line counts, the first (vmstat's average since boot) included, as review 556 read them.
 //   node infra/load/routing-memory-vmstat.mjs <server-vmstat.log> [...] > <vmstat.json>
+// Kept as evidence, nothing calls it: its CPU averages are cited in the measured record that set the routing service's memory limit.
 import { readFileSync } from 'node:fs';
 
 const files = process.argv.slice(2);

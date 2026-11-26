@@ -27,7 +27,7 @@ type Row = ListAnswer['rows'][number];
 type ExportIn = z.infer<typeof jobsExport.request>;
 
 /** SPECIFICATIONS section 6.2: "Today and upcoming" covers demo today and the next 4 calendar days (CTL-OFC-30-18). */
-export const UPCOMING_DAYS = 4;
+const UPCOMING_DAYS = 4;
 
 /** The catalog words of a job status and of a timing (the page's chips say the same). */
 const STATUS_KEY = {
@@ -64,7 +64,7 @@ function matches(query: string, r: SqlRow): boolean {
   return false;
 }
 
-export interface JobsResult {
+interface JobsResult {
   answer: ListAnswer;
   /** Every row of the picked tab, in order (the page is a slice of it). */
   all: Row[];
@@ -73,7 +73,7 @@ export interface JobsResult {
 const rankOf = (r: Row): number => (r.timing === 'late' ? 0 : r.timing === 'at_risk' ? 1 : r.technicianId === null && OPEN.has(r.status) ? 2 : 3);
 
 /** The whole read: every row of the picked tab in order, the counts and the range. null when the branch does not exist. */
-export async function readJobs(tx: Tx, p: ListIn | ExportIn, demoNow: Instant): Promise<JobsResult | null> {
+async function readJobs(tx: Tx, p: ListIn | ExportIn, demoNow: Instant): Promise<JobsResult | null> {
   const branch = await branchOf(tx, p.branch);
   if (!branch) return null;
   const today = localDateOf(demoNow, branch.zone);

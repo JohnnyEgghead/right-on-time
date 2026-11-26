@@ -17,7 +17,7 @@ export interface RescheduleJobDialogProps {
   jobNumber: number;
   /** Closed with no change (Cancel, Escape, the close button). */
   onClose: () => void;
-  /** SCR-OFC-19's Keep their change: closes and re-reads (default: onClose). */
+  /** Keep their change, in the Someone else changed this job dialog (SCR-OFC-19): closes and re-reads (default: onClose). */
   onKeep?: () => void;
   /** After API-24 answered 200: its answer, and the toast the job page shows for it (the host may show its own). */
   onDone: (answer: RescheduleAnswer, toast: Shown) => void;

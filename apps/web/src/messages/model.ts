@@ -82,9 +82,6 @@ export const isToday = (date: string, today: string | null): boolean => today !=
 
 // --- the call list --------------------------------------------------------------------------------------------------------------------
 
-/** The rows of the reminder table keep the API's order (by arrival window, then name). */
-export const callKey = (e: { entryId: string }): string => e.entryId;
-
 /** Whether the outcome buttons show for a row: no outcome yet, or the row's Change is open. */
 export const showsButtons = (outcome: ReminderCall['outcome'], changing: boolean): boolean => outcome === null || changing;
 
@@ -111,7 +108,7 @@ export function betweenWords(win: { start: string; end: string }, t: RowT): stri
  * The script's day words for a visit on `day` called about on `callDate` (F-655): null for the next day (the frame's
  * "your visit tomorrow"), else "today" or "on Thu, Sep 17". A failed-text row can be about any day of the week.
  */
-export function scriptWhen(day: string, callDate: string, t: RowT): string | null {
+function scriptWhen(day: string, callDate: string, t: RowT): string | null {
   if (day === addDays(callDate, 1)) return null;
   if (day === callDate) return t('calls.say.when.today');
   const n = dateNumbers(day);
@@ -144,9 +141,6 @@ export function scriptParts(
     return p === WIN ? { text: win, bold: true } : { text: p, bold: false };
   });
 }
-
-/** Next day of a date, for "tomorrow". */
-export const tomorrowOf = (date: string): string => addDays(date, 1);
 
 /** The branch zone's abbreviation for the intro line ("EDT"), at the read's time. */
 export function zoneAbbr(zone: string, asOf: string | undefined): string {

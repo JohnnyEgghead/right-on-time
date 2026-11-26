@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The on-screen email store (SPECIFICATIONS section 3 `email_message`, `email_link`; SD-29; FR-AUTH-8). Every email is a
 // row; no mail transport exists. A message opens only by a one-time link: a 32-byte token stored as its SHA-256, valid
-// for 1 opening and at most 24 demo hours. Alerts, invites and resets share this store (invites and resets are
-// P4-ACCOUNTS's callers). The caller passes demo now as an ISO instant, so this package reads no clock (FR-DEMO-2).
+// for 1 opening and at most 24 demo hours. Alerts, invites and resets share this store (invites and resets
+// are called from the accounts code, P4-ACCOUNTS). The caller passes demo now as an ISO instant, so this package reads no clock (FR-DEMO-2).
 import { createHash, randomBytes } from 'node:crypto';
 import type { Queryable } from './client.ts';
 

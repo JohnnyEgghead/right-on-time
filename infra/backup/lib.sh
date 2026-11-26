@@ -136,7 +136,7 @@ sets() {
 # ---- the database: the Compose project's db container, through its local socket --------------------------
 db_container() {
   local id
-  id="$(docker ps -q --filter "label=com.docker.compose.project=$BW_PROJECT" --filter label=com.docker.compose.service=db | head -n 1)"
+  id="$(docker ps -q --filter "label=com.docker.compose.project=$BW_PROJECT" --filter label=com.docker.compose.service=db)"; id=${id%%$'\n'*}
   # stderr, not stdout: DB="$(db_container)" would otherwise put the reason in the variable and leave the journal empty (F-390).
   [ -n "$id" ] || { log error "no running db container in Compose project $BW_PROJECT" >&2; exit 1; }
   printf '%s' "$id"

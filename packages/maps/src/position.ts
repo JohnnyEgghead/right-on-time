@@ -32,7 +32,7 @@ export const trackSeconds = (t: Pick<LegTrack, 'seconds'>): number => t.seconds[
 export const trackMinutes = (t: Pick<LegTrack, 'seconds'>): number => Math.ceil(trackSeconds(t) / 60);
 
 /** The part of a baked track still to drive after `elapsedSeconds`: the van's point first, then the vertices after it, and the seconds left. */
-export interface TrackRemainder {
+interface TrackRemainder {
   vertices: [number, number][];
   seconds: number;
 }
@@ -41,7 +41,7 @@ export interface TrackRemainder {
  * The track left after `elapsedSeconds` (SD-22): the whole track for 0 or less, only its end once it is driven (held, not past it).
  * Its first vertex is the van's point, so {@link pointAlongTrack} and the route from the van (F-1003) cannot disagree.
  */
-export function trackRemainder(t: LegTrack, elapsedSeconds: number): TrackRemainder {
+function trackRemainder(t: LegTrack, elapsedSeconds: number): TrackRemainder {
   const vertices = decodePolyline(t.polyline);
   const v = vanOnTrack(t, vertices, elapsedSeconds);
   return { vertices: [v.point, ...vertices.slice(v.next)], seconds: v.secondsLeft };

@@ -17,8 +17,8 @@ export interface BillingCase {
   widthFrom?: WidthFrom[];
 }
 
-export const OFFICE_BILLING = 'mockups/pages/office-billing.html';
-export const PBS_FRAMES = {
+const OFFICE_BILLING = 'mockups/pages/office-billing.html';
+const PBS_FRAMES = {
   'a-list': 'mockups/pages/r1-pbs-a-list.html',
   'b-list': 'mockups/pages/r1-pbs-b-list.html',
   'c-list': 'mockups/pages/r1-pbs-c-list.html',
@@ -35,7 +35,7 @@ const B = 'SCR-OFC-10 Jobs not in billing: ';
 const K = 'SCR-OFC-47 Mark fixed: ';
 const P1 = 'SCR-PBS-01 Pretend billing: invoices and mode: ';
 const P2 = 'SCR-PBS-02 Pretend billing: invoice: ';
-export const CMP01 = 'CMP-01 Demo clock: Running, no Change (SURF-PBS, D5a-2)';
+const CMP01 = 'CMP-01 Demo clock: Running, no Change (SURF-PBS, D5a-2)';
 
 const CHROME = ['> .r1-demobar', '.r1-demobar .clk', '.r1-demobar .clk .lbl', '.r1-demobar .clk b', '.r1-demobar .run'];
 const FOOT = ['.r1-foot', '.r1-foot a', '.r1-foot a code', '.r1-foot [data-ctl="CTL-CMP-04-02"]', '.r1-foot .demo'];

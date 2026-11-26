@@ -19,15 +19,15 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAnnounce } from '../shell/Announcer.tsx';
 import { branchById, BRANCH_STORAGE_KEY } from '../shell/branches.ts';
-import { advance, toView, type ClockAnswer, type ClockView } from '../shell/clock.ts';
+import { toView, type ClockAnswer } from '../shell/clock.ts';
+import { officeClock, useDemoClock } from '../shell/demo-day.ts';
 import { OfficeFrame } from '../shell/Frames.tsx';
 import { Icon } from '../shell/Icon.tsx';
 import { useT } from '../shell/intl.tsx';
 import { useMe } from '../shell/me.ts';
-import { createReader } from '../shell/reads.ts';
 import type { Me } from '../shell/OfficeTopBar.tsx';
 import { ErrorPanel, LiveIndicator, type LiveState } from '../shell/Panels.tsx';
-import { boardApi, conflictOf, overlapOf, type BoardApi, type Refusal } from './api.ts';
+import { boardApi, conflictOf, overlapOf, type Refusal } from './api.ts';
 import { delaySampler } from './delay-samples.ts';
 import { routeLines } from './route-lines.ts';
 import { weekParamMonday } from '../week/week-model.ts';
@@ -73,7 +73,6 @@ export interface BoardScreenProps {
     /** The map panel's harness state: its read's answer and the choices a person made. */
     vans?: readonly Van[] | 'failed'; shows?: MapShows; skill?: string | null; tab?: JobTab; selected?: string | null; hidden?: boolean;
   };
-  api?: BoardApi;
 }
 
 const findJob = (b: Board, n: number): BoardJob | undefined => [...b.unassigned, ...b.technicians.flatMap((x) => x.jobs)].find((j) => j.jobNumber === n);
@@ -82,10 +81,13 @@ const findBlock = (b: Board, id: string) => {
   return null;
 };
 
-export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
+/** A board read on its way: for 1 branch and date, with whether it must run again and whether its last answer failed. */
+interface Flight { key: string; again: boolean; failed: boolean; promise: Promise<Board | null> }
+
+export function BoardScreen({ fixed }: BoardScreenProps) {
   const t = useT();
   const announce = useAnnounce();
-  const api = useMemo(() => given ?? boardApi(), [given]);
+  const api = useMemo(() => boardApi(), []);
   const me = useMe(fixed ? false : undefined, fixed?.me);
   const params = useSearchParams();
   const asked = params?.get('date') ?? 'today';
@@ -121,65 +123,66 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
   const [selectedVan, setSelectedVan] = useState<string | null>(fixed?.selected ?? null);
 
   // --- the demo time (API-10): the now line and "Today, live" (CTL-OFC-02-11, -04), re-read on clock.changed -----------
-  const [clockView, setClockView] = useState<ClockView | null>(fixed ? toView(fixed.clock) : null);
-  const clockReadAt = useRef(0);
-  const [, setTick] = useState(0);
-  const readClock = useCallback(async () => {
-    if (fixed) return;
-    const r = await createReader({ baseUrl: window.location.origin }).read<ClockAnswer>('API-10');
-    if (!r.ok) return;
-    clockReadAt.current = performance.now();
-    setClockView(toView(r.data));
-  }, [fixed]);
-  useEffect(() => {
-    void readClock();
-    if (fixed) return;
-    const h = window.setInterval(() => setTick((n) => n + 1), 30_000);
-    return () => window.clearInterval(h);
-  }, [fixed, readClock]);
-  const demoNow = clockView ? advance(clockView, fixed ? 0 : performance.now() - clockReadAt.current) : null;
+  const { now: demoNow, readClock, ticks, failed: clockFailed } = useDemoClock(fixed ? null : officeClock, fixed ? toView(fixed.clock) : null);
 
   // --- reads ---------------------------------------------------------------------------------------------------------
-  const reading = useRef<Promise<Board | null> | null>(null);
-  const again = useRef(false);
+  // 1 read on its way for each branch and date: a read for another branch does not join it, and an answer of a read that is no longer the
+  // one on its way does not land, so the old branch's rows never stand under the new branch's name (F-1947).
+  const reading = useRef<Flight | null>(null);
+  const shownKey = useRef('');
+  const [readFailures, setReadFailures] = useState(0);
   const read = useCallback(async (): Promise<Board | null> => {
     if (fixed || !branch) return null;
-    if (reading.current) {
-      again.current = true;
-      return reading.current;
+    const key = `${branch} ${date}`;
+    // A write begun under the branch just left ends with that branch's read: it must not start, nor take the place of the new branch's read (F-1983).
+    if (key !== shownKey.current) return null;
+    const flying = reading.current;
+    if (flying && flying.key === key) {
+      flying.again = true;
+      return flying.promise;
     }
-    const run = (async () => {
+    const flight: Flight = { key, again: false, failed: false, promise: Promise.resolve(null) };
+    flight.promise = (async () => {
       let out: Board | null = null;
       do {
-        again.current = false;
+        flight.again = false;
         const r = await api.board(branch, date);
+        if (reading.current !== flight) return out;
         if (r.ok) {
           out = r.data;
           setBoard(r.data);
           setFailed(false);
           setOffline(false);
+          flight.failed = false;
         } else if (r.code === 'offline' || r.status >= 500) {
           setOffline(true);
           setFailed((f) => f || out === null);
+          flight.failed = true;
         } else {
           // F-833: a refusal is no passing outage, and nothing says the last board is old: CMP-12 takes its place until a read answers.
           setBoard(null);
           setFailed(true);
+          flight.failed = true;
         }
-      } while (again.current);
+      } while (flight.again);
       return out;
     })();
-    reading.current = run;
+    reading.current = flight;
     try {
-      return await run;
+      return await flight.promise;
     } finally {
-      reading.current = null;
+      if (reading.current === flight) {
+        reading.current = null;
+        // A failed read changes no dependency of the date check below when the offline bar was already up; this lets it look once more (F-1949).
+        if (flight.failed) setReadFailures((n) => n + 1);
+      }
     }
   }, [api, branch, date, fixed]);
 
   useEffect(() => {
     if (fixed || !branch) return;
     setBoard(null);
+    shownKey.current = `${branch} ${date}`;
     void read();
   }, [branch, date, fixed, read]);
 
@@ -247,7 +250,8 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
     // F-1085: the first read can start before this board's stream is open (event-stream.ts calls onReconnect only on a re-open), and nothing
     // replays (D1), so a change committed in between would wait for some later event: the first time the stream answers, read once more.
     let firstLive = true;
-    // Every seq the batch held: the 1 re-read holds 1 sample per seq (API-172, F-606), so SD-43's slowest is not under-reported in a
+    let reconnected = false;
+    // Every seq the batch held: the 1 re-read holds 1 sample per seq (API-172, F-606), so the slowest delay (SD-43) is not under-reported in a
     // burst; the held samples leave in batches (F-885).
     const samples = delaySampler((batch, keepalive) => onLive.current.api.delaySamples(batch, keepalive));
     let pending: number[] = [];
@@ -267,12 +271,22 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
         pending.push(e.seq);
         if (timer === null) timer = window.setTimeout(() => void flush(), 50);
       },
-      onReconnect: () => void onLive.current.read(),
+      // The clock first: a clock event missed while the stream was lost is never sent again.
+      onReconnect: () => {
+        reconnected = true;
+        void onLive.current.readClock().then(() => {
+          if (open) void onLive.current.read();
+        });
+      },
       onState: (s) => {
         if (open) setLive(s === 'live' ? 'live' : s === 'closed' ? 'paused' : 'reconnecting');
         if (open && s === 'live' && firstLive) {
           firstLive = false;
-          void onLive.current.read();
+          // A board that subscribed while the stream was lost first hears it live on a reconnect, and the hub says live before it says
+          // reconnect: that read is onReconnect's, clock first, and the only one.
+          queueMicrotask(() => {
+            if (open && !reconnected) void onLive.current.read();
+          });
         }
       },
     });
@@ -296,9 +310,24 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
   const techName = (id: string | null) => (id === null ? null : board?.technicians.find((x) => x.id === id)?.name ?? null);
   // UD-18: while today is chosen the board follows the demo clock across midnight.
   const demoDate = board && demoNow ? toWire(demoNow, board.zone).slice(0, 10) : null;
+  // Either date can be the old one (this page can miss a clock event, or run ahead of a clock that was paused), so the clock is read before the
+  // board. 1 re-read for each pair of dates, because every answer is a new board and runs this again; once the 2 agree the pair is forgotten, so
+  // the same dates can come again after a reset. A board read already on its way answers first; one that fails sets no board, but offline changes.
+  // A pair whose clock read failed is not held: the next tick (30 s) tries it again, and so does a failed board read that ended while the dates differed (F-1949).
+  const reReadFor = useRef<string | null>(null);
+  const reReadTick = useRef(0);
   useEffect(() => {
-    if (date === 'today' && board && demoDate && demoDate !== board.date) void read();
-  }, [board, date, demoDate, read]);
+    if (date !== 'today' || !board || !demoDate || demoDate === board.date) {
+      reReadFor.current = null;
+      return;
+    }
+    // A failed clock read makes the pair try again once for each tick, so the answers it brings do not run this in a loop.
+    const pair = `${board.date} ${demoDate}`;
+    if (reading.current || (reReadFor.current === pair && (!clockFailed || reReadTick.current === ticks))) return;
+    reReadFor.current = pair;
+    reReadTick.current = ticks;
+    void readClock().then(() => onLive.current.read());
+  }, [board, date, demoDate, offline, readClock, ticks, clockFailed, readFailures]);
   const nowWire = board?.today && demoNow ? toWire(demoNow, board.zone) : null;
   const nowHour = nowWire ? hourOf(nowWire) : null;
 
@@ -366,7 +395,8 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
     const text = jobOverlapText(r, to === null ? null : techName(to), windowText(job.window.start, job.window.end));
     if (from === 'dialog') setModal((m) => (m?.kind === 'reassign' && m.state.step === 'choosing' ? { ...m, state: { ...m.state, saving: false, message: text } } : m));
     else {
-      setModal(null);
+      // A drop has no dialog of its own: one opened while its write was in flight is left open.
+      if (from !== 'drop') setModal(null);
       announce(text, 'alert');
     }
   };
@@ -415,14 +445,14 @@ export function BoardScreen({ fixed, api: given }: BoardScreenProps) {
       return;
     }
     if (r.code === 'not_found') {
-      setModal(from === 'drop' ? null : { kind: 'conflict', retry: { kind: 'block', block, technicianId, start, end }, conflict: null, theirs: null, again: false, resending: false });
+      if (from !== 'drop') setModal({ kind: 'conflict', retry: { kind: 'block', block, technicianId, start, end }, conflict: null, theirs: null, again: false, resending: false });
       void read();
       return;
     }
     const text = blockOverlapText(r, techName(technicianId));
     if (from === 'dialog') setModal((m) => (m?.kind === 'block' ? { ...m, saving: false, overlap: text } : m));
     else {
-      setModal(null);
+      if (from !== 'drop') setModal(null);
       announce(text, 'alert');
     }
   };

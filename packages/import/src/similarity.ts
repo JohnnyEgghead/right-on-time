@@ -3,7 +3,7 @@
 // tokens. Pure functions, no state.
 
 /** Jaro similarity of 2 strings, 0 to 1. */
-export function jaro(s: string, t: string): number {
+function jaro(s: string, t: string): number {
   if (s === t) return s === '' ? 0 : 1;
   const n = s.length;
   const m = t.length;

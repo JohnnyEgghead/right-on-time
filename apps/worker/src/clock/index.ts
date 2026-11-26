@@ -26,7 +26,7 @@ export { REPLAY_BATCH, replayStep, ReplayState } from './replay.ts';
 export { autoResetStep, idleDue, nightlyDue, nightlyInstant } from './resets.ts';
 
 /** How often the loop looks for a replay to run (real ms): a jump starts replaying within this. */
-export const CLOCK_TICK_MS = 250;
+const CLOCK_TICK_MS = 250;
 
 export interface ClockJobDeps {
   pool: ReturnType<typeof createPool>;
