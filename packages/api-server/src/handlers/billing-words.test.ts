@@ -74,4 +74,15 @@ describe('the billing list row words (the page and the export, @bw/i18n billing-
     expect(waitingReasonText({ reasonKind: 'timeout', reason: null }, en)).toBe('Billing system did not answer');
     expect(waitingReasonText({ reasonKind: null, reason: null }, en)).toBe('Waiting for its first try');
   });
+
+  // why: FR-BILL-2, CTL-OFC-10-03 a given-up item (F-2119) reads the give-up words, never the first-try words, and its Fixed cell is never blank
+  it('says the give-up in both languages on the waiting list and in the Fixed cell, with its hint', () => {
+    const gave = { reasonKind: 'gave_up' as const, reason: null };
+    expect(waitingReasonText(gave, en)).toBe('Billing stopped trying after its failed runs');
+    expect(waitingReasonText(gave, es)).toBe('La facturación dejó de intentarlo tras varios fallos');
+    expect(leftReasonText(row({ ...gave }), en)).toBe('Billing gave up');
+    expect(leftReasonText(row({ ...gave }), es)).toBe('Dejó de intentarlo');
+    for (const lang of ['en', 'es'] as const) expect(catalogs[lang]['billing.reason.gave_up.hint']).not.toBe('');
+    expect(waitingReasonText({ reasonKind: null, reason: null }, es)).toBe('Esperando su primer intento');
+  });
 });

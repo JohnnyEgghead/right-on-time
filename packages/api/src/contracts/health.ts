@@ -3,6 +3,7 @@
 // serves today (GET /healthz, SPECIFICATIONS 7.4). A later lane adds its own API-<nn> rows to its area file.
 import { z } from 'zod';
 import { defineContract, type ContractRow } from '../contract.ts';
+import { BILLING_REASON_KINDS } from './billing.ts';
 import { localDate } from './shapes.ts';
 
 export const healthz = defineContract({
@@ -172,7 +173,7 @@ export const systemHealth = defineContract({
         jobNumber: z.number().int(),
         customer: z.string(),
         service: z.string(),
-        reasonKind: z.enum(['timeout', 'down', 'data_error']).nullable(),
+        reasonKind: z.enum(BILLING_REASON_KINDS).nullable(),
         reason: z.string().nullable(),
       })),
     }),

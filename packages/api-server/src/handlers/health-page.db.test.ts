@@ -448,3 +448,19 @@ describe('Dismiss an alert (API-176; SD-30, F-875, owner ruling 9f7f745a)', () =
     }
   });
 });
+
+describe('the billing card reads a given-up item (F-2123)', () => {
+  // why: FR-BILL-2, CTL-OFC-16-26 a job billing gave up on reads its give-up reason on System health, the billing page's kind and words, never
+  // "Waiting for its first try"; an earlier timed-out try does not outrank the later give-up
+  it('gives a given-up item reasonKind gave_up, with and without earlier tries', async () => {
+    const a = db.admin();
+    const customer = await addCustomer(a, ref, { name: 'Hartley Billing' });
+    const job = await addJob(a, ref, customer, '2026-09-08', { status: 'done', ended_at: '2026-09-15T13:00:00Z', billing_state: 'waiting_person' });
+    await a.query(`INSERT INTO world.billing_item (job_number, state, reason_key, tries) VALUES ($1, 'waiting_person', 'the send failed 5 times in a row', 1)`, [job]);
+    await a.query(`INSERT INTO world.billing_attempt (job_number, number, at, result) VALUES ($1, 1, '2026-09-15T13:10:00Z', 'timeout')`, [job]);
+    await a.query(
+      `INSERT INTO world.scheduled_event (due_at, kind, subject, payload, state, run_at, result) VALUES ('2026-09-15T13:30:00Z', 'billing.send', $1, '{}', 'skipped', '2026-09-15T13:30:00Z', 'handler_failed')`, [String(job)]);
+    const listed = (await health()).billing.listed.find((l: { jobNumber: number }) => l.jobNumber === job);
+    expect(listed).toMatchObject({ reasonKind: 'gave_up', reason: null });
+  });
+});

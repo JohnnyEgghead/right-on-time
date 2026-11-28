@@ -118,8 +118,11 @@ const wireTime = z.string().min(1);
 const count = z.number().int().nonnegative();
 const branchParam = z.string().min(1).max(40);
 
-/** Why a billing try failed (billing_attempt.result): billing did not answer in time, billing was down, or billing refused the invoice. */
-export const BILLING_REASON_KINDS = ['timeout', 'down', 'data_error'] as const;
+/**
+ * Why a job is on the billing list: a try failed (billing_attempt.result: billing did not answer in time, was down, or refused the invoice), or
+ * billing's give-up ended the job's events after their failed runs with no try written (gave_up; F-2119, FR-BILL-2).
+ */
+export const BILLING_REASON_KINDS = ['timeout', 'down', 'data_error', 'gave_up'] as const;
 export const LEFT_HOW = ['automatic_retry', 'sent_again', 'corrected', 'marked_fixed'] as const;
 
 export const billingQueue = defineContract({

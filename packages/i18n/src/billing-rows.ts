@@ -6,7 +6,7 @@ import type { MessageKey } from './catalog.ts';
 
 export type RowT = (key: MessageKey, values?: Record<string, string | number>) => string;
 
-type ReasonKind = 'timeout' | 'down' | 'data_error' | null;
+type ReasonKind = 'timeout' | 'down' | 'data_error' | 'gave_up' | null;
 
 /** The fields of an API-60 waiting row these words read. */
 export interface WaitingWords {

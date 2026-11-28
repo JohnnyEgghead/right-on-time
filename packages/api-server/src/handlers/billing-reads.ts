@@ -4,7 +4,7 @@
 // around it); API-65 to API-67 read the pretend billing service over HTTP (FR-BILL-4: never a direct database call), and add the
 // names the world holds (the technician, who entered or set).
 import type { billingExport as exportRow, billingQueue as queueRow, pbsInvoice as invoiceRow, pbsInvoices as invoicesRow, pbsMode as modeRow } from '@bw/api';
-import { areaSql, lineWordsOf } from '@bw/domain';
+import { areaSql, BILLING_EVENT_KINDS, lineWordsOf } from '@bw/domain';
 import { leftChipText, leftHowText, leftReasonText, waitingReasonText } from '@bw/i18n/src/billing-rows.ts';
 import { formatterFor } from '@bw/i18n/src/format.ts';
 import { fromWire, Temporal, toWire } from '@bw/time';
@@ -49,13 +49,13 @@ export async function jobRows(tx: Tx, numbers: number[]): Promise<Map<number, Jo
   return new Map(r.rows.map((x) => [x.job_number, x]));
 }
 
-interface AttemptRow { job_number: number; result: string; reason: string | null }
+interface AttemptRow { job_number: number; result: string; reason: string | null; at: Date }
 
 /** The latest failed try of each job: why it was listed (billing_attempt.result: timeout, down or data_error). */
 export async function lastFailures(tx: Tx, numbers: number[]): Promise<Map<number, AttemptRow>> {
   if (numbers.length === 0) return new Map();
   const r = await tx.query<AttemptRow>(
-    `SELECT DISTINCT ON (job_number) job_number, result, reason FROM world.billing_attempt
+    `SELECT DISTINCT ON (job_number) job_number, result, reason, at FROM world.billing_attempt
       WHERE job_number = ANY($1::int[]) AND result <> 'success' ORDER BY job_number, number DESC`, [numbers]);
   return new Map(r.rows.map((x) => [x.job_number, x]));
 }
@@ -76,9 +76,33 @@ async function namesOf(tx: Tx, ids: string[]): Promise<Map<string, string>> {
   return new Map(r.rows.map((x) => [x.id, x.name]));
 }
 
+/**
+ * The jobs billing's give-up ended (F-2119): the billing lane ends a billing event that failed MAX_HANDLER_FAILURES runs as skipped with
+ * the result handler_failed (apps/worker/src/billing/link.ts billingGiveUp), and no other billing writer ends one that way. That event row is
+ * history: a later Mark fixed, Send again or Correct the finish retires only the events still due, and a success clears reason_key, so
+ * the row says "billing gave up on this job" long after the item's own columns do. Read from it, so no column or migration is needed.
+ */
+export async function givenUpJobs(tx: Tx, numbers: number[]): Promise<Map<number, Date>> {
+  if (numbers.length === 0) return new Map();
+  const r = await tx.query<{ subject: string; at: Date }>(
+    `SELECT subject, max(run_at) AS at FROM world.scheduled_event
+      WHERE kind = ANY($1::text[]) AND state = 'skipped' AND result = 'handler_failed' AND subject = ANY($2::text[]) GROUP BY subject`,
+    [BILLING_EVENT_KINDS, numbers.map(String)]);
+  return new Map(r.rows.map((x) => [Number(x.subject), x.at]));
+}
+
 const REASON_KINDS = new Set(['timeout', 'down', 'data_error']);
-const reasonKindOf = (a: AttemptRow | undefined): Queue['items'][number]['reasonKind'] =>
-  a && REASON_KINDS.has(a.result) ? (a.result as 'timeout' | 'down' | 'data_error') : null;
+/**
+ * The reason kind of a listed job (API-60, read by the page, the export API-159 and the health card API-70): the latest event wins. A give-up
+ * (its event's run_at) at or after the latest failed try's time is gave_up, even when earlier tries timed out (F-2122: nothing retries after
+ * it); a failed try after the give-up (a Send again that failed again) is that try's kind; a give-up with no try written reads gave_up (24790);
+ * a job still on its first try is none.
+ */
+export function reasonKindOf(a: AttemptRow | undefined, gaveUpAt: Date | undefined): Queue['items'][number]['reasonKind'] {
+  const tried = a && REASON_KINDS.has(a.result) ? (a.result as 'timeout' | 'down' | 'data_error') : null;
+  if (gaveUpAt === undefined) return tried;
+  return a === undefined || tried === null || gaveUpAt.getTime() >= a.at.getTime() ? 'gave_up' : tried;
+}
 
 /** Today's local date bounds in the branch zone, as instants. */
 function dayBounds(now: Temporal.Instant, zone: string): { from: string; to: string } {
@@ -108,6 +132,7 @@ async function queueOf(tx: Tx, ctx: HandlerContext, pbs: BillingClient, branch: 
   // F-886: 1 query at a time on the call's client.
   const jobs = await jobRows(tx, numbers);
   const failures = await lastFailures(tx, numbers);
+  const gaveUp = await givenUpJobs(tx, numbers);
   const actors = await lastActors(tx, numbers);
   const fixers = await namesOf(tx, leftLast7Days.flatMap((l) => (l.leftBy === null ? [] : [l.leftBy])));
   const wire = (iso: string) => toWire(Temporal.Instant.from(iso), zone);
@@ -128,7 +153,7 @@ async function queueOf(tx: Tx, ctx: HandlerContext, pbs: BillingClient, branch: 
     items: waiting.map((w) => {
       const j = jobs.get(w.jobNumber);
       const f = failures.get(w.jobNumber);
-      const kind = reasonKindOf(f);
+      const kind = reasonKindOf(f, w.state === 'waiting_person' ? gaveUp.get(w.jobNumber) : undefined);
       return {
         jobNumber: w.jobNumber, customer: j?.customer ?? '', area: j?.area ?? '', service: j?.service_id ?? '', technician: j?.technician ?? null,
         doneAt: j?.ended_at ? toWire(Temporal.Instant.from(j.ended_at.toISOString()), j.zone) : '', state: w.state,
@@ -138,7 +163,7 @@ async function queueOf(tx: Tx, ctx: HandlerContext, pbs: BillingClient, branch: 
     }),
     leftLast7Days: leftLast7Days.map((l) => {
       const f = failures.get(l.jobNumber);
-      const kind = reasonKindOf(f);
+      const kind = reasonKindOf(f, gaveUp.get(l.jobNumber));
       const by = l.leftHow === 'marked_fixed' ? (l.leftBy === null ? null : fixers.get(l.leftBy) ?? null) : actors.get(l.jobNumber) ?? null;
       return {
         jobNumber: l.jobNumber, reasonKind: kind, reason: kind === 'data_error' ? f?.reason ?? null : null, how: l.leftHow, tries: l.tries,

@@ -2,6 +2,15 @@
 
 All dates are in Eastern time. Each entry names the public release tag.
 
+## v1.0.7 - Nov 28, 2026
+
+- A billing item that billing gave up on now says so. The billing page shows "Billing stopped trying after its failed runs", in English and Spanish. Before, it showed "Waiting for its first try".
+- The Fixed card names the reason "Billing gave up" for such an item. Before, its reason was blank.
+- When a job has both failed tries and a give-up, the latest event wins. A Send again that fails after the give-up shows that try's reason.
+- The system health page's billing card uses the same reason as the billing page.
+- Adds no database migration, so no data reset is needed.
+- The iPhone app stays at version 1.0.1 (build 9). The fix changes only the office billing words and the health card. No call or answer shape that app uses changed.
+
 ## v1.0.6 - Nov 28, 2026
 
 - A billing item that failed every try and now waits for a person stays on the office billing list. Before, it left the list, so Mark fixed refused it, and its alert linked to a list that did not hold it.

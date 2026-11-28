@@ -12,7 +12,7 @@ import { billingList } from 'bw-worker/billing';
 import type { z } from 'zod';
 import type { ApiRequest, ApiResult, Handler, HandlerContext, Tx } from '../types.ts';
 import { pbsClientFor } from './billing.ts';
-import { billingToday, jobRows, lastFailures } from './billing-reads.ts';
+import { billingToday, givenUpJobs, jobRows, lastFailures, reasonKindOf } from './billing-reads.ts';
 
 type Out<T extends { response: z.ZodType }> = z.infer<T['response']>;
 type In<T extends { request: z.ZodType }> = z.infer<T['request']>;
@@ -250,6 +250,7 @@ export function healthHandlers(): { 'API-43': Handler<unknown>; 'API-70': Handle
     // F-886: 1 query at a time on the call's client.
     const jobs = await jobRows(tx, numbers);
     const failures = await lastFailures(tx, numbers);
+    const gaveUp = await givenUpJobs(tx, numbers);
     const lastSent = (await tx.query<{ at: Date | null }>(
       `SELECT max(a.at) AS at FROM world.billing_attempt a JOIN world.job j USING (job_number) WHERE j.branch_id = $1 AND a.result = 'success' AND a.at <= $2`,
       [caller.branch_id, req.demoNow.toString()])).rows[0]?.at ?? null;
@@ -292,7 +293,8 @@ export function healthHandlers(): { 'API-43': Handler<unknown>; 'API-70': Handle
           listed: listedItems.map((w) => {
             const j = jobs.get(w.jobNumber);
             const f = failures.get(w.jobNumber);
-            const kind = f && (f.result === 'timeout' || f.result === 'down' || f.result === 'data_error') ? f.result : null;
+            // The billing page's own read (F-2123): the latest event wins, so a given-up item says so here too.
+            const kind = reasonKindOf(f, gaveUp.get(w.jobNumber));
             return { jobNumber: w.jobNumber, customer: j?.customer ?? '', service: j?.service_id ?? '', reasonKind: kind, reason: kind === 'data_error' ? f?.reason ?? null : null };
           }),
         },
