@@ -374,7 +374,7 @@ describe('UC-19, FR-AUTH-9 and FR-AUTH-8: Forgot password and the one-time email
     expect((await call(k, 'POST', `/api/v1/password-tokens/${'B'.repeat(43)}`, { password: 'tess-third-example-3' })).status).toBe(410);
   });
 
-  // why: K-07 F-2013 a link past its expiry answers gone on the page and on the password write, and one with time left opens (the demo clock is paused at 14:28:00Z)
+  // why: FR-AUTH-8 K-07 F-2013 a link past its expiry answers gone on the page and on the password write, and one with time left opens (the demo clock is paused at 14:28:00Z)
   it('answers gone for a link that has run out, on read and on write, and opens one that has not', async () => {
     const k = await kernel();
     const email = 'tess.expiry@brightwater.example';

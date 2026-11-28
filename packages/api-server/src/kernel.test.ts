@@ -448,7 +448,7 @@ describe('the client address (J-28, F-2008)', () => {
   const post = (k: ReturnType<typeof kit>, peer: string, forged: string) => k.router.handle(
     new Request('http://web:3000/api/v1/access-code', { method: 'POST', headers: { 'x-forwarded-for': forged } }), { address: peer });
 
-  // why: J-28 the kernel took the first X-Forwarded-For entry from any peer, so a direct caller chose its own rate-limit address
+  // why: SD-4 J-28 the kernel took the first X-Forwarded-For entry from any peer, so a direct caller chose its own rate-limit address
   it('limits a direct caller by its own address whatever X-Forwarded-For it sends', async () => {
     const k = enterCode();
     for (let i = 0; i < 10; i++) expect((await post(k, '203.0.113.7', `198.51.100.${i}`)).status, `try ${i}`).toBe(204);
@@ -456,7 +456,7 @@ describe('the client address (J-28, F-2008)', () => {
     expect((await post(k, '203.0.113.8', '198.51.100.99')).status).toBe(204);
   });
 
-  // why: J-28 the header is still read from nginx's own peer (loopback or a private Compose address): its clients keep their own limits
+  // why: SD-4 J-28 the header is still read from nginx's own peer (loopback or a private Compose address): its clients keep their own limits
   it('reads the header from the proxy peer, so each client behind nginx has its own limit', async () => {
     const k = enterCode();
     for (let i = 0; i < 10; i++) expect((await post(k, '172.18.0.3', '198.51.100.1')).status).toBe(204);

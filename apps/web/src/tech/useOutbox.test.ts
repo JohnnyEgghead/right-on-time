@@ -45,7 +45,7 @@ afterEach(() => {
 });
 
 describe('the item engine\'s triggers', () => {
-  // why: K-10 (row K-10.6a) a refresh that rejects, on open and when the browser goes offline, is caught: no unhandled rejection
+  // why: FR-TECH-4 K-10 (row K-10.6a) a refresh that rejects, on open and when the browser goes offline, is caught: no unhandled rejection
   it('raises no unhandled rejection when the engine\'s refresh rejects', async () => {
     const { techOutbox } = await import('./useOutbox.ts');
     techOutbox();

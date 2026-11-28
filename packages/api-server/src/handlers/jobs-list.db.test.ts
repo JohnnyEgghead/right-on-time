@@ -254,7 +254,7 @@ describe('the jobs list read (API-133)', () => {
     expect((await list({ tab: 'late' })).pages).toBe(0);
   });
 
-  // why: K-08 row 1 a page past the last page answered an empty list, so a list that shrank under a page number showed nothing; it answers the last page
+  // why: FR-DISP-24 K-08 row 1 a page past the last page answered an empty list, so a list that shrank under a page number showed nothing; it answers the last page
   it('answers the last page for a page past the last', async () => {
     const first = await list();
     const last = await list({ page: first.pages });

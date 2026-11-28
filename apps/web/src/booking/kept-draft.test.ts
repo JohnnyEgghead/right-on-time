@@ -25,7 +25,7 @@ function address(start: string) {
 }
 
 describe('the kept draft as the page opens (K-08.14)', () => {
-  // why: K-08 item 14: Book another visit's ?new=1 stayed in the address, so every reload of the new draft wiped it again
+  // why: FR-BOOK-1 K-08 item 14: Book another visit's ?new=1 stayed in the address, so every reload of the new draft wiped it again
   it('wipes once on ?new=1 and keeps the new draft on the next reload', () => {
     writeKept({ draft: { ...emptyDraft('en'), name: 'Old Visit' }, step: 6, taken: null });
     const bar = address('/book?new=1');

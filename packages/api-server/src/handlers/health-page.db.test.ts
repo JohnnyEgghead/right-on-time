@@ -299,7 +299,7 @@ describe('the first saves on a copy with no seed rows (K-09.8a, K-09.8b; F-2009)
 });
 
 describe('the billing card when pbs answers null (J-22; F-2009)', () => {
-  // why: J-22 pbs answering 200 with a null body is a mode that is not known: the page answers 200 with mode null, never a 500
+  // why: API-70 J-22 pbs answering 200 with a null body is a mode that is not known: the page answers 200 with mode null, never a 500
   it('reads a null mode body as mode null with a 200', async () => {
     const pbs = createServer((_req, res) => { res.setHeader('content-type', 'application/json'); res.end('null'); });
     await new Promise<void>((done) => pbs.listen(0, '127.0.0.1', done));

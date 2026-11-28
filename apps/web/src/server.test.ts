@@ -284,7 +284,7 @@ describe('the web process: the page gate before every page (F-212 b)', () => {
     expect((await at('/map-assets/fonts/Noto%20Sans%20Regular/0-255.pbf')).status).toBe(200);
   });
 
-  // why: K-10 (row K-10.7) a page that throws is logged with its cause code (never its message), not the anonymous server_error
+  // why: SD-42 K-10 (row K-10.7) a page that throws is logged with its cause code (never its message), not the anonymous server_error
   it('logs the cause code of a page that throws', async () => {
     mode = 'throw-coded';
     k.lines.length = 0;

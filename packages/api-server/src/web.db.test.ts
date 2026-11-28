@@ -183,7 +183,7 @@ describe('a held lock under the web pool (F-2037 K-10.8)', () => {
 });
 
 describe('the access code row (J-23, F-2008)', () => {
-  // why: J-23 the replace was a DELETE then an INSERT with no transaction, so a failed INSERT left the table with no active code
+  // why: FR-AUTH-6 J-23 the replace was a DELETE then an INSERT with no transaction, so a failed INSERT left the table with no active code
   it('keeps the old row when the INSERT of a changed code fails', async () => {
     const p = createPool({ connectionString: asLogin(db.url(), 'bw_web'), max: 2 });
     try {
@@ -198,7 +198,7 @@ describe('the access code row (J-23, F-2008)', () => {
     }
   });
 
-  // why: K-07 F-2013 a restart with the same code must rewrite nothing and a changed code must replace the row, so the code the office types stays the 1 that works
+  // why: FR-AUTH-6 K-07 F-2013 a restart with the same code must rewrite nothing and a changed code must replace the row, so the code the office types stays the 1 that works
   it('leaves the row alone for the same code and replaces it, whole, for a changed code', async () => {
     const p = createPool({ connectionString: asLogin(db.url(), 'bw_web'), max: 2 });
     const rows = async () => (await db.admin().query<{ code_hash: string }>('SELECT code_hash FROM system.access_code WHERE active')).rows;

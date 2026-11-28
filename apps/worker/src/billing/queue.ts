@@ -208,8 +208,10 @@ export interface LeftItem {
 }
 
 /**
- * The 1 "listed" rule (FR-BILL-2): an item is on the office billing list when it has not left (`sending`, `retrying` or
- * `waiting_person`) and it failed at least once (tries > 0). F-1844: also an item still `sending` with 0 tries once its
+ * The 1 "listed" rule (FR-BILL-2): an item is on the office billing list when it waits for a person (`waiting_person`,
+ * whatever its tries: F-2105, the lane's give-up holds an item for a person with no try written, and its
+ * billing_waiting_person alert links to this list), or when it has not left (`sending` or `retrying`) and it failed at
+ * least once (tries > 0). F-1844: also an item still `sending` with 0 tries once its
  * send has been due for BILLING_RETRYING_LONG_MINUTES (60) demo minutes (its billing event, due since then, has not run
  * to an outcome: a send that keeps throwing never writes a try, and the healer leaves it alone while that event is due),
  * the limit the billing_retrying_long alert uses. Before the 60 minutes it is a send in progress and is not listed.
@@ -222,7 +224,7 @@ export function listedRule(now: Instant, first: number): { sql: string; params: 
   const [nowP, kindsP, minutesP] = [first, first + 1, first + 2];
   return {
     sql: `(bi.state IN ('sending', 'retrying', 'waiting_person')
-        AND (bi.tries > 0
+        AND (bi.state = 'waiting_person' OR bi.tries > 0
           OR (bi.state = 'sending' AND EXISTS (
                 SELECT 1 FROM world.scheduled_event e
                  WHERE e.kind = ANY($${kindsP}::text[]) AND e.subject = bi.job_number::text AND e.state = 'due'

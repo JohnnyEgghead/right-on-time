@@ -55,7 +55,7 @@ describe.each(engines)('the newest answer is the one shown on %s', (_name, type)
     return { page, r, close: () => g.context.close() };
   }
 
-  // why: K-05 the booking windows page re-reads when the branch changes, and an earlier branch's answer that landed last was shown over the newer branch's
+  // why: FR-BOOK-17 K-05 the booking windows page re-reads when the branch changes, and an earlier branch's answer that landed last was shown over the newer branch's
   it('windows: the branch picked last is the one shown when the earlier branch answers last', async () => {
     const { page, r, close } = await open('/shell-preview/live-reads/windows?branch=columbus', (x) => x.hold('GET /branches/:id/booking-settings'));
     try {
@@ -78,7 +78,7 @@ describe.each(engines)('the newest answer is the one shown on %s', (_name, type)
     }
   });
 
-  // why: K-05 the duplicates page re-reads for the filter picked, and the answer to an earlier filter that landed last was shown as the newer filter's
+  // why: FR-IMP-3 K-05 the duplicates page re-reads for the filter picked, and the answer to an earlier filter that landed last was shown as the newer filter's
   it('duplicates: the filter picked last is the one shown when the earlier filter answers last', async () => {
     const { page, r, close } = await open('/shell-preview/live-reads/duplicates', (x) => {
       x.hold('GET /import/duplicates');
@@ -105,7 +105,7 @@ describe.each(engines)('the newest answer is the one shown on %s', (_name, type)
     }
   });
 
-  // why: K-05 the merge history re-reads for the name typed, and the answer to an earlier name that landed last was shown as the newer name's
+  // why: FR-IMP-4 K-05 the merge history re-reads for the name typed, and the answer to an earlier name that landed last was shown as the newer name's
   it('history: the name typed last is the one shown when the earlier name answers last', async () => {
     const { page, r, close } = await open('/shell-preview/live-reads/history', (x) => {
       x.hold('GET /import/merges', 'GET /import/duplicates', 'GET /import/runs');
@@ -133,7 +133,7 @@ describe.each(engines)('the newest answer is the one shown on %s', (_name, type)
     }
   });
 
-  // why: K-08.3 the text log re-reads for each filter picked, and the answer to an earlier filter that landed last was shown as the newer filter's
+  // why: FR-TEXT-15 K-08.3 the text log re-reads for each filter picked, and the answer to an earlier filter that landed last was shown as the newer filter's
   it('messages: the filter picked last is the one shown when the earlier filter answers last', async () => {
     const { page, r, close } = await open('/shell-preview/live-reads/messages?branch=columbus&date=2026-09-15', (x) => {
       x.hold('POST /text-searches');
@@ -157,7 +157,7 @@ describe.each(engines)('the newest answer is the one shown on %s', (_name, type)
     }
   });
 
-  // why: K-08.21 the changes list re-reads after each change made on the users page, and an earlier read that landed last was shown over the newer one
+  // why: FR-AUTH-12 K-08.21 the changes list re-reads after each change made on the users page, and an earlier read that landed last was shown over the newer one
   it('users: the changes read last is the one shown when the earlier read answers last', async () => {
     const { page, r, close } = await open('/shell-preview/live-reads/users', (x) => {
       x.auto('POST /user-searches', 'API-149', TWO_OFF);
@@ -188,7 +188,7 @@ describe.each(engines)('the newest answer is the one shown on %s', (_name, type)
     }
   });
 
-  // why: K-04 the demo strip read the clock on a world reset only, so a clock move left it showing the old time; K-05 the read made after the event is the one shown
+  // why: FR-DEMO-6 K-04 the demo strip read the clock on a world reset only, so a clock move left it showing the old time; K-05 the read made after the event is the one shown
   it('demo strip: a clock.changed event reads the clock again and the newest read is the one shown', async () => {
     const { page, r, close } = await open('/shell-preview/live-reads/demo-strip', (x) => {
       x.hold('GET /clock', 'GET /events');

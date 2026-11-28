@@ -73,14 +73,14 @@ describe('API-01 hourly cap per address (F-1851)', () => {
     ]);
   });
 
-  // why: K-07 F-2013 the reset request (API-165) is capped at 5 an hour per address and every link-token route at 60 a minute per address; no test held either number
+  // why: SD-4 K-07 F-2013 the reset request (API-165) is capped at 5 an hour per address and every link-token route at 60 a minute per address; no test held either number
   it('gives API-165 5 an hour and a link-token route 60 a minute, each per address, and no other row any rule', () => {
     expect(rateRules({ id: 'API-165', path: '/password-resets' })).toEqual([{ scope: 'address', limit: 5, windowMs: 60 * 60_000 }]);
     expect(rateRules({ id: 'API-116', path: '/live-map/{token}' })).toEqual([{ scope: 'address', limit: 60, windowMs: 60_000 }]);
     expect(rateRules({ id: 'API-04', path: '/sessions/current' })).toEqual([]);
   });
 
-  // why: K-07 F-2013 the numbers bite: the 6th reset request in an hour and the 61st link-token hit in a minute are refused, and a new hour or minute lets the address in
+  // why: SD-4 K-07 F-2013 the numbers bite: the 6th reset request in an hour and the 61st link-token hit in a minute are refused, and a new hour or minute lets the address in
   it('refuses the 6th reset request in an hour and the 61st link-token hit in a minute', () => {
     const clock = new FixedClock({ demo: '2026-09-15T14:28:00Z', real: '2026-11-01T12:00:00Z', worldEpoch: 3 });
     const limiter = new RateLimiter(clock);

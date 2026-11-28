@@ -464,7 +464,7 @@ describe('the operator signal of the live client (F-1306)', () => {
     expect(lines).toEqual([]);
   });
 
-  // why: K-20 (F-2008) osrmRoutingService's log and now options were reached by tests only: the process's signal comes from configureRouting's log, so the client takes none
+  // why: FR-MAP-3 K-20 (F-2008) osrmRoutingService's log and now options were reached by tests only: the process's signal comes from configureRouting's log, so the client takes none
   it('takes no log or now option: the signal comes through signal, from configureRouting', async () => {
     const lines: Record<string, unknown>[] = [];
     const opts = { fetch: fail('ECONNREFUSED') as typeof fetch, log: logTo(lines), now: () => 0 } as Parameters<typeof osrmRoutingService>[1];

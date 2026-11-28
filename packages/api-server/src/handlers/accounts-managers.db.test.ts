@@ -131,7 +131,7 @@ describe('2 managers who act on each other at once (F-1934)', () => {
     expect(await activeManagers()).toBe(1);
   });
 
-  // why: K-07 F-2013 a session cookie issued while its owner was a manager loses the manager rights the moment the role is changed, since the role is read live (a read route that checks no role of its own)
+  // why: FR-AUTH-1 K-07 F-2013 a session cookie issued while its owner was a manager loses the manager rights the moment the role is changed, since the role is read live (a read route that checks no role of its own)
   it('refuses a demoted manager\'s old cookie on a manager route, with no new sign-in', async () => {
     const [a, b] = await twoManagers();
     const search = async (by: Person) => (await world.kernel.router.handle(new Request('http://web:3000/api/v1/user-searches', {

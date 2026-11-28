@@ -21,7 +21,8 @@ import {
 } from '../../../packages/outbox/src/testing/world.ts';
 import { HttpBillingClient } from './billing/client.ts';
 import { BILLING_CONCURRENCY, WORKER_POOL_MAX } from './billing/link.ts';
-import { billFinishedJob } from './billing/queue.ts';
+import { markFixed } from './billing/fixed.ts';
+import { billFinishedJob, billingList } from './billing/queue.ts';
 import { MAX_HANDLER_FAILURES } from './dispatcher.ts';
 import { startTestWorker, type TestWorker } from './testing/worker.ts';
 
@@ -159,8 +160,8 @@ describe('the billing lane beside the serial lane, under Not answering (F-357, F
 });
 
 describe('a billing send that fails every run in the parallel lane (F-2006 K-02)', () => {
-  // why: F-2006 K-02 the parallel lane had no give-up, so a billing event whose handler always failed was retried every pass for ever, unseen
-  it('is given up at the 5th failed run: its item waits for a person, its alert is open and its event has ended', async () => {
+  // why: F-2006 K-02 the parallel lane had no give-up, so a billing event whose handler always failed was retried every pass for ever, unseen; F-2105 the given-up item was off the office list, so Mark fixed refused it
+  it('is given up at the 5th failed run: its item waits for a person on the office list, Mark fixed takes it, its alert is open and its event has ended', async () => {
     await setDemoClock(db.admin(), NOW);
     await client.setMode({ mode: 'up' });
     const job = await finishedJob();
@@ -187,6 +188,11 @@ describe('a billing send that fails every run in the parallel lane (F-2006 K-02)
     expect(mine.map((l) => [l.status, l.errorCode])).toEqual([
       ...[1, 2, 3, 4, 5].map(() => ['event failed', '53100']), ['event gave up', '53100'],
     ]);
+    // F-2105: the given-up item (0 tries) is on the office billing list its alert links to, and Mark fixed accepts it.
+    const { waiting } = await billingList(worker.pool, { branchId: ref.branchId, now: I(NOW) });
+    expect(waiting.filter((w) => w.jobNumber === job).map((w) => [w.state, w.tries])).toEqual([['waiting_person', 0]]);
+    expect(await markFixed({ pool: worker.pool, client }, { jobNumber: job, reason: 'Entered in billing by hand', by: ref.userId, at: I(NOW) }))
+      .toEqual({ ok: true });
     await db.admin().query('DROP TRIGGER test_refuse_attempt ON world.billing_attempt');
   });
 });

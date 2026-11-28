@@ -513,7 +513,7 @@ describe('the P10-CHECKS cases (K-12, K-13, K-15, K-21, J-31, J-32, J-35; F-2025
   };
   const CHECKOUT = (extra: string) => `jobs:\n  a:\n    steps:\n      - uses: actions/checkout@v4\n${extra}      - run: echo hi\n`;
 
-  // why: K-12 K-13 K-15 K-21 J-31 J-32 J-35 each new case passes the committed tree, so the head run of the gate is green
+  // why: FR-DIST-1 K-12 K-13 K-15 K-21 J-31 J-32 J-35 each new case passes the committed tree, so the head run of the gate is green
   it('passes the real tree', () => {
     for (const which of ['fonts', 'css', 'workflows', 'changelog', 'engines', 'domain', 'spike']) {
       const r = runReal(which);
@@ -521,7 +521,7 @@ describe('the P10-CHECKS cases (K-12, K-13, K-15, K-21, J-31, J-32, J-35; F-2025
     }
   });
 
-  // why: K-12 a font folder with no license file fails and is named; the license file beside it turns it green
+  // why: FR-DIST-6 K-12 a font folder with no license file fails and is named; the license file beside it turns it green
   it('fails a font folder with no license file, and passes it with one', () => {
     const bad = tree('font-bad', (d) => put(d, 'apps/web/fonts/Inter.woff2', 'x'));
     const r = run(bad, 'fonts');
@@ -531,7 +531,7 @@ describe('the P10-CHECKS cases (K-12, K-13, K-15, K-21, J-31, J-32, J-35; F-2025
     expect(run(ok, 'fonts').status).toBe(0);
   });
 
-  // why: K-13 F-2025 a .css file with no SPDX line and no REUSE.toml cover fails; an SPDX line, or a cover for its path, turns it green
+  // why: FR-DIST-6 K-13 F-2025 a .css file with no SPDX line and no REUSE.toml cover fails; an SPDX line, or a cover for its path, turns it green
   it('fails a .css file with no SPDX line and no REUSE.toml cover, and passes one with either', () => {
     const noCover = (d: string) => change(d, 'REUSE.toml', /# K-13[\s\S]*$/, '');
     const bad = tree('css-bad', (d) => { noCover(d); put(d, 'apps/web/styles/a.css', 'a { color: red; }\n'); });
@@ -571,7 +571,7 @@ describe('the P10-CHECKS cases (K-12, K-13, K-15, K-21, J-31, J-32, J-35; F-2025
     expect(run(tree('cl-ok', (d) => put(d, 'CHANGELOG.md', '# Changelog\n')), 'changelog').status).toBe(0);
   });
 
-  // why: J-31 an engines.node that is not the major of .node-version fails; the real one passes
+  // why: FR-DIST-7 J-31 an engines.node that is not the major of .node-version fails; the real one passes
   it('fails an engines.node that does not match .node-version', () => {
     const bad = tree('eng-bad', (d) => change(d, 'package.json', /"node": ">=\d+"/, '"node": ">=24"'));
     const r = run(bad, 'engines');
@@ -589,7 +589,7 @@ describe('the P10-CHECKS cases (K-12, K-13, K-15, K-21, J-31, J-32, J-35; F-2025
     expect(run(tree('dom-private', (d) => put(d, 'docs/build/notes.md', 'x@brightwaterair.com\n')), 'domain').status).toBe(0);
   });
 
-  // why: J-35 an export that holds infra/spike/ fails, and so does a private-paths.txt that no longer lists it; the clean export passes
+  // why: FR-DIST-1 J-35 an export that holds infra/spike/ fails, and so does a private-paths.txt that no longer lists it; the clean export passes
   it('fails an export that holds infra/spike/, and a private-paths list without it', () => {
     const bad = tree('spike-bad', (d) => put(d, 'infra/spike/s1/load.mjs', 'x\n'));
     const r = run(bad, 'spike', ['--floor', '1', '--export']);

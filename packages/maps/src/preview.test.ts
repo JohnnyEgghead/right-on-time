@@ -27,7 +27,7 @@ describe('the preview picture (API-164)', () => {
     expect(renderPreviewSvg('/nonexistent/columbus.pmtiles', { lon: -83, lat: 39.96 })).toContain('<circle');
   });
 
-  // why: K-06 a varint cut mid-way read undefined past the buffer's end and never ended (the loop and its catch could not run); it throws within the test's timeout
+  // why: FR-TEXT-21 K-06 a varint cut mid-way read undefined past the buffer's end and never ended (the loop and its catch could not run); it throws within the test's timeout
   it('throws a bounded error for a varint cut mid-way or longer than 10 bytes, and still reads a whole one', () => {
     expect(() => varint(Buffer.from([0x80, 0x80]), { i: 0 })).toThrow(/past the end/);
     expect(() => varint(Buffer.from([]), { i: 0 })).toThrow(/past the end/);
@@ -37,7 +37,7 @@ describe('the preview picture (API-164)', () => {
     expect(at.i).toBe(2);
   });
 
-  // why: K-06 a tile file whose root directory ends mid-varint left the reader looping; the picture now returns with the pin on plain ground
+  // why: FR-TEXT-21 K-06 a tile file whose root directory ends mid-varint left the reader looping; the picture now returns with the pin on plain ground
   it('draws the pin on plain ground from a map file whose directory is cut mid-varint', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'bw-preview-'));
     try {

@@ -156,7 +156,7 @@ describe('the reads of the day', () => {
     expect(reads.snapshot).toMatchObject({ online: false, settled: true });
   });
 
-  // why: K-10 (row K-10.6b) only fetch's own TypeError reads as no signal: a plain Error in a read leaves online as it was, and the read still ends failed
+  // why: FR-TECH-4 K-10 (row K-10.6b) only fetch's own TypeError reads as no signal: a plain Error in a read leaves online as it was, and the read still ends failed
   it('leaves online unchanged when a read throws an error that is no lost connection', async () => {
     const reads = new TechReads(createClient({ baseUrl: 'http://phone.test', fetch: async () => { throw new Error('a bug in the read'); } }), () => true);
     expect(reads.snapshot.online).toBe(true);

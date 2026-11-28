@@ -2,6 +2,12 @@
 
 All dates are in Eastern time. Each entry names the public release tag.
 
+## v1.0.6 - Nov 28, 2026
+
+- A billing item that failed every try and now waits for a person stays on the office billing list. Before, it left the list, so Mark fixed refused it, and its alert linked to a list that did not hold it.
+- Adds no database migration, so no data reset is needed.
+- The iPhone app stays at version 1.0.1 (build 9). The fix changes only which items the office billing list holds. No call or answer shape that app uses changed.
+
 ## v1.0.5 - Nov 27, 2026
 
 - Adds the fixes from a code audit of the server, the office screens, the web technician app and the public files.

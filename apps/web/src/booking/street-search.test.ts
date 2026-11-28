@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe('the street field search (API-111; K-08.15)', () => {
-  // why: K-08 item 15: the idle branch did not bump the street sequence, so a slow answer to a cleared text showed results under an empty field
+  // why: FR-BOOK-12 K-08 item 15: the idle branch did not bump the street sequence, so a slow answer to a cleared text showed results under an empty field
   it('leaves the field idle when the text is typed and then cleared before the answer lands', async () => {
     const r = rig();
     r.search.typed('Ma');
@@ -41,7 +41,7 @@ describe('the street field search (API-111; K-08.15)', () => {
     expect(r.shown).toEqual(['loading', 'idle']);
   });
 
-  // why: K-08 item 15: the search shows its newest text's answer only; an older text's late answer is dropped
+  // why: FR-BOOK-12 K-08 item 15: the search shows its newest text's answer only; an older text's late answer is dropped
   it("shows the newest text's answer, not an older one that lands later", async () => {
     const r = rig();
     r.search.typed('Ma');
@@ -55,7 +55,7 @@ describe('the street field search (API-111; K-08.15)', () => {
     expect(r.shown).toEqual(['loading', 'loading', 'results']);
   });
 
-  // why: K-08 item 15: picking a street ends the search: an answer still waiting must not reopen the result list
+  // why: FR-BOOK-12 K-08 item 15: picking a street ends the search: an answer still waiting must not reopen the result list
   it('drops a waiting answer once a street is picked', async () => {
     const r = rig();
     r.search.typed('Ma');

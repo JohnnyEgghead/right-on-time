@@ -16,8 +16,8 @@ Brightwater Heating & Air and its people are fictional. This is a demo.
 
 Right On Time v1 is complete. The owner accepted the v1 sign-off on November 26, 2026.
 
-- The hosted demo and the public copy run release v1.0.5.
-- v1.0.5 adds the fixes from a code audit, among them a booking key that stops double bookings. See `CHANGELOG.md`.
+- The hosted demo and the public copy run release v1.0.6.
+- v1.0.6 keeps a billing item that failed every try on the office billing list, so Mark fixed works on it. v1.0.5 added the fixes from a code audit. See `CHANGELOG.md`.
 - The iPhone app stays at version 1.0.1 (build 9). Its own fixes wait for the next iPhone build.
 
 ## License

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// why-file: K-08.1, K-08.2, K-08.4, K-08.5, K-08.16, K-08.17, K-08.18, K-08.19, K-08.20 (P10-OFFICE-LISTS: the office list screens read once, read the right thing, and keep what the person set)
+// why-file: FR-DISP-24, FR-DISP-8, FR-TEXT-15, FR-AUTH-12 (K-08.1, K-08.2, K-08.4, K-08.5, K-08.16, K-08.17, K-08.18, K-08.19, K-08.20; P10-OFFICE-LISTS: the office list screens read once, read the right thing, and keep what the person set)
 // Playwright on Chromium and WebKit against the harness app (ci/web-app.ts). The screens render live at /shell-preview/office-lists/<name> (jobs, new-job)
 // and /shell-preview/live-reads/<name> (messages, users); every /api/v1 read is answered by the test, which counts the reads and sees what each one
 // asked. Run with the page walkers (ci/gates/page-walkers*.sh). The outside-origin guard is on for every page.
@@ -40,6 +40,9 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     await browser?.close();
   });
 
+  // F-2108: each case's first wait after open is for the page load (it hydrates, then sends its first read and draws it), bounded like
+  // rig.next's reads; every wait after it is for what the live page does, with the default bound.
+  const LOAD_MS = 15_000;
   async function open(path: string, setup: (r: Rig) => void, clock?: string) {
     const g = await guardedContext(browser, [app.origin], { viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
     const page = await g.context.newPage();
@@ -50,14 +53,14 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     return { page, r, close: () => g.context.close() };
   }
 
-  // why: K-08 row 2 a tab click rewrote the address to ?tab= alone, so a page opened with ?branch= lost the branch from the address and showed the stored or home branch after the next read
+  // why: FR-DISP-24 K-08 row 2 a tab click rewrote the address to ?tab= alone, so a page opened with ?branch= lost the branch from the address and showed the stored or home branch after the next read
   it('jobs: a tab click keeps the branch of the address', async () => {
     const { page, r, close } = await open('/shell-preview/office-lists/jobs?branch=dayton', (x) => {
       x.on('POST /job-searches', () => ({ contract: 'API-133', data: JOBS_SUCCESS }));
       x.on('GET /me', () => ({ contract: 'API-07', data: { branch: 'columbus' } }));
     });
     try {
-      await expect.poll(() => r.count('POST /job-searches')).toBeGreaterThan(0);
+      await expect.poll(() => r.count('POST /job-searches'), { timeout: LOAD_MS }).toBeGreaterThan(0);
       expect((r.all('POST /job-searches')[0]!.body as Rec).branch).toBe('dayton');
       const before = r.count('POST /job-searches');
       await page.getByRole('tab').nth(3).click();
@@ -92,7 +95,7 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     await page.locator('[data-ctl="CTL-OFC-04-03"] button').nth(4).click();
   };
 
-  // why: K-08 row 16 a page opened with a date from the board read the days again on the first day click, because the wanted date was a dependency of the read
+  // why: FR-DISP-8 K-08 row 16 a page opened with a date from the board read the days again on the first day click, because the wanted date was a dependency of the read
   it('new job: the first day click reads no availability again', async () => {
     const { page, r, close } = await open(newJobPath, (x) => newJobSetup(x));
     try {
@@ -116,13 +119,13 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
   };
   const lastBody = (r: Rig, key: string) => r.all(key).at(-1)!.body as Rec;
 
-  // why: K-08 row 1 a branch change in the top bar kept the page number, so page 3 of one branch was asked of the next
+  // why: FR-DISP-24 K-08 row 1 a branch change in the top bar kept the page number, so page 3 of one branch was asked of the next
   it('jobs: page 3 then a branch change sends page 1', async () => {
     const { page, r, close } = await open('/shell-preview/office-lists/jobs?branch=columbus', (x) => {
       x.on('POST /job-searches', () => ({ contract: 'API-133', data: JOBS_SUCCESS }));
     });
     try {
-      await expect.poll(() => r.count('POST /job-searches')).toBeGreaterThan(0);
+      await expect.poll(() => r.count('POST /job-searches'), { timeout: LOAD_MS }).toBeGreaterThan(0);
       await page.locator('[data-ctl="CTL-OFC-30-12"] .pp [role="button"]', { hasText: /^3$/ }).click();
       await expect.poll(() => lastBody(r, 'POST /job-searches').page).toBe(3);
       await page.evaluate("window.history.pushState(null, '', '?branch=dayton')");
@@ -137,13 +140,13 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     }
   });
 
-  // why: K-08 row 1 a page past the last page (the list shrank) showed an empty list with no way back; the page goes to the last page
+  // why: FR-DISP-24 K-08 row 1 a page past the last page (the list shrank) showed an empty list with no way back; the page goes to the last page
   it('jobs: a page past the last page goes to the last page', async () => {
     const { page, r, close } = await open('/shell-preview/office-lists/jobs?branch=columbus', (x) => {
       x.on('POST /job-searches', (n) => ({ contract: 'API-133', data: n === 1 ? JOBS_SUCCESS : { ...JOBS_SUCCESS, rows: [], pages: 2, total: 60 } }));
     });
     try {
-      await expect.poll(() => r.count('POST /job-searches')).toBeGreaterThan(0);
+      await expect.poll(() => r.count('POST /job-searches'), { timeout: LOAD_MS }).toBeGreaterThan(0);
       await page.locator('[data-ctl="CTL-OFC-30-12"] .pp [role="button"]', { hasText: /^3$/ }).click();
       await expect.poll(() => lastBody(r, 'POST /job-searches').page).toBe(2);
     } finally {
@@ -154,13 +157,13 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
   const messagesPath = '/shell-preview/live-reads/messages?branch=columbus&date=2026-09-15';
   const withTries = (tries: number) => ({ ...LOG_SUCCESS, texts: LOG_SUCCESS.texts.map((t: Rec) => (t.id.endsWith('03') ? { ...t, tries } : t)) });
 
-  // why: K-08 row 5 each text event made a read of the log at once, so 3 events together made 3 reads; a read in flight is joined and 1 more follows
+  // why: FR-TEXT-15 K-08 row 5 each text event made a read of the log at once, so 3 events together made 3 reads; a read in flight is joined and 1 more follows
   it('messages: 3 text events together make at most 2 reads of the log', async () => {
     const { page, r, close } = await open(messagesPath, (x) => {
       x.on('POST /text-searches', () => ({ contract: 'API-45', data: LOG_SUCCESS }));
     });
     try {
-      await expect.poll(() => page.getByText('Deborah Lin').count()).toBeGreaterThan(0);
+      await expect.poll(() => page.getByText('Deborah Lin').count(), { timeout: LOAD_MS }).toBeGreaterThan(0);
       await expect.poll(() => r.streamHeld()).toBe(1);
       const before = r.count('POST /text-searches');
       r.events('text.changed', 'text.changed', 'text.changed');
@@ -173,13 +176,13 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     }
   });
 
-  // why: K-08 row 4 the highlight timer of an earlier change cleared the highlight of a later change early; 1 timer, re-armed by the later change
+  // why: FR-TEXT-15 K-08 row 4 the highlight timer of an earlier change cleared the highlight of a later change early; 1 timer, re-armed by the later change
   it('messages: a second change re-arms the highlight for its whole time', async () => {
     const { page, r, close } = await open(messagesPath, (x) => {
       x.on('POST /text-searches', (n) => ({ contract: 'API-45', data: withTries(n <= 1 ? 2 : n === 2 ? 3 : 4) }));
     });
     try {
-      await expect.poll(() => page.getByText('Deborah Lin').count()).toBeGreaterThan(0);
+      await expect.poll(() => page.getByText('Deborah Lin').count(), { timeout: LOAD_MS }).toBeGreaterThan(0);
       await expect.poll(() => r.streamHeld()).toBe(1);
       r.events('text.changed');
       await r.flush();
@@ -197,14 +200,14 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     }
   });
 
-  // why: K-08 row 4 leaving the page clears the highlight timer (the cleanup at MessagesScreen's unmount), so it never sets state on a page that is gone
+  // why: FR-TEXT-15 K-08 row 4 leaving the page clears the highlight timer (the cleanup at MessagesScreen's unmount), so it never sets state on a page that is gone
   it('messages: leaving the page by a client-side move clears the armed highlight timer', async () => {
     const { page, r, close } = await open(messagesPath, (x) => {
       x.on('POST /text-searches', (n) => ({ contract: 'API-45', data: withTries(n <= 1 ? 2 : 3) }));
       x.on('POST /user-searches', () => ({ contract: 'API-43', data: SEARCH }));
     });
     try {
-      await expect.poll(() => page.getByText('Deborah Lin').count()).toBeGreaterThan(0);
+      await expect.poll(() => page.getByText('Deborah Lin').count(), { timeout: LOAD_MS }).toBeGreaterThan(0);
       await expect.poll(() => r.streamHeld()).toBe(1);
       // F-2074: record the 4 s timers the page arms (FRESH_MS) and the timers it clears.
       await page.evaluate(() => {
@@ -230,13 +233,15 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
       expect(armed).toHaveLength(1);
       await page.evaluate(() => (globalThis as unknown as { next: { router: { push: (u: string) => void } } }).next.router.push('/shell-preview/live-reads/users'));
       await expect.poll(() => page.url()).toContain('/live-reads/users');
-      expect(await page.evaluate(() => (globalThis as unknown as { __cleared: number[] }).__cleared)).toContain(armed[0]);
+      // F-2113: the new address is written in the move's commit (Next writes history in an insertion effect), and the screen's unmount
+      // cleanup runs after it, in React's passive-effect pass: so the cleared timers are waited for, not read once on the new address.
+      await expect.poll(() => page.evaluate(() => (globalThis as unknown as { __cleared: number[] }).__cleared)).toContain(armed[0]);
     } finally {
       await close();
     }
   });
 
-  // why: K-08 row 17 a window_full answer turned the window Full in the page only; the room the server holds was not read again
+  // why: FR-DISP-8 K-08 row 17 a window_full answer turned the window Full in the page only; the room the server holds was not read again
   it('new job: a window_full answer reads the availability once', async () => {
     const { page, r, close } = await open(newJobPath, (x) => newJobSetup(x, () => ({ problem: { code: 'window_full', status: 409 } })));
     try {
@@ -281,7 +286,7 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     }
   });
 
-  // why: K-08 row 18 the days offered start at the demo day, and a demo day that moved did not read them again
+  // why: FR-DISP-8 K-08 row 18 the days offered start at the demo day, and a demo day that moved did not read them again
   it('new job: a new demo day reads the availability again', async () => {
     let at = '2026-09-15T23:59:40-04:00';
     const { page, r, close } = await open(newJobPath, (x) => newJobSetup(x, undefined, () => fullClock(at)), '2026-09-15T12:00:00-04:00');
@@ -307,12 +312,12 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     });
   };
 
-  // why: K-08 row 19 the list read after Turn on used the filters of the moment of the press, so a filter changed while it was in flight was undone
+  // why: FR-AUTH-12 K-08 row 19 the list read after Turn on used the filters of the moment of the press, so a filter changed while it was in flight was undone
   it('users: a filter changed while Turn on is in flight is the filter of the list read after it', async () => {
     const g = gate();
     const { page, r, close } = await open('/shell-preview/live-reads/users', (x) => usersSetup(x, () => SEARCH, g.opened));
     try {
-      await expect.poll(() => page.locator('[data-ctl="CTL-OFC-43-13"]').count()).toBeGreaterThan(0);
+      await expect.poll(() => page.locator('[data-ctl="CTL-OFC-43-13"]').count(), { timeout: LOAD_MS }).toBeGreaterThan(0);
       await page.locator('[data-ctl="CTL-OFC-43-13"]').first().click();
       await expect.poll(() => r.count('POST /users/:id/turn-on')).toBe(1);
       await page.locator('[data-ctl="CTL-OFC-43-03"] select').selectOption('manager');
@@ -326,7 +331,7 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     }
   });
 
-  // why: K-08 row 20 the last user of page 2 moved, and the page asked for stayed 2: an empty page with no pager; the page goes to the last page
+  // why: FR-AUTH-12 K-08 row 20 the last user of page 2 moved, and the page asked for stayed 2: an empty page with no pager; the page goes to the last page
   it('users: a page past the last page after a change is read again as the last page', async () => {
     let moved = false;
     const g = gate();
@@ -334,7 +339,7 @@ describe.each(engines)('the office lists on %s', (_name, type) => {
     const { page, r, close } = await open('/shell-preview/live-reads/users', (x) =>
       usersSetup(x, (_n, body) => (body.page === 1 ? SEARCH : moved ? { ...SEARCH, users: [], pages: 1, total: 6 } : { ...SEARCH, pages: 2 }), g.opened));
     try {
-      await expect.poll(() => page.locator('[data-ctl="CTL-OFC-43-09"] button').count()).toBe(2);
+      await expect.poll(() => page.locator('[data-ctl="CTL-OFC-43-09"] button').count(), { timeout: LOAD_MS }).toBe(2);
       await page.locator('[data-ctl="CTL-OFC-43-09"] button').nth(1).click();
       await expect.poll(() => lastBody(r, 'POST /user-searches').page).toBe(2);
       await expect.poll(() => page.locator('[data-ctl="CTL-OFC-43-13"]').count()).toBeGreaterThan(0);
