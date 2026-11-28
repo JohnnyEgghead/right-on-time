@@ -505,3 +505,100 @@ describe('owner-ids (F-1621, owner answer dedc3b70)', () => {
     expect(o.stderr).not.toContain(TEAM.toLowerCase());
   });
 });
+
+describe('the P10-CHECKS cases (K-12, K-13, K-15, K-21, J-31, J-32, J-35; F-2025)', () => {
+  const put = (d: string, rel: string, body: string) => {
+    mkdirSync(path.dirname(path.join(d, rel)), { recursive: true });
+    writeFileSync(path.join(d, rel), body);
+  };
+  const CHECKOUT = (extra: string) => `jobs:\n  a:\n    steps:\n      - uses: actions/checkout@v4\n${extra}      - run: echo hi\n`;
+
+  // why: K-12 K-13 K-15 K-21 J-31 J-32 J-35 each new case passes the committed tree, so the head run of the gate is green
+  it('passes the real tree', () => {
+    for (const which of ['fonts', 'css', 'workflows', 'changelog', 'engines', 'domain', 'spike']) {
+      const r = runReal(which);
+      expect(r.status, `${which}: ${r.stderr}`).toBe(0);
+    }
+  });
+
+  // why: K-12 a font folder with no license file fails and is named; the license file beside it turns it green
+  it('fails a font folder with no license file, and passes it with one', () => {
+    const bad = tree('font-bad', (d) => put(d, 'apps/web/fonts/Inter.woff2', 'x'));
+    const r = run(bad, 'fonts');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('apps/web/fonts/ holds a font and no license file');
+    const ok = tree('font-ok', (d) => { put(d, 'apps/web/fonts/Inter.woff2', 'x'); put(d, 'apps/web/fonts/OFL-1.1.txt', 'SIL OFL'); });
+    expect(run(ok, 'fonts').status).toBe(0);
+  });
+
+  // why: K-13 F-2025 a .css file with no SPDX line and no REUSE.toml cover fails; an SPDX line, or a cover for its path, turns it green
+  it('fails a .css file with no SPDX line and no REUSE.toml cover, and passes one with either', () => {
+    const noCover = (d: string) => change(d, 'REUSE.toml', /# K-13[\s\S]*$/, '');
+    const bad = tree('css-bad', (d) => { noCover(d); put(d, 'apps/web/styles/a.css', 'a { color: red; }\n'); });
+    const r = run(bad, 'css');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('apps/web/styles/a.css: no SPDX-License-Identifier line');
+    const spdx = tree('css-spdx', (d) => { noCover(d); put(d, 'apps/web/styles/a.css', '/* SPDX-License-Identifier: AGPL-3.0-or-later */\na { color: red; }\n'); });
+    expect(run(spdx, 'css').status).toBe(0);
+    const covered = tree('css-cover', (d) => put(d, 'apps/web/styles/a.css', 'a { color: red; }\n'));
+    expect(run(covered, 'css').status).toBe(0);
+    // A cover that names another license, or another folder, is no cover.
+    const other = tree('css-other', (d) => { change(d, 'REUSE.toml', /\*\*\/\*\.css/, 'docs/**/*.css'); put(d, 'apps/web/styles/a.css', 'a { color: red; }\n'); });
+    expect(run(other, 'css').status).toBe(1);
+  });
+
+  // why: K-15 a checkout step without persist-credentials: false fails and is named; with the line (or the key set to false later in its block) it passes
+  it('fails a checkout without persist-credentials: false, and passes one with it', () => {
+    const bad = tree('wf-bad', (d) => put(d, '.github/workflows/x.yml', CHECKOUT('')));
+    const r = run(bad, 'workflows');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('.github/workflows/x.yml:4: a checkout step without persist-credentials: false');
+    const wrong = tree('wf-true', (d) => put(d, '.github/workflows/x.yml', CHECKOUT('        with:\n          persist-credentials: true\n')));
+    expect(run(wrong, 'workflows').status).toBe(1);
+    const ok = tree('wf-ok', (d) => put(d, '.github/workflows/x.yml', CHECKOUT('        with:\n          persist-credentials: false\n')));
+    expect(run(ok, 'workflows').status).toBe(0);
+    // A false in the NEXT step does not count for this one.
+    const next = tree('wf-next', (d) => put(d, '.github/workflows/x.yml', 'jobs:\n  a:\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/other@v1\n        with:\n          persist-credentials: false\n'));
+    expect(run(next, 'workflows').status).toBe(1);
+  });
+
+  // why: K-21 an export with no CHANGELOG.md fails, and one that holds it passes
+  it('fails a tree with no CHANGELOG.md, and passes one that holds it', () => {
+    const bad = tree('cl-bad');
+    const r = run(bad, 'changelog');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('CHANGELOG.md is missing');
+    expect(run(tree('cl-ok', (d) => put(d, 'CHANGELOG.md', '# Changelog\n')), 'changelog').status).toBe(0);
+  });
+
+  // why: J-31 an engines.node that is not the major of .node-version fails; the real one passes
+  it('fails an engines.node that does not match .node-version', () => {
+    const bad = tree('eng-bad', (d) => change(d, 'package.json', /"node": ">=\d+"/, '"node": ">=24"'));
+    const r = run(bad, 'engines');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('engines.node is ">=24"');
+    expect(run(tree('eng-ok'), 'engines').status).toBe(0);
+  });
+
+  // why: J-32 a shipped file that names the company domain fails and is named; a private file that names it does not
+  it('fails a shipped file that names brightwaterair.com', () => {
+    const bad = tree('dom-bad', (d) => put(d, 'apps/web/src/a.ts', '// SPDX-License-Identifier: AGPL-3.0-or-later\nexport const e = \'x@brightwaterair.com\';\n'));
+    const r = run(bad, 'domain');
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('apps/web/src/a.ts: names brightwaterair.com');
+    expect(run(tree('dom-private', (d) => put(d, 'docs/build/notes.md', 'x@brightwaterair.com\n')), 'domain').status).toBe(0);
+  });
+
+  // why: J-35 an export that holds infra/spike/ fails, and so does a private-paths.txt that no longer lists it; the clean export passes
+  it('fails an export that holds infra/spike/, and a private-paths list without it', () => {
+    const bad = tree('spike-bad', (d) => put(d, 'infra/spike/s1/load.mjs', 'x\n'));
+    const r = run(bad, 'spike', ['--floor', '1', '--export']);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('FAIL spike: infra/spike/s1/load.mjs: the export holds infra/spike/');
+    const dropped = tree('spike-dropped', (d) => change(d, 'scripts/private-paths.txt', /^infra\/spike\/$/m, ''));
+    const d = run(dropped, 'spike');
+    expect(d.status).toBe(1);
+    expect(d.stderr).toContain('infra/spike/ is not in scripts/private-paths.txt');
+    expect(run(tree('spike-ok'), 'spike').status).toBe(0);
+  });
+});

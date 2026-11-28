@@ -104,6 +104,47 @@ describe('API-09 through the policy table (F-344)', () => {
   });
 });
 
+describe('the heartbeat of an open stream (SD-13)', () => {
+  // why: SD-13, F-344 replaces the events stack case "writes a heartbeat comment on a quiet stream (every 15 s)" (its real 15 s wait, P10-NIGHTLY-SPEED, F-2091)
+  it('writes a heartbeat comment every 15 s on a quiet stream and none sooner, through the real API-09 route', async () => {
+    const bus = standInBus();
+    // F-2096: through the kernel router and the mounted API-09 entry (handlers/index.ts), as the F-344 cases do, so a heartbeat lost or retimed
+    // at the route or in the kernel's stream answer turns this red. The sign-in runs on real timers; the stream opens on fake ones.
+    const k = kit(policyTable, { ...handlers }, {}, tokenChecks, { events: bus });
+    const { cookie } = await k.signIn('office');
+    vi.useFakeTimers();
+    try {
+      const res = await k.call('GET', EVENTS_PATH, { headers: { cookie } });
+      expect(res.status).toBe(200);
+      const reader = res.body!.getReader();
+      let text = '';
+      const dec = new TextDecoder();
+      void (async () => {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) return;
+          text += dec.decode(value);
+        }
+      })();
+      const beats = () => text.split(': heartbeat').length - 1;
+      await vi.advanceTimersByTimeAsync(0);
+      expect(text).toContain(': connected');
+      await vi.advanceTimersByTimeAsync(14_900);
+      expect(beats()).toBe(0);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(beats()).toBe(1);
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(beats()).toBe(2);
+      await reader.cancel();
+      expect(bus.subs.size).toBe(0);
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(beats()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("the stream's end path (F-345)", () => {
   // why: F-345
   it('cancels the stream body at once when the client left before the answer was ready', async () => {

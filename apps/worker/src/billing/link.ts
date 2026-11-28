@@ -38,12 +38,13 @@
 //     due event, so no item is ever dropped.
 import { inTransaction, type Queryable } from '@bw/db';
 import {
-  BILLING_EVENT_KINDS, RETRY_DEMO_MINUTES, type AttemptResult, type BillingState, type InvoiceRequest,
+  ALERT_FACTS, BILLING_EVENT_KINDS, RETRY_DEMO_MINUTES, type AttemptResult, type BillingState, type InvoiceRequest,
 } from '@bw/domain';
-import type { Logger } from '@bw/log';
-import type { Clock, Instant } from '@bw/time';
+import { causeCodeOf, type Logger } from '@bw/log';
+import { realNow, type Clock, type Instant } from '@bw/time';
 import type pg from 'pg';
-import type { DueEvent, EventOutcome, ParallelLane, SplitHandler } from '../dispatcher.ts';
+import { openAlert } from '../alerts/check.ts';
+import { MAX_HANDLER_FAILURES, type DueEvent, type EventOutcome, type LaneGiveUp, type ParallelLane, type SplitHandler } from '../dispatcher.ts';
 import { HttpBillingClient, type BillingClient, type SendOutcome } from './client.ts';
 import { composeFromJob } from './compose.ts';
 import { billingSubject, busPublish, scheduleBillingEvent, supersedeDueBillingEvents, type Publish } from './queue.ts';
@@ -87,6 +88,8 @@ export interface RunDeps {
   timeoutMs?: number;
   /** Real ms a try waits during a clock jump's replay (F-386). Absent: REPLAY_BILLING_TIMEOUT_MS. */
   replayTimeoutMs?: number;
+  /** The give-up's alert operator real time (F-2006 K-02). Absent: @bw/time realNow. */
+  clock?: Pick<Clock, 'realNow'>;
 }
 
 /** Owner ruling b3abd03a (Nov 2, 2026; F-386): during a clock jump, a replayed billing try gives up after about 2 s. */
@@ -234,6 +237,63 @@ export function billingSplitHandler(deps: RunDeps): SplitHandler<PreparedSend, S
   };
 }
 
+/** The reason a person reads on an item the give-up held (as a data error's reason, in words). */
+const GAVE_UP_REASON = `the send failed ${MAX_HANDLER_FAILURES} times in a row`;
+
+/** A billing event's job number, or null when it names none (that event's give-up has no item to hold). */
+function jobOrNull(e: DueEvent): number | null {
+  try {
+    return jobOfEvent(e);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * F-2006 K-02: the billing lane's give-up, after MAX_HANDLER_FAILURES failed runs of 1 billing event (its tx 1, call or
+ * tx 2 threw each time, never a BillingBusyError, which is another runner's send). An item that still wants a send is
+ * held for a person as a data error is (FR-BILL-7): waiting_person with no retry, every other due billing event of the
+ * job retired, its billing_waiting_person alert opened now (the 5-minute check would open the same alert; SD-30's 1 open
+ * alert per subject keeps it 1), and billing.changed published. The event ends skipped as handler_failed. The healer
+ * never writes a retry for a waiting_person item, so the end holds (invariant 2 counts only sending and retrying).
+ *
+ * Re-run semantics: the dispatcher runs `lock` and `run` and marks the event in 1 transaction holding, in order, the
+ * job's billing lock, its item row and the event row (the order of every billing writer, F-401), so a give-up and a
+ * send of the same job never interleave, and a second give-up finds the event gone and writes nothing.
+ */
+function billingGiveUp(deps: { publish?: Publish; clock?: Pick<Clock, 'realNow'> } = {}): LaneGiveUp {
+  const publish = deps.publish ?? busPublish;
+  const clock = deps.clock ?? { realNow: () => realNow('record_stamp') };
+  return {
+    counts: (cause) => !(cause instanceof BillingBusyError),
+    async lock(event, tx) {
+      const jobNumber = jobOrNull(event);
+      if (jobNumber === null) return;
+      await tx.query('SELECT pg_advisory_xact_lock($1, $2)', [BILLING_LOCK_CLASS, jobNumber]);
+      await tx.query('SELECT 1 FROM world.billing_item WHERE job_number = $1 FOR UPDATE', [jobNumber]);
+    },
+    async run(event, { tx, now }) {
+      const ended: EventOutcome = { state: 'skipped', result: 'handler_failed' };
+      const jobNumber = jobOrNull(event);
+      if (jobNumber === null) return ended;
+      const r = await tx.query<{ state: BillingState; branch_id: string }>(
+        'SELECT bi.state, j.branch_id FROM world.billing_item bi JOIN world.job j USING (job_number) WHERE bi.job_number = $1', [jobNumber]);
+      const item = r.rows[0];
+      if (item === undefined || !WANTS_SEND.includes(item.state)) return ended;
+      await supersedeDueBillingEvents(tx, jobNumber, event.id, 'superseded');
+      await tx.query(
+        `UPDATE world.billing_item SET state = 'waiting_person', next_try_at = NULL, reason_key = $2, send_cause = NULL WHERE job_number = $1`,
+        [jobNumber, GAVE_UP_REASON]);
+      await tx.query(`UPDATE world.job SET billing_state = 'waiting_person' WHERE job_number = $1`, [jobNumber]);
+      await openAlert(tx, 'billing_waiting_person', {
+        subject: String(jobNumber), branchId: item.branch_id, link: ALERT_FACTS.billing_waiting_person.link, values: { jobNumber },
+      }, { now, clock });
+      await publish(tx, 'billing.changed', { jobNumber, branch: item.branch_id });
+      return ended;
+    },
+  };
+}
+
 /** The billing lane of the worker dispatcher: billing.send and billing.retry, keyed by job, BILLING_CONCURRENCY wide. */
 export function billingLane(deps: RunDeps & { concurrency?: number }): ParallelLane<PreparedSend, SendOutcome> {
   return {
@@ -242,6 +302,7 @@ export function billingLane(deps: RunDeps & { concurrency?: number }): ParallelL
     keyOf: (e: DueEvent) => String(jobOfEvent(e)),
     concurrency: deps.concurrency ?? BILLING_CONCURRENCY,
     handler: billingSplitHandler(deps),
+    giveUp: billingGiveUp({ ...(deps.publish ? { publish: deps.publish } : {}), ...(deps.clock ? { clock: deps.clock } : {}) }),
   };
 }
 
@@ -250,8 +311,8 @@ export function billingLane(deps: RunDeps & { concurrency?: number }): ParallelL
  * timeout (BILLING_TIMEOUT_MS), the bus publish and the production concurrency. G-CI10's production-timing case builds
  * its link through this factory (F-383), so a changed default timeout fails it.
  */
-export function billingLaneFor(d: { settings: { PBS_URL: string }; log: Logger }): ParallelLane<PreparedSend, SendOutcome> {
-  return billingLane({ client: new HttpBillingClient(d.settings.PBS_URL), log: d.log });
+export function billingLaneFor(d: { settings: { PBS_URL: string }; log: Logger; clock?: Pick<Clock, 'realNow'> }): ParallelLane<PreparedSend, SendOutcome> {
+  return billingLane({ client: new HttpBillingClient(d.settings.PBS_URL), log: d.log, ...(d.clock ? { clock: d.clock } : {}) });
 }
 
 /** Write a retry at `now` for every item that wants a send and holds no due event. Answers how many. */
@@ -279,8 +340,9 @@ export function startBillingHealer(
   let running: Promise<unknown> = Promise.resolve();
   const timer = setInterval(() => {
     if (stopped) return;
-    running = d.clock.demoNow().then((now) => healBillingItems(d.pool, now)).catch(() => {
-      d.log.error({ status: 'unhandled error', errorCode: 'billing_heal_failed' });
+    // K-10.2 (F-2006): the cause code, never a fixed word, so a failing healer says why.
+    running = d.clock.demoNow().then((now) => healBillingItems(d.pool, now)).catch((e: unknown) => {
+      d.log.error({ status: 'billing heal failed', errorCode: causeCodeOf(e) });
     });
   }, everyMs);
   return {

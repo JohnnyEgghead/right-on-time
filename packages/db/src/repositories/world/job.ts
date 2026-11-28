@@ -37,15 +37,16 @@ export interface JobRow {
   touched_by_person: boolean;
   pilot: boolean;
   booking_token: string | null;
+  booking_key: string | null;
 }
 
 /** Insert shape: columns with a default, an identity or null may be left out. */
-export type JobInsert = Omit<JobRow, 'job_number' | 'equipment_id' | 'problem' | 'technician_id' | 'planned_arrival' | 'texted_arrival' | 'late_text_sent_at' | 'late_text_was_arrival' | 'on_the_way_at' | 'arrived_at' | 'ended_at' | 'confirmed_at' | 'booked_by' | 'labor_minutes' | 'no_parts_used' | 'booking_token'> & Partial<Pick<JobRow, 'job_number' | 'equipment_id' | 'problem' | 'technician_id' | 'planned_arrival' | 'texted_arrival' | 'late_text_sent_at' | 'late_text_was_arrival' | 'on_the_way_at' | 'arrived_at' | 'ended_at' | 'confirmed_at' | 'booked_by' | 'labor_minutes' | 'no_parts_used' | 'booking_token'>>;
+export type JobInsert = Omit<JobRow, 'job_number' | 'equipment_id' | 'problem' | 'technician_id' | 'planned_arrival' | 'texted_arrival' | 'late_text_sent_at' | 'late_text_was_arrival' | 'on_the_way_at' | 'arrived_at' | 'ended_at' | 'confirmed_at' | 'booked_by' | 'labor_minutes' | 'no_parts_used' | 'booking_token' | 'booking_key'> & Partial<Pick<JobRow, 'job_number' | 'equipment_id' | 'problem' | 'technician_id' | 'planned_arrival' | 'texted_arrival' | 'late_text_sent_at' | 'late_text_was_arrival' | 'on_the_way_at' | 'arrived_at' | 'ended_at' | 'confirmed_at' | 'booked_by' | 'labor_minutes' | 'no_parts_used' | 'booking_token' | 'booking_key'>>;
 
 export const jobRepository = mutableRepository<JobRow, JobInsert, 'job_number'>({
   schema: 'world',
   table: 'job',
-  columns: ['job_number', 'customer_id', 'branch_id', 'service_id', 'equipment_id', 'problem', 'date', 'zone', 'window_id', 'window_start', 'window_end', 'technician_id', 'status', 'version', 'planned_arrival', 'expected_minutes', 'texted_arrival', 'late_text_sent_at', 'late_text_was_arrival', 'on_the_way_at', 'arrived_at', 'ended_at', 'confirmed_at', 'booked_via', 'booked_at', 'booked_by', 'labor_minutes', 'no_parts_used', 'billing_state', 'autopilot', 'touched_by_person', 'pilot', 'booking_token'],
+  columns: ['job_number', 'customer_id', 'branch_id', 'service_id', 'equipment_id', 'problem', 'date', 'zone', 'window_id', 'window_start', 'window_end', 'technician_id', 'status', 'version', 'planned_arrival', 'expected_minutes', 'texted_arrival', 'late_text_sent_at', 'late_text_was_arrival', 'on_the_way_at', 'arrived_at', 'ended_at', 'confirmed_at', 'booked_via', 'booked_at', 'booked_by', 'labor_minutes', 'no_parts_used', 'billing_state', 'autopilot', 'touched_by_person', 'pilot', 'booking_token', 'booking_key'],
   key: ['job_number'],
   json: [],
 });

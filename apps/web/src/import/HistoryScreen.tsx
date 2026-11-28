@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAnnounce } from '../shell/Announcer.tsx';
 import { Icon } from '../shell/Icon.tsx';
 import { useT, type ClientT } from '../shell/intl.tsx';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { ErrorPanel } from '../shell/Panels.tsx';
 import { clockOf, dayText, fmtNumber, whenText, type MergeItem, type RunsAnswer, type RunSummary } from './model.ts';
 import { BusyLabel, call, Dialog, ImportFrame, type FrameProps } from './ui.tsx';
@@ -244,19 +245,31 @@ export function HistoryScreen() {
   const [ui, setUi] = useState<HistoryUi>(IDLE_HISTORY_UI);
   const timer = useRef<number | undefined>(undefined);
 
+  const newestRuns = useNewestAnswer();
+  const newestMerges = useNewestAnswer();
+  // K-05: the runs read has a fixed request, so an overlapping re-read (Try again) shows the newest answer; the merges read changes with the
+  // name typed and the page asked for, so an answer to an earlier name or page that lands after a later one began is dropped.
   const loadRuns = useCallback(async () => {
-    const r = await call(importRuns);
-    const d = await call(likelyDuplicates, { status: 'to_check', limit: 1 });
-    setState((s) => ({ ...s, dupCount: d.ok ? d.data.progress.left : null, runs: r.ok ? { kind: 'ready', data: r.data } : { kind: 'error' } }));
-  }, []);
-  const loadMerges = useCallback(async (name: string, cursor?: string) => {
-    const r = await call(merges, { limit: PAGE, ...(name.trim() ? { name: name.trim() } : {}), ...(cursor ? { cursor } : {}) });
-    setState((s) => {
-      if (!r.ok) return { ...s, merges: { kind: 'error' } };
-      const before = cursor && s.merges.kind === 'ready' ? s.merges.data.items : [];
-      return { ...s, merges: { kind: 'ready', data: { items: [...before, ...r.data.merges], next: r.data.next, total: r.data.total } } };
+    await newestRuns.run(async () => {
+      const r = await call(importRuns);
+      const d = await call(likelyDuplicates, { status: 'to_check', limit: 1 });
+      return { r, d };
+    }, ({ r, d }) => {
+      setState((s) => ({ ...s, dupCount: d.ok ? d.data.progress.left : null, runs: r.ok ? { kind: 'ready', data: r.data } : { kind: 'error' } }));
     });
-  }, []);
+  }, [newestRuns]);
+  const loadMerges = useCallback(async (name: string, cursor?: string) => {
+    await newestMerges.run(
+      () => call(merges, { limit: PAGE, ...(name.trim() ? { name: name.trim() } : {}), ...(cursor ? { cursor } : {}) }),
+      (r) => {
+        setState((s) => {
+          if (!r.ok) return { ...s, merges: { kind: 'error' } };
+          const before = cursor && s.merges.kind === 'ready' ? s.merges.data.items : [];
+          return { ...s, merges: { kind: 'ready', data: { items: [...before, ...r.data.merges], next: r.data.next, total: r.data.total } } };
+        });
+      },
+    );
+  }, [newestMerges]);
   useEffect(() => {
     void loadRuns();
     void loadMerges('');

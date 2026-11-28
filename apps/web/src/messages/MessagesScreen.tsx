@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { branchById } from '../shell/branches.ts';
 import { officeClock, useDemoDay } from '../shell/demo-day.ts';
 import { OfficeFrame } from '../shell/Frames.tsx';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { useT } from '../shell/intl.tsx';
 import { useBranch } from '../shell/useBranch.ts';
 import { LogBody, type DetailView } from './LogBody.tsx';
@@ -71,6 +72,10 @@ export function MessagesScreen() {
   const shown = useRef({ branch, date });
   shown.current = { branch, date };
   const before = useRef<Map<string, string>>(new Map());
+  const freshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (freshTimer.current !== null) clearTimeout(freshTimer.current);
+  }, []);
   const pickedRef = useRef<string | null>(null);
   pickedRef.current = picked;
   // The read must not change identity on each render (useT is a new function each time): the effects below would read again forever.
@@ -85,27 +90,38 @@ export function MessagesScreen() {
     return () => clearTimeout(id);
   }, [filters, applied.customer]);
 
+  const newest = useNewestAnswer();
   const load = useCallback(async () => {
     if (branch === null || date === null) return;
-    try {
-      const answer = await client.call(textLog, queryOf(branch, date, applied, cursor));
-      if (shown.current.branch !== branch || shown.current.date !== date) return; // an answer for a day or branch no longer shown is dropped
-      const next = answer.data;
-      // A row that is new, or whose status changed since the last read, shows as live for a moment (the Live row frame).
-      const now = new Map(logRows(next).map((r) => [r.key, r.kind === 'text' ? `${r.row.status}:${r.row.tries}` : r.row.handling] as const));
-      const changed = new Set<string>();
-      if (before.current.size > 0) for (const [k, v] of now) if (before.current.get(k) !== v) changed.add(k);
-      before.current = now;
-      setData(next);
-      setStatus('ready');
-      if (changed.size > 0) {
-        setFresh(changed);
-        setTimeout(() => setFresh(new Set()), FRESH_MS);
-      }
-    } catch {
-      if (shown.current.branch === branch && shown.current.date === date) setStatus((s) => (s === 'ready' ? s : 'error'));
-    }
-  }, [client, branch, date, applied, cursor]);
+    // K-08.3: an answer to an earlier filter or page that lands after a newer read began is dropped, as one for another day or branch is.
+    await newest.run(
+      () => client.call(textLog, queryOf(branch, date, applied, cursor)).then((answer) => ({ answer }), () => ({ answer: null })),
+      ({ answer }) => {
+        if (shown.current.branch !== branch || shown.current.date !== date) return; // an answer for a day or branch no longer shown is dropped
+        if (answer === null) {
+          setStatus((s) => (s === 'ready' ? s : 'error'));
+          return;
+        }
+        const next = answer.data;
+        // A row that is new, or whose status changed since the last read, shows as live for a moment (the Live row frame).
+        const now = new Map(logRows(next).map((r) => [r.key, r.kind === 'text' ? `${r.row.status}:${r.row.tries}` : r.row.handling] as const));
+        const changed = new Set<string>();
+        if (before.current.size > 0) for (const [k, v] of now) if (before.current.get(k) !== v) changed.add(k);
+        before.current = now;
+        setData(next);
+        setStatus('ready');
+        if (changed.size > 0) {
+          setFresh(changed);
+          // K-08.4: 1 timer at a time, in a ref: a new highlight re-arms it, and leaving the page clears it.
+          if (freshTimer.current !== null) clearTimeout(freshTimer.current);
+          freshTimer.current = setTimeout(() => {
+            freshTimer.current = null;
+            setFresh(new Set());
+          }, FRESH_MS);
+        }
+      },
+    );
+  }, [client, branch, date, applied, cursor, newest]);
 
   const loadCount = useCallback(async () => {
     if (branch === null || date === null) return;
@@ -145,8 +161,29 @@ export function MessagesScreen() {
     void loadDetail(picked);
   }, [picked, loadDetail]);
 
+  // K-08.5: a burst of events reads the log once more, not once each. A read made for an event while another is in flight is made after it, once.
+  const loadNow = useRef(load);
+  loadNow.current = load;
+  const eventRead = useRef({ running: false, again: false });
+  const loadForEvent = async () => {
+    const s = eventRead.current;
+    if (s.running) {
+      s.again = true;
+      return;
+    }
+    s.running = true;
+    try {
+      do {
+        s.again = false;
+        await loadNow.current();
+      } while (s.again);
+    } finally {
+      s.running = false;
+    }
+  };
+
   const live = useMessagesLive(branch, LOG_EVENTS, (notice) => {
-    void load();
+    void loadForEvent();
     void loadCount();
     if (notice?.textId && pickedRef.current === `text:${notice.textId}`) void loadDetail(pickedRef.current, true);
   }, { following, day: today, readDay });

@@ -176,8 +176,9 @@ export class TechOutbox {
 
   /**
    * 1 sync (see the header); joins a running one. Never rejects (F-1849): any throw (the store, the transport, the lock, a read)
-   * ends the sync with null, every item still waiting under its key, Sending off, and the next sync tries again (I3). The
-   * screens show the same states as a sync that found no signal; there is no other banner state.
+   * ends the sync with null, every item still waiting under its key, Sending off, and the next sync tries again (I3). F-2006
+   * K-10.5: the catch sets the no-signal state itself (online false, as a sync that found no signal), so the screens show the
+   * same states as that sync; there is no other banner state. The next read that answers sets online again.
    */
   sync(): Promise<SendReport | null> {
     if (!this.running) {
@@ -192,6 +193,8 @@ export class TechOutbox {
     try {
       return await (this.deps.lock ? this.deps.lock(() => this.syncOnce()) : this.syncOnce());
     } catch {
+      this.networkDown = true;
+      this.set({ online: false, sending: false });
       return null;
     }
   }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: SD-13, SD-43, SD-47, NFR-01 (P3-EVENTS Acceptance: the event bus and the event stream on the Compose stack at its default settings)
-// A notify reaches 2 open streams with ids only; a stream dropped for 30 s reconnects and the page re-reads; a worldEpoch
+// A notify reaches 2 open streams with ids only; a stream that was dropped reconnects (the 30 s outage and the 15 s heartbeat: unit tests, P10-NIGHTLY-SPEED) and the page re-reads; a worldEpoch
 // change empties the client cache; each event carries a rising seq. The stack is real PostgreSQL 18, the real handlers
 // (API-10 is read through the client) and pbs running, reached through its proxy (nginx's /api/v1/events location). The
 // rows are ci/shell-stack/fixture.sql's (the clock row at epoch 1, 1 office user and its session).
@@ -72,7 +72,7 @@ async function openRaw(url: string): Promise<{ text: () => string; close: () => 
 }
 const frames = (t: string) => [...t.matchAll(/event: (\S+)\nid: (\d+)\ndata: (.*)\n\n/g)].map((m) => ({ event: m[1]!, id: Number(m[2]), data: m[3]! }));
 
-/** A TCP relay in front of the stack's proxy that the test can cut and restore: the "dropped network" of the 30 s case. */
+/** A TCP relay in front of the stack's proxy that the test can cut and restore: the "dropped network" of the reconnect case. */
 function relay(targetPort: number) {
   const sockets = new Set<net.Socket>();
   let cut = false;
@@ -144,13 +144,6 @@ describe('the event stream on the Compose stack', () => {
     expect(frames(other.text()).map((x) => x.event)).toEqual(['alert.created']);
   });
 
-  // why: SD-13
-  it('writes a heartbeat comment on a quiet stream (every 15 s)', async () => {
-    const s = await openRaw(eventsUrl);
-    open.push(s);
-    await until('a heartbeat', () => s.text().includes(': heartbeat'), 20_000);
-  }, 40_000);
-
   // why: SD-47
   it('empties the client cache when a world.reset moves the worldEpoch, and the next read carries the new epoch', async () => {
     const client = createClient({ baseUrl: origin, headers });
@@ -181,8 +174,8 @@ describe('the event stream on the Compose stack', () => {
     expect(cache.epoch).toBe(2);
   });
 
-  // why: SD-13, SD-47
-  it('reconnects a stream that was dropped for 30 s, re-reads API-10 through the cache once, and keeps delivering with a higher seq', async () => {
+  // why: SD-13, SD-47 (P10-NIGHTLY-SPEED, F-2091: the 30 s outage and the 15 s heartbeat are fake-timer unit tests, packages/api/src/event-stream.test.ts and packages/api-server/src/events/stream.test.ts; this case keeps the real cut, the real reconnect and the real API-10 re-read, with no wait)
+  it('reconnects a stream that was dropped, re-reads API-10 through the cache once, and keeps delivering with a higher seq', async () => {
     const proxyPort = Number(new URL(base!).port);
     const r = relay(proxyPort);
     const port = await r.listen();
@@ -211,15 +204,12 @@ describe('the event stream on the Compose stack', () => {
     expect(rereads).toBe(0);
 
     r.cut();
-    const cutAt = Date.now();
     await until('the stream to notice', () => h.state === 'reconnecting');
     await publish('clock.changed', {}); // missed: never replayed (D1)
     psql('BEGIN; UPDATE system.demo_clock SET paused = true; COMMIT;'); // the change the missed event announced
-    await sleep(30_000 - (Date.now() - cutAt));
     expect(h.state).toBe('reconnecting');
     r.restore();
     await until('the stream to reconnect', () => h.state === 'live' && rereads === 1);
-    expect(Date.now() - cutAt).toBeGreaterThanOrEqual(30_000);
     expect(events).toHaveLength(1); // the event of the gap was not replayed: the page re-reads instead
     await Promise.all(reread);
     expect(cache.peek(readClock, {})?.paused).toBe(true); // the re-read brought the gap's change
@@ -229,5 +219,5 @@ describe('the event stream on the Compose stack', () => {
     expect(events[1]!.seq).toBeGreaterThan(events[0]!.seq);
     expect(rereads).toBe(1);
     expect(states).toEqual(['live', 'reconnecting', 'live']);
-  }, 120_000);
+  }, 60_000);
 });

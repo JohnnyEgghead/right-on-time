@@ -40,6 +40,10 @@ export const PROCESS_STATES = [
   'access code sync recovered', 'unhandled rejection',
   // F-1870: an exception no code caught, in a process that hooks it.
   'uncaught exception',
+  // F-2006 (K-10.1, K-10.2, K-10.4, J-24): a worker step that failed, each with its cause code: a billing reset the
+  // confirmer could not send, the healer, the heartbeat, a job that could not start, a stop that threw, and a late text
+  // given up after its tries.
+  'billing reset failed', 'billing heal failed', 'heartbeat failed', 'job start failed', 'stop failed', 'late text gave up',
 ] as const;
 export type ProcessState = (typeof PROCESS_STATES)[number];
 
@@ -55,7 +59,7 @@ export interface LogFields {
   errorCode?: string;
   userId?: string;
   jobNumber?: number;
-  /** A count of failures since the last line of the same kind (P6-ROUTE-SIGNAL): a number, never a subject. */
+  /** A count of failures: since the last line of the same kind (the live route signal, F-1306; a background loop's failed line, F-1846), or the whole outage on a loop's recovered line. A number, never a subject. */
   failures?: number;
   /** A scheduled_event kind (`text.try`, F-1844): dotted lower-case words, never a subject or payload. */
   eventKind?: string;
@@ -82,6 +86,14 @@ export function causeCodeOf(e: unknown): string {
   if (typeof err?.code === 'string' && CAUSE_SHAPE.test(err.code)) return err.code;
   if (typeof err?.name === 'string' && CAUSE_SHAPE.test(err.name)) return err.name;
   return 'Error';
+}
+
+/**
+ * F-2006 (K-10.2, J-21): an error event of `source` (a pg Pool: an idle connection the server ended) is logged at error
+ * level with its cause code. With no listener the event would throw, and the process would end on it.
+ */
+export function logErrorEvents(source: { on(event: 'error', listener: (e: unknown) => void): unknown }, log: Pick<Logger, 'error'>): void {
+  source.on('error', (e) => log.error({ status: 'unhandled error', errorCode: causeCodeOf(e) }));
 }
 
 /** The process seam of exitOnUnhandledRejection (a test passes a fake). */

@@ -4,6 +4,7 @@
 // (API-117) and moves the visit with 1 confirm (API-118, SD-45). A link that has ended answers gone and the page says so with the office
 // phone (OA-62). The token travels only in the paths of its own rows.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { callPage, rows, type MovedVisit, type RescheduleData } from './api.ts';
 import { RescheduleView, type RescheduleNotice, type RescheduleState } from './RescheduleView.tsx';
 
@@ -18,17 +19,20 @@ export function RescheduleScreen({ token }: { token: string }) {
   const [moved, setMoved] = useState<MovedVisit | null>(null);
   const saving = useRef(false);
 
+  const newest = useNewestAnswer();
+  // K-05: a re-read of the offered days (after a refused move) shows the newest read's answer, however late an earlier one lands.
   const read = useCallback(async () => {
-    const r = await callPage(rows.reschedulePage, { rescheduleToken: token });
-    if (r.ok) {
-      setData(r.data);
-      setPhone(r.data.officePhone);
-      setState('choosing');
-    } else if (r.status === 410) {
-      setPhone(r.officePhone ?? '');
-      setState('ended');
-    } else setState(r.status === 404 ? 'not_valid' : 'failed');
-  }, [token]);
+    await newest.run(() => callPage(rows.reschedulePage, { rescheduleToken: token }), (r) => {
+      if (r.ok) {
+        setData(r.data);
+        setPhone(r.data.officePhone);
+        setState('choosing');
+      } else if (r.status === 410) {
+        setPhone(r.officePhone ?? '');
+        setState('ended');
+      } else setState(r.status === 404 ? 'not_valid' : 'failed');
+    });
+  }, [token, newest]);
 
   useEffect(() => {
     void read();

@@ -19,6 +19,7 @@ import { AdminSide } from '../shell/Headers.tsx';
 import { Icon } from '../shell/Icon.tsx';
 import { useT, type ClientT } from '../shell/intl.tsx';
 import { useMe } from '../shell/me.ts';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { OfficeTopBar, type Me, type OfficeTopBarProps } from '../shell/OfficeTopBar.tsx';
 import { ErrorPanel } from '../shell/Panels.tsx';
 import type { Reader } from '../shell/reads.ts';
@@ -372,28 +373,39 @@ export function ClockScreen() {
   const fields = useRef(false);
   const left0 = useRef(0);
 
+  const newestClock = useNewestAnswer();
+  const newestPresets = useNewestAnswer();
+  // K-05: the timer, a focus, an event and a refused move all read; the newest read's answer is the one shown, however late an earlier one lands.
+  // The caller gets the read's own answer either way (a refused move reads the cooldown it was refused for).
   const readClockNow = useCallback(async (): Promise<ClockAnswer | null> => {
-    const r = await call(readClock);
-    if (!r.ok) {
-      setState((s) => (s.clock.kind === 'ready' ? s : { ...s, clock: { kind: 'error' } }));
-      return null;
-    }
-    const a = r.data as ClockAnswer;
-    readAt.current = now();
-    left0.current = a.resetAvailableInSeconds ?? 0;
-    view.current = toView(a);
-    setState((s) => ({ ...s, clock: { kind: 'ready', data: a } }));
-    if (!fields.current) {
-      fields.current = true;
-      const f = defaultFields(view.current.at, view.current.zone);
-      setUi((u) => ({ ...u, date: f.date, time: f.time }));
-    }
-    return a;
-  }, []);
+    let got: ClockAnswer | null = null;
+    await newestClock.run(async () => {
+      const r = await call(readClock);
+      got = r.ok ? (r.data as ClockAnswer) : null;
+      return r;
+    }, (r) => {
+      if (!r.ok) {
+        setState((s) => (s.clock.kind === 'ready' ? s : { ...s, clock: { kind: 'error' } }));
+        return;
+      }
+      const a = r.data as ClockAnswer;
+      readAt.current = now();
+      left0.current = a.resetAvailableInSeconds ?? 0;
+      view.current = toView(a);
+      setState((s) => ({ ...s, clock: { kind: 'ready', data: a } }));
+      if (!fields.current) {
+        fields.current = true;
+        const f = defaultFields(view.current.at, view.current.zone);
+        setUi((u) => ({ ...u, date: f.date, time: f.time }));
+      }
+    });
+    return got;
+  }, [newestClock]);
   const readPresets = useCallback(async () => {
-    const r = await call(clockPresets);
-    setState((s) => ({ ...s, presets: r.ok ? { kind: 'ready', data: r.data.presets } : { kind: 'error' } }));
-  }, []);
+    await newestPresets.run(() => call(clockPresets), (r) => {
+      setState((s) => ({ ...s, presets: r.ok ? { kind: 'ready', data: r.data.presets } : { kind: 'error' } }));
+    });
+  }, [newestPresets]);
   const readAll = useCallback(async () => {
     await Promise.all([readClockNow(), readPresets()]);
   }, [readClockNow, readPresets]);
@@ -432,7 +444,15 @@ export function ClockScreen() {
   }, [have, paused]);
   useEffect(() => {
     if (!running) return;
-    const poll = window.setInterval(() => void readClockNow(), REPLAY_POLL_MS);
+    // K-08.24: a poll is skipped while the last one is unanswered, so a slow clock read is never piled up behind.
+    let inFlight = false;
+    const poll = window.setInterval(() => {
+      if (inFlight) return;
+      inFlight = true;
+      void readClockNow().finally(() => {
+        inFlight = false;
+      });
+    }, REPLAY_POLL_MS);
     return () => window.clearInterval(poll);
   }, [running, readClockNow]);
 

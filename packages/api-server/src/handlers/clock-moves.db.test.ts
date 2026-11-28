@@ -331,3 +331,81 @@ describe('a jump and a reset together (F-540)', () => {
     }
   }, 60_000);
 });
+
+// P10-NIGHTLY-SPEED (F-2091): the demo clock stack's 6:00 PM reminder case used to wait out the real 5-minute reset cool-down before it reset the
+// world and jumped. The cool-down is the setting RESET_COOLDOWN_SECONDS (300 by default, config.test.ts), so the wait is tested here with a short
+// one and with the default, and the stack case (ci/clock-ui-stack) keeps only the steps the page and the worker show.
+describe('the reset cool-down is the setting, and the 6:00 PM jump follows the reset (UC-10)', () => {
+  const kernelWith = (env: Record<string, string>) => createWebKernel({ settings: loadConfig({ DATABASE_URL: asWeb(), ACCESS_CODE_ON: 'off', ...env }), log });
+  const sendOn = (kernel: WebKernel, method: string, path: string, payload: unknown) =>
+    kernel.router.handle(new Request(`http://web:3000/api/v1${path}`, {
+      method, body: JSON.stringify(payload), headers: { 'content-type': 'application/json', origin: ORIGIN, cookie: cookies.manager },
+    }), { address: '203.0.113.9' });
+  const getOn = (kernel: WebKernel, path: string) =>
+    kernel.router.handle(new Request(`http://web:3000/api/v1${path}`, { headers: { cookie: cookies.manager } }), { address: '203.0.113.9' });
+  const resetAgo = (seconds: number) =>
+    db.admin().query(`UPDATE system.demo_clock SET last_reset_real = now() - make_interval(secs => $1) WHERE id = 1`, [seconds]);
+
+  // why: UC-10, FR-DEMO-5, FR-DEMO-6 the reset waits for the cool-down the setting names, then the manager jumps to 6:00 PM and the due reminders are counted for the replay, with the mover named
+  it('refuses a reset inside RESET_COOLDOWN_SECONDS, resets once it is over, and the 6:00 PM preset then jumps with the due reminders counted', async () => {
+    const short = kernelWith({ RESET_COOLDOWN_SECONDS: '20' });
+    try {
+      const a = db.admin();
+      await settle(a);
+      await resetAgo(5);
+      const early = await sendOn(short, 'POST', '/clock/resets', {});
+      expect(early.status).toBe(429);
+      const problem = await body(early);
+      expect(problem.code).toBe('cooldown');
+      expect(problem.availableInSeconds).toBeGreaterThan(10);
+      expect(problem.availableInSeconds).toBeLessThanOrEqual(15);
+      expect((await body(await getOn(short, '/clock'))).data.resetAvailableInSeconds).toBeLessThanOrEqual(15);
+
+      // 21 s after the last reset the 20 s cool-down is over: the reset runs.
+      await resetAgo(21);
+      const before = await clockRow();
+      const reset = await sendOn(short, 'POST', '/clock/resets', {});
+      expect(reset.status).toBe(202);
+      expect((await clockRow()).world_epoch).toBe(before.world_epoch + 1);
+      expect((await body(await getOn(short, '/clock'))).data.resetAvailableInSeconds).toBeGreaterThan(0);
+
+      // The billing service confirms the reset; then the 2 evening reminders are due and the 6:00 PM preset jumps past them.
+      await a.query('UPDATE system.demo_clock SET pbs_epoch = world_epoch WHERE id = 1');
+      await a.query(`INSERT INTO world.scheduled_event (due_at, kind, subject, payload, state)
+                     VALUES ('2026-09-15T21:00:00Z', 'text.reminder', 'atlantic', '{}', 'due'), ('2026-09-15T22:00:00Z', 'text.reminder', 'eastern', '{}', 'due')`);
+      const presets = (await body(await getOn(short, '/clock/presets'))).data.presets as { presetId: string; reachable: boolean }[];
+      expect(presets.find((p) => p.presetId === 'reminder_6pm')?.reachable).toBe(true);
+      const jump = await sendOn(short, 'POST', '/clock/jumps', { presetId: 'reminder_6pm' });
+      expect(jump.status).toBe(202);
+      // Due through 6:05 PM EDT: the snapshot's alert.check and the 2 reminders.
+      expect((await body(jump)).data).toEqual({ replay: { running: true, done: 0, total: 3 } });
+      expect((await clockRow()).replay_target).toEqual(new Date('2026-09-15T22:05:00Z'));
+      const move = await a.query(`SELECT kind, by_name FROM system.clock_move ORDER BY at_real DESC, id DESC LIMIT 1`);
+      expect(move.rows[0]).toEqual({ kind: 'pause', by_name: 'Dana Ruiz' }); // the jump holds the clock for the replay with a pause row by the mover (as the API-12 case above)
+      await a.query(`DELETE FROM world.scheduled_event WHERE kind = 'text.reminder' AND subject IN ('atlantic', 'eastern')`);
+    } finally {
+      await short.close();
+    }
+  }, 60_000);
+
+  // why: UC-10, FR-DEMO-6 with no RESET_COOLDOWN_SECONDS given the cool-down is 300 s: a reset 1 s after the last is refused with about 300 s left, and one 299 s after it is still refused
+  it('reads 300 s when the setting is absent', async () => {
+    const standard = kernelWith({});
+    try {
+      await settle(db.admin());
+      await resetAgo(1);
+      const first = await sendOn(standard, 'POST', '/clock/resets', {});
+      expect(first.status).toBe(429);
+      const left = (await body(first)).availableInSeconds as number;
+      expect(left).toBeGreaterThan(295);
+      expect(left).toBeLessThanOrEqual(299);
+      await resetAgo(299);
+      const late = await sendOn(standard, 'POST', '/clock/resets', {});
+      expect(late.status).toBe(429);
+      expect((await body(late)).availableInSeconds).toBeLessThanOrEqual(2);
+      expect((await body(await getOn(standard, '/clock'))).data.resetAvailableInSeconds).toBeLessThanOrEqual(2);
+    } finally {
+      await standard.close();
+    }
+  });
+});

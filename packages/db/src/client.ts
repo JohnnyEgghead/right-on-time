@@ -30,6 +30,19 @@ export const pgTypes = {
   },
 };
 
+/**
+ * F-2006 K-10.8 (PROVISIONAL values, set from the measure in the P10-WORKER-ENDS report): the bounds of every statement
+ * a service's pool runs (the worker's, its import pool's, pbs's, and the web process's, F-2037). A statement that waits
+ * on a lock longer than SERVICE_LOCK_TIMEOUT_MS fails with 55P03 and one that runs longer than SERVICE_STATEMENT_TIMEOUT_MS
+ * with 57014, so a held lock or a runaway query fails 1 pass or 1 call, which is counted and logged, instead of holding a
+ * connection (and every pass or call behind it) without end. Setup's pool (packages/setup/src/pipeline.ts) is exempt:
+ * a one-shot run that serves no other caller while it waits. The test databases carry their own (testing/database.ts).
+ */
+export const SERVICE_LOCK_TIMEOUT_MS = 10_000;
+export const SERVICE_STATEMENT_TIMEOUT_MS = 60_000;
+/** The pool options that carry them (pg sends both as startup parameters of each connection). */
+export const SERVICE_TIMEOUTS = { lock_timeout: SERVICE_LOCK_TIMEOUT_MS, statement_timeout: SERVICE_STATEMENT_TIMEOUT_MS } as const;
+
 export function createPool(config: Omit<pg.PoolConfig, 'types'>): pg.Pool {
   return new pg.Pool({ ...config, types: pgTypes as pg.CustomTypesConfig });
 }

@@ -12,7 +12,7 @@ import { catalogs } from '../../../i18n/src/catalog.ts';
 import { useMigratedDatabase } from '../../../db/src/testing/fixture.ts';
 import { addCustomer, addJob, seedOutboxWorld, type OutboxRef } from '../../../outbox/src/testing/world.ts';
 import { createWebKernel, type WebKernel } from '../web.ts';
-import { rescheduleLinkEnded } from './inbox.ts';
+import { inboxTokenChecks, rescheduleLinkEnded } from './inbox.ts';
 
 const db = useMigratedDatabase();
 const NOW = '2026-09-15T14:00:00Z'; // Tue, Sep 15, 10:00 AM EDT
@@ -229,6 +229,23 @@ describe('Change your visit time (API-117, API-118, FR-TEXT-8, SD-45)', () => {
     const v = await visit();
     await db.admin().query(`UPDATE world.link_token SET expires_at = '2026-09-15T13:00:00Z' WHERE token = $1`, [v.token]);
     expect((await call('GET', `/r/${v.token}/data`)).status).toBe(410);
+  });
+
+  // why: K-07 F-2013 a live map link is a link token of another kind, and the reschedule page must not open or move a visit on it
+  it('answers not found to a live map link token on the reschedule page and on the move', async () => {
+    const v = await visit();
+    await db.admin().query(`UPDATE world.link_token SET kind = 'live_map' WHERE token = $1`, [v.token]);
+    expect((await call('GET', `/r/${v.token}/data`)).status).toBe(404);
+    expect((await call('POST', `/r/${v.token}`, { date: '2026-09-17', windowId: windowId() })).status).toBe(404);
+    expect((await db.admin().query('SELECT date::text AS date FROM world.job WHERE job_number = $1', [v.job])).rows[0]!.date).toBe('2026-09-16');
+  });
+
+  // why: K-07 F-2013 the kernel's reschedule token check passes a reschedule token only; the handler's own kind filter is a second guard, so the check is tried by itself
+  it('passes a reschedule link token and no other kind at the kernel token check', async () => {
+    const v = await visit();
+    expect(await inboxTokenChecks.reschedule(v.token, db.admin())).toBe(true);
+    await db.admin().query(`UPDATE world.link_token SET kind = 'live_map' WHERE token = $1`, [v.token]);
+    expect(await inboxTokenChecks.reschedule(v.token, db.admin())).toBe(false);
   });
 
   // why: FR-TEXT-8

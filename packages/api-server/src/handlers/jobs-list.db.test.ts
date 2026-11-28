@@ -251,8 +251,17 @@ describe('the jobs list read (API-133)', () => {
     const second = await list({ page: 2 });
     expect(second.rows.length).toBe(Math.min(50, first.total - 50));
     expect(second.rows.map((r) => r.jobNumber).filter((n) => first.rows.some((x) => x.jobNumber === n))).toEqual([]);
-    expect((await list({ page: first.pages + 1 })).rows).toEqual([]);
     expect((await list({ tab: 'late' })).pages).toBe(0);
+  });
+
+  // why: K-08 row 1 a page past the last page answered an empty list, so a list that shrank under a page number showed nothing; it answers the last page
+  it('answers the last page for a page past the last', async () => {
+    const first = await list();
+    const last = await list({ page: first.pages });
+    expect(last.rows.length).toBe(first.total - 50 * (first.pages - 1));
+    const past = await list({ page: first.pages + 5 });
+    expect(past.rows.map((r) => r.jobNumber)).toEqual(last.rows.map((r) => r.jobNumber));
+    expect((await list({ tab: 'late', page: 4 })).rows).toEqual([]);
   });
 
   // why: FR-DISP-24 every call needs a signed-in office user; the branch exists, the tab, status and page are well formed

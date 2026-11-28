@@ -39,7 +39,7 @@ import {
   type BlockErrors, type BlockForm, type BlockView, type ConflictSubject, type ReassignState,
 } from './Dialogs.tsx';
 import {
-  blockDrop, boardHref, dateParts, draggable, entryLines, filtered, flagValues, hhmm, hourOf, isDate, jobDrop, noRoomText, shortName, shortWindow, spanText, stepDate, timeText, windowText,
+  blockDrop, boardHref, dateParts, draggable, entryLines, filtered, flagValues, hhmm, hourOf, isDate, jobDrop, noRoomText, shortName, shortWindow, spanText, stepDate, ticksEachSecond, timeText, windowText,
   type Board, type BoardBlock, type BoardJob, type Conflict, type JobTab, type MapShows, type Target, type Van,
 } from './model.ts';
 import { Timeline, type Drag, type DragPreview } from './Timeline.tsx';
@@ -68,7 +68,7 @@ type Modal =
 export interface BoardScreenProps {
   /** Harness states: a fixed board, no reads, no stream. */
   fixed?: {
-    board: Board | 'loading' | 'error'; me: Me; clock: ClockAnswer; scene?: Drag | null; moving?: Map<number, string | null>; offline?: boolean;
+    board: Board | 'loading'; me: Me; clock: ClockAnswer; scene?: Drag | null; moving?: Map<number, string | null>; offline?: boolean;
     marking?: string | null; extra?: ReactNode;
     /** The map panel's harness state: its read's answer and the choices a person made. */
     vans?: readonly Van[] | 'failed'; shows?: MapShows; skill?: string | null; tab?: JobTab; selected?: string | null; hidden?: boolean;
@@ -103,7 +103,7 @@ export function BoardScreen({ fixed }: BoardScreenProps) {
   const branch = me ? branchById(params?.get('branch') ?? storedBranch ?? me.branch).id : null;
 
   const [board, setBoard] = useState<Board | null>(fixed && typeof fixed.board === 'object' ? fixed.board : null);
-  const [failed, setFailed] = useState(fixed?.board === 'error');
+  const [failed, setFailed] = useState(false);
   const [offline, setOffline] = useState(fixed?.offline ?? false);
   // F-1085: a live board starts at Reconnecting: Live is said only once the stream (API-09) has answered (a preview's fixed state starts Live).
   const [live, setLive] = useState<LiveState>(fixed ? 'live' : 'reconnecting');
@@ -123,7 +123,7 @@ export function BoardScreen({ fixed }: BoardScreenProps) {
   const [selectedVan, setSelectedVan] = useState<string | null>(fixed?.selected ?? null);
 
   // --- the demo time (API-10): the now line and "Today, live" (CTL-OFC-02-11, -04), re-read on clock.changed -----------
-  const { now: demoNow, readClock, ticks, failed: clockFailed } = useDemoClock(fixed ? null : officeClock, fixed ? toView(fixed.clock) : null);
+  const { time: demoTime, now: demoNow, readClock, ticks, failed: clockFailed } = useDemoClock(fixed ? null : officeClock, fixed ? toView(fixed.clock) : null);
 
   // --- reads ---------------------------------------------------------------------------------------------------------
   // 1 read on its way for each branch and date: a read for another branch does not join it, and an answer of a read that is no longer the
@@ -330,6 +330,17 @@ export function BoardScreen({ fixed }: BoardScreenProps) {
   }, [board, date, demoDate, offline, readClock, ticks, clockFailed, readFailures]);
   const nowWire = board?.today && demoNow ? toWire(demoNow, board.zone) : null;
   const nowHour = nowWire ? hourOf(nowWire) : null;
+  // K-08.12: "Today, live" shows the minute, and the demo clock's own tick is 30 s, so the board showed a minute the demo strip had already left.
+  // The board draws again each second (the strip does too) while its clock runs, so the board's time and the strip's change together. F-2078: that is
+  // the Today, live line only (board.today) and a clock that is not paused; a past or future date, or a paused clock, has no time to move, and each tick
+  // draws the whole board (the map view stringifies every marker and track).
+  const [, setSecond] = useState(0);
+  const clockRuns = ticksEachSecond(board?.today, demoTime);
+  useEffect(() => {
+    if (fixed || !clockRuns) return;
+    const h = window.setInterval(() => setSecond((n) => n + 1), 1_000);
+    return () => window.clearInterval(h);
+  }, [fixed, clockRuns]);
 
   // --- refusals ------------------------------------------------------------------------------------------------------
   const refusalText = (r: Refusal, technician: string | null, window = ''): string => {

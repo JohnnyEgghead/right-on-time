@@ -16,6 +16,7 @@
 // Every run's progress and finish send EVT-08 import.run.changed (runPendingImport; UI-SPECIFICATION 12.3).
 import type pg from 'pg';
 import { createPool } from '@bw/db';
+import { causeCodeOf, logErrorEvents } from '@bw/log';
 import { failureCode, runPendingImport, type ExportFiles } from '@bw/import';
 import { SETUP_LOCK_KEYS } from '@bw/setup';
 import type { RunningJob, WorkerDeps } from '../jobs.ts';
@@ -35,7 +36,7 @@ export interface ImportJobOptions {
   pollMs?: number;
 }
 
-/** The import job's own pool: the worker pool's login and settings, 2 connections. */
+/** The import job's own pool: the worker pool's login and settings (its service timeouts too, F-2006 K-10.8), 2 connections. */
 function importPool(main: pg.Pool): pg.Pool {
   // createPool sets the type parsers itself
   const { types, ...options } = main.options;
@@ -69,22 +70,22 @@ export async function executeOwed(s: PassSteps): Promise<void> {
       return;
     }
     if (!out) return;
-    let analyzed = true;
+    let analyzeCause: string | null = null;
     if (out.kind === 'real') {
       try {
         await s.analyze();
-      } catch {
-        analyzed = false;
+      } catch (e) {
+        analyzeCause = causeCodeOf(e); // F-2036: the warn line names the cause, never a fixed word
       }
     }
     s.log.info({ status: 'import run done' });
-    if (!analyzed) s.log.warn({ status: 'import run done', errorCode: 'analyze_failed' });
+    if (analyzeCause !== null) s.log.warn({ status: 'import run done', errorCode: analyzeCause });
   }
 }
 
 export function startImportJob(d: WorkerDeps, opts: ImportJobOptions = {}): RunningJob {
   const pool = importPool(d.pool);
-  pool.on('error', () => d.log.error({ status: 'unhandled error', errorCode: 'server_error' }));
+  logErrorEvents(pool, d.log); // F-2006 K-10.2: with the cause code
   // A run holds its 2 clients for minutes; a connection lost meanwhile fails the run's next query (the run ends failed
   // or, with the record connection gone, is picked up again), and the client's own error event must not end the worker.
   pool.on('connect', (c) => c.on('error', () => undefined));
@@ -114,7 +115,7 @@ export function startImportJob(d: WorkerDeps, opts: ImportJobOptions = {}): Runn
 
   const tick = (): void => {
     current = pass()
-      .catch(() => d.log.error({ status: 'unhandled error', errorCode: 'import_job_failed' }))
+      .catch((e: unknown) => d.log.error({ status: 'unhandled error', errorCode: causeCodeOf(e) })) // F-2036: with the cause code
       .finally(() => {
         if (!stopped) timer = setTimeout(tick, opts.pollMs ?? IMPORT_POLL_MS);
       });

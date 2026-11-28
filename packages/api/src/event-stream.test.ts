@@ -97,4 +97,49 @@ describe('connectEventStream', () => {
     expect(calls).toBeGreaterThan(1);
     expect(cancelled).toHaveBeenCalledTimes(calls);
   });
+
+  // why: SD-13, SD-47 replaces the events stack case "reconnects a stream that was dropped for 30 s, re-reads API-10 through the cache once, and keeps delivering with a higher seq" (its real 30 s sleep, P10-NIGHTLY-SPEED, F-2091)
+  it('retries through a 30 s outage, reconnects once, re-reads once, asks for no replay of the gap (no Last-Event-ID on any request), and keeps delivering with a higher seq', async () => {
+    const { fetchFn, opened } = fakeStreams();
+    let down = false;
+    const doFetch = ((url: string, init?: RequestInit) => (down ? Promise.reject(new Error('refused')) : (fetchFn as unknown as (u: string, i?: RequestInit) => Promise<Response>)(url, init))) as unknown as typeof fetch;
+    const events: { seq: number }[] = [];
+    const states: string[] = [];
+    const reread = vi.fn();
+    // The retry wait the stack case used: 0.5 s growing to 2 s.
+    const h = connectEventStream({ url: 'http://x/events', fetch: doFetch, onEvent: (e) => events.push(e), onReconnect: reread, onState: (s) => states.push(s), retryWaitMs: (n) => Math.min(2_000, 500 * 2 ** n) });
+    await vi.advanceTimersByTimeAsync(10);
+    opened[0]!.push('event: clock.changed\nid: 4\ndata: {"ids":{}}\n\n');
+    await vi.advanceTimersByTimeAsync(10);
+    expect(events.map((e) => e.seq)).toEqual([4]);
+    expect(reread).not.toHaveBeenCalled();
+
+    // The connection is cut and the server stays unreachable for 30 s: the stream says reconnecting the whole time and never re-reads.
+    down = true;
+    opened[0]!.end();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(h.state).toBe('reconnecting');
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(h.state).toBe('reconnecting');
+    expect(reread).not.toHaveBeenCalled();
+    expect(opened).toHaveLength(1);
+
+    // The server is back: the next retry opens the stream, the page re-reads once, and the event of the gap (id 5) is not asked for again.
+    down = false;
+    await vi.advanceTimersByTimeAsync(2_500);
+    expect(h.state).toBe('live');
+    expect(opened).toHaveLength(2);
+    expect(reread).toHaveBeenCalledTimes(1);
+    expect(events).toHaveLength(1);
+    // The client asks for no replay on any request it made, so the gap (id 5) cannot be sent back; the events stack holds the server half (events.stack.ts).
+    const sent = (fetchFn as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+    expect(sent.length).toBeGreaterThan(1);
+    for (const [, init] of sent) expect(JSON.stringify(init?.headers)).not.toMatch(/last-event-id/i);
+    opened[1]!.push('event: clock.changed\nid: 6\ndata: {"ids":{}}\n\n');
+    await vi.advanceTimersByTimeAsync(10);
+    expect(events.map((e) => e.seq)).toEqual([4, 6]);
+    expect(reread).toHaveBeenCalledTimes(1);
+    expect(states).toEqual(['live', 'reconnecting', 'live']);
+    h.close();
+  });
 });

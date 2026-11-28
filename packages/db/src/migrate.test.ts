@@ -17,7 +17,7 @@ const tmp = (files: Record<string, string>) => {
 describe('loadMigrations', () => {
   it('reads the committed files in version order, each with its sha-256', () => {
     const m = loadMigrations();
-    expect(m.map((x) => x.version)).toEqual(['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012', '0013', '0014', '0015', '0016', '0017', '0018', '0019', '0020', '0021', '0022', '0023', '0024']);
+    expect(m.map((x) => x.version)).toEqual(['0001', '0002', '0003', '0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012', '0013', '0014', '0015', '0016', '0017', '0018', '0019', '0020', '0021', '0022', '0023', '0024', '0025']);
     expect(m.every((x) => x.sha256.length === 32 && x.sql.includes('Forward-only'))).toBe(true);
   });
 

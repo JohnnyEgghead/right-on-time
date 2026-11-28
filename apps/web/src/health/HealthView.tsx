@@ -39,6 +39,8 @@ export interface HealthUi {
   toast: string | null;
   /** A refused or failed write's message by its control. */
   message: { where: 'check' | 'apply' | 'switch'; text: string } | null;
+  /** The controls whose write is in flight (F-2079): `dismiss:<alertId>` and `switch:<type>:<which>`. They show a busy look and take no press. */
+  busy?: readonly string[];
 }
 
 export const IDLE_UI: HealthUi = {
@@ -106,7 +108,7 @@ function Spark({ d, asOf }: { d: Health['delay']; asOf: string }) {
   );
 }
 
-function Switch({ on, label, ctl, onChange }: { on: boolean; label: string; ctl: string; onChange?: (v: boolean) => void }) {
+function Switch({ on, label, ctl, busy, onChange }: { on: boolean; label: string; ctl: string; busy?: boolean; onChange?: (v: boolean) => void }) {
   const key = (e: KeyboardEvent<HTMLSpanElement>) => {
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
@@ -114,7 +116,7 @@ function Switch({ on, label, ctl, onChange }: { on: boolean; label: string; ctl:
     }
   };
   return (
-    <span className={on ? 'sw on' : 'sw'} role="switch" aria-checked={on} aria-label={label} tabIndex={0} data-ctl={ctl} onClick={() => onChange?.(!on)} onKeyDown={key} />
+    <span className={on ? 'sw on' : 'sw'} role="switch" aria-checked={on} aria-label={label} aria-busy={busy || undefined} aria-disabled={busy || undefined} tabIndex={0} data-ctl={ctl} onClick={() => onChange?.(!on)} onKeyDown={key} />
   );
 }
 
@@ -484,7 +486,7 @@ function HealthBody({ state, ui, on }: { state: HealthState; ui: HealthUi; on: H
                 <time>{alertWhen(a.at, d.asOf, t.lang, t)}</time>
                 {a.emailWaiting ? <a className="r1-link sm" href="#" role="button" data-ctl="CTL-OFC-16-23" onClick={(ev) => (ev.preventDefault(), on.onEmail?.(a.id))}>{t('health.alerts.email')}</a> : null}
                 {a.emailOpened ? <span className="used" data-ctl="CTL-OFC-16-23">{t('health.alerts.emailUsed')}</span> : null}
-                {a.dismissible && a.state === 'open' ? <span><button type="button" className="btn sm" data-ctl="CTL-OFC-16-28" onClick={() => on.onDismiss?.(a.id)}>{t('health.alerts.dismiss')}</button></span> : null}
+                {a.dismissible && a.state === 'open' ? <span><button type="button" className={ui.busy?.includes(`dismiss:${a.id}`) ? 'btn sm dis' : 'btn sm'} aria-disabled={ui.busy?.includes(`dismiss:${a.id}`) || undefined} data-ctl="CTL-OFC-16-28" onClick={() => on.onDismiss?.(a.id)}>{t('health.alerts.dismiss')}</button></span> : null}
               </div>
             ))}
           </div>
@@ -498,8 +500,8 @@ function HealthBody({ state, ui, on }: { state: HealthState; ui: HealthUi; on: H
                 {d.alertSettings.map((s) => (
                   <tr key={s.type}>
                     <td>{alertTypeName(t, s.type)}</td>
-                    <td><Switch on={s.bell} label={t('health.alerts.switchBell', { type: alertTypeName(t, s.type) })} ctl="CTL-OFC-16-21" onChange={(v) => on.onSwitch?.(s.type, 'bell', v)} /></td>
-                    <td><Switch on={s.managersEmail} label={t('health.alerts.switchEmail', { type: alertTypeName(t, s.type) })} ctl="CTL-OFC-16-22" onChange={(v) => on.onSwitch?.(s.type, 'managersEmail', v)} /></td>
+                    <td><Switch on={s.bell} label={t('health.alerts.switchBell', { type: alertTypeName(t, s.type) })} ctl="CTL-OFC-16-21" busy={ui.busy?.includes(`switch:${s.type}:bell`) ?? false} onChange={(v) => on.onSwitch?.(s.type, 'bell', v)} /></td>
+                    <td><Switch on={s.managersEmail} label={t('health.alerts.switchEmail', { type: alertTypeName(t, s.type) })} ctl="CTL-OFC-16-22" busy={ui.busy?.includes(`switch:${s.type}:managersEmail`) ?? false} onChange={(v) => on.onSwitch?.(s.type, 'managersEmail', v)} /></td>
                   </tr>
                 ))}
               </tbody>

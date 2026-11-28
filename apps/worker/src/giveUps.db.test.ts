@@ -8,7 +8,7 @@
 // Run by gate G-CI2 (ci/gates/G-CI2/vitest.db.config.ts).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { useMigratedDatabase } from '../../../packages/db/src/testing/fixture.ts';
-import { seedOutboxWorld, setDemoClock } from '../../../packages/outbox/src/testing/world.ts';
+import { addCustomer, addJob, seedOutboxWorld, setDemoClock, type OutboxRef } from '../../../packages/outbox/src/testing/world.ts';
 import { MAX_HANDLER_FAILURES } from './dispatcher.ts';
 import { startTestWorker, type TestWorker } from './testing/worker.ts';
 
@@ -18,9 +18,10 @@ const NEXT = '2026-09-15T14:05:00.000Z';
 const KINDS = ['alert.check', 'eta.sweep', 'text.reminder', 'autopilot.step'] as const;
 const PRIVATE = 'Harold Jenkins 6145550100 at 12 Oak St';
 let worker: TestWorker;
+let ref: OutboxRef;
 
 beforeAll(async () => {
-  await seedOutboxWorld(db.admin(), NOW);
+  ref = await seedOutboxWorld(db.admin(), NOW);
   const admin = db.admin();
   await admin.query(`CREATE FUNCTION world.test_refuse_end() RETURNS trigger LANGUAGE plpgsql AS $f$
     BEGIN
@@ -76,5 +77,39 @@ describe('every serial-lane kind gives a failing event up (F-1844)', () => {
       ]);
     }
     expect(worker.logs.join('')).not.toMatch(/Harold|6145550100|Oak/);
+  });
+});
+
+describe('a reminder whose text can never be enqueued (F-2006 K-03)', () => {
+  // why: F-2006 K-03 a given-up text.reminder ended skipped with no call list entry, so no one told the customer of the visit
+  it('is on the call list, dated the day before the visit, after its 5th failed run', async () => {
+    const admin = db.admin();
+    const c = await addCustomer(admin, ref, { mobile: '6145550111' });
+    const job = await addJob(admin, ref, c, '2026-09-16');
+    // Every enqueue of this visit's text fails in the database (a full disk, a broken table): no reminder can go out.
+    await admin.query(`CREATE FUNCTION world.test_refuse_text() RETURNS trigger LANGUAGE plpgsql AS $f$
+      BEGIN
+        IF NEW.job_number = ${job} THEN RAISE EXCEPTION 'no room' USING ERRCODE = '53100'; END IF;
+        RETURN NEW;
+      END $f$`);
+    await admin.query(`CREATE TRIGGER test_refuse_text BEFORE INSERT ON world.outbox_text FOR EACH ROW EXECUTE FUNCTION world.test_refuse_text()`);
+    // An at-once reminder (F-446), due now, so the clock need not move past the other chains' next events.
+    const r = await admin.query<{ id: string }>(
+      `INSERT INTO world.scheduled_event (due_at, kind, subject, payload, state) VALUES ($1, 'text.reminder', $2, $3::jsonb, 'due') RETURNING id`,
+      [NOW, String(job), JSON.stringify({ jobNumber: job, atOnce: true, visitDate: '2026-09-16' })]);
+    const id = r.rows[0]!.id;
+    await setDemoClock(admin, NOW);
+    const event = async () => (await admin.query<{ state: string; result: string | null; n: number | null }>(
+      `SELECT state, result, (payload->>'failures')::int AS n FROM world.scheduled_event WHERE id = $1`, [id])).rows[0]!;
+    for (let pass = 0; pass < 40 && (await event()).state === 'due'; pass += 1) await worker.drain();
+
+    expect(await event()).toEqual({ state: 'skipped', result: 'handler_failed', n: MAX_HANDLER_FAILURES });
+    const calls = await admin.query<{ call_date: string; reason: string }>(
+      `SELECT call_date::text, reason FROM world.call_list_entry WHERE job_number = $1`, [job]);
+    expect(calls.rows).toEqual([{ call_date: '2026-09-15', reason: 'no_mobile' }]);
+    const mine = worker.logs.map((l) => JSON.parse(l) as Record<string, unknown>).filter((l) => l.eventId === id);
+    expect(mine.map((l) => [l.status, l.errorCode])).toEqual([
+      ...[1, 2, 3, 4, 5].map(() => ['event failed', '53100']), ['event gave up', '53100'],
+    ]);
   });
 });

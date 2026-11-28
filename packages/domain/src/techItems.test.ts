@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   batchOrder, classifyChange, columnOf, conflictVerdict, demoTimeAtRealMs, entryRealMs, isForwardMove,
-  onMyWayIsHistoryOnly, placeItem, type ClockMoveRow, type HistoryRow,
+  onMyWayIsHistoryOnly, placeItem, type ClockMoveRow, type HistoryRow, type JobChangeKind,
 } from './techItems.ts';
 
 describe('the offline conflict table constant (FR-TECH-6)', () => {
@@ -16,8 +16,17 @@ describe('the offline conflict table constant (FR-TECH-6)', () => {
   });
 });
 
-const row = (kind: string, actorKind: HistoryRow['actorKind'], fromVersion: number, data: Record<string, unknown> = {}): HistoryRow =>
+const row = (kind: JobChangeKind, actorKind: HistoryRow['actorKind'], fromVersion: number, data: Record<string, unknown> = {}): HistoryRow =>
   ({ kind, actorKind, fromVersion, data });
+
+describe('the job_change kind is a closed union (K-18; F-2009)', () => {
+  // why: K-18 a misspelled job_change kind fails tsc (the directive below is an error on its own if the kind is a plain string), and a known kind compiles
+  it('refuses a misspelled kind at compile time and still reads a known one', () => {
+    // @ts-expect-error 'cancelled' is not a job_change kind (the spelling is 'canceled')
+    const typo: HistoryRow = { kind: 'cancelled', actorKind: 'office', fromVersion: 1, data: {} };
+    expect(columnOf({ ...typo, kind: 'canceled' })).toBe('canceled');
+  });
+});
 
 describe('classifying the change since the app last read the job (section 5.1 step 5)', () => {
   // why: FR-TECH-6

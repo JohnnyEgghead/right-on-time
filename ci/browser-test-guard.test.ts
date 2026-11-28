@@ -102,10 +102,11 @@ describe('browser test population', () => {
     const ok = { path: 'ci/x/g.mjs', src: "import { webkit } from 'playwright';\nconst p = await g.context.newPage();\nconst q = await ctx.newPage();" };
     const exempt = { path: 'mockups/tools/build.mjs', src: "import { chromium } from 'playwright';\nconst p = await browser.newPage();" };
     expect(unguarded([mjs, dyn, tsx, ok, exempt])).toEqual(['ci/x/d.mjs', 'ci/x/e.js', 'ci/x/f.tsx']);
-    // F-1852: mockups/ and docs/design/ are private paths (scripts/private-paths.txt), so a public copy has 2 of the exempt files; the
-    // plants above still run there, and the every-exempt-file-exists half skips with a note naming the missing ones.
-    const missing = Object.keys(EXEMPT).filter((p) => /^(mockups|docs\/design)\//.test(p) && !existsSync(p));
-    if (missing.length > 0) ctx.skip(`${missing.join(' and ')} not in this copy (private paths the public export leaves out)`);
+    // F-1852, J-35: mockups/, docs/design/ and infra/spike/ are private paths (scripts/private-paths.txt), so a public copy has 3 of the
+    // exempt files fewer; the plants above still run there, and the every-exempt-file-exists half skips, only when a path is absent,
+    // with a note naming the missing ones. The private checkout has them all, so there the half runs (public-copy-tests step 0).
+    const missing = Object.keys(EXEMPT).filter((p) => /^(mockups|docs\/design|infra\/spike)\//.test(p) && !existsSync(p));
+    if (missing.length > 0) ctx.skip(`${missing.join(' and ')}: each is not in this copy (private paths the public export leaves out)`);
     expect(Object.keys(EXEMPT).every((p) => files.includes(p))).toBe(true);
   });
 });

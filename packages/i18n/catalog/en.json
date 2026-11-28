@@ -880,7 +880,7 @@
   "booking.done.title": "You're booked",
   "booking.done.visit": "Your visit",
   "booking.err.closed": "Booking for {day} just closed. Pick another day.",
-  "booking.err.failed": "The visit could not be booked. Check the connection, then try again.",
+  "booking.err.failed": "We could not confirm the booking. Check the connection, then press Confirm booking again.",
   "booking.err.invalid": "Some details were not accepted. Check them, then try again.",
   "booking.err.refused": "That visit cannot be booked online. Pick another day or call {phone}.",
   "booking.err.window": "The arrival windows could not load.",

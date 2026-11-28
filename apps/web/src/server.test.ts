@@ -23,6 +23,13 @@ vi.mock('./map/map-assets.ts', async (orig) => {
   return { ...m, readMapAsset: (file: string) => { if (mapRead.fail) throw new Error('EACCES'); return m.readMapAsset(file); } };
 });
 
+// F-2071: the technician shell asset read can be made to throw a coded error for one test.
+const shellRead = vi.hoisted(() => ({ fail: false }));
+vi.mock('./tech/shell-assets.ts', async (orig) => {
+  const m = await orig<typeof import('./tech/shell-assets.ts')>();
+  return { ...m, techShellAsset: (...a: Parameters<typeof m.techShellAsset>) => { if (shellRead.fail) throw Object.assign(new Error('no such file sw.js'), { code: 'ENOENT' }); return m.techShellAsset(...a); } };
+});
+
 interface Seen {
   url: string;
   csp: string | undefined;
@@ -32,10 +39,11 @@ interface Seen {
 const k = kit(policyTable, { ...handlers });
 const seen: Seen[] = [];
 /** The stand-in's answer for the next request: a page, a 500 page, its own CSP header, or a throw. */
-let mode: 'page' | 'error-page' | 'own-csp' | 'throw' = 'page';
+let mode: 'page' | 'error-page' | 'own-csp' | 'throw' | 'throw-coded' = 'page';
 const fakeNext: NextHandler = async (req: IncomingMessage, res: ServerResponse) => {
   seen.push({ url: req.url ?? '', csp: req.headers['content-security-policy'] as string | undefined, verdict: req.headers[PAGE_VERDICT_HEADER] as string | undefined });
   if (mode === 'throw') throw new Error('render failed');
+  if (mode === 'throw-coded') throw Object.assign(new Error('render exploded'), { code: 'ERR_RENDER' });
   if (mode === 'own-csp') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'Content-Security-Policy': "default-src *" });
     res.end('<!doctype html><p>page</p>');
@@ -274,6 +282,32 @@ describe('the web process: the page gate before every page (F-212 b)', () => {
       mapRead.fail = false;
     }
     expect((await at('/map-assets/fonts/Noto%20Sans%20Regular/0-255.pbf')).status).toBe(200);
+  });
+
+  // why: K-10 (row K-10.7) a page that throws is logged with its cause code (never its message), not the anonymous server_error
+  it('logs the cause code of a page that throws', async () => {
+    mode = 'throw-coded';
+    k.lines.length = 0;
+    const r = await at('/book');
+    expect(r.status).toBe(500);
+    const errors = k.lines.filter((l) => l['status'] === 'unhandled error');
+    expect(errors.map((l) => l['errorCode'])).toEqual(['ERR_RENDER']);
+    expect(JSON.stringify(k.lines)).not.toContain('render exploded');
+  });
+
+  // why: F-2071 the service worker's failed read is logged with its cause code, not the anonymous server_error, and never its message
+  it('logs the cause code of a technician shell asset that fails to read', async () => {
+    shellRead.fail = true;
+    k.lines.length = 0;
+    try {
+      const r = await at('/tech/sw.js');
+      expect(r.status).toBe(500);
+    } finally {
+      shellRead.fail = false;
+    }
+    const errors = k.lines.filter((l) => l['status'] === 'unhandled error');
+    expect(errors.map((l) => l['errorCode'])).toEqual(['ENOENT']);
+    expect(JSON.stringify(k.lines)).not.toContain('no such file');
   });
 
   // why: SD-40, F-214 a write to a page is refused before the gate or Next

@@ -142,8 +142,18 @@ export class TechReads {
     // F-1775: the profile is read beside the day, whatever the day read's outcome, so Loading and Day not loaded name the person on a first open too.
     // F-1778: the name and skill change only at sign-in, so API-07 is read once, when no profile is kept, never on every round.
     const profileRead = this.s.profile ? Promise.resolve() : this.readProfile(gen);
+    // F-2070: only a TypeError thrown by a client call is a lost connection; a TypeError from this round's own code (a bug) leaves the signal.
+    let lost = false;
+    const reach = async <T>(call: Promise<T>): Promise<T> => {
+      try {
+        return await call;
+      } catch (e) {
+        if (e instanceof TypeError) lost = true;
+        throw e;
+      }
+    };
     try {
-      const day = await this.client.call(todayJobs, {});
+      const day = await reach(this.client.call(todayJobs, {}));
       if (gen !== this.epoch()) return;
       const at = day.envelope?.meta.demoNow ?? this.s.now ?? '';
       const saved = { at, data: day.data };
@@ -157,13 +167,13 @@ export class TechReads {
         ? [...this.s.notices, { id: this.nextId++, change: changes.length === 1 ? (changes[0] as DayChange) : null, n: changes.length }]
         : this.s.notices;
       this.set({ day: saved, now: at, online: true, failed: false, signedOut: false, notices });
-      const route = await this.client.call(dayRoute, {});
+      const route = await reach(this.client.call(dayRoute, {}));
       if (gen !== this.epoch()) return;
       const savedR = { at, data: route.data };
       saveRoute(savedR);
       this.set({ route: savedR });
       if (this.s.parts === null || this.rounds === 1 || this.rounds % PARTS_EVERY_ROUNDS === 0) {
-        const parts = await this.client.call(partsList, {});
+        const parts = await reach(this.client.call(partsList, {}));
         if (gen !== this.epoch()) return;
         const savedP = { at, data: parts.data.parts };
         saveParts(savedP);
@@ -171,8 +181,9 @@ export class TechReads {
       }
       this.set({ settled: true });
     } catch (e) {
-      // An answer that is a refusal (401, 5xx) is not a lost connection; only a call that never reached the server is.
-      this.set({ online: e instanceof ApiError ? this.s.online : false, settled: true, failed: true, failedAt: realNow('device_stamp').epochMilliseconds, signedOut: e instanceof ApiError && e.status === 401 });
+      // An answer that is a refusal (401, 5xx) is not a lost connection; only a client call that never reached the server is: fetch's own TypeError
+      // (CallTimeout is one too), caught at the call by reach() above. Any other error, a TypeError of this round's own code included, leaves the signal as it was (K-10.6b).
+      this.set({ online: lost ? false : this.s.online, settled: true, failed: true, failedAt: realNow('device_stamp').epochMilliseconds, signedOut: e instanceof ApiError && e.status === 401 });
     } finally {
       // readProfile never throws; the round ends with it, so a joined refresh never leaves it running into the next round.
       await profileRead;

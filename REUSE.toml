@@ -9,3 +9,11 @@ path = ["packages/db/migrations/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 John Loring"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# K-13 / J-30: the stylesheets carry no header line. The kit stylesheets are byte copies of the frozen design kit, so no .css
+# file is edited; this annotation covers them instead (REUSE specification 3.2).
+[[annotations]]
+path = ["**/*.css"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 John Loring"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

@@ -16,8 +16,10 @@ import type { AppInfo } from '../shell/Footer.tsx';
 import { AdminFrame } from '../shell/Frames.tsx';
 import { Icon } from '../shell/Icon.tsx';
 import type { IconName } from '../shell/icon-paths.ts';
+import { useInFlight, useKeyedInFlight } from '../shell/in-flight.ts';
 import { useModalFocus } from '../shell/modal-focus.ts';
 import { useT, type ClientT } from '../shell/intl.tsx';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import type { Me } from '../shell/OfficeTopBar.tsx';
 import { ErrorPanel } from '../shell/Panels.tsx';
 import {
@@ -119,21 +121,30 @@ export function UsersScreen(p: UsersScreenProps) {
   const [dialog, setDialog] = useState<DialogState | null>(p.dialog ?? null);
   const [rowError, setRowError] = useState<string | null>(null);
   const latest = useRef(0);
+  // K-08.19: the filters as they are now, for a read made after a write that began under older ones.
+  const filtersNow = useRef(filters);
+  filtersNow.current = filters;
 
   const readUsers = useCallback(async (f: Filters) => {
     const n = ++latest.current;
     const r = await callRow(rows.searchUsers, { ...f });
     if (n !== latest.current) return;
+    // K-08.20: a page past the last (the last user of it moved) is not shown: the page goes to the last one, which reads again.
+    if (r.ok && f.page > 1 && f.page > r.data.pages && filtersNow.current.page === f.page) {
+      setFilters((g) => (g.page === f.page ? { ...g, page: Math.max(1, r.data.pages) } : g));
+      return;
+    }
     setSearch(r.ok ? r.data : 'failed');
   }, []);
+  const newestChanges = useNewestAnswer();
+  const newestAreas = useNewestAnswer();
+  // K-08.21: the list of changes is read again after each change made here; the newest read's answer is the one shown.
   const readChanges = useCallback(async () => {
-    const r = await callRow(rows.userChanges, { limit: 10 });
-    setChanges(r.ok ? r.data.changes : 'failed');
-  }, []);
+    await newestChanges.run(() => callRow(rows.userChanges, { limit: 10 }), (r) => setChanges(r.ok ? r.data.changes : 'failed'));
+  }, [newestChanges]);
   const readAreas = useCallback(async () => {
-    const r = await callRow(rows.roleAccess, {});
-    setAreas(r.ok ? r.data.areas : 'failed');
-  }, []);
+    await newestAreas.run(() => callRow(rows.roleAccess, {}), (r) => setAreas(r.ok ? r.data.areas : 'failed'));
+  }, [newestAreas]);
 
   useEffect(() => {
     if (fixed) return;
@@ -154,15 +165,24 @@ export function UsersScreen(p: UsersScreenProps) {
   const changed = async (text: string) => {
     setDialog(null);
     announce(text);
-    await Promise.all([readUsers(filters), readChanges()]);
+    await Promise.all([readUsers(filtersNow.current), readChanges()]);
   };
 
+  // K-01 (F-2011): a second Turn on while the write is in flight sends nothing; the guard is held outside React state (shell/in-flight.ts).
+  // F-2088: 1 guard per user, held until the follow-up reads land or the write fails. The row's Turn on stays until then, and a 2nd press for the
+  // same user would send a 2nd API-170 the server refuses (409 rule_refused). A press on another user goes on; the newest read's answer is shown (K-08.21).
+  const turning = useKeyedInFlight();
   const turnOn = async (u: UserItem) => {
-    setRowError(null);
-    const r = await callRow(rows.turnUserOn, { userId: u.id });
-    if (r.ok) return changed(t('accounts.users.turnedOn', { name: u.name }));
-    if (r.code === 'not_found') return readUsers(filters);
-    setRowError(r.code === 'rule_refused' ? t('accounts.users.refused') : t('accounts.users.actionFailed'));
+    if (!turning.begin(u.id)) return;
+    try {
+      setRowError(null);
+      const r = await callRow(rows.turnUserOn, { userId: u.id });
+      if (r.ok) return await changed(t('accounts.users.turnedOn', { name: u.name }));
+      if (r.code === 'not_found') return await readUsers(filtersNow.current);
+      setRowError(r.code === 'rule_refused' ? t('accounts.users.refused') : t('accounts.users.actionFailed'));
+    } finally {
+      turning.end(u.id);
+    }
   };
 
   const set = (patch: Partial<Filters>) => setFilters((f) => ({ ...f, ...patch, page: patch.page ?? 1 }));
@@ -250,7 +270,7 @@ export function UsersScreen(p: UsersScreenProps) {
                           {u.id === meId ? (
                             <span className="you">{t('accounts.users.you')}</span>
                           ) : u.status === 'turned_off' ? (
-                            <button type="button" className="btn sm" data-ctl="CTL-OFC-43-13" onClick={() => void turnOn(u)}>{t('accounts.users.turnOn')}</button>
+                            <button type="button" className={`btn sm${turning.busy.includes(u.id) ? ' dis' : ''}`} aria-disabled={turning.busy.includes(u.id) || undefined} data-ctl="CTL-OFC-43-13" onClick={() => void turnOn(u)}>{t('accounts.users.turnOn')}</button>
                           ) : (
                             <>
                               <button type="button" className="btn sm" data-ctl="CTL-OFC-43-07" aria-label={t('accounts.users.changeRoleOf', { name: u.name })} onClick={() => setDialog({ kind: 'role', step: 'choosing', user: u })}>{t('accounts.users.changeRole')}</button>
@@ -323,7 +343,7 @@ export function UsersScreen(p: UsersScreenProps) {
           )}
         </section>
       </div>
-      {dialog?.kind === 'invite' ? <InviteDialog d={dialog} setD={setDialog} onSent={() => void Promise.all([readUsers(filters), readChanges()])} /> : null}
+      {dialog?.kind === 'invite' ? <InviteDialog d={dialog} setD={setDialog} onSent={() => void Promise.all([readUsers(filtersNow.current), readChanges()])} /> : null}
       {dialog?.kind === 'role' ? <RoleDialog d={dialog} setD={setDialog} onDone={changed} /> : null}
       {dialog?.kind === 'off' ? <OffDialog d={dialog} setD={setDialog} onDone={changed} /> : null}
     </AdminFrame>
@@ -445,12 +465,22 @@ function InviteDialog({ d, setD, onSent }: { d: Extract<DialogState, { kind: 'in
   const [branch, setBranch] = useState(d.branch ?? 'columbus');
   const [errs, setErrs] = useState<{ name?: string; email?: string; form?: string }>({});
   const [used, setUsed] = useState(false);
-  const close = () => setD(null);
+  const sendGuard = useInFlight();
+  // A send in flight holds the dialog: Escape and the close button wait for its answer, as Cancel does.
+  const close = () => !sendGuard.busy && setD(null);
   const valid = name.trim().length > 0 && EMAIL.test(email.trim()) && role !== null;
 
   const send = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (d.step !== 'editing') return;
+    // K-01 (F-2011): 1 invite per press-run; the shared guard (shell/in-flight.ts) is held from the press to the answer.
+    if (d.step !== 'editing' || !sendGuard.begin()) return;
+    try {
+      await sendOnce();
+    } finally {
+      sendGuard.end();
+    }
+  };
+  const sendOnce = async () => {
     const next: typeof errs = {};
     if (!name.trim()) next.name = t('accounts.field.nameRequired');
     if (!EMAIL.test(email.trim())) next.email = t('accounts.field.notEmail');
@@ -581,14 +611,20 @@ function OffDialog({ d, setD, onDone }: { d: Extract<DialogState, { kind: 'off' 
   const t = useT();
   const [err, setErr] = useState<string | null>(null);
   const turning = d.step === 'turning';
-  const close = () => !turning && setD(null);
+  const guard = useInFlight();
+  const close = () => !turning && !guard.busy && setD(null);
   const confirm = async () => {
-    if (turning) return;
-    setD({ ...d, step: 'turning' });
-    const r = await callRow(rows.turnUserOff, { userId: d.user.id });
-    if (r.ok) return onDone(t('accounts.users.offDone', { name: d.user.name }));
-    setD({ ...d, step: 'asking' });
-    setErr(r.code === 'rule_refused' ? t('accounts.users.refused') : t('accounts.users.actionFailed'));
+    // K-01 (F-2011): 1 turn-off per press-run; the shared guard is held from the press to the answer.
+    if (turning || !guard.begin()) return;
+    try {
+      setD({ ...d, step: 'turning' });
+      const r = await callRow(rows.turnUserOff, { userId: d.user.id });
+      if (r.ok) return await onDone(t('accounts.users.offDone', { name: d.user.name }));
+      setD({ ...d, step: 'asking' });
+      setErr(r.code === 'rule_refused' ? t('accounts.users.refused') : t('accounts.users.actionFailed'));
+    } finally {
+      guard.end();
+    }
   };
   return (
     <Dialog

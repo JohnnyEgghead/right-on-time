@@ -11,6 +11,8 @@ const addressNamed = { [ADDRESS_TAG]: true };
 const placeId = () => z.uuid().meta(addressNamed);
 const wireTime = z.string().min(1);
 const SAMPLE_ID = '00000000-0000-7000-8000-000000000000';
+/** A UUID v4 for the booking examples' bookingKey (API-113). */
+const SAMPLE_KEY = '00000000-0000-4000-8000-000000000000';
 const language = z.enum(['en', 'es']);
 
 /** Online booking offers the next 21 days after today (SPECIFICATIONS SD-27, GAP-9). */
@@ -67,6 +69,9 @@ export const bookOnline = defineContract({
     textsOn: z.boolean(),
     textLanguage: language,
     timeZone: z.string().min(1).max(64),
+    // SPECIFICATIONS 6.1 Booking write (FR-BOOK-1; plan D-34, K-01): the booking page's key for 1 draft, a UUID v4 string of 36 characters made
+    // from crypto.getRandomValues. A key a job already holds answers that job's booking again; a missing or malformed key is validation_failed.
+    bookingKey: z.uuidv4(),
   }),
   response: z.object({
     bookingToken: z.string(),
@@ -79,7 +84,7 @@ export const bookOnline = defineContract({
   labels: [],
   examples: [{ name: 'a street not on the list', input: {
     serviceId: 'furnace_tune_up', streetId: SAMPLE_ID, houseNumber: 12, date: '2026-09-15', windowId: 'x', name: 'Lucia Moreno', mobile: null, textsOn: false,
-    textLanguage: 'en', timeZone: 'America/New_York',
+    textLanguage: 'en', timeZone: 'America/New_York', bookingKey: SAMPLE_KEY,
   }, expectStatus: 422 }],
 });
 

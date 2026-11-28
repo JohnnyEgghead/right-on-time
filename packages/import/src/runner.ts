@@ -191,6 +191,8 @@ interface PickedRun {
   attempt: number;
   stage: string;
   percent: number;
+  /** The row's started_at: a failure's finished_at when the clock cannot be read (F-2006 J-26). */
+  startedAt: Date;
 }
 
 /** Steps 3 to 6 for 1 run row the caller has picked up under the run lock. */
@@ -248,7 +250,9 @@ async function execute(pool: Connector, record: Queryable, run: PickedRun, sourc
       });
     }
   } catch (e) {
-    const failedAt = await Promise.resolve(clock()).catch(() => new Date(0));
+    // F-2006 J-26: a clock that cannot be read (a rejection, or a throw before it returns) ends the run at its own
+    // start, never at 1970 (a finish before its start), and the run's own failure is the one rethrown.
+    const failedAt = await Promise.resolve().then(clock).catch(() => run.startedAt);
     await closeFailed(record, runId, failedAt, { error: failureCode(e), attempts: run.attempt }).catch(() => undefined);
     throw e;
   }
@@ -307,8 +311,8 @@ export interface PendingOptions {
  */
 export async function runPendingImport(pool: Connector, opts: PendingOptions): Promise<RunOutcome | null> {
   return underRunLock(pool, opts.clock, async (record) => {
-    const r = await record.query<{ id: string; kind: RunKind; stage: string; percent: number; report: RunAttempts | null }>(
-      `SELECT id, kind, stage, percent, report FROM world.import_run WHERE status = 'running' AND NOT by_setup ORDER BY started_at, id LIMIT 1`);
+    const r = await record.query<{ id: string; kind: RunKind; stage: string; percent: number; report: RunAttempts | null; started_at: Date }>(
+      `SELECT id, kind, stage, percent, report, started_at FROM world.import_run WHERE status = 'running' AND NOT by_setup ORDER BY started_at, id LIMIT 1`);
     const run = r.rows[0];
     if (!run) return null;
     const before = typeof run.report?.attempts === 'number' ? run.report.attempts : 0;
@@ -324,7 +328,7 @@ export async function runPendingImport(pool: Connector, opts: PendingOptions): P
     if (run.stage !== 'parse' || run.percent !== 0) await changed(record, run.id);
     const files = opts.files;
     const source = typeof files === 'function' ? files : () => files;
-    return execute(pool, record, { id: run.id, kind: run.kind, attempt, stage: 'parse', percent: 0 }, source, opts.clock);
+    return execute(pool, record, { id: run.id, kind: run.kind, attempt, stage: 'parse', percent: 0, startedAt: run.started_at }, source, opts.clock);
   });
 }
 
@@ -338,7 +342,7 @@ export async function runImport(pool: Connector, opts: RunOptions): Promise<RunO
     const at = await opts.clock();
     const runId = await inRecordTransaction(record, () =>
       requestImportRun(record, { kind: opts.kind, bySetup: opts.bySetup, byUser: opts.byUser, at }));
-    return execute(pool, record, { id: runId, kind: opts.kind, attempt: 1, stage: 'parse', percent: 0 }, () => opts.files, opts.clock);
+    return execute(pool, record, { id: runId, kind: opts.kind, attempt: 1, stage: 'parse', percent: 0, startedAt: at }, () => opts.files, opts.clock);
   });
   if (!out) throw new ImportRefused('run_in_progress', 'an import run is in progress');
   return out;

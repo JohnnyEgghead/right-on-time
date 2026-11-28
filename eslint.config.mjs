@@ -27,7 +27,7 @@ export default tseslint.config(
   // The 1 path exemption left (F-180, P6-NATIVE-SHELL removed the native spike's): apps/web/spike/s2, spike S2's throwaway
   // offline shell (G-S2-TWA-OFFLINE), kept as that record's evidence. Its 7 reads stamp the spike's own log lines and items
   // (public/app.js:45, :77, :89, :98, :110; server.mjs:38, :76); none is product code: the release image leaves apps/web/spike
-  // out (infra/image/Dockerfile.dockerignore) and only infra/spike/s2/deploy.sh serves it, on the spike host.
+  // out (infra/image/Dockerfile.dockerignore) and only the spike's own deploy script (private tree only, J-35) serves it, on the spike host.
   {
     files: ['apps/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}', 'packages/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}'],
     ignores: ['packages/time/src/real.ts', 'apps/web/spike/s2/**'],

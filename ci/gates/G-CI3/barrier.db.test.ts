@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// why-file: invariant-3, FR-DISP-6, FR-BOOK-3, FR-DISP-34
+// why-file: invariant-3, FR-DISP-6, FR-BOOK-3, FR-DISP-34, K-01
 // Gate G-CI3 (inv3-one-technician-capacity; SPECIFICATIONS section 14 item 3, section 5.3, invariant 3, D15): 2
 // barrier-released transactions on the same job, the last place in a window, or the same block; exactly 1 commits.
 //
@@ -20,6 +20,10 @@
 // assigns serialize on that row and it holds the outcome, not the technician-day lock. By reading, no case here is known to turn red on
 // lockTechnicianDays alone (not planted, budget 0). Invariant 3 still holds on the live path: every writer that adds to a
 // technician's room takes the booking-day row.
+// K-01 (P10-BOOKING-KEY): 2 sends of 1 booking key (API-113) both pass the handler's first key lookup, then race. On 1 day the booking-day
+// lock serializes them and the second finds the key under it; on 2 days nothing serializes them and the unique constraint does. Each
+// request's statements are traced (traces) so a case proves which of the 2 settled it.
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from '../../../packages/config/src/index.ts';
 import { inTransaction, type Queryable } from '../../../packages/db/src/client.ts';
@@ -44,6 +48,8 @@ const BARRIER_TIMEOUT_MS = 10_000;
 
 interface Barrier { arrive(): Promise<void>; met: boolean }
 let barrier: Barrier | null = null;
+/** While set, each gated transaction's statements, 1 list per request in the order the transactions began. */
+let traces: string[][] | null = null;
 
 function newBarrier(parties: number): Barrier {
   let arrived = 0;
@@ -67,8 +73,11 @@ function newBarrier(parties: number): Barrier {
 /** The transaction as the handler sees it, held once at GATE_AT while a barrier is armed. */
 function gated(tx: Queryable, b: Barrier): Queryable {
   let held = false;
+  const trace: string[] = [];
+  traces?.push(trace);
   return {
     async query<R>(text: string, values?: unknown[]) {
+      trace.push(text);
       if (!held && GATE_AT.test(text)) {
         held = true;
         await b.arrive();
@@ -254,6 +263,92 @@ describe('the technician-day lock (F-381; SD-27, FR-BOOK-5, FR-DISP-34): writes 
       ]);
       expect(out.map((o) => o.code === 'window_full').sort()).toEqual([false, true]);
       expect(await n(`SELECT count(*) AS n FROM world.job WHERE date = $1::date AND window_id = $2 AND status <> 'canceled'`, [date, win('two_hour 16:00')])).toBe(10);
+    }
+  });
+});
+
+describe('1 booking key sent twice at once (API-113; SPECIFICATIONS 6.1 Booking write, K-01): 1 job, both answers the same', () => {
+  const ROUNDS_KEY = 3;
+  let clock: Record<string, unknown>;
+  beforeAll(async () => {
+    clock = (await rows<Record<string, unknown>>('SELECT paused, demo_anchor, last_reset_real FROM system.demo_clock WHERE id = 1'))[0]!;
+    await db.admin().query(`UPDATE system.demo_clock SET paused = true, demo_anchor = '2026-09-15T11:00:00Z', last_reset_real = now() - interval '1 hour' WHERE id = 1`);
+  });
+  afterAll(async () => {
+    await db.admin().query('UPDATE system.demo_clock SET paused = $1, demo_anchor = $2, last_reset_real = $3 WHERE id = 1', [clock.paused, clock.demo_anchor, clock.last_reset_real]);
+  });
+  const visitor = (body: unknown) => router.handle(new Request('http://web:3000/api/v1/public/bookings', {
+    method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json', origin: ORIGIN },
+  }), { address: '203.0.113.9' });
+  const street = async () => (await rows<{ id: string }>(`SELECT id FROM world.street WHERE branch_id = 'columbus' ORDER BY name, id LIMIT 1`))[0]!.id;
+  const draft = (streetId: string, bookingKey: string, name: string, date: string, windowKey = 'two_hour 10:00') => ({
+    serviceId: 'furnace_tune_up', streetId, houseNumber: 2310, date, windowId: win(windowKey), name, mobile: null, textsOn: false,
+    textLanguage: 'en', timeZone: 'America/New_York', bookingKey,
+  });
+  /** 2 sends of 1 key released together; the traces of the 2 requests. */
+  async function raceKey(first: unknown, second: unknown) {
+    traces = [];
+    try {
+      const out = await race([() => visitor(first), () => visitor(second)]);
+      return { out, traced: traces };
+    } finally {
+      traces = null;
+    }
+  }
+  const lookedUpUnderLock = (t: string[]) => t.some((q) => /SELECT 1 FROM world\.job WHERE booking_key/.test(q));
+  const insertedJob = (t: string[]) => t.some((q) => /INSERT INTO world\.job \(/.test(q));
+  const rolledBack = (t: string[]) => t.includes('ROLLBACK TO SAVEPOINT booking_key');
+
+  // why: K-01 a double Confirm sends 1 key twice onto 1 day: the booking-day lock serializes them, the second finds the key under it and answers the first's booking
+  it(`books 1 job for 2 sends of 1 key onto 1 day, the second found under the booking-day lock, ${ROUNDS_KEY} rounds`, async () => {
+    const id = await street();
+    for (let round = 0; round < ROUNDS_KEY; round++) {
+      const key = randomUUID();
+      const name = `Key Sameday ${round}`;
+      const { out, traced } = await raceKey(draft(id, key, name, '2026-09-17'), draft(id, key, name, '2026-09-17'));
+      expect(out.map((o) => [o.status, o.code]), JSON.stringify(out.map((o) => o.body))).toEqual([[201, null], [201, null]]);
+      expect(out[0]!.body).toEqual(out[1]!.body);
+      expect(await n('SELECT count(*) AS n FROM world.job WHERE booking_key = $1', [key])).toBe(1);
+      // The loser's customer insert went with its savepoint: 1 customer by that name.
+      expect(await n('SELECT count(*) AS n FROM world.customer WHERE name = $1', [name])).toBe(1);
+      expect(traced.length).toBe(2);
+      const loser = traced.filter(rolledBack);
+      expect(loser.length).toBe(1);
+      expect([lookedUpUnderLock(loser[0]!), insertedJob(loser[0]!)]).toEqual([true, false]);
+    }
+  });
+
+  // why: F-2061 the key lookup comes before the room check (SPECIFICATIONS 6.1); with room for 1 only, a lookup moved after the room check answers the second send window_full
+  it(`books 1 job for 2 sends of 1 key onto the last place of a window, the second answering the first's booking, ${ROUNDS_KEY} rounds`, async () => {
+    const id = await street();
+    for (let round = 0; round < ROUNDS_KEY; round++) {
+      const date = ['2026-09-22', '2026-09-23', '2026-09-24'][round] as string; // Tue, Wed, Thu
+      await fill(date, 'two_hour 16:00', 9); // the 4-6 PM window holds 10 jobs: room for 1
+      const key = randomUUID();
+      const name = `Key Lastplace ${round}`;
+      const { out } = await raceKey(draft(id, key, name, date, 'two_hour 16:00'), draft(id, key, name, date, 'two_hour 16:00'));
+      expect(out.map((o) => [o.status, o.code]), JSON.stringify(out.map((o) => o.body))).toEqual([[201, null], [201, null]]);
+      expect(out[0]!.body).toEqual(out[1]!.body);
+      expect(await n('SELECT count(*) AS n FROM world.job WHERE booking_key = $1', [key])).toBe(1);
+      expect(await n(`SELECT count(*) AS n FROM world.job WHERE date = $1::date AND window_id = $2 AND status <> 'canceled'`, [date, win('two_hour 16:00')])).toBe(10);
+    }
+  });
+
+  // why: K-01 2 sends of 1 key onto 2 days take 2 booking-day locks, so the unique constraint settles them: the loser's insert fails and it answers as a repeat
+  it(`books 1 job for 2 sends of 1 key onto 2 days, the second refused by the unique constraint, ${ROUNDS_KEY} rounds`, async () => {
+    const id = await street();
+    for (let round = 0; round < ROUNDS_KEY; round++) {
+      const key = randomUUID();
+      const name = `Key Twoday ${round}`;
+      const { out, traced } = await raceKey(draft(id, key, name, '2026-09-17'), draft(id, key, name, '2026-09-21')); // Thu and Mon: Sep 16 and 18 are 4-hour peak days
+      expect(out.map((o) => [o.status, o.code]), JSON.stringify(out.map((o) => o.body))).toEqual([[201, null], [201, null]]);
+      expect(out[0]!.body).toEqual(out[1]!.body);
+      expect(await n('SELECT count(*) AS n FROM world.job WHERE booking_key = $1', [key])).toBe(1);
+      expect(await n('SELECT count(*) AS n FROM world.customer WHERE name = $1', [name])).toBe(1);
+      const loser = traced.filter(rolledBack);
+      expect(loser.length).toBe(1);
+      expect(insertedJob(loser[0]!)).toBe(true);
+      expect(await n('SELECT count(*) AS n FROM world.job_change c JOIN world.job j ON j.job_number = c.job_number WHERE j.booking_key = $1', [key])).toBe(1);
     }
   });
 });

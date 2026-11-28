@@ -237,6 +237,7 @@
    "DEFAULT_DIR": "Used in its own file, and another file names it; there when this check began."
   },
   "ci/look-values/accounts-cases.ts": {
+   "LEFT_OUT": "A record read with the cases, no gate reads it (the shape of the other look-value case files' LEFT_OUT); F-2060.",
    "NOT_COMPARED": "Used in its own file, and another file names it; there when this check began."
   },
   "ci/look-values/auth-cases.ts": {
@@ -474,8 +475,7 @@
    "newItemKey": "Another file names it; there when this check began.",
    "offsetFromClock": "Another file names it; there when this check began.",
    "oldItemCount": "Another file names it; there when this check began.",
-   "stampEntry": "Another file names it; there when this check began.",
-   "uploadLimitMs": "Another file names it; there when this check began."
+   "stampEntry": "Another file names it; there when this check began."
   },
   "packages/outbox/src/items/send.ts": {
    "CallStop": "Used in its own file, and another file names it; there when this check began."

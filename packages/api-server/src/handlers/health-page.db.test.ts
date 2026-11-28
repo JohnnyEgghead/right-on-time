@@ -3,6 +3,7 @@
 // FR-DISP-12, FR-TEXT-16, FR-AUTH-8): API-43 Office alerts, API-70 System health, API-71 Set text simulator, API-160 Check now and
 // API-161 Set an alert switch, each called over the real handlers as a signed-in manager (the web process's login bw_web, the real
 // session layer) on real PostgreSQL 18. Run by gate G-CI7 (ci/gates/G-CI7/vitest.db.config.ts); the merge set excludes *.db.test.ts.
+import { createServer } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { loadConfig } from '@bw/config';
 import { BUS_CHANNEL, createClient, createPool, decodeNotification, openEmailLink } from '@bw/db';
@@ -264,6 +265,60 @@ describe('the text simulator (API-71, FR-TEXT-16)', () => {
     expect(r.json.data['textSimulator']).toMatchObject({ mode: 'all_fail', setBy: 'Dana Ruiz' });
     expect((await db.admin().query<{ mode: string }>('SELECT mode FROM world.text_simulator')).rows).toEqual([{ mode: 'all_fail' }]);
     await call('PUT', '/system/text-simulator', { mode: 'up' });
+  });
+});
+
+describe('the first saves on a copy with no seed rows (K-09.8a, K-09.8b; F-2009)', () => {
+  // why: F-2009 2 first saves of the simulator at once on an empty table both succeed and leave 1 row (the unique index holds it to 1) (K-09.8a)
+  it('answers 200 to both of 2 parallel first simulator saves and keeps 1 row', async () => {
+    const a = db.admin();
+    await a.query('DELETE FROM world.text_simulator');
+    // A 1 s pause inside the insert holds the first save's row uncommitted while the second save runs its own read, so the race is not left to timing.
+    await a.query(`CREATE FUNCTION world.p10_slow_sim() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(1); RETURN NEW; END $$`);
+    await a.query('CREATE TRIGGER p10_slow_sim BEFORE INSERT ON world.text_simulator FOR EACH ROW EXECUTE FUNCTION world.p10_slow_sim()');
+    try {
+      const [one, two] = await Promise.all([call('PUT', '/system/text-simulator', { mode: 'all_fail' }), call('PUT', '/system/text-simulator', { mode: 'fail_next_n', n: 2 })]);
+      expect([one.status, two.status]).toEqual([200, 200]);
+      expect((await a.query<{ n: string }>('SELECT count(*) AS n FROM world.text_simulator')).rows[0]?.n).toBe('1');
+    } finally {
+      await a.query('DROP TRIGGER p10_slow_sim ON world.text_simulator');
+      await a.query('DROP FUNCTION world.p10_slow_sim()');
+    }
+    await call('PUT', '/system/text-simulator', { mode: 'up' });
+  });
+
+  // why: F-2009 a copy whose seed wrote no row for an alert type still takes the manager's switch: the row is made from the type's defaults, never answered 404 (K-09.8b)
+  it('upserts the alert setting row a seed did not write, from the type\'s defaults', async () => {
+    await db.admin().query(`DELETE FROM world.alert_setting WHERE type = 'backup_failed'`);
+    const r = await call('PUT', '/system/alert-settings/backup_failed', { bell: false });
+    expect(r.status).toBe(200);
+    expect(r.json.data['alertSetting']).toEqual({ type: 'backup_failed', bell: false, managersEmail: true });
+    expect((await db.admin().query(`SELECT bell, managers_email FROM world.alert_setting WHERE type = 'backup_failed'`)).rows).toEqual([{ bell: false, managers_email: true }]);
+    await call('PUT', '/system/alert-settings/backup_failed', { bell: true });
+  });
+});
+
+describe('the billing card when pbs answers null (J-22; F-2009)', () => {
+  // why: J-22 pbs answering 200 with a null body is a mode that is not known: the page answers 200 with mode null, never a 500
+  it('reads a null mode body as mode null with a 200', async () => {
+    const pbs = createServer((_req, res) => { res.setHeader('content-type', 'application/json'); res.end('null'); });
+    await new Promise<void>((done) => pbs.listen(0, '127.0.0.1', done));
+    const port = (pbs.address() as { port: number }).port;
+    const k = createWebKernel({
+      settings: loadConfig({
+        DATABASE_URL: loginUrl(db.url(), 'bw_web'), ACCESS_CODE_ON: 'off', PBS_URL: `http://127.0.0.1:${port}`, BACKUP_TARGET: 'lightsail',
+        DATA_LOCATION_APP: 'AWS Lightsail, US East (Virginia)', DATA_LOCATION_BACKUPS: 'AWS Lightsail object storage, US East (Virginia)',
+      }),
+      log: createLogger({ process: 'web', write: () => undefined }),
+    });
+    try {
+      const res = await k.router.handle(new Request('http://web:3000/api/v1/system/health', { headers: { cookie: manager.cookie } }), { address: '203.0.113.9' });
+      expect(res.status).toBe(200);
+      expect(((await res.json()) as Reply).data['billing']).toMatchObject({ mode: null });
+    } finally {
+      await k.close();
+      await new Promise((done) => pbs.close(done));
+    }
   });
 });
 

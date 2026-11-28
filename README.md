@@ -16,13 +16,13 @@ Brightwater Heating & Air and its people are fictional. This is a demo.
 
 Right On Time v1 is complete. The owner accepted the v1 sign-off on November 26, 2026.
 
-- The hosted demo and the public copy run release v1.0.4.
-- v1.0.4 adds the phase 9 closing fixes, a board change, a code cleanup, and a newer Next.js (16.4.6; v1.0.3 used 16.4.2).
-- The iPhone app stays at version 1.0.1 (build 9). v1.0.4 changes no call or answer shape that app uses.
+- The hosted demo and the public copy run release v1.0.5.
+- v1.0.5 adds the fixes from a code audit, among them a booking key that stops double bookings. See `CHANGELOG.md`.
+- The iPhone app stays at version 1.0.1 (build 9). Its own fixes wait for the next iPhone build.
 
 ## License
 
-- The program code is under the **GNU Affero General Public License, version 3 or any later version** (`LICENSE`). Every source file carries the line `SPDX-License-Identifier: AGPL-3.0-or-later`.
+- The program code is under the **GNU Affero General Public License, version 3 or any later version** (`LICENSE`). Every source file carries the line `SPDX-License-Identifier: AGPL-3.0-or-later`, except the stylesheets (`.css`) and the database migrations, which `REUSE.toml` covers.
 - `COPYING.iOS` gives the App Store permission for the native iPhone app (AGPL section 7).
 - The map files, tracks and street list come from OpenStreetMap and are under the ODbL (`LICENSE-DATA.md`). Credit: © OpenStreetMap contributors.
 
@@ -89,7 +89,7 @@ Docker Desktop is free for personal use, for non-commercial open source, and for
 
 ## Developer path
 
-You need Node 26.12.1 (`.node-version`), pnpm 12.14.0 (the `packageManager` field of `package.json`) and PostgreSQL 18.
+You need Node 26 (`engines.node` in `package.json`; the pinned release is 26.12.1 in `.node-version`), pnpm 12.14.0 (the `packageManager` field of `package.json`) and PostgreSQL 18.
 
 ```sh
 pnpm install --frozen-lockfile

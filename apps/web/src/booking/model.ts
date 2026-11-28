@@ -31,10 +31,31 @@ export interface Draft {
   textLanguage: Lang;
   /** True once the customer picked the text language: it then stops following the page's language (CTL-CUS-01-16). */
   languagePicked: boolean;
+  /**
+   * The draft's booking key (API-113 bookingKey; SPECIFICATIONS 6.1 Booking write, K-01): sent with Confirm booking and with Book this window,
+   * kept with the draft across a reload and the language switch, so a second send of the draft answers its first booking. A refusal keeps it;
+   * only a key the server refuses as missing or malformed is replaced. Book another visit starts a new draft with a new key.
+   */
+  bookingKey: string;
 }
+
+/** A UUID v4 string of 36 characters from crypto.getRandomValues, never crypto.randomUUID (SPECIFICATIONS 6.1: it needs no secure context). */
+export function newBookingKey(random: (bytes: Uint8Array) => Uint8Array = (b) => globalThis.crypto.getRandomValues(b)): string {
+  const b = random(new Uint8Array(16));
+  b[6] = ((b[6] as number) & 0x0f) | 0x40;
+  b[8] = ((b[8] as number) & 0x3f) | 0x80;
+  const hex = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+/** Whether a validation_failed answer names the booking key as a bad field: the one refusal that gives the draft a new key (CTL-CUS-01-13, F-2061). */
+export const namesBookingKey = (detail: unknown): boolean =>
+  Array.isArray((detail as { fields?: unknown } | null)?.fields) && ((detail as { fields: { field?: unknown }[] }).fields).some((f) => f?.field === 'bookingKey');
+/** The key shape the contract accepts (API-113: a UUID v4). */
+export const isBookingKey = (k: unknown): k is string => typeof k === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(k);
 
 export const emptyDraft = (lang: Lang): Draft => ({
   serviceId: null, streetText: '', street: null, house: '', date: null, windowId: null, name: '', mobile: '', textsOn: true, textLanguage: lang, languagePicked: false,
+  bookingKey: newBookingKey(),
 });
 
 /** The service icons of the Book a visit page's picker (DK-118; a service the frame does not draw takes its nearest trade's). */
@@ -211,7 +232,7 @@ export const roomWords = (t: ClientT, w: Pick<OnlineWindow, 'placesLeft'>): stri
 const KEY = 'bw.booking.draft';
 export interface Kept { draft: Draft; step: StepNumber; taken: { date: string; windowId: string; start: string; end: string } | null }
 /** The draft survives a reload and the language switch in this tab's session storage; no storage (a private window) simply keeps nothing. */
-export function readKept(): Kept | null {
+function readKept(): Kept | null {
   try {
     const raw = window.sessionStorage.getItem(KEY);
     return raw ? (JSON.parse(raw) as Kept) : null;
@@ -219,6 +240,22 @@ export function readKept(): Kept | null {
     return null;
   }
 }
+/**
+ * The kept draft as the page opens (K-08.14). `fresh` is Book another visit (`/book?new=1`): the kept draft is wiped once and `dropFresh`
+ * takes `?new=1` off the address, so a later reload of the new draft keeps it. A draft kept before it had a key (or with a bad one) gets a
+ * new key: it was never sent with one.
+ */
+export function openKept(fresh: boolean, dropFresh: () => void): Kept | null {
+  if (fresh) {
+    writeKept(null);
+    dropFresh();
+    return null;
+  }
+  const k = readKept();
+  if (!k) return null;
+  return isBookingKey(k.draft.bookingKey) ? k : { ...k, draft: { ...k.draft, bookingKey: newBookingKey() } };
+}
+
 export function writeKept(k: Kept | null): void {
   try {
     if (k === null) window.sessionStorage.removeItem(KEY);

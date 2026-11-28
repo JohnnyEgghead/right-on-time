@@ -15,7 +15,7 @@ import { visitPosition } from '../../../maps/src/position.ts';
 import { legFor } from '../../../maps/src/route-source.ts';
 import { addDays, localDateOf, Temporal, toWire } from '@bw/time';
 import type { z } from 'zod';
-import { branchWindows, officeDay, readDayKind, readPreviousStop, roomInWindow, serviceIsInstall, skilledRoomCounter, windowOffered } from '../office-writes/day.ts';
+import { branchWindows, officeDays, readDayKinds, readPreviousStop, roomInWindow, serviceIsInstall, skilledRoomCounter, windowOffered } from '../office-writes/day.ts';
 import { OFFICE_HORIZON_DAYS } from '../office-writes/service.ts';
 import type { ApiResult, Handler, Tx } from '../types.ts';
 import { initialsOf } from './board.ts';
@@ -171,9 +171,14 @@ export const officeAvailabilityHandler: Handler<Out<typeof availabilityRow>> = a
   const exclude = p.jobNumber ? { excludeJob: p.jobNumber } : {};
   const skilledWithRoom = await skilledRoomCounter(tx, { branch: p.branch, serviceId: p.serviceId, from: first, to: p.to < last ? p.to : last, ...exclude });
   const days: Out<typeof availabilityRow>['days'] = [];
-  for (let d = first, i = 0; d <= p.to && d <= last && i < MAX_AVAILABILITY_DAYS; d = addDays(d, 1), i++) {
-    const kind = await readDayKind(tx, p.branch, d);
-    const day = await officeDay(tx, { branch: p.branch, date: d, kind, install, ...exclude });
+  // K-09.6: the range's dates are known up front, so day kinds and day plans are read in 1 query each, not 1 per day.
+  const dates: string[] = [];
+  for (let d = first, i = 0; d <= p.to && d <= last && i < MAX_AVAILABILITY_DAYS; d = addDays(d, 1), i++) dates.push(d);
+  const kinds = await readDayKinds(tx, p.branch, dates);
+  const plans = await officeDays(tx, { branch: p.branch, kinds, install, ...exclude });
+  for (const d of dates) {
+    const kind = kinds.get(d)!;
+    const day = plans.get(d)!;
     const offered = windows.filter((x) => windowOffered(x, kind));
     const out = [];
     for (const x of offered) {
@@ -241,7 +246,7 @@ export const addOfficeNoteHandler: Handler<Out<typeof addOfficeNoteRow>> = async
   let customerId = p.customerId ?? null;
   let job: { version: number; branch_id: string; zone: string } | null = null;
   if (p.jobNumber !== undefined) {
-    const r = (await tx.query<{ customer_id: string; version: number; branch_id: string; zone: string }>('SELECT customer_id, version, branch_id, zone FROM world.job WHERE job_number = $1', [p.jobNumber])).rows[0];
+    const r = (await tx.query<{ customer_id: string; version: number; branch_id: string; zone: string }>('SELECT customer_id, version, branch_id, zone FROM world.job WHERE job_number = $1 FOR UPDATE', [p.jobNumber])).rows[0];
     if (!r) return notFound;
     customerId = r.customer_id;
     job = r;

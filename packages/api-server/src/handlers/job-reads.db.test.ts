@@ -4,8 +4,12 @@
 // Run by gate G-CI7 step 3 (ci/gates/G-CI7/vitest.db.config.ts) with the other api-server database tests.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { JobDetailAnswer, OnTheWayAnswer } from '@bw/api';
+import { createClient } from '@bw/db';
+import { Temporal } from '@bw/time';
 import { useMigratedDatabase } from '../../../db/src/testing/fixture.ts';
+import type { ApiRequest, Tx } from '../types.ts';
 import { caller, ORIGIN, officeWorld, type Caller, type OfficeWorld, type Staff } from '../office-writes/testing.ts';
+import { officeAvailabilityHandler } from './job-reads.ts';
 
 const db = useMigratedDatabase();
 let world: OfficeWorld;
@@ -279,3 +283,53 @@ describe('the dialogs\' reads', () => {
     expect(d.url).toMatch(/^\/inbox\//);
   });
 });
+
+describe('the job reads on the real database (F-2008)', () => {
+  // why: F-2008 K-09.4 (an offline-entered note's read carried no entered_offline label: no handler set it and no row required it)
+  it('API-23 carries the entered_offline label on an answer that holds an offline-entered note', async () => {
+    expect((await api.post('/notes', { jobNumber: job, body: 'Typed on the roof, no signal.' }, keisha)).status).toBe(201);
+    await db.admin().query(`UPDATE world.note SET entered_offline = true WHERE body = 'Typed on the roof, no signal.'`);
+    const r = await api.get(`/jobs/${job}`, keisha);
+    const body = (await r.json()) as { data: JobDetailAnswer; meta: { labels: string[] } };
+    expect(body.data.notes.find((n) => n.body === 'Typed on the roof, no signal.')).toMatchObject({ enteredOffline: true });
+    expect(body.meta.labels).toContain('entered_offline');
+  });
+
+  // why: F-2008 K-09.5 (the note's read of the job took no lock, so a job write committing between the read and the note's history row left the row at the old version)
+  it('API-140 waits for a job write in flight and records its history row at the version that write left', async () => {
+    const other = createClient({ connectionString: db.url() });
+    await other.connect();
+    try {
+      const before = (await rows<{ version: number }>('SELECT version FROM world.job WHERE job_number = $1', [job]))[0]!.version;
+      await other.query('BEGIN');
+      await other.query('UPDATE world.job SET version = version + 1 WHERE job_number = $1', [job]);
+      const pending = api.post('/notes', { jobNumber: job, body: 'Written beside a job write.' }, keisha);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await other.query('COMMIT');
+      expect((await pending).status).toBe(201);
+      const change = (await rows<{ from_version: number; to_version: number }>(
+        `SELECT from_version, to_version FROM world.job_change WHERE job_number = $1 AND kind = 'note_added' ORDER BY at DESC, id DESC LIMIT 1`, [job]))[0]!;
+      expect(change).toEqual({ from_version: before + 1, to_version: before + 1 });
+    } finally {
+      await other.end();
+    }
+  });
+
+  // why: F-2008 K-09.6 (API-29 read each day's kind and plan with its own queries, about 3 per day: 183 for 61 days)
+  it('API-29 reads a 61-day range with 1 day-mode query and 1 job query', async () => {
+    const seen: string[] = [];
+    const counting = { query: (text: string, values?: unknown[]) => { seen.push(text); return db.admin().query(text, values); } } as unknown as Tx;
+    const req = {
+      params: { branch: 'columbus', serviceId: 'furnace_tune_up', from: '2026-09-15', to: '2026-11-14', channel: 'office' },
+      demoNow: Temporal.Instant.from('2026-09-15T14:28:00Z'),
+    } as unknown as ApiRequest;
+    const out = await officeAvailabilityHandler(req, counting, undefined as never);
+    expect(out.ok && out.data.days.length).toBe(61);
+    // the span counter's own 1 query (a GROUP BY over the technicians' jobs) is the same for 1 day or 61; the 2 day reads are the ones that grew
+    const touching = seen.filter((q) => /world\.day_mode/.test(q) || /FROM world\.job\b/.test(q));
+    const perDay = touching.filter((q) => !/GROUP BY technician_id/.test(q));
+    expect(perDay.length).toBeLessThanOrEqual(2);
+    expect(touching.length).toBeLessThanOrEqual(3);
+  });
+});
+

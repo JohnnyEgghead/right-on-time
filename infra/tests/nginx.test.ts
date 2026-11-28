@@ -184,6 +184,11 @@ describe('nginx routes', () => {
     expect(strip(read('routes-open.conf'))).toContain('proxy_set_header X-Forwarded-For $remote_addr;');
   });
 
+  // why: SD-4 (J-27, F-2008: the locked /healthz reaches the kernel too, so it overwrites a client's X-Forwarded-For with the peer as the open routes do)
+  it('overwrites X-Forwarded-For with the peer address in the locked /healthz location', () => {
+    expect(strip(read('routes-locked.conf'))).toMatch(/location = \/healthz \{[^}]*proxy_set_header X-Forwarded-For \$remote_addr;/);
+  });
+
   // why: F-61
   it('open routes carry the S1 event-stream location: no buffering, no cache, no gzip, 1 h read timeout', () => {
     const open = strip(read('routes-open.conf'));

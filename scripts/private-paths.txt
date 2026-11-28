@@ -55,6 +55,10 @@ infra/owner.local.env
 # F-1920: the build-continuity git hook of the jl-dev harness (a plugin file; owner answer 44079436, plugin files stay private).
 # It stays byte-identical to the harness copy, with no SPDX header, so a reinstall sees it as unchanged.
 .githooks/
+# J-35: the phase 1 spike scripts and their hosted-spike deploys (S1 to S3): the owner's own spike host, not product. The tests and
+# checks that read them skip, with a reason naming the path, only when it is absent (infra/tests/host-address.test.ts,
+# ci/browser-test-guard.test.ts). ci/copy-check/baseline.json and ci/dead-code/knip.jsonc keep their spike entries for the private checkout.
+infra/spike/
 
 # The private repo's workflows are never copied (SD-38): .github at any depth.
 **/.github

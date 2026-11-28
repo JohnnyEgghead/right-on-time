@@ -85,7 +85,7 @@ export function startClockJobs(d: ClockJobDeps): { readonly name: string; stop()
       nextConfirm = t + RESET_CONFIRM_EVERY_MS;
       let confirmed = false;
       await guarded('reset_confirmer', async () => {
-        confirmed = (await confirmStep({ pool: d.pool, client: billing, clock: d.clock, real, state: confirmer })) === 'confirmed';
+        confirmed = (await confirmStep({ pool: d.pool, client: billing, clock: d.clock, real, state: confirmer, log: d.log })) === 'confirmed';
       });
       if (confirmed) {
         d.log.info({ status: 'world reset confirmed' });

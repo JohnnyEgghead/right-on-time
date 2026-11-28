@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Publish script (SPECIFICATIONS section 6.13 FR-DIST-1, FR-DIST-3, SD-38, SD-40; P8-PUBLISH).
 #   scripts/publish.sh --dry-run [--ref <tag|commit>] [--out <dir>] [--list <file>] [--release-tag <vX.Y.Z> [--slug <owner/repo>]]
-#   scripts/publish.sh prepare <vX.Y.Z> [--ref <ref>] [--clone <dir>] [--remote <url>] [--slug <owner/repo>]
+#   scripts/publish.sh prepare <vX.Y.Z> [--ref <ref>] [--clone <dir>] [--remote <url>] [--slug <owner/repo>] --verdict <ci-verdict.json>
 #   scripts/publish.sh image   <vX.Y.Z> [--clone <dir>] [--docker-context <name>]
 #   scripts/publish.sh push    <vX.Y.Z> --granted [--clone <dir>]
 #   scripts/publish.sh release <vX.Y.Z> --granted [--clone <dir>] [--data <dir>]
@@ -31,6 +31,9 @@
 #            tag, then the state, are written last, with PREPARED=1 the very last line. A prepare of an unpushed tag that stops on any
 #            check leaves it not prepared (PREPARED=0, or no state at all), and image, push and release refuse it. F-1622: the private
 #            paths list is read from the ref that is exported, never from the working tree.
+#            K-07, F-2055: --verdict <file> is required (the ci-verdict.json of a narrow run, ci.sh --gates schema-gates,unit-tests,G-CI7); prepare without it refuses (exit 1).
+#            prepare first runs ci/wave-run.sh --check-verdict <file> <the exported sha> gates, and the verdict must list schema-gates,
+#            unit-tests and G-CI7 as pass; any other verdict (another sha, a red result, a missing gate) refuses (exit 1) before the export is made.
 #   image    the release image from the tag's tree only (git archive), linux/amd64, PUBLIC_COMMIT and the revision label set to the
 #            public commit, loaded as bw-app:<tag>; then, inside the image, the real config and the app-info handler give the footer's
 #            Source link <SOURCE_REPO_URL>/commit/<public commit> (and follow a SOURCE_REPO_URL override); the notices file is there.
@@ -59,7 +62,7 @@ usage() { sed -n '3,10p' "$root/scripts/publish.sh" | sed 's/^# //' >&2; }
 sub=dry
 case "${1:-}" in
   prepare|image|push|release|docs) sub="$1"; shift ;;
-  -h|--help) sed -n '3,53p' "$root/scripts/publish.sh" | sed -e 's/^# \{0,1\}//'; exit 0 ;;
+  -h|--help) sed -n '3,56p' "$root/scripts/publish.sh" | sed -e 's/^# \{0,1\}//'; exit 0 ;;
 esac
 
 dry=0
@@ -74,6 +77,7 @@ remote="https://github.com/JohnnyEgghead/right-on-time.git"
 data="$root/.build/data"
 dctx="${BW_PUBLISH_DOCKER_CONTEXT:-spectre}"
 granted=0
+verdict=""
 if [ "$sub" = docs ]; then
   tag=docs
 elif [ "$sub" != dry ]; then
@@ -90,6 +94,7 @@ while [ "$#" -gt 0 ]; do
     dry:--ref|prepare:--ref|docs:--ref) ref="${2:?--ref needs a value}"; shift 2 ;;
     dry:--slug|prepare:--slug|docs:--slug) slug="${2:?--slug needs a value}"; shift 2 ;;
     docs:--dry-run) dry=1; shift ;;
+    prepare:--verdict) verdict="${2:?--verdict needs a value}"; shift 2 ;;
     prepare:--remote|docs:--remote) remote="${2:?--remote needs a value}"; shift 2 ;;
     prepare:--clone|docs:--clone|image:--clone|push:--clone|release:--clone) clone="${2:?--clone needs a value}"; shift 2 ;;
     release:--data) data="${2:?--data needs a value}"; shift 2 ;;
@@ -250,6 +255,20 @@ archive_to() {
 # The sha of 1 ref of the public repo, by its exact name (empty when absent); --refs leaves out the peeled ^{} lines.
 remote_ref() { g ls-remote --refs origin "$1" | awk -v r="$1" '$2 == r { print $1 }'; }
 
+# K-07: a verdict clears a commit for a release when ci/wave-run.sh --check-verdict (mode gates) passes it for that sha and it lists
+# schema-gates, unit-tests and G-CI7 green (G-CI7 runs 4 of the 5 K-07 db suites; F-2055). It is the verdict of a run the build already makes; this adds no run. A gate absent from the
+# verdict is not green.
+check_verdict_of() {
+  local file="$1" sha="$2"
+  bash "$root/ci/wave-run.sh" --check-verdict "$file" "$sha" gates || return 1
+  node -e '
+    const v = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const gates = Array.isArray(v.gates) ? v.gates : [];
+    const bad = ["schema-gates", "unit-tests", "G-CI7"].filter((id) => gates.find((g) => g.id === id)?.status !== "pass");
+    if (bad.length > 0) { console.error("publish: the verdict does not list " + bad.join(" and ") + " as pass"); process.exit(1); }
+  ' "$file"
+}
+
 prepare() {
   tag_ok "$tag"
   local priv out list idx tree base name email when commit rt rtree n carried dropped cand img_id img_commit img_ctx
@@ -257,6 +276,9 @@ prepare() {
   # F-1620: from here until every check has passed, an unpushed tag is not prepared, so a prepare that stops on a check leaves
   # nothing image, push or release would take. (A pushed tag's state records what is public; prepare never changes that.)
   if [ -f "$state" ] && [ "$(state_get PUSHED)" != 1 ]; then state_set PREPARED 0; fi
+  # F-2055: no verdict, no release; a prepare without --verdict is refused, not waved through.
+  [ -n "$verdict" ] || die "prepare needs --verdict <ci-verdict.json> (the verdict of ci.sh --gates schema-gates,unit-tests,G-CI7 on $priv); nothing is exported"
+  check_verdict_of "$verdict" "$priv" || die "the verdict $verdict does not clear $priv for a release (nothing is exported)"
   out="$work/export"
   list="$work/export.list"
   bash "$root/scripts/publish.sh" --dry-run --ref "$priv" --out "$out" --list "$list" --release-tag "$tag" --slug "$slug" || die "the export of $ref did not pass its guards"

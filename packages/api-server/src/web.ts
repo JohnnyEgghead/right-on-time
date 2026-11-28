@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The production kernel of the web process: the real policy table and handlers over the real database, sessions and
-// clock. A page-serving framework mounts `handle` (a Fetch-API Request to Response function): the Next.js catch-all
-// `app/api/v1/[...path]/route.ts` and the root routes export it for each method; the plain node:http server of
-// apps/web/src/server.ts calls it through node.ts. `pages` is the page gate; `pageVerdict` asks it for 1 page request,
+// clock. `router.handle` is a Fetch-API Request to Response function: the plain node:http server of apps/web/src/server.ts
+// calls it through node.ts for the API base and the root routes of the policy table (no Next.js route file serves them).
+// `pages` is the page gate; `pageVerdict` asks it for 1 page request,
 // with the caller and the access-code state resolved from the request's cookies as the API routes resolve them.
 import type { Settings } from '@bw/config';
-import { createClient, createPool, hashPassword, inTransaction, verifyPassword, type Queryable } from '@bw/db';
-import { causeCodeOf, type Logger } from '@bw/log';
+import { createClient, createPool, hashPassword, inTransaction, SERVICE_TIMEOUTS, verifyPassword, type Queryable } from '@bw/db';
+import { causeCodeOf, logErrorEvents, type Logger } from '@bw/log';
 import { DbClock, Temporal, toWire } from '@bw/time';
 import { routedOutside } from '../../maps/src/route-source.ts';
 import { PgNotifyBus } from './events/bus.ts';
@@ -149,8 +149,12 @@ export function createWebKernel(opts: WebKernelOptions): WebKernel {
     max: 10,
     connectionTimeoutMillis: 5_000,
     idleTimeoutMillis: 30_000,
+    // F-2037 K-10.8: a call that waits on a held lock fails with 55P03 within SERVICE_LOCK_TIMEOUT_MS (server_error, 503 for
+    // API-171) instead of holding 1 of these 10 connections without end.
+    ...SERVICE_TIMEOUTS,
   });
-  pool.on('error', () => log.error({ status: 'unhandled error', errorCode: 'server_error' }));
+  // F-2046: an idle connection the server ended logs its cause code (logErrorEvents), not a fixed word.
+  logErrorEvents(pool, log);
   const clock = new DbClock(pool);
   // F-218: with the code on, the key and the code are the owner's secrets (a key made at each start would end every visitor's
   // code at each restart or deploy); with it off, no cookie is ever checked and a key made at start is enough.
@@ -167,7 +171,7 @@ export function createWebKernel(opts: WebKernelOptions): WebKernel {
   const bus = new PgNotifyBus({
     clock,
     newClient: () => createClient({ connectionString: url.toString(), application_name: 'bw-web-listen', connectionTimeoutMillis: 5_000, keepAlive: true }),
-    onError: () => log.error({ status: 'unhandled error', errorCode: 'server_error' }),
+    onError: (e) => log.error({ status: 'unhandled error', errorCode: causeCodeOf(e) }),
   });
   const router = mount(policyTable, handlers, {
     // F-1504: no call waits on the routing service while it holds a pooled connection (route-source.ts routedOutside).
@@ -216,10 +220,13 @@ export function createWebKernel(opts: WebKernelOptions): WebKernel {
  * Store the access code's scrypt hash as the 1 active system.access_code row. A row that already verifies is left alone
  * (a restart rewrites nothing and the web processes agree); a changed code replaces it. The row is the whole table.
  */
-async function syncAccessCode(db: Queryable, code: string, clock: Pick<DbClock, 'realNow'>): Promise<void> {
-  const current = (await db.query<{ code_hash: string }>('SELECT code_hash FROM system.access_code WHERE active LIMIT 1')).rows[0];
+export async function syncAccessCode(pool: Parameters<typeof inTransaction>[0], code: string, clock: Pick<DbClock, 'realNow'>): Promise<void> {
+  const current = (await pool.query<{ code_hash: string }>('SELECT code_hash FROM system.access_code WHERE active LIMIT 1')).rows[0];
   if (current && (await verifyPassword(code, current.code_hash))) return;
   const hash = await hashPassword(code);
-  await db.query('DELETE FROM system.access_code');
-  await db.query('INSERT INTO system.access_code (code_hash, active, created_real) VALUES ($1, true, $2::timestamptz)', [hash, clock.realNow('record_stamp').toString()]);
+  // J-23: the replace is 1 transaction, so a failed INSERT leaves the old row (and its code) in place, never an empty table.
+  await inTransaction(pool, async (tx: Queryable) => {
+    await tx.query('DELETE FROM system.access_code');
+    await tx.query('INSERT INTO system.access_code (code_hash, active, created_real) VALUES ($1, true, $2::timestamptz)', [hash, clock.realNow('record_stamp').toString()]);
+  });
 }

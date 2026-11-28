@@ -21,15 +21,18 @@ function readAt(fd: number, offset: number, length: number): Buffer {
 }
 const u64 = (b: Buffer, at: number): number => Number(b.readBigUInt64LE(at));
 
-function varint(b: Buffer, at: { i: number }): number {
+/** A protobuf and PMTiles varint is at most 10 bytes; one that runs past the buffer's end or past 10 bytes is a corrupt file (K-06). */
+export function varint(b: Buffer, at: { i: number }): number {
   let r = 0;
   let mul = 1;
-  for (;;) {
+  for (let n = 0; n < 10; n++) {
+    if (at.i >= b.length) throw new RangeError('varint runs past the end of the buffer');
     const byte = b[at.i++]!;
     r += (byte & 0x7f) * mul;
     if (byte < 0x80) return r;
     mul *= 128;
   }
+  throw new RangeError('varint is longer than 10 bytes');
 }
 
 /** The PMTiles tile id of z/x/y: the tiles of every smaller zoom first, then the Hilbert curve position (PMTiles v3 spec). */

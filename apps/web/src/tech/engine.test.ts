@@ -345,6 +345,20 @@ describe('a sync never rejects (F-1849)', () => {
     await expect(locked.engine.sync()).resolves.toBeNull();
     expect([locked.engine.snapshot.sending, locked.server.calls]).toEqual([false, []]);
   });
+
+  // why: F-2006 K-10.5 the catch set no state, so a sync that threw left the banner online although nothing was sent
+  it('a sync that throws leaves the no-signal state (online false), and the next sync that answers sets online again', async () => {
+    const w = world();
+    await w.engine.sync();
+    expect(w.engine.snapshot.online).toBe(true);
+    const saveUser = w.store.saveUser.bind(w.store);
+    w.store.saveUser = async () => { throw quota(); };
+    await expect(w.engine.sync()).resolves.toBeNull();
+    expect([w.engine.snapshot.online, w.engine.snapshot.sending]).toEqual([false, false]);
+    w.store.saveUser = saveUser;
+    await w.engine.sync();
+    expect(w.engine.snapshot.online).toBe(true);
+  });
 });
 
 describe('F-1932 the finish and its signature leave as 2 entries', () => {

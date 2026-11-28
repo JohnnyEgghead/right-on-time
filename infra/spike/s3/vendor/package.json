@@ -1,9 +1,0 @@
-{
-  "name": "brightwater-spike-s3-vendor",
-  "private": true,
-  "description": "Spike S3 (G-S3-MAP-SAFARI): THROWAWAY. Pins the 2 browser libraries the page self-hosts. maplibre-gl 6.14.0 (2026-10-11) is the newest release at least 14 days before 2026-10-31; pmtiles 4.5.0 (2026-08-10).",
-  "dependencies": {
-    "maplibre-gl": "6.14.0",
-    "pmtiles": "4.5.0"
-  }
-}

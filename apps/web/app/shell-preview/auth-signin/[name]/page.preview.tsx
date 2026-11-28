@@ -17,7 +17,7 @@ const PEOPLE: SamplePerson[] = [
 ];
 /** The message states by name (a state key, not copy: the screen renders the catalog text). */
 const STATE: Record<'bad' | 'off' | 'returned', { message: SignInMessage }> = { bad: { message: 'bad' }, off: { message: 'off' }, returned: { message: 'returned' } };
-const EMAIL = 'druiz@brightwaterair.com';
+const EMAIL = 'druiz@brightwater.example';
 
 export default async function SignInPreview({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;

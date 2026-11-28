@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createLogger, type Logger } from '../../log/src/index.ts';
 import type { Queryable } from '../../db/src/client.ts';
 import { etaDay, legsAsked, planDay, type EtaStop } from '../../domain/src/planner.ts';
-import { configureRouting, legsFor, LIVE_ROUTE_CONCURRENCY, osrmRoutingService, osrmRouteUrl, ROUTE_SIGNAL_INTERVAL_MS, ROUTING_SERVICE_URL, routedOutside, trackFromOsrm, type RouteTrack, type RoutingService } from './route-source.ts';
+import { configureRouting, legsFor, LIVE_ROUTE_CONCURRENCY, osrmRoutingService, osrmRouteUrl, ROUTE_SIGNAL_INTERVAL_MS, ROUTING_SERVICE_URL, routedOutside, routeSignal, trackFromOsrm, type RouteTrack, type RoutingService } from './route-source.ts';
 import { FakeRouting, osrmRouteBetween } from './testing.ts';
 import { decodePolyline } from './tracks.ts';
 
@@ -400,7 +400,7 @@ describe('the operator signal of the live client (F-1306)', () => {
   // why: F-1306 F-1767 (osrm-routed answers NoRoute and NoSegment as HTTP 400 with a JSON body, F-1337; the clock stamp is no field that can carry a location) a stub service failing by each cause class gives 1 warn line naming that class, through @bw/log, with no point or job in it
   it.each(byClass)('writes 1 warn line naming %s', async (cause, f) => {
     const lines: Record<string, unknown>[] = [];
-    expect(await osrmRoutingService('http://x', { fetch: f as typeof fetch, log: logTo(lines) }).route(A, B)).toBeNull();
+    expect(await osrmRoutingService('http://x', { fetch: f as typeof fetch, signal: routeSignal(logTo(lines), () => 0) }).route(A, B)).toBeNull();
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatchObject({ level: 'warn', process: 'web', status: 'live route failed', errorCode: cause, failures: 1 });
     // the clock stamp (realTime) is no field that can carry a location; a stamp reading :39.9 must not fail this
@@ -413,7 +413,7 @@ describe('the operator signal of the live client (F-1306)', () => {
   it('writes 1 line a minute, the next carrying the failures since the last', async () => {
     const lines: Record<string, unknown>[] = [];
     let t = 1_000;
-    const s = osrmRoutingService('http://x', { fetch: fail('ECONNREFUSED') as typeof fetch, log: logTo(lines), now: () => t });
+    const s = osrmRoutingService('http://x', { fetch: fail('ECONNREFUSED') as typeof fetch, signal: routeSignal(logTo(lines), () => t) });
     for (let i = 0; i < 100; i++) {
       t += 500; // 100 failures over 50 s
       await s.route({ lon: A.lon + i / 1000, lat: A.lat }, B);
@@ -459,8 +459,16 @@ describe('the operator signal of the live client (F-1306)', () => {
   // why: F-1306 a working service writes no line, and a client given no logger writes none (tests, setup)
   it('writes nothing for an answered route or without a logger', async () => {
     const lines: Record<string, unknown>[] = [];
-    await osrmRoutingService('http://x', { fetch: ok({ code: 'Ok', routes: [osrmRouteBetween(A, B)] }) as typeof fetch, log: logTo(lines) }).route(A, B);
+    await osrmRoutingService('http://x', { fetch: ok({ code: 'Ok', routes: [osrmRouteBetween(A, B)] }) as typeof fetch, signal: routeSignal(logTo(lines), () => 0) }).route(A, B);
     await osrmRoutingService('http://x', { fetch: fail('ECONNREFUSED') as typeof fetch }).route(A, B);
+    expect(lines).toEqual([]);
+  });
+
+  // why: K-20 (F-2008) osrmRoutingService's log and now options were reached by tests only: the process's signal comes from configureRouting's log, so the client takes none
+  it('takes no log or now option: the signal comes through signal, from configureRouting', async () => {
+    const lines: Record<string, unknown>[] = [];
+    const opts = { fetch: fail('ECONNREFUSED') as typeof fetch, log: logTo(lines), now: () => 0 } as Parameters<typeof osrmRoutingService>[1];
+    expect(await osrmRoutingService('http://x', opts).route(A, B)).toBeNull();
     expect(lines).toEqual([]);
   });
 });

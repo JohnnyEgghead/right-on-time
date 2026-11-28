@@ -120,6 +120,19 @@ export function databasePassword(settings: Pick<Settings, 'DATABASE_PASSWORD_FIL
 }
 
 /**
+ * Start-up entry for the database password: databasePassword, or on a ConfigError the named message on stderr and exit
+ * 78 (EX_CONFIG), as configOrExit does for the settings. Web, worker and pbs share this 1 implementation.
+ */
+export function databasePasswordOrExit(settings: Pick<Settings, 'DATABASE_PASSWORD_FILE'>): string | undefined {
+  try {
+    return databasePassword(settings);
+  } catch (e) {
+    if (e instanceof ConfigError) exitWithMessage(`${e.name}: ${e.message}`, 78);
+    throw e;
+  }
+}
+
+/**
  * The one sanctioned free-text exit of a process, for a failure before it has a logger (log-allowlist, F-234): the
  * message names a setting or a missing file, never data. Writes it to stderr and exits with `status`.
  */

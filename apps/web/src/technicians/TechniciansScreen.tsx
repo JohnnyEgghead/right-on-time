@@ -28,12 +28,12 @@ const branchOfParam = (v: string | null): string | null => (BRANCHES.some((b) =>
 
 type Open = null | 'add' | 'timeoff';
 
-export function TechniciansScreen({ api: given }: { api?: TechApi } = {}) {
+export function TechniciansScreen() {
   const t = useT();
   const announce = useAnnounce();
   const params = useSearchParams();
   const topBranch = useBranch();
-  const api = useMemo(() => given ?? techApi(typeof window === 'undefined' ? undefined : createClient({ baseUrl: window.location.origin })), [given]);
+  const api = useMemo(() => techApi(typeof window === 'undefined' ? undefined : createClient({ baseUrl: window.location.origin })), []);
   const [pickedBranch, setPickedBranch] = useState<string | null>(() => branchOfParam(params.get('branch')));
   const [filters, setFilters] = useState<Filters>(START_FILTERS);
   const [data, setData] = useState<TechData | null>(null);

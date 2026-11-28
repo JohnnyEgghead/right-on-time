@@ -14,7 +14,7 @@ interface ChangeRow extends HistoryRow {
 
 /** Section 5.1 step 5 over the job's real history rows (every writer's job_change row; office, customer, time off). */
 export async function changeSince(tx: Queryable, jobNumber: number, baseVersion: number): Promise<{ column: ChangeColumn; row: ChangeRow | null }> {
-  const r = await tx.query<{ kind: string; actor_kind: HistoryRow['actorKind']; from_version: number; data: Record<string, unknown>; at: Date; actor_name: string | null }>(
+  const r = await tx.query<{ kind: HistoryRow['kind']; actor_kind: HistoryRow['actorKind']; from_version: number; data: Record<string, unknown>; at: Date; actor_name: string | null }>(
     `SELECT c.kind, c.actor_kind, c.from_version, c.data, c.at, u.name AS actor_name
        FROM world.job_change c LEFT JOIN world."user" u ON u.id = c.actor_user_id
       WHERE c.job_number = $1 AND c.from_version >= $2

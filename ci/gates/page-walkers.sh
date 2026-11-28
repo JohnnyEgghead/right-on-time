@@ -34,8 +34,8 @@ pnpm exec vitest run --config vitest.browser.config.ts ci/page-walkers
 #   4. (P2-AUTH) The sign-in screens against the Compose stack with ACCESS_CODE_ON=on, DEMO_MODE off and then on, in 1 project:
 #      ci/auth-stack.sh. Each runs to the end; the gate is red when any step was.
 #   5. (P3-EVENTS, F-348) The event bus and the event stream (API-09) against the Compose stack at its default settings:
-#      ci/events-stack.sh (a notify through publishEvent as bw_worker reaches 2 streams; a 30 s drop reconnects and re-reads
-#      API-10 through the client cache; an epoch change empties the cache). The stack suites' gate, as for steps 3 and 4.
+#      ci/events-stack.sh (a notify through publishEvent as bw_worker reaches 2 streams; a dropped stream reconnects and re-reads
+#      API-10 through the client cache (the 30 s outage and the 15 s heartbeat are unit tests: stream.test.ts, event-stream.test.ts); an epoch change empties the cache). The stack suites' gate, as for steps 3 and 4.
 #   6. (P4-BILLING-UI) The billing list, Mark fixed and the pretend billing screens against the Compose stack at its default settings:
 #      ci/billing-stack.sh (Playwright on Chromium here, the BW_PW_ENGINES above; its WebKit half is step 3 of the nightly gate
 #      page-walkers-nightly, F-595; the outside-origin guard on: UC-20 clears the list with Retry all and Mark fixed, a finished job

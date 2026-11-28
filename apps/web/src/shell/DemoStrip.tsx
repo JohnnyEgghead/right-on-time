@@ -2,13 +2,14 @@
 'use client';
 // CMP-01 demo clock (CTL-CMP-01-01, CTL-CMP-01-02) and CMP-02 clock banner (CTL-CMP-02-01 to CTL-CMP-02-03): the kit's
 // demo strip (DK-24, markup DK-77 / DK-80). FR-DEMO-1: every web surface shows it in its header.
-// Reads API-10 on mount, on window focus, every READ_EVERY_MS (GAP-7: pages without the event stream) and on EVT-06, and advances
+// Reads API-10 on mount, on window focus, every READ_EVERY_MS (GAP-7: pages without the event stream) and on EVT-05 and EVT-06, and advances
 // the shown time from API-10's anchor by the monotonic time since the read (FR-DEMO-2: never the device clock's now).
 import { subscribeEvents } from '@bw/api';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { advance, bannerLine, clockText, moveKey, shortText, toView, type ClockAnswer, type ClockView } from './clock.ts';
 import { Icon } from './Icon.tsx';
 import { useT } from './intl.tsx';
+import { useNewestAnswer } from './newest-answer.ts';
 import { createReader, type Reader } from './reads.ts';
 import { useWorldReset } from './world-reset.tsx';
 
@@ -44,23 +45,26 @@ export function DemoStrip({ initial = null, changeHref = null, variant = 'deskto
   const [, setTick] = useState(0);
   const wasReplaying = useRef(Boolean(initial?.replay?.running));
 
+  const newest = useNewestAnswer();
   const read = useCallback(async () => {
     if (reader === false) return;
     const r = reader ?? createReader({ baseUrl: window.location.origin });
-    const res = await r.read<ClockAnswer>('API-10');
-    if (!res.ok) {
-      setStale(true);
-      return;
-    }
-    readAt.current = now();
-    observe(res.data);
-    const v = toView(res.data);
-    // "Caught up" shows for 1 refresh after a replay ends (CTL-CMP-02-02).
-    setCaughtUp(wasReplaying.current && !v.answer.replay?.running);
-    wasReplaying.current = Boolean(v.answer.replay?.running);
-    setView(v);
-    setStale(false);
-  }, [reader, observe]);
+    // K-05: the timer, a focus and an event each read; the newest read's answer is the one shown, however late an earlier one lands.
+    await newest.run(() => r.read<ClockAnswer>('API-10'), (res) => {
+      if (!res.ok) {
+        setStale(true);
+        return;
+      }
+      readAt.current = now();
+      observe(res.data);
+      const v = toView(res.data);
+      // "Caught up" shows for 1 refresh after a replay ends (CTL-CMP-02-02).
+      setCaughtUp(wasReplaying.current && !v.answer.replay?.running);
+      wasReplaying.current = Boolean(v.answer.replay?.running);
+      setView(v);
+      setStale(false);
+    });
+  }, [reader, observe, newest]);
 
   useEffect(() => {
     if (initial) readAt.current = now();
@@ -79,9 +83,9 @@ export function DemoStrip({ initial = null, changeHref = null, variant = 'deskto
     if (!live || reader !== undefined) return;
     const handle = subscribeEvents({
       onEvent: (e) => {
-        if (e.name === 'world.reset') void read();
+        if (e.name === 'world.reset' || e.name === 'clock.changed') void read(); // K-04: a move of the clock changes the strip too
       },
-      onReconnect: () => void read(), // an EVT-06 missed while the stream was lost is never replayed
+      onReconnect: () => void read(), // an EVT-05 or EVT-06 missed while the stream was lost is never replayed
     });
     return () => handle.close();
   }, [live, reader, read]);

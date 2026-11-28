@@ -155,6 +155,26 @@ describe('the reads of the day', () => {
     expect(s.calls).toEqual([]);
     expect(reads.snapshot).toMatchObject({ online: false, settled: true });
   });
+
+  // why: K-10 (row K-10.6b) only fetch's own TypeError reads as no signal: a plain Error in a read leaves online as it was, and the read still ends failed
+  it('leaves online unchanged when a read throws an error that is no lost connection', async () => {
+    const reads = new TechReads(createClient({ baseUrl: 'http://phone.test', fetch: async () => { throw new Error('a bug in the read'); } }), () => true);
+    expect(reads.snapshot.online).toBe(true);
+    await reads.refresh();
+    expect(reads.snapshot).toMatchObject({ online: true, settled: true, failed: true });
+    const lost = new TechReads(createClient({ baseUrl: 'http://phone.test', fetch: async () => { throw new TypeError('fetch failed'); } }), () => true);
+    await lost.refresh();
+    expect(lost.snapshot).toMatchObject({ online: false, failed: true });
+  });
+
+  // why: F-2070 only a client call's TypeError reads as no signal: a TypeError of the round's own code (a bug after the answer came) leaves online as it was
+  it('leaves online unchanged when the round\'s own code throws a TypeError after the answer arrived', async () => {
+    // A client that answers at once with a day whose jobs are missing: the round's own reading of it throws a TypeError, with no call failing.
+    const client = { call: async () => ({ data: { date: '2026-09-15', jobs: null }, envelope: undefined }) } as never;
+    const reads = new TechReads(client, () => true);
+    await reads.refresh();
+    expect(reads.snapshot).toMatchObject({ online: true, settled: true, failed: true });
+  });
 });
 
 describe('the saved day belongs to the person', () => {

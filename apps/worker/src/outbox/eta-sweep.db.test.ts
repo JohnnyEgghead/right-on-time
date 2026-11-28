@@ -66,6 +66,33 @@ describe('one job that cannot be texted does not stop the sweep (F-514)', () => 
   });
 });
 
+describe('a late text that throws every sweep (F-2006 K-10.4)', () => {
+  // why: F-2006 K-10.4 a late text that always threw was retried every 5 demo minutes all day, 1 warn line each, with no end
+  it('is tried 5 sweeps, then given up with exactly 1 give-up line, and the 6th sweep does not try it', async () => {
+    const date = '2026-09-22';
+    const broken: TextContext = { ...ctx, catalogs: { ...catalogs, es: Object.fromEntries(Object.entries(catalogs.es).filter(([k]) => k !== 'text.late')) } as typeof catalogs };
+    const job = await visit(date, '08:00', '10:00', { planned_arrival: `${date}T08:15:00-04:00` }, { language: 'es' });
+    const lines: Record<string, unknown>[] = [];
+    const log = createLogger({ process: 'worker', write: (l) => lines.push(JSON.parse(l) as Record<string, unknown>) });
+    // Each sweep's counts ride on to the next, as the sweep event's successor carries them.
+    let carried: Record<string, number> = {};
+    const skipped: number[] = [];
+    for (let n = 0; n < 6; n += 1) {
+      const report = await inTransaction(pool, (tx) => runEtaSweep(tx, broken, I(new Date(Date.parse(`${date}T17:00:00Z`) + n * 5 * 60_000).toISOString()), log, carried));
+      skipped.push(report.skipped);
+      carried = report.lateFailures;
+    }
+    const mine = lines.filter((l) => l.jobNumber === job);
+    expect(mine.filter((l) => l.status === 'unhandled error')).toHaveLength(5);
+    expect(mine.filter((l) => l.status === 'late text gave up')).toEqual([
+      expect.objectContaining({ level: 'error', errorCode: 'late_text_failed', failures: 5 }),
+    ]);
+    expect(skipped).toEqual([1, 1, 1, 1, 1, 0]);
+    expect(carried).toEqual({ [String(job)]: 5 });
+    expect(await lateTexts(job)).toHaveLength(0);
+  });
+});
+
 describe('the code a skipped late text logs (F-561)', () => {
   // why: F-561 free text never reaches a log line: a SQLSTATE or Node code passes, anything else is the fixed word
   it('keeps a code of the right shape and replaces a message, a phone number or a missing code with late_text_failed', () => {

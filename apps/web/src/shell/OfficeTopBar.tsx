@@ -63,9 +63,6 @@ export interface OfficeTopBarProps {
    */
   alertCount?: number | null;
   liveAlerts?: boolean;
-  /** Previews: the alerts panel open, with these rows. */
-  initialPanel?: import('./AlertsPanel.tsx').PanelState | null;
-  onBell?: () => void;
   reader?: Reader;
   /** Previews: open the user menu, the More menu or show search results as the kit frames show them. */
   initialMenu?: 'user' | 'more' | null;
@@ -74,7 +71,7 @@ export interface OfficeTopBarProps {
   currentPath?: string;
 }
 
-export function OfficeTopBar({ me, alertCount, liveAlerts = true, initialPanel = null, onBell, reader, initialMenu = null, initialSearch = null, currentPath }: OfficeTopBarProps) {
+export function OfficeTopBar({ me, alertCount, liveAlerts = true, reader, initialMenu = null, initialSearch = null, currentPath }: OfficeTopBarProps) {
   const t = useT();
   const routePath = usePathname() ?? '';
   const pathname = currentPath ?? routePath;
@@ -89,6 +86,14 @@ export function OfficeTopBar({ me, alertCount, liveAlerts = true, initialPanel =
   // A new bar width starts the fit again from 0 links moved. The pass counter re-runs the fit even when the count is
   // already 0 (setting 0 to 0 alone would not re-render, so a narrowed bar would never move a link).
   const [fitPass, setFitPass] = useState(0);
+  // K-08.25: a new language changes the labels' width the same way, so the fit starts again from 0 links moved (router.refresh keeps this bar mounted).
+  const fitLang = useRef(t.lang);
+  useLayoutEffect(() => {
+    if (fitLang.current === t.lang) return;
+    fitLang.current = t.lang;
+    setOverflow(0);
+    setFitPass((p) => p + 1);
+  }, [t.lang]);
   useLayoutEffect(() => {
     const h = headerRef.current;
     if (!h) return;
@@ -141,7 +146,7 @@ export function OfficeTopBar({ me, alertCount, liveAlerts = true, initialPanel =
   // The alerts bell and its count (CTL-CMP-07-06, FR-DISP-12), and the alerts list it opens (SCR-OFC-28).
   const bell = useBell({ enabled: liveAlerts && alertCount === undefined && branchKnown, branch, reader: read });
   const bellCount = alertCount !== undefined ? alertCount : bell.count;
-  const bellOpen = initialPanel !== null || bell.open;
+  const bellOpen = bell.open;
   const closeBell = bell.close;
   useEffect(() => {
     if (!bell.open) return;
@@ -350,11 +355,11 @@ export function OfficeTopBar({ me, alertCount, liveAlerts = true, initialPanel =
           ) : null}
         </div>
       ) : null}
-      <button type="button" className="iconbtn bw-btn-reset" aria-label={t('shell.office.alerts', { count: bellCount ?? 0 })} aria-haspopup="dialog" aria-expanded={bellOpen} data-ctl="CTL-CMP-07-06" onClick={onBell ?? bell.toggle}>
+      <button type="button" className="iconbtn bw-btn-reset" aria-label={t('shell.office.alerts', { count: bellCount ?? 0 })} aria-haspopup="dialog" aria-expanded={bellOpen} data-ctl="CTL-CMP-07-06" onClick={bell.toggle}>
         <Icon name="bell" />
         {bellCount ? <span className="badge">{bellCount}</span> : null}
       </button>
-      {bellOpen ? <AlertsPanelView state={initialPanel ?? bell.state} manager={me.role === 'manager'} onClose={closeBell} onEmail={bell.email} onDismiss={bell.dismiss} /> : null}
+      {bellOpen ? <AlertsPanelView state={bell.state} manager={me.role === 'manager'} onClose={closeBell} onEmail={bell.email} onDismiss={bell.dismiss} /> : null}
       <button type="button" className="user bw-btn-reset" data-ctl="CTL-CMP-07-07" aria-haspopup="menu" aria-expanded={userOpen} onClick={() => setUserOpen((o) => !o)}>
         <span className="av">{initials(me.name)}</span>
         <span>

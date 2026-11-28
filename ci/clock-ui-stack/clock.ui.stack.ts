@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: FR-DEMO-5, FR-DEMO-6, FR-DEMO-4, UC-10 (P4-CLOCK Acceptance: Playwright on Chromium and WebKit against the Compose stack)
 // UC-10 on the demo clock page against the Compose stack at its default settings (real PostgreSQL 18, real handlers, pbs running, the worker
-// started by its real start-up; ACCESS_CODE_ON and DEMO_MODE on as the named settings), after a fresh setup from the image, through its proxy
+// started by its real start-up; ACCESS_CODE_ON and DEMO_MODE on as the named settings, the reset cool-down at its default 300 s), after a fresh setup from the image, through its proxy
 // and the suites' https front (ci/auth-stack/tls-front.ts), with the outside-origin guard on (the browsers may reach the stack's origin only).
 // The web image is the release build: the page is the release route. On each engine, in its own fresh world (ci/clock-ui-stack.sh):
 //   1. The visitor enters the access code, signs in as the sample manager (Dana Ruiz) with her sample password, and opens the clock page.
 //   2. FIRST ENGINE ONLY (ruling Nov 10, 2026 item 4b; BW_CLOCK_UI_RESET=0 on the later engines): reset the demo world through the page (the suite
 //      first makes a clean world dirty with the 6:00 PM preset, F-732) (Keep the world closes the dialog and changes nothing; Reset the world,
-//      once the cool-down is over, puts the world back to Tue, Sep 15, 7:00 AM) and the cool-down note follows, and another open page follows the
+//      once setup's cool-down is backdated with psql, puts the world back to Tue, Sep 15, 7:00 AM) and the 5-minute cool-down note follows, and another open page follows the
 //      reset (F-646). The later engines (WebKit) do not run Reset, Keep the world, the cool-down or the F-646 follow.
 //   3. Two seeded reminders are due that evening, the later job's first once the office moves its customer to Atlantic time; the manager
 //      presses the 6:00 PM reminder preset; the worker replays them in due order, each stamped at its own time, each job in the world gets 1
@@ -86,7 +86,7 @@ const clockOf = (p: Page): Promise<ClockBody> =>
 const bigText = (p: Page) => p.locator('[data-ctl="CTL-OFC-17-01"]');
 const resetButton = (p: Page) => p.locator('[data-ctl="CTL-OFC-17-06"]');
 const preset = (p: Page, id: string) => p.locator(`button[data-preset="${id}"]`);
-// Ruling Nov 10, 2026 item 4b: the Reset flow and its cool-down (which a fresh world also starts at setup, 5 minutes) are tested on the first
+// Ruling Nov 10, 2026 item 4b: the Reset flow and its cool-down (which a fresh world also starts at setup, 5 minutes; the suite backdates that one with psql, never waits it out) are tested on the first
 // engine's world only; ci/clock-ui-stack.sh sets BW_CLOCK_UI_RESET=0 for the later engines, whose world is fresh and clean at Tue, Sep 15, 7:00 AM.
 const resetFlow = process.env.BW_CLOCK_UI_RESET !== '0';
 const banner = (p: Page) => p.locator('.r1-demobar [data-ctl="CTL-CMP-02-01"]');
@@ -152,8 +152,11 @@ describe.each(engines)('the demo clock page on the Compose stack, %s', (engine, 
       expect((await clockOf(dana)).worldEpoch).toBe(before.worldEpoch);
     }
     if (resetFlow) {
-      // The cool-down note counts down; Reset is on again when it is over (a timer in the page, the server's seconds from API-10).
-      await until('the Reset button to be on', async () => (await resetButton(dana).getAttribute('aria-disabled')) !== 'true', 420_000);
+      // Setup started a 300 s cool-down. Do not wait it out: backdate last_reset_real by an hour with the stack's psql (the setting stays at its default),
+      // then reload, since the page's countdown runs on the seconds it read from API-10. Reset is on once the page reads the backdated row.
+      psql(`UPDATE system.demo_clock SET last_reset_real = now() - interval '1 hour' WHERE id = 1`);
+      await dana.reload({ waitUntil: 'load' });
+      await until('the Reset button to be on', async () => (await resetButton(dana).getAttribute('aria-disabled')) !== 'true', 30_000);
       // An invited manager signs in by password without the access code and opens the office. The reset erases that account.
       const email = `rita.cole.${engine}@example.test`;
       const invite = await dana.evaluate(async (addr) => {
@@ -210,7 +213,7 @@ describe.each(engines)('the demo clock page on the Compose stack, %s', (engine, 
       await expect.poll(async () => (await clockOf(dana)).demoNow.slice(0, 16), { timeout: 60_000 }).toBe('2026-09-15T07:00');
       // The cool-down: Reset is off and the note says so (CTL-OFC-17-06, CTL-OFC-17-08).
       await expect.poll(() => resetButton(dana).getAttribute('aria-disabled'), { timeout: 30_000 }).toBe('true');
-      expect(await dana.locator('[data-ctl="CTL-OFC-17-08"]').textContent()).toMatch(/^Next reset allowed in [45] minutes?$/);
+      expect(await dana.locator('[data-ctl="CTL-OFC-17-08"]').textContent()).toMatch(/^Next reset allowed in [45] minutes?$/); // the default 300 s, read just after the reset
       // The world reset notice names the time it was reset to (CTL-CMP-02-03).
       await expect.poll(() => dana.locator('.r1-demobar [data-ctl="CTL-CMP-02-03"]').textContent(), { timeout: 30_000 }).toContain('Tue, Sep 15, 7:00 AM');
       await keisha.reload({ waitUntil: 'load' });

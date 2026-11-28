@@ -15,6 +15,8 @@ export type Answer<T> = { ok: true; data: T } | Refusal;
 interface BookInput {
   serviceId: string; streetId: string; houseNumber: number; date: string; windowId: string; name: string; mobile: string | null;
   textsOn: boolean; textLanguage: 'en' | 'es'; timeZone: string;
+  /** The draft's booking key (K-01): a UUID v4 the page keeps with the draft; a repeat of it answers the first booking. */
+  bookingKey: string;
 }
 
 /** The calls the pages make. Previews and tests pass a stand-in; the pages use bookingApi(). */

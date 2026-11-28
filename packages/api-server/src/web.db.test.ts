@@ -9,14 +9,14 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { defineContract, z } from '@bw/api';
 import { loadConfig } from '@bw/config';
-import { createPool, inTransaction, provisionLogins } from '@bw/db';
+import { createPool, inTransaction, provisionLogins, SERVICE_LOCK_TIMEOUT_MS, verifyPassword } from '@bw/db';
 import { createLogger } from '@bw/log';
 import { DbClock, Temporal } from '@bw/time';
 import { attempt, useMigratedDatabase } from '../../db/src/testing/fixture.ts';
 import { mount } from './kernel/mount.ts';
 import { sessionCookie, SqlSessionStore, startSession } from './kernel/sessions.ts';
 import { api, MANAGER } from './policy/entry.ts';
-import { createWebKernel } from './web.ts';
+import { createWebKernel, syncAccessCode } from './web.ts';
 
 const db = useMigratedDatabase();
 const asLogin = (url: string, user: string) => {
@@ -147,4 +147,77 @@ describe('the kernel on the real database, as bw_web', () => {
 
 afterAll(() => {
   expect(lines.join('')).not.toMatch(/dana@|maria@|password/);
+});
+
+describe('a held lock under the web pool (F-2037 K-10.8)', () => {
+  // why: F-2037 the web pool set no lock_timeout, so a call waiting on a held lock held 1 of its 10 connections without end
+  it('answers the health check 503 server_error within the service lock timeout, and logs 55P03', async () => {
+    const settings = loadConfig({ DATABASE_URL: asLogin(db.url(), 'bw_web') });
+    const k = createWebKernel({ settings, log });
+    await db.admin().query(`INSERT INTO system.worker_heartbeat (id, beat_real) VALUES (1, now()) ON CONFLICT (id) DO UPDATE SET beat_real = now()`);
+    // Another session (a migration, a long office write) holds the heartbeat table's lock for longer than the timeout.
+    const holder = createPool({ connectionString: db.url(), max: 1 });
+    const held = await holder.connect();
+    const from = lines.length;
+    try {
+      await held.query('BEGIN');
+      await held.query('LOCK TABLE system.worker_heartbeat IN ACCESS EXCLUSIVE MODE');
+      const t0 = performance.now();
+      const r = await k.router.handle(new Request('http://web:3000/healthz'));
+      const waited = performance.now() - t0;
+      // The test database's own lock_timeout is 30 s (testing/database.ts): only the pool's 10 s answers inside this bound.
+      expect(waited).toBeGreaterThanOrEqual(SERVICE_LOCK_TIMEOUT_MS - 500);
+      expect(waited).toBeLessThan(SERVICE_LOCK_TIMEOUT_MS + 5_000);
+      // SPECIFICATIONS 7.4 and 11.4: a thrown database error is a server_error, 503 on the health check, its cause in the log.
+      expect(r.status).toBe(503);
+      expect(JSON.parse(await r.text())).toMatchObject({ status: 503, code: 'server_error' });
+      const errors = lines.slice(from).map((l) => JSON.parse(l) as Record<string, unknown>).filter((l) => l.level === 'error');
+      expect(errors).toEqual([expect.objectContaining({ contract: 'API-171', status: 503, errorCode: '55P03' })]);
+    } finally {
+      await held.query('ROLLBACK').catch(() => undefined);
+      held.release();
+      await holder.end();
+      await k.close();
+    }
+  }, SERVICE_LOCK_TIMEOUT_MS + 30_000);
+});
+
+describe('the access code row (J-23, F-2008)', () => {
+  // why: J-23 the replace was a DELETE then an INSERT with no transaction, so a failed INSERT left the table with no active code
+  it('keeps the old row when the INSERT of a changed code fails', async () => {
+    const p = createPool({ connectionString: asLogin(db.url(), 'bw_web'), max: 2 });
+    try {
+      await syncAccessCode(p, 'first-code', new DbClock(p));
+      const before = (await db.admin().query<{ code_hash: string }>('SELECT code_hash FROM system.access_code')).rows;
+      expect(before).toHaveLength(1);
+      // the clock's stamp is no timestamp, so the INSERT fails after the DELETE has run
+      await expect(syncAccessCode(p, 'second-code', { realNow: () => 'not a time' as never })).rejects.toThrow();
+      expect((await db.admin().query<{ code_hash: string }>('SELECT code_hash FROM system.access_code')).rows).toEqual(before);
+    } finally {
+      await p.end();
+    }
+  });
+
+  // why: K-07 F-2013 a restart with the same code must rewrite nothing and a changed code must replace the row, so the code the office types stays the 1 that works
+  it('leaves the row alone for the same code and replaces it, whole, for a changed code', async () => {
+    const p = createPool({ connectionString: asLogin(db.url(), 'bw_web'), max: 2 });
+    const rows = async () => (await db.admin().query<{ code_hash: string }>('SELECT code_hash FROM system.access_code WHERE active')).rows;
+    try {
+      const clock = new DbClock(p);
+      await syncAccessCode(p, 'rotate-a', clock);
+      const first = await rows();
+      expect(first).toHaveLength(1);
+      // the same code again (a restart): the stored hash is the same bytes, never re-salted
+      await syncAccessCode(p, 'rotate-a', clock);
+      expect(await rows()).toEqual(first);
+      // a changed code: 1 row, which verifies the new code and no longer the old one
+      await syncAccessCode(p, 'rotate-b', clock);
+      const after = await rows();
+      expect(after).toHaveLength(1);
+      expect(await verifyPassword('rotate-b', after[0]!.code_hash)).toBe(true);
+      expect(await verifyPassword('rotate-a', after[0]!.code_hash)).toBe(false);
+    } finally {
+      await p.end();
+    }
+  });
 });

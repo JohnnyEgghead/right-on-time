@@ -883,7 +883,7 @@
     "booking.done.title": {"h":"9154e35187f0288f","by":"Claude Sonnet 5.5/P7-SPANISH","v":"pass"},
     "booking.done.visit": {"h":"8d5f720007b5c579","by":"Claude Sonnet 5.5/P7-SPANISH","v":"pass"},
     "booking.err.closed": {"h":"5e138c011b734d4b","by":"Claude Sonnet 5.5/P7-SPANISH","v":"pass"},
-    "booking.err.failed": {"h":"025031124a0609b5","by":"Claude Sonnet 5.5/P7-SPANISH","v":"pass"},
+    "booking.err.failed": {"h":"9467aca2c21ba5ba","by":"claude-opus-5-5/P10-BOOKING-KEY-review","v":"pass"},
     "booking.err.invalid": {"h":"9795827a4b24ee09","by":"Claude Sonnet 5.5/P7-SPANISH","v":"pass"},
     "booking.err.refused": {"h":"eba4d14c055727c0","by":"Claude Sonnet 5.5/P7-SPANISH","v":"pass"},
     "booking.err.window": {"h":"13eac3a7607f4520","by":"Claude Sonnet 5.5/P7-SPANISH","v":"pass"},

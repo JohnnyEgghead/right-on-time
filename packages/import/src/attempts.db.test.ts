@@ -111,6 +111,26 @@ describe('EVT-08 import.run.changed (UI-SPECIFICATION 12.3; CTL-OFC-13-05)', () 
   });
 });
 
+describe('a failed run whose clock cannot be read (F-2006 J-26)', () => {
+  // why: F-2006 J-26, FR-IMP-1 a failed clock read ended the run at 1970, before its own start
+  it('ends failed at the run\'s own start, never at 1970', async () => {
+    const id = await request('dry_run');
+    const started = (await db.admin().query<{ started_at: Date }>('SELECT started_at FROM world.import_run WHERE id = $1', [id])).rows[0]!.started_at;
+    const refused = Object.assign(new Error('refused'), { code: 'generator_manifest' });
+    // The clock answers until the export refuses, then cannot be read: the failure's own read of it throws.
+    let down = false;
+    const clock = () => {
+      if (down) throw Object.assign(new Error('clock down'), { code: 'ECONNRESET' });
+      return demoClock();
+    };
+    const err = await runPendingImport(pool, { files: () => { down = true; throw refused; }, clock }).catch((e: unknown) => e);
+    expect(err).toBe(refused);
+    const r = (await db.admin().query<{ status: string; finished_at: Date }>('SELECT status, finished_at FROM world.import_run WHERE id = $1', [id])).rows[0]!;
+    expect(r.status).toBe('failed');
+    expect(r.finished_at.toISOString()).toBe(started.toISOString());
+  });
+});
+
 describe('a run whose executor dies is executed again, 3 times in all (owner ruling dc73cb08, F-266)', () => {
   /** 1 attempt in an executor whose connections are cut once the run is working, as a killed process's are. */
   async function crashedAttempt(id: string, attempt: number): Promise<void> {

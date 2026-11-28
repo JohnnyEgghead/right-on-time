@@ -3,6 +3,18 @@ packages:
   - packages/*
 # 14-day rule (REQUIREMENTS section 6): refuse any release published less than 14 days ago.
 minimumReleaseAge: 20160
+# J-20: refuse an install that pulls a dependency from a tarball URL or a git repo (an exotic transitive), and refuse a
+# release whose trust is lower than the one already in the lockfile (a publisher change or a lost provenance attestation).
+blockExoticSubdeps: true
+# J-20 exclusion: the committed lockfile pins semver@6.3.1, which fails no-downgrade (ERR_PNPM_TRUST_DOWNGRADE).
+# The exclusion names that exact version, not a range, so every other semver release is still checked.
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - semver@6.3.1
+# K-14 / J-18: pins node-forge past the vulnerable 1.4.0 and 1.4.2 (the advisories say patched >=1.4.3). 1.4.3 was published
+# 2026-11-04, so it passes the 14-day rule.
+overrides:
+  node-forge: 1.4.3
 # @bw/db's dev-only embedded PostgreSQL 18.4 (P2-SCHEMA): its postinstall only re-creates library symlinks,
 # which packages/db/src/testing/pg-server.ts does itself at run time, so no third-party install script runs.
 allowBuilds:

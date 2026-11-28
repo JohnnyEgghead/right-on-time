@@ -25,8 +25,8 @@ export {
   type LinkKind, type TextCatalogs,
 } from './slots.ts';
 export {
-  customerZoneFor, fireReminder, planReminder, reminderBodyAt, reminderDueAt, reminderIsStale, reminderTemplateAt, REMINDER_TIME, replanCustomerReminders,
-  sendConfirmation, sendLate, sendOnTheWay, TEXT_REMINDER,
+  customerZoneFor, fireReminder, giveUpReminder, planReminder, reminderBodyAt, reminderDueAt, reminderIsStale, reminderTemplateAt, REMINDER_TIME, replanCustomerReminders,
+  ReminderNotEnqueuedError, sendConfirmation, sendLate, sendOnTheWay, TEXT_REMINDER,
   type LateSent, type OnTheWaySent, type ReminderFired, type ReminderPlan, type TextContext,
 } from './triggers.ts';
 export { tryNow, type TryNowResult } from './try-now.ts';

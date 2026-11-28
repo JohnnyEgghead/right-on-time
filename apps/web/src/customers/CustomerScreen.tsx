@@ -14,6 +14,7 @@ import type { Shown } from '../job/model.ts';
 import { OfficeFrame } from '../shell/Frames.tsx';
 import { useMe } from '../shell/me.ts';
 import { useAnnounce } from '../shell/Announcer.tsx';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { useT } from '../shell/intl.tsx';
 import { CustomerFormDialog } from './CustomerFormDialog.tsx';
 import { CustomerView, type CustomerState, type ZoneUi } from './CustomerView.tsx';
@@ -52,17 +53,19 @@ export function CustomerScreen({ customerId, api: given }: { customerId: string;
   const [dialog, setDialog] = useState<Modal | null>(null);
   const [missing, setMissing] = useState(false);
 
-  const read = useCallback(async (): Promise<Detail | null> => {
-    const r = await call(customerDetail, { customerId });
-    if (r.ok) {
-      setData(r.data);
-      setState('ready');
-      return r.data;
-    }
-    if (r.status === 404) setMissing(true);
-    else setState('error');
-    return null;
-  }, [customerId]);
+  const newest = useNewestAnswer();
+  // K-05: the page re-reads after each change; the newest read's answer is the one shown, however late an earlier one lands.
+  const read = useCallback(async (): Promise<void> => {
+    await newest.run(() => call(customerDetail, { customerId }), (r) => {
+      if (r.ok) {
+        setData(r.data);
+        setState('ready');
+        return;
+      }
+      if (r.status === 404) setMissing(true);
+      else setState('error');
+    });
+  }, [customerId, newest]);
 
   useEffect(() => {
     setState('loading');

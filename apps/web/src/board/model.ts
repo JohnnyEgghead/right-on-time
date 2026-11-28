@@ -294,3 +294,9 @@ export function noRoomText(t: ClientT, detail: Record<string, unknown>, name: st
   const shown = noRoomShown(detail, name, window);
   return shown && t(shown.key as Parameters<ClientT>[0], shown.values);
 }
+
+/**
+ * Whether the board draws again each second (K-08.12, F-2078): only when it shows today and the demo clock runs. A past or future date, a paused clock
+ * and a clock not read yet have no time to move.
+ */
+export const ticksEachSecond = (today: boolean | undefined, time: { answer: { paused: boolean } } | null): boolean => today === true && time !== null && !time.answer.paused;

@@ -15,14 +15,14 @@ const user = (o: Partial<UserItem> & Pick<UserItem, 'id' | 'name' | 'email' | 'r
 });
 
 export const USERS: UserItem[] = [
-  user({ id: 'u-dana', name: 'Dana Ruiz', email: 'druiz@brightwaterair.com', role: 'manager', branch: 'columbus', title: 'Director of Operations', lastSignInAt: at('2026-09-15T07:48:00'), lastSignInApp: 'office' }),
-  user({ id: 'u-pat', name: 'Pat Kessler', email: 'pkessler@brightwaterair.com', role: 'manager', branch: 'dayton', title: 'Branch manager', lastSignInAt: at('2026-09-14T16:52:00'), lastSignInApp: 'office' }),
-  user({ id: 'u-keisha', name: 'Keisha Thompson', email: 'kthompson@brightwaterair.com', role: 'office', branch: 'columbus', title: 'Dispatcher', lastSignInAt: at('2026-09-15T07:31:00'), lastSignInApp: 'office' }),
-  user({ id: 'u-ana', name: 'Ana Gutierrez', email: 'agutierrez@brightwaterair.com', role: 'office', branch: 'columbus', title: 'Customer service (Spanish)', lastSignInAt: at('2026-09-15T08:05:00'), lastSignInApp: 'office' }),
-  user({ id: 'u-omar', name: 'Omar Haddad', email: 'ohaddad@brightwaterair.com', role: 'office', branch: 'dayton', title: 'Customer service', lastSignInAt: at('2026-08-28T15:15:00'), lastSignInApp: 'office', status: 'turned_off', statusSince: at('2026-09-04T17:02:00') }),
-  user({ id: 'u-maria', name: 'Maria Santos', email: 'msantos@brightwaterair.com', role: 'technician', branch: 'columbus', van: '12', primarySkill: 'heating_cooling', lastSignInAt: at('2026-09-15T07:12:00'), lastSignInApp: 'tech_native' }),
-  user({ id: 'u-luis', name: 'Luis Ortega', email: 'lortega@brightwaterair.com', role: 'technician', branch: 'columbus', van: '18', primarySkill: 'heating_cooling', lastSignInAt: at('2026-09-15T07:09:00'), lastSignInApp: 'tech_native' }),
-  user({ id: 'u-derek', name: 'Derek Simmons', email: 'dsimmons@brightwaterair.com', role: 'technician', branch: 'dayton', van: '41', primarySkill: 'heating_cooling', status: 'invited', statusSince: at('2026-09-14T14:10:00') }),
+  user({ id: 'u-dana', name: 'Dana Ruiz', email: 'druiz@brightwater.example', role: 'manager', branch: 'columbus', title: 'Director of Operations', lastSignInAt: at('2026-09-15T07:48:00'), lastSignInApp: 'office' }),
+  user({ id: 'u-pat', name: 'Pat Kessler', email: 'pkessler@brightwater.example', role: 'manager', branch: 'dayton', title: 'Branch manager', lastSignInAt: at('2026-09-14T16:52:00'), lastSignInApp: 'office' }),
+  user({ id: 'u-keisha', name: 'Keisha Thompson', email: 'kthompson@brightwater.example', role: 'office', branch: 'columbus', title: 'Dispatcher', lastSignInAt: at('2026-09-15T07:31:00'), lastSignInApp: 'office' }),
+  user({ id: 'u-ana', name: 'Ana Gutierrez', email: 'agutierrez@brightwater.example', role: 'office', branch: 'columbus', title: 'Customer service (Spanish)', lastSignInAt: at('2026-09-15T08:05:00'), lastSignInApp: 'office' }),
+  user({ id: 'u-omar', name: 'Omar Haddad', email: 'ohaddad@brightwater.example', role: 'office', branch: 'dayton', title: 'Customer service', lastSignInAt: at('2026-08-28T15:15:00'), lastSignInApp: 'office', status: 'turned_off', statusSince: at('2026-09-04T17:02:00') }),
+  user({ id: 'u-maria', name: 'Maria Santos', email: 'msantos@brightwater.example', role: 'technician', branch: 'columbus', van: '12', primarySkill: 'heating_cooling', lastSignInAt: at('2026-09-15T07:12:00'), lastSignInApp: 'tech_native' }),
+  user({ id: 'u-luis', name: 'Luis Ortega', email: 'lortega@brightwater.example', role: 'technician', branch: 'columbus', van: '18', primarySkill: 'heating_cooling', lastSignInAt: at('2026-09-15T07:09:00'), lastSignInApp: 'tech_native' }),
+  user({ id: 'u-derek', name: 'Derek Simmons', email: 'dsimmons@brightwater.example', role: 'technician', branch: 'dayton', van: '41', primarySkill: 'heating_cooling', status: 'invited', statusSince: at('2026-09-14T14:10:00') }),
 ];
 
 export const SEARCH: UserSearch = {
@@ -49,7 +49,7 @@ export const CHANGES: UserChange[] = [
 export const CHANGED: UserChange[] = [{ userName: 'Omar Haddad', what: 'turned_back_on', role: 'office', branch: 'dayton', byName: 'Dana R.', at: at('2026-09-15T10:34:00') }];
 
 export const OMAR = USERS[4]!;
-export const TANYA = user({ id: 'u-tanya', name: 'Tanya Brooks', email: 'tbrooks@brightwaterair.com', role: 'office', branch: 'columbus', title: 'Dispatcher' });
+export const TANYA = user({ id: 'u-tanya', name: 'Tanya Brooks', email: 'tbrooks@brightwater.example', role: 'office', branch: 'columbus', title: 'Dispatcher' });
 
 export const RESET_EMAIL: OpenedEmail = {
   inboxFor: 'keisha.t@brightwater.example', from: 'Right On Time <no-reply@brightwater.example>', to: 'keisha.t@brightwater.example',

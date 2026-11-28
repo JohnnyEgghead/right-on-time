@@ -8,7 +8,7 @@ import { APP_INFO, CLOCK_RUNNING } from '../../../../src/shell/preview-fixtures.
 
 export const dynamic = 'force-dynamic';
 
-const NADIA = { name: 'Nadia Price', email: 'nprice@brightwaterair.com', role: 'office' as const, branch: 'columbus' };
+const NADIA = { name: 'Nadia Price', email: 'nprice@brightwater.example', role: 'office' as const, branch: 'columbus' };
 const DIALOGS: Record<string, DialogState> = {
   'invite-editing': { kind: 'invite', step: 'editing' },
   'invite-sending': { kind: 'invite', step: 'sending', ...NADIA },

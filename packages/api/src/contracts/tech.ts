@@ -27,7 +27,8 @@ const JOB_NUMBER_MAX = 2_147_483_647;
 const facts = {
   key: itemKey,
   jobNumber: z.number().int().min(1).max(JOB_NUMBER_MAX),
-  baseVersion: z.number().int().min(1),
+  // K-09.7: the job's version is a PostgreSQL integer, so a larger number is refused here, not left to fail at the version compare.
+  baseVersion: z.number().int().min(1).max(2147483647),
   worldEpoch: z.number().int().min(0),
   /** The phone's own real time at entry (realNow('device_stamp')). */
   deviceTime: itemTime,

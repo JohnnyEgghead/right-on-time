@@ -1,5 +1,0 @@
-# Spike S1 is its own pnpm root, outside the product workspace (apps/*, packages/*).
-packages:
-  - .
-# 14-day rule (REQUIREMENTS section 6): refuse any release published less than 14 days ago.
-minimumReleaseAge: 20160

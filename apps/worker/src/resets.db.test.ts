@@ -3,6 +3,7 @@
 // the real database, as the worker's login bw_worker (role app: the reset's EXECUTE on system.restore_world, F-150),
 // after a day-start snapshot written by setup's own writeSnapshot. Each step is called with its real time, so no test
 // reads the wall. Run by gate G-CI2 (ci/gates/G-CI2/vitest.db.config.ts: apps/worker/src/*.db.test.ts).
+import * as fsp from 'node:fs/promises';
 import { mkdir, mkdtemp, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,8 +13,8 @@ import { Temporal } from '@bw/time';
 import { useMigratedDatabase } from '../../../packages/db/src/testing/fixture.ts';
 import { addCustomer, addJob, loginPool, seedOutboxWorld, type OutboxRef } from '../../../packages/outbox/src/testing/world.ts';
 import { writeSnapshot } from '../../../packages/setup/src/snapshot.ts';
-import { CLEANUP_MIN_AGE_MS, cleanup } from './clock/cleanup.ts';
-import { confirmStep, ConfirmerState } from './clock/confirmer.ts';
+import { CLEANUP_MIN_AGE_MS, cleanup, type CleanupFs } from './clock/cleanup.ts';
+import { confirmStep, ConfirmerState, RESET_CONFIRM_ALERT_AFTER } from './clock/confirmer.ts';
 import { autoResetStep } from './clock/resets.ts';
 
 const db = useMigratedDatabase();
@@ -111,7 +112,7 @@ describe('the nightly reset (FR-DEMO-7)', () => {
     expect(await clockRow()).toMatchObject({ paused: true, demo_anchor: at('2026-09-15T11:00:00Z'), last_move_by_name: NIGHTLY_MOVER, last_move_kind: 'reset' });
     // The confirmer has pbs apply the epoch and unpauses the clock at Tue, Sep 15, 7:00 AM.
     const state = new ConfirmerState();
-    const confirmed = await confirmStep({ pool: worker, client: { reset: async (e) => ({ applied: true, epoch: e }) }, clock: { realNow: () => Temporal.Instant.from('2026-11-03T08:00:40Z') }, real: () => plus(night, 1), state });
+    const confirmed = await confirmStep({ pool: worker, client: { reset: async (e) => ({ applied: true, epoch: e }) }, clock: { realNow: () => Temporal.Instant.from('2026-11-03T08:00:40Z') }, real: () => plus(night, 1), state, log: { error: () => undefined } });
     expect(confirmed).toBe('confirmed');
     const c = await clockRow();
     expect(c).toMatchObject({ paused: false, demo_anchor: at('2026-09-15T11:00:00Z') });
@@ -162,6 +163,62 @@ describe('Cleanup after a reset (SD-12, section 2)', () => {
       expect((await stat(path.join(dir, files.inFlight))).isFile()).toBe(true); // F-474: a send's file before its row commits
       expect(report.clockMovesPruned).toBe(Number(moves.rows[0]!.n));
       expect(await cleanup({ pool: worker, photosDir: path.join(dir, 'none'), real })).toMatchObject({ filesDeleted: 0 });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('a reset the billing service cannot take (F-2006 K-10.1)', () => {
+  // why: F-2006 K-10.1 the confirmer's catch kept no cause, so a reset pbs refused for an hour logged nothing of why
+  it('logs the failure with its cause code on the 1st call, and again only every RESET_CONFIRM_ALERT_AFTER calls', async () => {
+    const r0 = at('2026-11-02T13:00:00Z');
+    await world({ resetReal: r0, writeReal: plus(r0, 5) });
+    expect(await autoResetStep({ pool: worker, real: plus(r0, 5 + 120), idleMinutes: 120, nightly: false })).toBe('idle');
+    const lines: Record<string, unknown>[] = [];
+    const state = new ConfirmerState();
+    const refused = { reset: async () => { throw Object.assign(new Error('connect refused'), { code: 'ECONNREFUSED' }); } };
+    const step = (n: number) => confirmStep({
+      pool: worker, client: refused, clock: { realNow: () => Temporal.Instant.from(plus(r0, 130 + n).toISOString()) }, real: () => plus(r0, 130 + n), state,
+      log: { error: (f) => void lines.push(f as Record<string, unknown>) },
+    });
+    expect(await step(1)).toBe('failed');
+    expect(lines).toEqual([{ status: 'billing reset failed', errorCode: 'ECONNREFUSED', failures: 1 }]);
+    for (let n = 2; n <= RESET_CONFIRM_ALERT_AFTER; n++) expect(await step(n)).toBe('failed');
+    expect(lines).toEqual([
+      { status: 'billing reset failed', errorCode: 'ECONNREFUSED', failures: 1 },
+      { status: 'billing reset failed', errorCode: 'ECONNREFUSED', failures: RESET_CONFIRM_ALERT_AFTER },
+    ]);
+    await world({ resetReal: r0, writeReal: plus(r0, 5) }); // confirmed again for the next test
+    await db.admin().query(`UPDATE world.alert SET state = 'resolved' WHERE type = 'billing_reset_waiting' AND state = 'open'`);
+  });
+});
+
+describe('a cleanup run whose file vanishes mid-sweep (F-2006 J-25)', () => {
+  // why: F-2006 J-25 a file gone between the listing and its stat threw ENOENT and ended the run, so nothing after it was pruned
+  it('skips the vanished file and still deletes the other orphans and prunes the delay samples', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'bw-photos-'));
+    try {
+      const real = at('2026-11-04T12:00:00Z');
+      const old = new Date(real.getTime() - CLEANUP_MIN_AGE_MS - 1000);
+      await mkdir(path.join(dir, '2026-09'));
+      for (const f of ['2026-09/gone', '2026-09/orphan']) {
+        await writeFile(path.join(dir, f), 'x');
+        await utimes(path.join(dir, f), old, old);
+      }
+      await db.admin().query(`INSERT INTO system.delay_sample (seq, emitted_real, acked_real, ms) VALUES (1, $1, $1, 5)`, [plus(real, -25 * 60)]);
+      // The file 'gone' is deleted after the listing and before its stat (another sweep, a reset's own cleanup).
+      const racing: CleanupFs = {
+        readdir: (d) => fsp.readdir(d),
+        stat: async (f) => {
+          if (f.endsWith(`${path.sep}gone`)) await fsp.rm(f);
+          return fsp.stat(f);
+        },
+        rm: (f, o) => fsp.rm(f, o),
+      };
+      const report = await cleanup({ pool: worker, photosDir: dir, real, fs: racing });
+      expect(report).toMatchObject({ filesDeleted: 1, delaySamplesPruned: 1 });
+      await expect(stat(path.join(dir, '2026-09/orphan'))).rejects.toThrow();
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

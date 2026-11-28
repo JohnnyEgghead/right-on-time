@@ -28,12 +28,21 @@ interface Common { job: Job; api: JobApi; onClose: () => void; onDone: Done; onK
  */
 export interface DialogCustomer { id: string; name: string; mobile: string | null; language: string; zone: string; officeZone: string; equipment: Job['equipment'] }
 type Who = { job: Job; customer?: undefined } | { job?: undefined; customer: DialogCustomer };
-type Hosted = Omit<Common, 'job'> & Who;
+/** The dialogs a customer page hosts too (text, note, equipment) have no conflict dialog, so no onKeep (K-20). */
+type Hosted = Omit<Common, 'job' | 'onKeep'> & Who;
 const whoOf = (p: Who): DialogCustomer => p.customer ?? {
   id: p.job.customer.id, name: p.job.customer.name, mobile: p.job.customer.mobile, language: p.job.customer.language, zone: p.job.customer.zone, officeZone: p.job.job.zone, equipment: p.job.equipment,
 };
 /** Harness previews only: the state a dialog opens in (a typed text, a pick, a busy write), so each frame state is drawn fixed. */
-export interface DialogStart { body?: string; saving?: boolean; shown?: Shown | null; day?: string; win?: string; serviceId?: string }
+export interface DialogStart { body?: string; saving?: boolean; day?: string; win?: string; serviceId?: string }
+
+/**
+ * K-08.22: the text dialog's refusal and whether it bars Send. A refusal that the text cannot fix (texts off, no mobile) keeps Send off (DK-87 Text
+ * customer: Refused) in its own flag: typing never clears a barred refusal, so the message stays beside the dimmed Send.
+ */
+export interface TextRefusal { shown: Shown | null; barred: boolean }
+export const refused = (shown: Shown | null): TextRefusal => ({ shown, barred: shown?.key === 'job.text.textsOff' || shown?.key === 'job.text.noMobile' });
+export const typed = (r: TextRefusal): TextRefusal => (r.barred ? r : { shown: null, barred: false });
 
 function Refused({ shown }: { shown: Shown | null }) {
   const t = useT();
@@ -87,7 +96,7 @@ export function ReassignJobDialog(p: Common) {
 export function CancelDialog(p: Common & { start?: DialogStart }) {
   const t = useT();
   const [saving, setSaving] = useState(p.start?.saving ?? false);
-  const [shown, setShown] = useState<Shown | null>(p.start?.shown ?? null);
+  const [shown, setShown] = useState<Shown | null>(null);
   const j = p.job;
   const w = useVersionedWrite({
     action: 'cancel', version: j.job.version, onKeep: p.onKeep ?? p.onClose,
@@ -122,7 +131,7 @@ export function RescheduleDialog(p: Common & { today: string; horizon: string; s
   const [day, setDay] = useState<string | null>(p.start?.day ?? null);
   const [win, setWin] = useState<string | null>(p.start?.win ?? null);
   const [saving, setSaving] = useState(p.start?.saving ?? false);
-  const [shown, setShown] = useState<Shown | null>(p.start?.shown ?? null);
+  const [shown, setShown] = useState<Shown | null>(null);
   const load = () => {
     setDays(null);
     void p.api.availability({ branch: j.job.branch, serviceId: j.job.serviceId, from: p.today, to: p.horizon, jobNumber: j.job.jobNumber })
@@ -200,7 +209,7 @@ export function EditDetailsDialog(p: Common & { start?: DialogStart }) {
   const [services, setServices] = useState<ServicesAnswer['services'] | null>(null);
   const [form, setForm] = useState({ serviceId: p.start?.serviceId ?? j.job.serviceId, equipmentId: j.job.equipmentId, problem: j.job.problem ?? '' });
   const [saving, setSaving] = useState(p.start?.saving ?? false);
-  const [shown, setShown] = useState<Shown | null>(p.start?.shown ?? null);
+  const [shown, setShown] = useState<Shown | null>(null);
   // API-110 failing keeps the job's own service in the select and says so, with Try again (a failed read is not a quiet empty list).
   const [servicesFailed, setServicesFailed] = useState(false);
   const loadServices = () => { setServicesFailed(false); void p.api.services().then((r) => { if (r.ok) setServices(r.data.services); else setServicesFailed(true); }); };
@@ -269,16 +278,15 @@ function heldToast(t: ReturnType<typeof useT>, heldUntil: string | null, custome
 }
 
 /** SCR-OFC-35 Text customer: free text held to 1 message by the shared counter (D12), and to quiet hours (FR-TEXT-7); API-143. */
-export function TextDialog(p: Hosted & { start?: DialogStart }) {
+export function TextDialog(p: Hosted & { start?: DialogStart & { shown?: Shown | null } }) {
   const t = useT();
   const j = whoOf(p);
   const [body, setBody] = useState(p.start?.body ?? '');
   const [saving, setSaving] = useState(p.start?.saving ?? false);
-  const [shown, setShown] = useState<Shown | null>(p.start?.shown ?? null);
+  const [refusal, setRefusal] = useState<TextRefusal>(refused(p.start?.shown ?? null));
+  const { shown, barred } = refusal;
   const [asking, setAsking] = useState(false);
   const c = textCount(body);
-  // A refusal that the text cannot fix (texts off, no mobile) keeps Send off (DK-87 Text customer: Refused).
-  const barred = shown?.key === 'job.text.textsOff' || shown?.key === 'job.text.noMobile';
   const ready = body.trim() !== '' && c.fits && !saving && !barred;
   const left = body === '' ? t('job.text.leftEmpty', { n: c.limit })
     : !c.fits ? t('job.text.tooLong') : c.left === 0 ? t('job.text.zeroLeft') : t('job.text.left', { n: c.left });
@@ -288,7 +296,7 @@ export function TextDialog(p: Hosted & { start?: DialogStart }) {
     const r = await p.api.text(j.id, body.trim(), p.job?.job.jobNumber ?? null);
     setSaving(false);
     if (r.ok) return p.onDone(r.data.text.status === 'held' ? heldToast(t, r.data.text.heldUntil, j.zone, j.officeZone) : { key: 'job.text.sent' });
-    setShown(shownOf(r));
+    setRefusal(refused(shownOf(r)));
   };
   const close = () => { if (body.trim() !== '' && !asking) setAsking(true); else p.onClose(); };
   const lang = j.language === 'es' ? t('job.text.inSpanish') : t('job.text.inEnglish');
@@ -305,7 +313,7 @@ export function TextDialog(p: Hosted & { start?: DialogStart }) {
       <div className="r1-field" data-ctl="CTL-OFC-35-02">
         <label htmlFor="bw-tx">{t('job.text.message')}</label>
         <textarea id="bw-tx" className={`tbox-in${c.fits ? '' : ' bad'}`} value={body} maxLength={1000} placeholder={t('job.text.ph', { name: j.name.split(' ')[0] ?? '' })}
-          aria-describedby="bw-tx-cnt" onChange={(e) => { setShown(null); setBody(e.target.value); }} />
+          aria-describedby="bw-tx-cnt" onChange={(e) => { setRefusal(typed); setBody(e.target.value); }} />
       </div>
       <p id="bw-tx-cnt" className={`cnt${c.fits ? '' : ' bad'}`} role="status" aria-live="polite" data-ctl="CTL-OFC-35-03">
         {left}{c.outside && c.fits ? ` ${t('job.text.outside', { ch: c.outside })}` : ''}
@@ -321,7 +329,7 @@ export function NoteDialog(p: Hosted & { start?: DialogStart }) {
   const t = useT();
   const [body, setBody] = useState(p.start?.body ?? '');
   const [saving, setSaving] = useState(p.start?.saving ?? false);
-  const [shown, setShown] = useState<Shown | null>(p.start?.shown ?? null);
+  const [shown, setShown] = useState<Shown | null>(null);
   const [asking, setAsking] = useState(false);
   const ready = body.trim() !== '' && !saving;
   const go = async () => {
@@ -365,7 +373,7 @@ export function EquipmentDialog(p: Hosted & { equipmentId?: string; start?: Dial
   const year0 = e0?.year == null ? '' : String(e0.year);
   const [f, setF] = useState({ type: type0, year: year0, location: e0?.location ?? '', details: p.start?.details ?? e0?.details ?? '' });
   const [saving, setSaving] = useState(p.start?.saving ?? false);
-  const [shown, setShown] = useState<Shown | null>(p.start?.shown ?? null);
+  const [shown, setShown] = useState<Shown | null>(null);
   const yearBad = f.year.trim() !== '' && !/^(19|20)\d{2}$/.test(f.year.trim());
   const changed = adding || f.type !== type0 || f.year !== year0 || f.location !== (e0?.location ?? '') || f.details !== (e0?.details ?? '');
   const ready = f.type.trim() !== '' && !yearBad && changed && !saving;

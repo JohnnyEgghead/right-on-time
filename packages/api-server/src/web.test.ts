@@ -1,11 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // why-file: FR-AUTH-5, FR-AUTH-6 (F-286: the start-up inputs of the access surface do not fail quietly)
 import { loadConfig } from '@bw/config';
+import { SERVICE_LOCK_TIMEOUT_MS, SERVICE_STATEMENT_TIMEOUT_MS } from '@bw/db';
 import { createLogger } from '@bw/log';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CONTENT_SECURITY_POLICY } from './kernel/headers.ts';
 import type { Router } from './kernel/mount.ts';
 import { createWebKernel, startSync, syncGuard, syncWithRetry } from './web.ts';
+
+// The options of every pool @bw/db makes in this file, passed through to the real createPool (F-2037).
+const poolConfigs = vi.hoisted(() => [] as Record<string, unknown>[]);
+const pools = vi.hoisted(() => [] as { application_name: unknown; pool: { emit(e: string, ...a: unknown[]): boolean } }[]);
+const busOptions = vi.hoisted(() => [] as { onError?: (e: unknown) => void }[]);
+vi.mock('./events/bus.ts', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./events/bus.ts')>();
+  return { ...real, PgNotifyBus: class extends real.PgNotifyBus { constructor(o: ConstructorParameters<typeof real.PgNotifyBus>[0]) { busOptions.push(o); super(o); } } };
+});
+vi.mock('@bw/db', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@bw/db')>();
+  return { ...real, createPool: (c: Parameters<typeof real.createPool>[0]) => { poolConfigs.push({ ...c }); const pool = real.createPool(c); pools.push({ application_name: c.application_name, pool }); return pool; } };
+});
 
 describe('start-up of the access surface', () => {
   // why: FR-AUTH-6 (a failed access code sync is tried again, not logged once and forgotten)
@@ -174,4 +188,40 @@ describe('a failed access code sync is logged with its cause (F-1848)', () => {
       await kernel.close();
     }
   }, 30_000);
+});
+
+describe('the web pool carries the service timeouts (F-2037 K-10.8)', () => {
+  // why: F-2037 the web pool set neither statement_timeout nor lock_timeout, so 1 stuck call held a web connection without end
+  it('makes the bw-web pool with lock_timeout and statement_timeout', async () => {
+    const settings = loadConfig({ DATABASE_URL: 'postgres://web@127.0.0.1:1/none' });
+    const from = poolConfigs.length;
+    const kernel = createWebKernel({ settings, log: quiet });
+    try {
+      const web = poolConfigs.slice(from).filter((c) => c.application_name === 'bw-web');
+      expect(web).toHaveLength(1);
+      expect(web[0]).toMatchObject({ lock_timeout: SERVICE_LOCK_TIMEOUT_MS, statement_timeout: SERVICE_STATEMENT_TIMEOUT_MS });
+    } finally {
+      await kernel.close();
+    }
+  });
+});
+
+describe('the web process logs the cause of an error event (F-2046)', () => {
+  // why: F-2046 the web pool error handler and the notify bus onError logged the fixed word server_error, so an ended idle connection never named its cause (SPECIFICATIONS 11.4)
+  it('logs the code of a pool error event and of a notify bus error', async () => {
+    const lines: Record<string, unknown>[] = [];
+    const log = createLogger({ process: 'web', write: (l: string) => lines.push(JSON.parse(l)) });
+    const settings = loadConfig({ DATABASE_URL: 'postgres://web@127.0.0.1:1/none' });
+    const from = pools.length;
+    const busFrom = busOptions.length;
+    const kernel = createWebKernel({ settings, log });
+    try {
+      const web = pools.slice(from).find((p) => p.application_name === 'bw-web');
+      web?.pool.emit('error', Object.assign(new Error('terminating connection'), { code: '57P01' }));
+      busOptions[busFrom]?.onError?.(Object.assign(new Error('read'), { code: 'ECONNRESET' }));
+      expect(lines.filter((l) => l.status === 'unhandled error').map((l) => l.errorCode)).toEqual(['57P01', 'ECONNRESET']);
+    } finally {
+      await kernel.close();
+    }
+  });
 });

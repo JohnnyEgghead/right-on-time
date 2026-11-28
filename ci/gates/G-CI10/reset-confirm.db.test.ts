@@ -71,7 +71,7 @@ describe('G-CI10 epoch case: a reset is confirmed by the billing service before 
     const client = new HttpBillingClient(`http://127.0.0.1:${port}`);
     const step = (n: number) => confirmStep({
       pool: worker, client, clock: { realNow: () => Temporal.Instant.fromEpochMilliseconds(REAL.getTime() + n * 5000) },
-      real: () => new Date(REAL.getTime() + n * 5000), state,
+      real: () => new Date(REAL.getTime() + n * 5000), state, log: createLogger({ process: 'worker', write: () => undefined }),
     });
     for (let n = 1; n < RESET_CONFIRM_ALERT_AFTER; n++) {
       expect(await step(n)).toBe('failed');

@@ -8,7 +8,7 @@
 // and a refused connection -> down; the real-time timeout -> timeout (FR-BILL-6; a timeout is a retry, never a drop,
 // invariant 2); a 400 (a request that breaks the protocol) -> data_error, so a person sees it instead of a retry loop.
 import {
-  BILLING_TIMEOUT_MS, EPOCH_HEADER, IDEMPOTENCY_HEADER, idempotencyKey, type InvoiceLine, type InvoiceRequest, type PbsMode,
+  BILLING_TIMEOUT_MS, EPOCH_HEADER, PBS_MODES, IDEMPOTENCY_HEADER, idempotencyKey, type InvoiceLine, type InvoiceRequest, type PbsMode,
 } from '@bw/domain';
 
 export type SendOutcome =
@@ -65,6 +65,25 @@ export class BillingUnavailableError extends Error {
  */
 export const PBS_CALL_TIMEOUT_MS = 5_000;
 
+/**
+ * F-2006 J-22: the send's answer fields, each kept only when it is a string: a body of null, a number or an array, or an
+ * answer of another type, reads as no answer (the HTTP status then decides), never as a TypeError from the send.
+ */
+function answerOf(body: unknown): { answer?: string; reason?: string } {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return {};
+  const { answer, reason } = body as { answer?: unknown; reason?: unknown };
+  return { ...(typeof answer === 'string' ? { answer } : {}), ...(typeof reason === 'string' ? { reason } : {}) };
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isTextOrNull = (v: unknown): boolean => v === null || typeof v === 'string';
+
+/** F-2006 J-22: pbs's mode answer has PbsMode's shape (a mode name, nLeft, setBy, setAt, epoch), checked field by field. */
+function isPbsMode(v: unknown): v is PbsMode {
+  return isObject(v) && (PBS_MODES as readonly unknown[]).includes(v.mode) && (v.nLeft === null || Number.isInteger(v.nLeft))
+    && isTextOrNull(v.setBy) && isTextOrNull(v.setAt) && Number.isInteger(v.epoch);
+}
+
 const isTimeout = (e: unknown): boolean => e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
 
 export class HttpBillingClient implements BillingClient {
@@ -91,7 +110,7 @@ export class HttpBillingClient implements BillingClient {
       });
       const text = await res.text(); // an abort while the body arrives is the timeout too
       try {
-        body = JSON.parse(text) as { answer?: string; reason?: string };
+        body = answerOf(JSON.parse(text));
       } catch {
         body = {};
       }
@@ -107,7 +126,11 @@ export class HttpBillingClient implements BillingClient {
     return { outcome: 'down', httpStatus: res.status, reason: body.answer ?? `http_${res.status}` };
   }
 
-  async #call(what: string, path: string, init: RequestInit = {}): Promise<unknown> {
+  /**
+   * 1 call with no retry of its own. F-2006 J-22: with `shape`, a 2xx answer of any other shape (null, an error page) is
+   * BillingUnavailableError too, so a caller's catch reads it as no answer, never as a value of the wrong type.
+   */
+  async #call(what: string, path: string, init: RequestInit = {}, shape?: (body: unknown) => boolean): Promise<unknown> {
     let res: Response;
     try {
       res = await fetch(`${this.#base}${path}`, { ...init, signal: AbortSignal.timeout(this.#callTimeoutMs) });
@@ -116,6 +139,7 @@ export class HttpBillingClient implements BillingClient {
     }
     const body: unknown = await res.json().catch(() => null);
     if (!res.ok) throw new BillingUnavailableError(what, res.status);
+    if (shape && !shape(body)) throw new BillingUnavailableError(`${what} (an answer of the wrong shape)`, res.status);
     return body;
   }
 
@@ -127,21 +151,23 @@ export class HttpBillingClient implements BillingClient {
   }
 
   async getMode(): Promise<PbsMode> {
-    return (await this.#call('the mode read', '/mode')) as PbsMode;
+    return (await this.#call('the mode read', '/mode', {}, isPbsMode)) as PbsMode;
   }
 
   async setMode(m: { mode: PbsMode['mode']; n?: number | null; setBy?: string | null; setAt?: string | null }): Promise<PbsMode> {
-    return (await this.#call('the mode', '/mode', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m) })) as PbsMode;
+    return (await this.#call('the mode', '/mode', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(m) }, isPbsMode)) as PbsMode;
   }
 
   async reset(epoch: number): Promise<{ applied: boolean; epoch: number }> {
-    return (await this.#call('the reset', '/reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ epoch }) })) as {
+    return (await this.#call('the reset', '/reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ epoch }) },
+      (b) => isObject(b) && typeof b.applied === 'boolean' && Number.isInteger(b.epoch))) as {
       applied: boolean; epoch: number;
     };
   }
 
   async listInvoices(cursor?: string): Promise<{ items: unknown[]; next: string | null }> {
-    return (await this.#call('the invoice list', cursor === undefined ? '/invoices' : `/invoices?cursor=${encodeURIComponent(cursor)}`)) as {
+    return (await this.#call('the invoice list', cursor === undefined ? '/invoices' : `/invoices?cursor=${encodeURIComponent(cursor)}`, {},
+      (b) => isObject(b) && Array.isArray(b.items) && isTextOrNull(b.next))) as {
       items: unknown[]; next: string | null;
     };
   }

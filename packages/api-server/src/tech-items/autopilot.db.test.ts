@@ -5,7 +5,7 @@
 // The sample day's own run (the seeded events through the real dispatcher) is in packages/setup/src/setup.db.test.ts.
 // Run by G-CI1 and by G-CI7 step 3.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createPool, inTransaction } from '@bw/db';
+import { createPool, inTransaction, type Queryable } from '@bw/db';
 import { Temporal } from '@bw/time';
 import { useMigratedDatabase } from '../../../db/src/testing/fixture.ts';
 import { catalogs } from '../../../i18n/src/catalog.ts';
@@ -134,5 +134,24 @@ describe('a write that marks the job touched (SD-21, F-491)', () => {
     }));
     expect(moved).toEqual([n]);
     expect(await job(n)).toMatchObject({ touched: true, version: 2 });
+  });
+});
+
+describe('a finish reads only its own parts (K-09.10; F-2009)', () => {
+  // why: F-2009 the finish's part check reads the part table by the finish's own ids (WHERE id = ANY), not every row of it (K-09.10)
+  it('names the finish\'s part ids in the part query and still finishes with them', async () => {
+    const n = await w.newJob({ status: 'on_site' });
+    const part = (await w.rows<{ id: string; code: string }>('SELECT id::text, code FROM world.part ORDER BY code LIMIT 1'))[0]!;
+    const seen: { text: string; values: unknown[] | undefined }[] = [];
+    const out = await inTransaction(pool, (tx) => {
+      const spy = { query: (text: string, values?: unknown[]) => { seen.push({ text, values }); return tx.query(text, values); } } as unknown as Queryable;
+      return runAutopilotStep(spy, deps, { id: crypto.randomUUID(), payload: { jobNumber: n, technicianId: maria.technicianId, step: 'finished', laborMinutes: 30, partCodes: [part.code] } }, demoAt('10:10'));
+    });
+    expect(out).toEqual({ state: 'done', result: 'applied' });
+    // The autopilot looks its parts up by code; the finish's own check is the other read of world.part.
+    const checks = seen.filter((q) => /FROM world\.part\b/.test(q.text) && !/code\s*=\s*ANY/.test(q.text));
+    expect(checks).toHaveLength(1);
+    expect(checks[0]?.text).toMatch(/WHERE id = ANY\(\$1/);
+    expect(checks[0]?.values).toEqual([[part.id]]);
   });
 });

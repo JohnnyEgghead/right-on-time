@@ -12,6 +12,7 @@ import { clockText } from '../billing/format.ts';
 import { openAlertEmail } from './alert-email.ts';
 import { alertOpenLabel, alertText } from './alert-words.ts';
 import { createBellSeen } from './bell-seen.ts';
+import { createKeyedInFlight } from './in-flight.ts';
 import { useAnnounce } from './Announcer.tsx';
 import { useT } from './intl.tsx';
 import type { Reader } from './reads.ts';
@@ -181,13 +182,21 @@ export function useBell({ enabled, branch, reader }: { enabled: boolean; branch:
   };
   const state: PanelState = failed && alerts === null ? { kind: 'error' } : alerts === null ? { kind: 'loading' } : { kind: 'ready', alerts, ...(fresh ? { fresh } : {}) };
   const email = (alertId: string) => void openAlertEmail(alertId, () => void loadRef.current(false), reader());
-  const dismiss = (alertId: string) =>
-    void reader()
-      .read('API-176', { alertId })
-      .then(async (r) => {
+  // F-2077, F-2084: 1 Dismiss per alert for as long as its button can be pressed. A 2nd press sends no 2nd API-176 (it would answer 409 and the person
+  // would hear "dismissed", then "refused"). The guard holds across the re-read that removes the button and ends after it, or when the write fails.
+  const dismissing = useRef(createKeyedInFlight());
+  const dismiss = (alertId: string) => {
+    if (!dismissing.current.begin(alertId)) return;
+    void (async () => {
+      try {
+        const r = await reader().read('API-176', { alertId });
         await loadRef.current(false);
         const w = words.current;
         w.announce(w.t(r.ok ? 'health.alerts.dismissed' : 'health.alerts.dismissRefused'), r.ok ? 'check' : 'alert');
-      });
+      } finally {
+        dismissing.current.end(alertId);
+      }
+    })();
+  };
   return { count: alerts === null ? null : alerts.length, open, state, toggle, close: () => setOpen(false), email, dismiss };
 }

@@ -136,18 +136,19 @@ async function simulatorOf(tx: Tx, zone: string): Promise<Out<typeof setTextSimu
 }
 
 /** The next time of day in America/New_York after a real instant: today's if it is still ahead, else tomorrow's (compatible: a missing hour moves on). */
-function nextDaily(after: Temporal.Instant, at: { hour: number; minute: number }): Temporal.Instant {
+export function nextDaily(after: Temporal.Instant, at: { hour: number; minute: number }): Temporal.Instant {
   const z = after.toZonedDateTimeISO(REAL_ZONE);
-  const today = z.startOfDay().add({ hours: at.hour, minutes: at.minute });
-  return (Temporal.Instant.compare(today.toInstant(), after) > 0 ? today : z.startOfDay().add({ days: 1 }).add({ hours: at.hour, minutes: at.minute })).toInstant();
+  // K-09.9: the wall-clock time is set on the zoned day, never added as exact hours, so a DST day (Mar 8, Nov 1, 2026) reads right.
+  const today = z.startOfDay().with({ hour: at.hour, minute: at.minute });
+  return (Temporal.Instant.compare(today.toInstant(), after) > 0 ? today : z.startOfDay().add({ days: 1 }).with({ hour: at.hour, minute: at.minute })).toInstant();
 }
 
 /** SPECIFICATIONS section 11.7: the weekly restore test runs Sunday 4:00 AM America/New_York. */
-function nextSunday(after: Temporal.Instant): Temporal.Instant {
+export function nextSunday(after: Temporal.Instant): Temporal.Instant {
   let day = after.toZonedDateTimeISO(REAL_ZONE).startOfDay();
   for (let i = 0; i < 8; i += 1, day = day.add({ days: 1 })) {
     if (day.dayOfWeek !== 7) continue;
-    const at = day.add({ hours: RESTORE_AT.hour, minutes: RESTORE_AT.minute });
+    const at = day.with({ hour: RESTORE_AT.hour, minute: RESTORE_AT.minute });
     if (Temporal.Instant.compare(at.toInstant(), after) > 0) return at.toInstant();
   }
   return after;
@@ -163,7 +164,8 @@ const alertEmailLinkHandler: Handler<Out<typeof alertEmailLink>> = async (req, t
   return { ok: true, status: 200, data: { link: `/email/${shown.token}` } };
 };
 
-export function healthHandlers(client = pbsClientFor()): { 'API-43': Handler<unknown>; 'API-70': Handler<unknown>; 'API-71': Handler<unknown>; 'API-160': Handler<unknown>; 'API-161': Handler<unknown>; 'API-174': Handler<unknown>; 'API-176': Handler<unknown> } {
+export function healthHandlers(): { 'API-43': Handler<unknown>; 'API-70': Handler<unknown>; 'API-71': Handler<unknown>; 'API-160': Handler<unknown>; 'API-161': Handler<unknown>; 'API-174': Handler<unknown>; 'API-176': Handler<unknown> } {
+  const client = pbsClientFor();
   const read: Handler<Health> = async (req, tx, ctx) => {
     const caller = await callerOf(tx, req);
     if (!caller) return { ok: false, status: 401, code: 'unauthenticated' };
@@ -251,7 +253,7 @@ export function healthHandlers(client = pbsClientFor()): { 'API-43': Handler<unk
     const lastSent = (await tx.query<{ at: Date | null }>(
       `SELECT max(a.at) AS at FROM world.billing_attempt a JOIN world.job j USING (job_number) WHERE j.branch_id = $1 AND a.result = 'success' AND a.at <= $2`,
       [caller.branch_id, req.demoNow.toString()])).rows[0]?.at ?? null;
-    const mode = await client(ctx).getMode().then((m) => String(m.mode), () => null);
+    const mode = await client(ctx).getMode().then((m) => (typeof m?.mode === 'string' ? m.mode : null), () => null);
 
     const lists = await shapeAlerts(tx, recent.rows, caller, zone);
     return {
@@ -314,11 +316,11 @@ export function healthHandlers(client = pbsClientFor()): { 'API-43': Handler<unk
       return bad;
     }
     const values = [p.mode, p.mode === 'fail_customer' ? p.customerId : null, p.mode === 'fail_next_n' ? p.n : null, caller.id, req.demoNow.toString()];
-    const changed = await tx.query(`UPDATE world.text_simulator SET mode = $1, customer_id = $2, n_left = $3, set_by = $4, set_at = $5`, values);
-    // The row is the seed's; a copy that has none gets its one row here, so a pick is never silently dropped (the unique index holds it to 1).
-    if (changed.rowCount === 0) {
-      await tx.query(`INSERT INTO world.text_simulator (mode, customer_id, n_left, set_by, set_at) VALUES ($1, $2, $3, $4, $5)`, values);
-    }
+    // The row is the seed's; a copy that has none gets its one row here, so a pick is never silently dropped. 1 statement, so 2 first saves
+    // at once both succeed: the unique index on a constant holds the table to 1 row and the loser updates it (K-09.8a).
+    await tx.query(
+      `INSERT INTO world.text_simulator (mode, customer_id, n_left, set_by, set_at) VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT ((true)) DO UPDATE SET mode = EXCLUDED.mode, customer_id = EXCLUDED.customer_id, n_left = EXCLUDED.n_left, set_by = EXCLUDED.set_by, set_at = EXCLUDED.set_at`, values);
     await publishEvent(tx, 'settings.changed', { kind: 'text_simulator' });
     return { ok: true, status: 200, data: { textSimulator: await simulatorOf(tx, caller.zone) } };
   };
@@ -346,12 +348,16 @@ export function healthHandlers(client = pbsClientFor()): { 'API-43': Handler<unk
     if (caller === 'gone') return { ok: false, status: 404, code: 'not_found' };
     const p = req.params as In<typeof setAlertSwitch>;
     if (!(ALERT_TYPES as readonly string[]).includes(p.alertType)) return { ok: false, status: 404, code: 'not_found' };
+    // K-09.8b: a copy whose seed wrote no row for the type gets it here, from the type's own defaults, so the switch is never refused as not found.
+    const facts = ALERT_FACTS[p.alertType as keyof typeof ALERT_FACTS];
     const r = await tx.query<{ type: string; bell: boolean; managers_email: boolean }>(
-      `UPDATE world.alert_setting SET bell = COALESCE($2, bell), managers_email = COALESCE($3, managers_email), set_by = $4, set_at = $5
-        WHERE type = $1 RETURNING type, bell, managers_email`,
-      [p.alertType, p.bell ?? null, p.managersEmail ?? null, caller.id, req.demoNow.toString()]);
+      `INSERT INTO world.alert_setting (type, bell, managers_email, set_by, set_at)
+       VALUES ($1, COALESCE($2::boolean, $6::boolean), COALESCE($3::boolean, $7::boolean), $4, $5)
+       ON CONFLICT (type) DO UPDATE SET bell = COALESCE($2::boolean, world.alert_setting.bell), managers_email = COALESCE($3::boolean, world.alert_setting.managers_email), set_by = $4, set_at = $5
+       RETURNING type, bell, managers_email`,
+      [p.alertType, p.bell ?? null, p.managersEmail ?? null, caller.id, req.demoNow.toString(), facts.bell, facts.managersEmail]);
     const row = r.rows[0];
-    if (!row) return { ok: false, status: 404, code: 'not_found' };
+    if (!row) return { ok: false, status: 500, code: 'server_error' };
     await publishEvent(tx, 'settings.changed', { kind: 'alert_settings' });
     return { ok: true, status: 200, data: { alertSetting: { type: row.type, bell: row.bell, managersEmail: row.managers_email } } };
   };

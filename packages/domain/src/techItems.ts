@@ -89,9 +89,18 @@ export function onMyWayIsHistoryOnly(jobStatus: string, batchKindsForJob: readon
   return ARRIVED_OR_ENDED.has(jobStatus) && column !== 'status_set';
 }
 
+/**
+ * Every job_change kind a writer stores (SPECIFICATIONS section 3, the job_change.kind row), a closed union so a misspelled
+ * kind fails tsc (K-18). A new writer adds its kind here and to that row.
+ */
+export type JobChangeKind =
+  | 'created' | 'assigned' | 'unassigned_time_off' | 'rescheduled' | 'details' | 'canceled' | 'status_set' | 'status' | 'flagged' | 'history_only'
+  | 'flag_handled' | 'note_added' | 'photo_added' | 'signature_added' | 'finish_corrected' | 'sent_again' | 'marked_fixed' | 'billing_sent'
+  | 'office_text' | 'call_outcome' | 'confirmed' | 'merged';
+
 /** A job_change row as the classifier reads it (section 3 job_change). */
 export interface HistoryRow {
-  kind: string;
+  kind: JobChangeKind;
   actorKind: 'office' | 'technician' | 'customer' | 'system';
   fromVersion: number;
   /** The row's data: for a move, `from` and `to` with technicianId, date and windowId (office write service). */

@@ -13,7 +13,7 @@
 // A refused item (parts_required) writes no row, so the corrected item can still be sent under its key; a flagged one
 // (validation_failed, not_found) writes its row, so its resend answers duplicate and lists nothing twice.
 import type { Queryable } from '@bw/db';
-import { demoTimeAtRealMs, entryRealMs, placeItem, type ClockMoveRow } from '@bw/domain';
+import { demoTimeAtRealMs, entryRealMs, placeItem, type ClockMoveRow, type JobChangeKind } from '@bw/domain';
 import { Temporal, toWire, type Instant } from '@bw/time';
 
 /** pg_advisory_xact_lock class of the item keys ('ti'); the billing link uses 0x6269. */
@@ -198,7 +198,7 @@ export const wireAt = (at: Instant | Date, zone: string): string =>
 
 /** 1 job_change row by the technician's app (section 3; actor_kind technician, with the offline and sent times). */
 export async function appendTechnicianChange(tx: Queryable, ctx: ItemContext, row: {
-  jobNumber: number; at: Instant; kind: string; fromVersion: number; toVersion: number; data: Record<string, unknown>;
+  jobNumber: number; at: Instant; kind: JobChangeKind; fromVersion: number; toVersion: number; data: Record<string, unknown>;
 }): Promise<void> {
   await tx.query(
     `INSERT INTO world.job_change (job_number, at, actor_user_id, actor_kind, kind, from_version, to_version, data)

@@ -44,6 +44,13 @@ interface JobFacts {
 }
 
 async function jobFacts(tx: Queryable, jobNumber: number): Promise<JobFacts> {
+  const j = await jobFactsOrNull(tx, jobNumber);
+  if (!j) throw new Error(`no job ${jobNumber}`);
+  return j;
+}
+
+/** The job's facts, or null when no job has the number (a read that fails throws). */
+async function jobFactsOrNull(tx: Queryable, jobNumber: number): Promise<JobFacts | null> {
   const { rows } = await tx.query<JobFacts>(
     `SELECT j.job_number, j.customer_id, j.branch_id, j.date::text AS date, j.zone, j.status, j.window_start, j.window_end,
             j.technician_id, s.text_label_key, c.text_language, c.zone AS customer_zone, c.texts_on, c.mobile
@@ -53,9 +60,7 @@ async function jobFacts(tx: Queryable, jobNumber: number): Promise<JobFacts> {
       WHERE j.job_number = $1`,
     [jobNumber],
   );
-  const j = rows[0];
-  if (!j) throw new Error(`no job ${jobNumber}`);
-  return j;
+  return rows[0] ?? null;
 }
 
 /**
@@ -153,25 +158,61 @@ export type ReminderFired =
   | { result: 'call_list'; reason: 'no_mobile' | 'texts_off' }
   | { result: 'skipped'; why: 'not_scheduled' | 'moved' };
 
+/** What a reminder event names: its job, its own time, the run's time and (F-446) an at-once reminder's visit date. */
+type ReminderInput = { jobNumber: number; eventDueAt: Instant; now: Instant; atOnce?: { visitDate: string } };
+
+/** A reminder that is no longer owed (the job is not scheduled, or its visit or 6:00 PM has moved), else null. */
+function reminderNotOwed(j: JobFacts, input: ReminderInput): Extract<ReminderFired, { result: 'skipped' }> | null {
+  if (j.status !== 'scheduled') return { result: 'skipped', why: 'not_scheduled' };
+  // An at-once reminder (F-446) is stale when its visit has moved to another day since it was planned; a regular one when its 6:00 PM has moved.
+  const stale = input.atOnce ? input.atOnce.visitDate !== j.date : Temporal.Instant.compare(reminderDueAt(j.date, j.customer_zone), input.eventDueAt) !== 0;
+  return stale ? { result: 'skipped', why: 'moved' } : null;
+}
+
+/** The visit's call list entry, dated the day before it (FR-TEXT-13). */
+async function reminderCall(tx: Queryable, j: JobFacts, reason: 'no_mobile' | 'texts_off', now: Instant): Promise<ReminderFired> {
+  // Once per visit and call date (F-653): a 2nd fire after a same-evening re-plan, or a row API-38 already wrote that morning, is kept as it is.
+  await upsertReminderCall(tx, { branchId: j.branch_id, callDate: addDays(j.date, -1), customerId: j.customer_id, jobNumber: j.job_number, reason, addedAt: now });
+  return { result: 'call_list', reason };
+}
+
+/** F-2006 K-03: the reminder text could not be enqueued; `code` is enqueueText's reason, so the log line's cause code names it. */
+export class ReminderNotEnqueuedError extends Error {
+  readonly jobNumber: number;
+  readonly code: string;
+  constructor(jobNumber: number, code: string) {
+    super(`reminder for job ${jobNumber} was not enqueued: ${code}`);
+    this.name = 'ReminderNotEnqueuedError';
+    this.jobNumber = jobNumber;
+    this.code = code;
+  }
+}
+
+/**
+ * F-2006 K-03: the end of a reminder event the dispatcher gave up (its handler failed MAX_HANDLER_FAILURES runs, as a
+ * reminder whose text can never be enqueued does): a visit still owed its reminder goes on the call list, as one with no
+ * mobile does, so the office calls the customer instead of no one being told. Its reason is the one the call list's
+ * reader shows for the customer (texts on: no_mobile, else texts_off; API-38 and the reader both use this rule). A job
+ * that is gone, moved or no longer scheduled writes nothing.
+ */
+export async function giveUpReminder(tx: Queryable, input: ReminderInput): Promise<ReminderFired | { result: 'skipped'; why: 'no_job' }> {
+  const j = await jobFactsOrNull(tx, input.jobNumber);
+  if (!j) return { result: 'skipped', why: 'no_job' };
+  return reminderNotOwed(j, input) ?? reminderCall(tx, j, j.texts_on ? 'no_mobile' : 'texts_off', input.now);
+}
+
 /**
  * The reminder event at fire time (section 6.4): the reminder text, or, with no mobile or texts off, a call list entry
  * dated the day before the visit (FR-TEXT-13). `eventDueAt` is the event's own time; a job moved or canceled since
  * leaves the event stale and it does nothing. The text is stamped at the event's time (`now` = max(due, demo now)).
  */
 export async function fireReminder(
-  tx: Queryable, ctx: TextContext, input: { jobNumber: number; eventDueAt: Instant; now: Instant; atOnce?: { visitDate: string } },
+  tx: Queryable, ctx: TextContext, input: ReminderInput,
 ): Promise<ReminderFired> {
   const j = await jobFacts(tx, input.jobNumber);
-  if (j.status !== 'scheduled') return { result: 'skipped', why: 'not_scheduled' };
-  // An at-once reminder (F-446) is stale when its visit has moved to another day since it was planned; a regular one when its 6:00 PM has moved.
-  const stale = input.atOnce ? input.atOnce.visitDate !== j.date : Temporal.Instant.compare(reminderDueAt(j.date, j.customer_zone), input.eventDueAt) !== 0;
-  if (stale) return { result: 'skipped', why: 'moved' };
-  if (!j.texts_on || !j.mobile) {
-    const reason = !j.texts_on ? 'texts_off' : 'no_mobile';
-    // Once per visit and call date (F-653): a 2nd fire after a same-evening re-plan, or a row API-38 already wrote that morning, is kept as it is.
-    await upsertReminderCall(tx, { branchId: j.branch_id, callDate: addDays(j.date, -1), customerId: j.customer_id, jobNumber: j.job_number, reason, addedAt: input.now });
-    return { result: 'call_list', reason };
-  }
+  const owed = reminderNotOwed(j, input);
+  if (owed) return owed;
+  if (!j.texts_on || !j.mobile) return reminderCall(tx, j, !j.texts_on ? 'texts_off' : 'no_mobile', input.now);
   // The day word is the one true when try 1 goes out (F-650): an at-once reminder that quiet hours hold past midnight says "today".
   const r = await enqueueText(tx, {
     kind: 'reminder',
@@ -182,7 +223,7 @@ export async function fireReminder(
     catalog: textCatalogOf(ctx.catalogs),
     values: reminderValues(j, j.text_language),
   });
-  if (!r.ok) throw new Error(`reminder for job ${j.job_number} was not enqueued: ${r.reason}`);
+  if (!r.ok) throw new ReminderNotEnqueuedError(j.job_number, r.reason);
   return { result: 'sent', textId: r.textId };
 }
 

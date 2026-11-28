@@ -3,12 +3,13 @@
 // order, each event at max(its due_at, demo now), exactly once under concurrent dispatchers (FOR UPDATE SKIP LOCKED),
 // a throwing handler left due without blocking the rows behind it, and a kind with no handler never touched.
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { inTransaction } from '@bw/db';
+import { createPool, inTransaction, SERVICE_LOCK_TIMEOUT_MS } from '@bw/db';
 import { createLogger } from '@bw/log';
 import { useMigratedDatabase } from '../../../packages/db/src/testing/fixture.ts';
 import { scheduleEvent } from '../../../packages/outbox/src/events.ts';
-import { count, I, loginPool, seedOutboxWorld } from '../../../packages/outbox/src/testing/world.ts';
+import { addCustomer, addJob, count, I, loginPool, seedOutboxWorld, type OutboxRef } from '../../../packages/outbox/src/testing/world.ts';
 import { drainDue, startDispatcher, type EventHandlers, type ParallelLane } from './dispatcher.ts';
+import { workerPool } from './pool.ts';
 
 const db = useMigratedDatabase();
 let pool: ReturnType<typeof loginPool>;
@@ -16,8 +17,10 @@ let pool: ReturnType<typeof loginPool>;
 const lines: string[] = [];
 const log = createLogger({ process: 'worker', write: (l) => lines.push(l) });
 
+let ref: OutboxRef;
+
 beforeAll(async () => {
-  await seedOutboxWorld(db.admin());
+  ref = await seedOutboxWorld(db.admin());
   pool = loginPool(db.url(), 'bw_worker');
 });
 afterAll(async () => {
@@ -201,4 +204,41 @@ describe('the failed run of an event is logged with its kind, id and cause (F-18
     expect(lines.some((l) => l.includes('dispatcher pass failed'))).toBe(false);
     expect(lines.join('')).not.toMatch(/Harold|6145550100|Oak/);
   });
+});
+
+describe('a held row lock under the worker pool (F-2006 K-10.8)', () => {
+  // why: F-2006 K-10.8 no production pool set lock_timeout, so a pass waiting on a held row lock held its connection without end
+  it('fails the pass with 55P03 within the service lock timeout, and the event stays due', async () => {
+    const admin = db.admin();
+    const job = await addJob(admin, ref, await addCustomer(admin, ref), '2026-09-20');
+    const bad = await plant('test.locked', '2026-09-20T10:00:00Z', String(job));
+    // The worker's own pool shape (main.ts), logged in as bw_worker.
+    const worker = workerPool(String(pool.options.connectionString), log);
+    // Another session (an office write, a stuck migration) holds the job's row lock for longer than the timeout.
+    const holder = createPool({ connectionString: db.url(), max: 1 });
+    const held = await holder.connect();
+    try {
+      await held.query('BEGIN');
+      await held.query('SELECT 1 FROM world.job WHERE job_number = $1 FOR UPDATE', [job]);
+      const handlers: EventHandlers = {
+        'test.locked': async (_e, { tx }) => {
+          await tx.query('UPDATE world.job SET version = version WHERE job_number = $1', [job]);
+          return { state: 'done', result: 'ran' };
+        },
+      };
+      const t0 = performance.now();
+      const r = await drainDue(worker, handlers, { through: I('2026-09-20T11:00:00Z'), demoNow: I('2026-09-20T10:30:00Z'), epoch: await epoch(), log });
+      const waited = performance.now() - t0;
+      expect(r.failed).toEqual([bad]);
+      expect(linesOf(bad)).toEqual([expect.objectContaining({ status: 'event failed', errorCode: '55P03' })]);
+      expect(waited).toBeGreaterThanOrEqual(SERVICE_LOCK_TIMEOUT_MS - 500);
+      expect(waited).toBeLessThan(SERVICE_LOCK_TIMEOUT_MS + 5_000);
+      expect(await count(admin, `SELECT count(*) AS n FROM world.scheduled_event WHERE id = $1 AND state = 'due'`, [bad])).toBe(1);
+    } finally {
+      await held.query('ROLLBACK').catch(() => undefined);
+      held.release();
+      await holder.end();
+      await worker.end();
+    }
+  }, SERVICE_LOCK_TIMEOUT_MS + 30_000);
 });

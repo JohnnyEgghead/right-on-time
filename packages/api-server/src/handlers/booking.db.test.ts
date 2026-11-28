@@ -4,6 +4,7 @@
 // FR-BOOK-14 to FR-BOOK-16, FR-TEXT-1). The booking itself is the office write's createJob under its locks (G-CI3 races that); these tests prove
 // the online channel's rules around it and that a real request queues the confirmation (F-782, F-421). The demo clock is set per test, never slept.
 // Run by gate G-CI7 step 3 (ci/gates/G-CI7/vitest.db.config.ts).
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ORIGIN, officeWorld, type OfficeWorld } from '../office-writes/testing.ts';
 import { useMigratedDatabase } from '../../../db/src/testing/fixture.ts';
@@ -32,7 +33,7 @@ const SEP15_7AM = '2026-09-15T11:00:00Z';
 const availability = (streetId: string, from: string, to: string, serviceId = 'furnace_tune_up') => send('POST', '/public/availability', { streetId, serviceId, from, to });
 const booking = (o: Record<string, unknown> = {}) => ({
   serviceId: 'furnace_tune_up', streetId: columbus, houseNumber: 2310, date: '2026-09-17', windowId: windowId('two_hour', '10:00'), name: 'Lucia Moreno',
-  mobile: '(614) 555-0148', textsOn: true, textLanguage: 'en', timeZone: 'America/New_York', ...o,
+  mobile: '(614) 555-0148', textsOn: true, textLanguage: 'en', timeZone: 'America/New_York', bookingKey: randomUUID(), ...o,
 });
 const windowId = (mode: string, start: string, branch = 'columbus') => windowIds.get(`${branch} ${mode} ${start}`) as string;
 const book = (o: Record<string, unknown> = {}) => send('POST', '/public/bookings', booking(o));
@@ -301,6 +302,61 @@ describe('booking (API-113) and its summary (API-114)', () => {
     const after = await dueOf(first.bookingToken);
     expect(after).toBeDefined();
     expect(after).not.toBe(before);
+  });
+});
+
+describe('the booking key (API-113 bookingKey; SPECIFICATIONS 6.1 Booking write, K-01)', () => {
+  const jobsOf = (key: string) => rows<{ job_number: number; customer_id: string }>('SELECT job_number, customer_id FROM world.job WHERE booking_key = $1', [key]);
+
+  // why: K-01 a second send of 1 draft's key (a double Confirm, a resend after a lost answer) answers the first booking and books nothing
+  it('answers a repeated key with the first booking and writes no second job, change, text or customer update', async () => {
+    const bookingKey = randomUUID();
+    const first = await book({ bookingKey, name: 'Rhea Keyes', mobile: '(614) 555-0171' });
+    expect(first.status).toBe(201);
+    const a = (await json(first)).data;
+    const [job] = await jobsOf(bookingKey);
+    const counts = async () => (await rows<{ changes: string; texts: string; customers: string }>(
+      `SELECT (SELECT count(*) FROM world.job_change WHERE job_number = $1) AS changes, (SELECT count(*) FROM world.outbox_text WHERE job_number = $1) AS texts,
+              (SELECT count(*) FROM world.customer WHERE name = 'Rhea Keyes') AS customers`, [job!.job_number]))[0];
+    const before = await counts();
+    // The resend changes the language: a repeat must not update the customer either.
+    const again = await book({ bookingKey, name: 'Rhea Keyes', mobile: '(614) 555-0171', textLanguage: 'es' });
+    expect(again.status).toBe(201);
+    expect((await json(again)).data).toEqual(a);
+    expect((await jobsOf(bookingKey)).length).toBe(1);
+    expect(await counts()).toEqual(before);
+    expect((await rows<{ text_language: string }>('SELECT text_language FROM world.customer WHERE id = $1', [job!.customer_id]))[0]!.text_language).toBe('en');
+  });
+
+  // why: K-01 the key belongs to 1 draft: another draft's key for the same visit details books its own visit, and each job keeps its key
+  it('books normally with the key of another draft', async () => {
+    const keys = [randomUUID(), randomUUID()];
+    const one = (await json(await book({ bookingKey: keys[0], name: 'Otto Drafts', mobile: null }))).data;
+    const two = await book({ bookingKey: keys[1], name: 'Otto Drafts', mobile: null });
+    expect(two.status).toBe(201);
+    const d = (await json(two)).data;
+    expect(d.bookingToken).not.toBe(one.bookingToken);
+    expect(d.visit.jobNumber).not.toBe(one.visit.jobNumber);
+    const kept = await rows<{ job_number: number; booking_key: string | null }>(
+      'SELECT job_number, booking_key FROM world.job WHERE job_number = ANY($1::int[]) ORDER BY job_number', [[one.visit.jobNumber, d.visit.jobNumber]]);
+    expect(kept.map((r) => r.booking_key)).toEqual(keys);
+  });
+
+  // why: K-01 the contract requires a UUID v4 key; a missing or malformed one is validation_failed and books nothing
+  it('refuses a missing or malformed key with validation_failed and books nothing', async () => {
+    const jobs = async () => (await rows<{ n: string }>("SELECT count(*) AS n FROM world.job j JOIN world.customer c ON c.id = j.customer_id WHERE c.name = 'Nell Nokey'"))[0]!.n;
+    const { bookingKey: _drop, ...noKey } = booking({ name: 'Nell Nokey', mobile: null });
+    void _drop;
+    const missing = await send('POST', '/public/bookings', noKey);
+    const why = await json(missing);
+    expect([missing.status, why.code]).toEqual([422, 'validation_failed']);
+    // The page reads this field's name to give the draft a new key (CTL-CUS-01-13).
+    expect(why.fields.map((x: Json) => x.field)).toEqual(['bookingKey']);
+    for (const bad of ['not-a-key', '00000000-0000-7000-8000-000000000000', randomUUID().slice(0, 35)]) {
+      const r = await book({ bookingKey: bad, name: 'Nell Nokey', mobile: null });
+      expect([bad, r.status]).toEqual([bad, 422]);
+    }
+    expect(await jobs()).toBe('0');
   });
 });
 

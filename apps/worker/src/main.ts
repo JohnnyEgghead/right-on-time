@@ -2,22 +2,15 @@
 // The worker process (SPECIFICATIONS section 2, SD-3: web, worker and pbs are 1 image with 3 entry points). It signs in
 // as bw_worker, reads demo time from the 1 clock (@bw/time DbClock), starts every job of the registry (./jobs.ts) and
 // stops them on SIGTERM. A job joins in jobs.ts, never here (F-269).
-import { configOrExit, ConfigError, databasePassword, exitWithMessage } from '@bw/config';
-import { createPool } from '@bw/db';
-import { createLogger, exitOnUncaughtException, exitOnUnhandledRejection } from '@bw/log';
+import { configOrExit, databasePasswordOrExit, exitWithMessage } from '@bw/config';
+import { causeCodeOf, createLogger, exitOnUncaughtException, exitOnUnhandledRejection } from '@bw/log';
 import { DbClock } from '@bw/time';
 import { configureRouting, ROUTING_SERVICE_URL } from '../../../packages/maps/src/route-source.ts';
-import { WORKER_POOL_MAX } from './billing/link.ts';
-import { startJobs, stopJobs, type RunningJob } from './jobs.ts';
+import { startJobs, stopWorker, type RunningJob } from './jobs.ts';
+import { workerPool } from './pool.ts';
 
 const settings = configOrExit();
-let password: string | undefined;
-try {
-  password = databasePassword(settings);
-} catch (e) {
-  if (!(e instanceof ConfigError)) throw e;
-  exitWithMessage(`${e.name}: ${e.message}`, 78);
-}
+const password = databasePasswordOrExit(settings);
 if (!settings.DATABASE_URL) exitWithMessage('invalid setting DATABASE_URL: the worker process needs a database', 78);
 // The password goes into the in-memory URL: pg lets the URL's (absent) password override a separate `password` field.
 const url = new URL(settings.DATABASE_URL);
@@ -29,8 +22,8 @@ const log = createLogger({ process: 'worker', level: settings.LOG_LEVEL });
 exitOnUnhandledRejection(log);
 // F-1870: the same for an exception no code caught, so Node's default (the message and stack on stderr) never prints.
 exitOnUncaughtException(log);
-const pool = createPool({ connectionString: url.toString(), application_name: 'bw-worker', max: WORKER_POOL_MAX, connectionTimeoutMillis: 5_000, idleTimeoutMillis: 30_000 });
-pool.on('error', () => log.error({ status: 'unhandled error', errorCode: 'server_error' }));
+// F-2006 K-10.8, K-10.2: the pool's timeouts and its error line with the cause code (./pool.ts).
+const pool = workerPool(url.toString(), log);
 const clock = new DbClock(pool);
 // SD-49: the ETA sweep's and the autopilot's legs a stored track does not cover are asked of the routing service (P6-LIVE-ROUTING).
 configureRouting({ url: ROUTING_SERVICE_URL, log });
@@ -38,8 +31,9 @@ configureRouting({ url: ROUTING_SERVICE_URL, log });
 let running: RunningJob[] = [];
 try {
   running = await startJobs({ pool, clock, log, settings });
-} catch {
-  log.error({ status: 'unhandled error', errorCode: 'job_start_failed' });
+} catch (e) {
+  // F-2006 J-24: the cause code of the job that could not start.
+  log.error({ status: 'job start failed', errorCode: causeCodeOf(e) });
   await pool.end().catch(() => undefined);
   process.exit(1);
 }
@@ -50,9 +44,8 @@ const stop = () => {
   if (stopping) return;
   stopping = true;
   log.info({ status: 'stopping' });
-  void stopJobs(running)
-    .then(() => pool.end())
-    .finally(() => process.exit(0));
+  // F-2006 J-24: a stop that rejects is logged and exits 1.
+  void stopWorker({ running, pool, log, exit: (code) => process.exit(code) });
 };
 process.on('SIGTERM', stop);
 process.on('SIGINT', stop);

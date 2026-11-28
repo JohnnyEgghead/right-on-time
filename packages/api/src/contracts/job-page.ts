@@ -82,7 +82,7 @@ export const jobDetail = defineContract({
     billing: z.object({ state: billingState, reasonKey: z.string().nullable() }),
   }),
   errors: [],
-  labels: [],
+  labels: ['entered_offline'],
   examples: [{ name: 'signed out', input: { jobNumber: SAMPLE_JOB }, expectStatus: 401 }],
 });
 

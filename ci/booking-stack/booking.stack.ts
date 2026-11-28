@@ -16,6 +16,7 @@
 //   FR-BOOK-11: a booking with the texts box unticked sends no text and the visit's reminder is on the call list the day before.
 //   FR-BOOK-9: after 5:00 PM on Sep 14 the site shows Sep 15 as Booking closed and a booking for it is refused (booking_closed).
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import type { Browser, Locator, Page } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { guardedContext, type GuardedContext } from '../page-walkers/origin-guard.ts';
@@ -221,7 +222,7 @@ describe.each(engines)('the booking site on the Compose stack, %s', (engine, typ
     const r = await visitor('POST', '/public/bookings', {
       serviceId: 'furnace_tune_up', streetId: psql(`SELECT id FROM world.street WHERE branch_id = 'columbus' ORDER BY name, id LIMIT 1`), houseNumber: 12, date: '2026-09-17',
       windowId: psql(`SELECT id FROM world.arrival_window WHERE branch_id = 'columbus' AND mode = 'two_hour' AND start_local = '14:00'`), name: `Night ${engine}`, mobile: `(614) 555-01${engine === 'chromium' ? '20' : '21'}`,
-      textsOn: true, textLanguage: 'en', timeZone: 'America/New_York',
+      textsOn: true, textLanguage: 'en', timeZone: 'America/New_York', bookingKey: randomUUID(),
     });
     expect(r.status, JSON.stringify(r.body)).toBe(201);
     const job = jobBy(r.body.data.bookingToken);
@@ -400,7 +401,7 @@ describe.each(engines)('the booking site on the Compose stack, %s', (engine, typ
     const late = await visitor('POST', '/public/bookings', {
       serviceId: 'furnace_tune_up', streetId: psql(`SELECT id FROM world.street WHERE branch_id = 'columbus' ORDER BY name, id LIMIT 1`), houseNumber: 12, date: '2026-09-15',
       windowId: psql(`SELECT id FROM world.arrival_window WHERE branch_id = 'columbus' AND mode = 'two_hour' AND start_local = '14:00'`), name: `Closed ${engine}`, mobile: null,
-      textsOn: true, textLanguage: 'en', timeZone: 'America/New_York',
+      textsOn: true, textLanguage: 'en', timeZone: 'America/New_York', bookingKey: randomUUID(),
     });
     expect([late.status, late.body?.code], JSON.stringify(late.body)).toEqual([409, 'booking_closed']);
     expect(psql('SELECT count(*) FROM world.job')).toBe(jobsBefore);

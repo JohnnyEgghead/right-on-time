@@ -116,10 +116,14 @@ export function NewJobScreen({ customerId, date, api: given }: NewJobScreenProps
   const branch = detail?.branch ?? null;
   const serviceId = picks.serviceId;
   const customerKey = detail?.id ?? null;
-  const loadDays = useCallback(() => {
+  // K-08.16: the day the board sent is read from a ref, so picking a day (which clears it) is not a new read of the days.
+  const wanted = useRef(wantedDate);
+  wanted.current = wantedDate;
+  // F-2073: `keep` leaves the days on screen while this read is out (the read after window_full: its local Full mark must show until the answer lands).
+  const loadDays = useCallback((opts?: { keep?: boolean }) => {
     const mine = ++daysSeq.current;
     if (!branch || !serviceId) return setDays(null);
-    setDays('loading');
+    if (opts?.keep !== true) setDays('loading');
     void api.availability({ branch, serviceId }).then((r) => {
       if (mine !== daysSeq.current) return;
       if (!r.ok) return setDays('error');
@@ -130,14 +134,21 @@ export function NewJobScreen({ customerId, date, api: given }: NewJobScreenProps
         const stillDay = day && day.state !== 'full';
         const win = stillDay ? day.windows.find((w) => w.windowId === p.windowId) : undefined;
         // The `date` the board sent (CTL-OFC-02-05) is picked once its day is offered and has room.
-        const want = wantedDate ? offered.find((d) => d.date === wantedDate && d.state !== 'full') : undefined;
+        const want = wanted.current ? offered.find((d) => d.date === wanted.current && d.state !== 'full') : undefined;
         if (!p.day && want) return { ...p, day: want.date };
         if (stillDay && win && win.state !== 'full') return p;
         return stillDay ? { ...p, windowId: null, technicianId: null } : { ...p, day: null, windowId: null, technicianId: null };
       });
     });
-  }, [api, branch, serviceId, wantedDate]);
+  }, [api, branch, serviceId]);
   useEffect(loadDays, [loadDays, customerKey]);
+  // K-08.18: the demo clock moving to another day re-reads the days (the days it offers start at today). The first answer of the clock is not a move.
+  const seenDay = useRef<string | null>(null);
+  useEffect(() => {
+    if (today === null) return;
+    if (seenDay.current !== null && seenDay.current !== today) loadDays();
+    seenDay.current = today;
+  }, [today, loadDays]);
 
   // API-30: the technicians with room once the customer, service, day and window are picked.
   const day = picks.day;
@@ -178,6 +189,8 @@ export function NewJobScreen({ customerId, date, api: given }: NewJobScreenProps
       // The window turns Full and its pick is dropped; the other fields keep their values.
       setDays((ds) => (Array.isArray(ds) ? ds.map((d) => (d.date === day ? { ...d, windows: d.windows.map((w) => (w.windowId === windowId ? { ...w, state: 'full' as const, left: 0 } : w)) } : d)) : ds));
       setPicks((p) => ({ ...p, windowId: null, technicianId: null }));
+      // K-08.17: the room is read again, so the other windows show what the server holds now (the local Full mark above shows until it lands).
+      loadDays({ keep: true });
     } else if (r.code === 'technician_no_room') {
       setPicks((p) => ({ ...p, technicianId: null }));
       setTechsKey((k) => k + 1);

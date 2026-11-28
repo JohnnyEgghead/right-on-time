@@ -4,6 +4,7 @@
 // (FR-TEXT-14, GAP-7), and sends a reply as C, R or free text (API-121, FR-TEXT-8). The token travels only in the paths of its own rows.
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { useT } from '../shell/intl.tsx';
 import { LANG_COOKIE, langCookie } from '../shell/lang.ts';
 import { callRow, rows, type InboxData } from './api.ts';
@@ -27,29 +28,32 @@ export function InboxScreen({ token }: { token: string }) {
   const outs = useRef<number | null>(null);
   const langSet = useRef(false);
 
+  const newest = useNewestAnswer();
+  // K-05: the timer, the focus and a sent reply each read; the newest read's answer is the one shown, however late an earlier one lands.
   const read = useCallback(async () => {
-    const r = await callRow(rows.inboxMessages, { inboxToken: token });
-    if (!r.ok) {
-      if (r.status === 404) setState('not_valid');
-      else if (outs.current === null) setState('error');
-      return;
-    }
-    const fresh = r.data;
-    // The page opens in the customer's text language unless the visitor already chose one (UD-32).
-    if (!langSet.current) {
-      langSet.current = true;
-      if (!document.cookie.split('; ').some((c) => c.startsWith(`${LANG_COOKIE}=`)) && fresh.customer.language !== t.lang) {
-        document.cookie = langCookie(fresh.customer.language);
-        router.refresh();
+    await newest.run(() => callRow(rows.inboxMessages, { inboxToken: token }), (r) => {
+      if (!r.ok) {
+        if (r.status === 404) setState('not_valid');
+        else if (outs.current === null) setState('error');
+        return;
       }
-    }
-    setData({ customer: fresh.customer, messages: fresh.messages });
-    const now = fresh.messages.filter((m) => m.direction === 'out').length;
-    const was = outs.current;
-    outs.current = now;
-    setState('ready');
-    if (was !== null && now > was) setNewText(true);
-  }, [token, t.lang, router]);
+      const fresh = r.data;
+      // The page opens in the customer's text language unless the visitor already chose one (UD-32).
+      if (!langSet.current) {
+        langSet.current = true;
+        if (!document.cookie.split('; ').some((c) => c.startsWith(`${LANG_COOKIE}=`)) && fresh.customer.language !== t.lang) {
+          document.cookie = langCookie(fresh.customer.language);
+          router.refresh();
+        }
+      }
+      setData({ customer: fresh.customer, messages: fresh.messages });
+      const now = fresh.messages.filter((m) => m.direction === 'out').length;
+      const was = outs.current;
+      outs.current = now;
+      setState('ready');
+      if (was !== null && now > was) setNewText(true);
+    });
+  }, [token, t.lang, router, newest]);
 
   // F-1935: a link that answers not found stays not found, so the page asks no more.
   const gone = state === 'not_valid';

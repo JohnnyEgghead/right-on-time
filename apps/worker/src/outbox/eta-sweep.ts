@@ -15,7 +15,7 @@ import { sendLate, type TextContext } from '@bw/outbox';
 import { atLocal, Temporal, type Instant } from '@bw/time';
 import { routedDrive } from '../../../../packages/maps/src/route-source.ts';
 import { chainSuccessorDue } from '../clock/chain.ts';
-import type { EventHandler, GiveUp } from '../dispatcher.ts';
+import { MAX_HANDLER_FAILURES, type EventHandler, type GiveUp } from '../dispatcher.ts';
 
 export const ETA_SWEEP = 'eta.sweep';
 
@@ -53,6 +53,21 @@ export interface SweepReport {
   lateTexts: number;
   /** Late texts that could not be made (a throw from one job's sendLate, rolled back to its savepoint) or that were too long (F-514). */
   skipped: number;
+  /**
+   * F-2006 K-10.4: per job (its number as a key), the failed runs of its late text so far; at LATE_TEXT_TRIES the job is
+   * given up and no later sweep tries it. Only jobs still waiting on a late text today are kept.
+   */
+  lateFailures: Record<string, number>;
+}
+
+/** A job's late text that threw on this many sweeps is given up (the dispatcher's limit, F-2006 K-10.4). */
+const LATE_TEXT_TRIES = MAX_HANDLER_FAILURES;
+
+/** The eta.sweep payload's carried counts (F-2006 K-10.4), shape-checked: anything else reads as none. */
+function lateFailuresOf(payload: unknown): Record<string, number> {
+  const raw = (payload as { lateFailures?: unknown } | null)?.lateFailures;
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {};
+  return Object.fromEntries(Object.entries(raw).filter(([k, v]) => /^[1-9][0-9]{0,9}$/.test(k) && Number.isInteger(v) && (v as number) > 0)) as Record<string, number>;
 }
 
 const ms = (d: Date | null): number | null => (d === null ? null : d.getTime());
@@ -66,8 +81,13 @@ export function errorCodeOf(e: unknown): string {
   return typeof code === 'string' && /^[a-zA-Z0-9_]{2,40}$/.test(code) ? code : 'late_text_failed';
 }
 
-/** One sweep at `now`: the ETA and timing of every technician's day today, and the late texts that follow. */
-export async function runEtaSweep(tx: Queryable, ctx: TextContext, now: Instant, log?: Logger): Promise<SweepReport> {
+/**
+ * One sweep at `now`: the ETA and timing of every technician's day today, and the late texts that follow. `lateFailures`
+ * is the previous sweep's count of each job's failed late texts (F-2006 K-10.4).
+ */
+export async function runEtaSweep(
+  tx: Queryable, ctx: TextContext, now: Instant, log?: Logger, lateFailures: Readonly<Record<string, number>> = {},
+): Promise<SweepReport> {
   const r = await tx.query<DayJob>(
     `SELECT j.job_number, j.branch_id, j.technician_id, j.zone, j.date::text AS date, j.status, j.window_start, j.window_end, j.booked_at,
             j.expected_minutes, j.on_the_way_at, j.arrived_at, j.ended_at, j.planned_arrival, j.texted_arrival, j.late_text_sent_at,
@@ -81,7 +101,7 @@ export async function runEtaSweep(tx: Queryable, ctx: TextContext, now: Instant,
   const days = new Map<string, DayJob[]>();
   for (const j of r.rows) days.set(j.technician_id, [...(days.get(j.technician_id) ?? []), j]);
 
-  const report: SweepReport = { open: 0, late: 0, atRisk: 0, lateTexts: 0, skipped: 0 };
+  const report: SweepReport = { open: 0, late: 0, atRisk: 0, lateTexts: 0, skipped: 0, lateFailures: {} };
   for (const jobs of days.values()) {
     const first = jobs[0] as DayJob;
     const stops: EtaStop[] = jobs.map((j) => ({
@@ -103,6 +123,14 @@ export async function runEtaSweep(tx: Queryable, ctx: TextContext, now: Instant,
       // The candidate check reads the sweep's snapshot; sendLate re-reads the baseline under the job's lock and decides again.
       const baseline = ms(j.texted_arrival) ?? ms(j.planned_arrival);
       if (j.late_text_sent_at !== null || baseline === null || !isLateEnoughToText(e.eta, baseline)) continue;
+      // F-2006 K-10.4: a job whose late text threw LATE_TEXT_TRIES sweeps is given up: it is not tried again (it was retried
+      // every 5 demo minutes all day), and it stays counted so a later sweep still knows.
+      const key = String(j.job_number);
+      const failedBefore = lateFailures[key] ?? 0;
+      if (failedBefore >= LATE_TEXT_TRIES) {
+        report.lateFailures[key] = failedBefore;
+        continue;
+      }
       // F-514: one savepoint per late text. A throw from one job's sendLate rolls back that job's text only, is counted as a skip, and the
       // rest of the sweep and the next event still run (it was the whole sweep's rollback, retried every pass with no customer texted).
       await tx.query('SAVEPOINT late_text');
@@ -118,6 +146,10 @@ export async function runEtaSweep(tx: Queryable, ctx: TextContext, now: Instant,
         report.skipped += 1;
         // F-558: a skip is seen. The job number and the error's code (else its message, cut short) are the only fields; no text, name or address.
         log?.warn({ status: 'unhandled error', errorCode: errorCodeOf(e), jobNumber: j.job_number, demoTime: now.toString() });
+        const failures = failedBefore + 1;
+        report.lateFailures[key] = failures;
+        // F-2006 K-10.4: 1 error line when the job is given up, never again after it.
+        if (failures >= LATE_TEXT_TRIES) log?.error({ status: 'late text gave up', errorCode: errorCodeOf(e), jobNumber: j.job_number, failures, demoTime: now.toString() });
       }
       await tx.query('RELEASE SAVEPOINT late_text');
     }
@@ -125,14 +157,21 @@ export async function runEtaSweep(tx: Queryable, ctx: TextContext, now: Instant,
   return report;
 }
 
-/** The next eta.sweep, 5 demo minutes on, only when no other eta.sweep is due (the alert.check chain's rule, F-444). */
-async function writeEtaSweepSuccessor(tx: Queryable, event: { id: string }, now: Instant, replayTarget: Instant | undefined): Promise<void> {
+/**
+ * The next eta.sweep, 5 demo minutes on, only when no other eta.sweep is due (the alert.check chain's rule, F-444). It
+ * carries the late-text failure counts (F-2006 K-10.4) in its payload, so they survive a worker restart; when another
+ * sweep is already due, that one's counts stand.
+ */
+async function writeEtaSweepSuccessor(
+  tx: Queryable, event: { id: string }, now: Instant, replayTarget: Instant | undefined, lateFailures: Readonly<Record<string, number>>,
+): Promise<void> {
   await tx.query('SELECT pg_advisory_xact_lock($1)', [CHAIN_LOCK]);
+  const payload = Object.keys(lateFailures).length === 0 ? {} : { lateFailures };
   await tx.query(
     `INSERT INTO world.scheduled_event (due_at, kind, subject, payload, state)
-     SELECT $1, $2, 'eta', '{}'::jsonb, 'due'
+     SELECT $1, $2, 'eta', $4::jsonb, 'due'
       WHERE NOT EXISTS (SELECT 1 FROM world.scheduled_event WHERE kind = $2 AND state = 'due' AND id <> $3)`,
-    [chainSuccessorDue(now, ETA_SWEEP_EVERY_MINUTES, replayTarget).toString(), ETA_SWEEP, event.id]);
+    [chainSuccessorDue(now, ETA_SWEEP_EVERY_MINUTES, replayTarget).toString(), ETA_SWEEP, event.id, JSON.stringify(payload)]);
 }
 
 /**
@@ -140,15 +179,15 @@ async function writeEtaSweepSuccessor(tx: Queryable, event: { id: string }, now:
  * written as a run would write it, so late jobs keep being swept after 1 event that cannot run.
  */
 export const giveUpEtaSweep: GiveUp = async (event, { tx, now, replayTarget }) => {
-  await writeEtaSweepSuccessor(tx, event, now, replayTarget);
+  await writeEtaSweepSuccessor(tx, event, now, replayTarget, lateFailuresOf(event.payload));
   return { state: 'skipped', result: 'handler_failed' };
 };
 
 /** The eta.sweep event handler: one sweep at the event's time, then the next event 5 demo minutes on. */
 export function etaSweepHandler(ctx: TextContext, log?: Logger): EventHandler {
   return async (event, { tx, now, replayTarget }) => {
-    const report = await runEtaSweep(tx, ctx, now, log);
-    await writeEtaSweepSuccessor(tx, event, now, replayTarget);
+    const report = await runEtaSweep(tx, ctx, now, log, lateFailuresOf(event.payload));
+    await writeEtaSweepSuccessor(tx, event, now, replayTarget, report.lateFailures);
     return { state: 'done', result: `open ${report.open}, late ${report.late}, at risk ${report.atRisk}, late texts ${report.lateTexts}, skipped ${report.skipped}` };
   };
 }

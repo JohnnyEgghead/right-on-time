@@ -872,7 +872,8 @@ describe('ci/gates.json parallel declarations (F-410)', () => {
     // smoke-public-tag is since P7-SMOKE (ci/smoke/smoke-public-tag.sh: a Docker-in-Docker engine, a harness container and a browser); it has no parallel field, so it runs alone.
     // public-copy-tests is since P9-AUDIT-PUBLIC (ci/gates/public-copy-tests.sh runs pnpm run test in a public export, so every file the root config runs is in the files it runs, as for G-CI4-nightly); it has no parallel field, so it runs alone.
     // outage-drill is since P8-OUTAGE-DRILL only because infra/tests/outage-drill.test.ts names docker compose in a --dry-run assertion (the driver sends its docker commands over ssh, stubbed in that test, so no container, stack or browser starts here); it has no parallel field, so it runs alone.
-    expect(touches.map((g) => g.id).sort()).toEqual(['G-CI1', 'G-CI4-nightly', 'G-CI5', 'G-CI6', 'contract-gates', 'import-target-counts', 'look-values-comparator', 'look-values-comparator-nightly', 'map-manifest', 'outage-drill', 'page-walkers','page-walkers-nightly', 'public-copy-tests', 'public-files-check', 'restore-test', 'smoke-public-tag']);
+    // mac-host-tests is since P10-CHECKS (K-19) only because infra/tests/render-session.test.ts names the run engine; it is a runner mac gate with no parallel field, so it runs alone.
+    expect(touches.map((g) => g.id).sort()).toEqual(['G-CI1', 'G-CI4-nightly', 'G-CI5', 'G-CI6', 'contract-gates', 'import-target-counts', 'look-values-comparator', 'look-values-comparator-nightly', 'mac-host-tests', 'map-manifest', 'outage-drill', 'page-walkers','page-walkers-nightly', 'public-copy-tests', 'public-files-check', 'restore-test', 'smoke-public-tag']);
     for (const g of scripted.filter((x) => x.parallel?.exclusive.includes('engine-net'))) expect(touches).toContain(g);
   });
 
@@ -1326,13 +1327,15 @@ describe('runner mac gates (F-1201)', () => {
     expect(validateMap({ gates: [gate('x', { runner: 'mac' }), gate('y', { runner: 'linux' })] })).toEqual([]);
   });
 
-  it('the map has exactly 2 runner mac gates, native-no-demo and native-suite, each active from P6-XCUITEST', () => {
+  it('the map has exactly 3 runner mac gates, native-no-demo, native-suite and mac-host-tests (P10-CHECKS, K-19), the native 2 active from P6-XCUITEST', () => {
     // why: F-1201 FR-IOS-1, FR-IOS-4 the native gates run in the mac half (owner ruling Nov 4, 2026 item 3): the suite in the nightly, never the merge set
     const repo = path.resolve(import.meta.dirname, '..');
     const real = loadMap(path.resolve(import.meta.dirname, 'gates.json'));
     const mac = real.gates.filter((g) => g.runner === 'mac');
-    expect(mac.map((g) => g.id)).toEqual(['native-no-demo', 'native-suite']);
-    for (const g of mac) {
+    expect(mac.map((g) => g.id)).toEqual(['native-no-demo', 'native-suite', 'mac-host-tests']);
+    expect(mac[2]).toMatchObject({ id: 'mac-host-tests', when: 'nightly', activates: 'P10-CHECKS' });
+    expect(existsSync(path.join(repo, 'ci', 'active', 'mac-host-tests'))).toBe(true);
+    for (const g of mac.slice(0, 2)) {
       expect(g.activates, g.id).toBe('P6-XCUITEST');
       expect(existsSync(path.join(repo, 'ci', 'active', g.id)), `marker for ${g.id}`).toBe(true);
     }

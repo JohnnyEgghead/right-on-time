@@ -12,7 +12,7 @@ import { api, PUBLIC } from '../policy/entry.ts';
 import { ACCESS_KEY, NO_PBS_URL, ORIGIN } from '../testing.ts';
 import type { Handler } from '../types.ts';
 import { mount, type KernelDb } from './mount.ts';
-import { rateRules } from './rate-limit.ts';
+import { RateLimiter, rateRules } from './rate-limit.ts';
 import { MemorySessionStore } from './sessions.ts';
 
 /** A database holding 1 active access code, the only query API-01 runs. */
@@ -71,5 +71,29 @@ describe('API-01 hourly cap per address (F-1851)', () => {
     expect(rateRules({ id: 'API-03', path: '/sessions' })).toEqual([
       { scope: 'address', limit: 10, windowMs: MIN }, { scope: 'login', limit: 20, windowMs: 60 * MIN },
     ]);
+  });
+
+  // why: K-07 F-2013 the reset request (API-165) is capped at 5 an hour per address and every link-token route at 60 a minute per address; no test held either number
+  it('gives API-165 5 an hour and a link-token route 60 a minute, each per address, and no other row any rule', () => {
+    expect(rateRules({ id: 'API-165', path: '/password-resets' })).toEqual([{ scope: 'address', limit: 5, windowMs: 60 * 60_000 }]);
+    expect(rateRules({ id: 'API-116', path: '/live-map/{token}' })).toEqual([{ scope: 'address', limit: 60, windowMs: 60_000 }]);
+    expect(rateRules({ id: 'API-04', path: '/sessions/current' })).toEqual([]);
+  });
+
+  // why: K-07 F-2013 the numbers bite: the 6th reset request in an hour and the 61st link-token hit in a minute are refused, and a new hour or minute lets the address in
+  it('refuses the 6th reset request in an hour and the 61st link-token hit in a minute', () => {
+    const clock = new FixedClock({ demo: '2026-09-15T14:28:00Z', real: '2026-11-01T12:00:00Z', worldEpoch: 3 });
+    const limiter = new RateLimiter(clock);
+    const reset = rateRules({ id: 'API-165', path: '/password-resets' })[0]!;
+    const link = rateRules({ id: 'API-116', path: '/live-map/{token}' })[0]!;
+    const hits = (rule: typeof reset, n: number) => Array.from({ length: n }, () => limiter.hit('x', rule, '203.0.113.7'));
+    expect(hits(reset, 6)).toEqual([true, true, true, true, true, false]);
+    expect(hits(link, 61).filter((ok) => !ok)).toHaveLength(1);
+    expect(limiter.hit('x', link, '198.51.100.9')).toBe(true);
+    clock.advance({ minutes: 2 });
+    expect(limiter.hit('x', link, '203.0.113.7')).toBe(true);
+    expect(limiter.hit('x', reset, '203.0.113.7')).toBe(false);
+    clock.advance({ minutes: 61 });
+    expect(limiter.hit('x', reset, '203.0.113.7')).toBe(true);
   });
 });

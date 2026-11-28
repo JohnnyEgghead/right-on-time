@@ -291,6 +291,65 @@ describe('blocks (FR-DISP-34; OA-72, OA-74, OA-75)', () => {
   });
 });
 
+describe('only an overlap the write causes refuses it (section 5.3 step 2; owner answer 2f636a8d, OA-92)', () => {
+  interface Block { blockId: string }
+  const kevin = () => tech('Kevin Doyle');
+  const planned = async (job: number) => (await rows<{ at: Date; end: Date }>(
+    `SELECT planned_arrival AS at, planned_arrival + make_interval(mins => expected_minutes) AS "end" FROM world.job WHERE job_number = $1`, [job]))[0]!;
+  const overlapsOn = (technician: string, date: string) => count(
+    `SELECT count(*) AS n FROM world.job j JOIN world.time_block b ON b.technician_id = j.technician_id AND b.date = j.date
+      WHERE j.technician_id = $1 AND j.date = $2 AND j.status = 'scheduled'
+        AND j.planned_arrival < b."end" AND b.start < j.planned_arrival + make_interval(mins => j.expected_minutes)`, [technician, date]);
+
+  // why: F-2012 K-09.1 a day the write only leaves must not refuse for an overlap already there, while a move onto it still refuses one it brings
+  it('with an overlap already on the day, moves a job off it and one onto it that overlaps nothing, and refuses one onto it that lands on a block', async () => {
+    const date = '2026-10-20';
+    const first = await created({ date, window: 'two_hour 10:00', technician: 'Kevin Doyle' });
+    const leaving = await created({ date, window: 'two_hour 12:00', technician: 'Kevin Doyle' });
+    const late = (await body<{ block: Block }>(await api.post('/time-blocks', { technicianId: kevin(), date, label: 'Late block', place: null, start: '16:00', end: '16:30' }, keisha))).block;
+    const ontoBlock = await created({ date, window: 'two_hour 16:00', technician: 'Ryan Mitchell' });
+    const ontoClear = await created({ date, window: 'two_hour 14:00', technician: 'Ryan Mitchell' });
+    // The overlap a merge leaves by design (F-378): a block over the first job's planned time, put in by the database.
+    const p = await planned(first.jobNumber);
+    await rows(`INSERT INTO world.time_block (technician_id, date, zone, start, "end", label, place, version, seeded)
+                VALUES ($1, $2, 'America/New_York', $3, $4, 'Over the job', NULL, 1, false)`, [kevin(), date, p.at, new Date(p.at.getTime() + 30 * 60_000)]);
+    expect(await overlapsOn(kevin(), date)).toBe(1);
+
+    const off = await assign(leaving.jobNumber, 'Ryan Mitchell', leaving.version);
+    expect([off.status, off.status === 200 ? null : await problem(off)]).toEqual([200, null]);
+
+    const onto = await assign(ontoBlock.jobNumber, 'Kevin Doyle', ontoBlock.version);
+    const refused = await problem(onto);
+    expect([onto.status, refused.code]).toEqual([409, 'time_overlap']);
+    // The refusal names the overlap the move brings, not the one already on the day.
+    expect([(refused.block as { blockId: string }).blockId, (refused.job as { jobNumber: number }).jobNumber]).toEqual([late.blockId, ontoBlock.jobNumber]);
+    expect(await rows('SELECT technician_id FROM world.job WHERE job_number = $1', [ontoBlock.jobNumber])).toEqual([{ technician_id: tech('Ryan Mitchell') }]);
+
+    const clear = await assign(ontoClear.jobNumber, 'Kevin Doyle', ontoClear.version);
+    expect([clear.status, clear.status === 200 ? null : await problem(clear)]).toEqual([200, null]);
+    expect(await overlapsOn(kevin(), date)).toBe(1); // the overlap already there stays for the office to fix
+  });
+
+  // why: F-2012 OA-92 a write that only takes work off a day is allowed even when the recompute pulls a job left there onto a block
+  it('moves a job off a day when the recompute then pulls the next job onto a block, and keeps that overlap on the board', async () => {
+    const date = '2026-10-21';
+    const first = await created({ date, window: 'two_hour 08:00', technician: 'Kevin Doyle' });
+    const next = await created({ date, window: 'two_hour 08:00', technician: 'Kevin Doyle', service: 'boiler_repair' });
+    const end1 = (await planned(first.jobNumber)).end;
+    const arrival2 = (await planned(next.jobNumber)).at;
+    // The drive between the 2 customers leaves a gap: a block there overlaps neither job now (touching ends do not overlap).
+    expect(arrival2.getTime()).toBeGreaterThan(end1.getTime());
+    await rows(`INSERT INTO world.time_block (technician_id, date, zone, start, "end", label, place, version, seeded)
+                VALUES ($1, $2, 'America/New_York', $3, $4, 'Gap', NULL, 1, false)`, [kevin(), date, end1, arrival2]);
+    expect(await overlapsOn(kevin(), date)).toBe(0);
+
+    const off = await assign(first.jobNumber, 'Ryan Mitchell', first.version);
+    expect([off.status, off.status === 200 ? null : await problem(off)]).toEqual([200, null]);
+    expect((await planned(next.jobNumber)).at.getTime()).toBeLessThan(arrival2.getTime()); // pulled earlier, onto the block
+    expect(await overlapsOn(kevin(), date)).toBe(1);
+  });
+});
+
 describe('an office write marks the job touched by a person (SD-21; F-423)', () => {
   const touched = async (n: number) => (await rows<{ touched_by_person: boolean }>('SELECT touched_by_person FROM world.job WHERE job_number = $1', [n]))[0]!.touched_by_person;
   const untouch = (n: number) => rows('UPDATE world.job SET touched_by_person = false WHERE job_number = $1', [n]);

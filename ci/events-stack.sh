@@ -5,7 +5,7 @@
 # proxy. Same shape as ci/shell-stack.sh: its own Compose project (bw-w16-events, free host ports), verified (db, pbs, proxy,
 # web and worker running; PostgreSQL 18; every setting at its default), the fixture rows of ci/shell-stack/fixture.sql, then
 # ci/events-stack/events.stack.ts; torn down on every exit path (a reaper outside the process group covers a kill).
-# The suite takes about 1 minute (it holds a stream dropped for 30 s). No docker: exit 3 ("stack unavailable", a red).
+# The suite takes about 1 minute (P10-NIGHTLY-SPEED: no 30 s outage and no 15 s heartbeat wait now; those are unit tests). No docker: exit 3 ("stack unavailable", a red).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"

@@ -397,12 +397,57 @@ describe('wave-run --mac-half (F-1201)', () => {
   it('a mac gate killed at its cap is waited for while its EXIT trap tears down, so no stack is left', () => {
     // why: F-1203 cap-fires probe - run.sh stops its Compose stack in an EXIT trap; bash -c dies at TERM and hides run.sh from a tree walk made after it
     const r = rig([g('mac-cap', { cmd: 'bash stack.sh', timeoutS: 1, runner: 'mac' })], ['mac-cap']);
-    writeFileSync(path.join(r, 'stack.sh'), "trap 'sleep 3; touch stack-down' EXIT\ntrap 'exit 143' TERM\ntouch stack-up\nsleep 30 &\nwait\n");
+    // F-2101: a stand-in clock on the rig's PATH reads 2 s later only once the gate has set its traps and started its child, so the cap
+    // never fires before the gate is ready, however slow the machine; every other date call goes to the real date.
+    const realDate = spawnSync('sh', ['-c', 'command -v date'], { encoding: 'utf8' }).stdout.trim();
+    expect(realDate, 'no date on PATH').toMatch(/^\//);
+    writeFileSync(path.join(r, 'bin', 'date'), `#!/bin/sh\n[ "$1" = +%s ] || exec "${realDate}" "$@"\nif [ -e "${r}/stack-up" ]; then echo 102; else echo 100; fi\n`, { mode: 0o755 });
+    writeFileSync(path.join(r, 'stack.sh'), "trap 'sleep 3; touch stack-down' EXIT\ntrap 'exit 143' TERM\nsleep 30 &\ntouch stack-up\nwait\n");
     const res = mac(r, []);
     expect(res.status, res.out).toBe(1);
     expect(res.out).toMatch(/RED: mac gate mac-cap timed out after 1s/);
     expect(existsSync(path.join(r, 'stack-up'))).toBe(true);
     expect(existsSync(path.join(r, 'stack-down')), 'the teardown was cut short or still runs').toBe(true);
+  });
+
+  // F-2101: bounded() alone, cut from ci/wave-run.sh between kill_tree() and cleanup() as ci/wave-image-key.test.ts cuts it, run in its own folder.
+  const boundedOnly = (body: string) => {
+    const src = readFileSync(path.join(repoRoot, 'ci', 'wave-run.sh'), 'utf8');
+    const a = src.indexOf('kill_tree() {');
+    const b = src.indexOf('cleanup() {');
+    expect(a).toBeGreaterThan(0);
+    expect(b).toBeGreaterThan(a);
+    const t = path.join(dir, `bounded-${Math.random().toString(36).slice(2)}`);
+    mkdirSync(t);
+    const res = spawnSync('bash', ['-c', `${src.slice(a, b)}\n${body}`], { cwd: t, encoding: 'utf8', timeout: 30_000 });
+    return { status: res.status, err: res.stderr, at: t };
+  };
+
+  it('a cap sends TERM to each process of the gate before its children, so a script never sees its child die first', () => {
+    // why: F-2101 children first let the gate's script run on into its EXIT trap, and its own late TERM then ended that trap mid-teardown
+    // A kill() function in front of the builtin logs each TERM in the order sent; the stand-in clock moves on once the 3 levels run.
+    const res = boundedOnly([
+      `printf 'echo "top $$" >>pids\\nbash mid.sh &\\nwait\\n' >top.sh`,
+      `printf 'echo "mid $$" >>pids\\nsleep 30 &\\necho "leaf $!" >>pids\\n: >ready\\nwait\\n' >mid.sh`,
+      'date() { if [ -e ready ]; then echo 102; else echo 100; fi; }',
+      'kill() { [ "$1" = -TERM ] && echo "$2" >>term-order; builtin kill "$@"; }',
+      'bounded 1 "order probe" bash top.sh',
+    ].join('\n'));
+    expect(res.status, res.err).toBe(124);
+    const pids = new Map(readFileSync(path.join(res.at, 'pids'), 'utf8').trim().split('\n').map((l) => [l.split(' ')[0], l.split(' ')[1]]));
+    const order = readFileSync(path.join(res.at, 'term-order'), 'utf8').trim().split('\n');
+    const at = (k: string) => order.indexOf(pids.get(k) ?? `no ${k} pid`);
+    expect(at('top'), `TERM order ${order.join(' ')}`).toBeGreaterThan(-1);
+    expect(at('top'), `TERM order ${order.join(' ')}`).toBeLessThan(at('mid'));
+    expect(at('mid'), `TERM order ${order.join(' ')}`).toBeLessThan(at('leaf'));
+  });
+
+  it('a cap never fires before its limit: a whole-second clock that turned just after the start is not a second of run time', () => {
+    // why: F-2101 a difference of secs whole seconds fired the cap, so a 1 s cap could kill a gate at once, before it had set its traps
+    // The stand-in clock reads 100 for the start and 101 ever after: a second turned at once, and the command runs to its end.
+    const res = boundedOnly(['date() { if [ -e clock ]; then echo 101; else : >clock; echo 100; fi; }', 'bounded 1 "clock probe" sleep 2'].join('\n'));
+    expect(res.status, res.err).toBe(0);
+    expect(res.err).not.toContain('timed out');
   });
 
   // Ruling item 3 (Nov 10, 2026): --halves-selftest runs the real mac half and the real wait loop against a stand-in container half.
@@ -552,7 +597,8 @@ describe('wave-run --mac-half (F-1201)', () => {
 
   it('the seconds the mac half ran past the Spectre half are counted, and a mac half inside it counts 0', () => {
     // why: F-1375 the mac half's whole wall went into totalDurationS though the halves run side by side
-    const slow = rig([g('mac-s', { cmd: 'sleep 5', runner: 'mac' })], ['mac-s']);
+    // F-2054: a mac half of 10 s against a 1 s Spectre half leaves about 9 s of overrun, so load must eat 6 s to break the 3 s floor
+    const slow = rig([g('mac-s', { cmd: 'sleep 10', runner: 'mac' })], ['mac-s']);
     const over = /(\d+)s of it past the Spectre half/.exec(halves(slow, 1, 0).out);
     expect(over, 'no overrun in the measured line').not.toBeNull();
     expect(Number(over![1])).toBeGreaterThanOrEqual(3);

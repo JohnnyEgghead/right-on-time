@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // public-files-check (P8-PUBLIC-FILES; SPECIFICATIONS section 6.13: FR-DIST-2, FR-DIST-4, FR-DIST-5, FR-DIST-7):
-//   node ci/public-files.ts [spdx|readme|copying|files|private-refs|ipv4|owner-ids|all] [--root <dir>] [--floor <n>] [--owner-env <file>]... [--export]
+//   node ci/public-files.ts [spdx|readme|copying|files|private-refs|ipv4|owner-ids|fonts|css|workflows|changelog|engines|domain|spike|all] [--root <dir>] [--floor <n>] [--owner-env <file>]... [--export]
 //   (--floor: the source file floor of spdx, default MIN_SOURCE_FILES; --owner-env: the owner files owner-ids reads, default defaultOwnerFiles;
 //   --export: the tree is an export, so a private path in it fails as export-private instead of being left out; F-1682)
 //   spdx      spdx-header-check: every source file of the public tree has the SPDX line AGPL-3.0-or-later, and LICENSE is the AGPL-3.0 text
@@ -10,11 +10,18 @@
 //             THIRD-PARTY-NOTICES.md (F-248: every credit ci/license/policy.json records, word for word)
 //   private-refs  no exported file names a private path (F-1571); ipv4  no exported file holds a real IPv4 address (F-1609)
 //   owner-ids no exported file holds the owner's Apple team id or App Store Connect key id, read from the owner's private file (F-1621)
+//   fonts     fonts-licensed: every shipped font folder holds a license file (K-12)
+//   css       css-covered: every .css file has an SPDX line or a REUSE.toml annotation that covers it (K-13, F-2025)
+//   workflows persist-credentials: every checkout in the private tree's .github/workflows/ sets persist-credentials: false (K-15)
+//   changelog the export holds CHANGELOG.md (K-21)
+//   engines   engines.node in package.json is the major of .node-version (J-31)
+//   domain    no shipped file names brightwaterair.com (J-32)
+//   spike     the export holds no infra/spike/, and scripts/private-paths.txt lists it (J-35)
 //   all       every check above (the default)
 // Exit 0: every check passed. Exit 1: a check failed (the problems are named on stderr). Exit 2: usage error.
 // The public tree is the files git knows (tracked, or new and not ignored) minus scripts/private-paths.txt, the list scripts/publish.sh uses.
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, openSync, readFileSync, readSync, closeSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, openSync, readdirSync, readFileSync, readSync, closeSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { isMain } from './is-main.ts';
 
@@ -409,19 +416,143 @@ export function checkOwnerIds(root: string, ownerFiles: readonly string[] = defa
   return problems;
 }
 
+const FONT_EXT = /\.(woff2?|ttf|otf)$/i;
+const FONT_LICENSE = /^(OFL|LICENSE|LICENCE|COPYING)/i;
+
+/** fonts-licensed (K-12): each folder of the public tree that holds a font file also holds a license file (OFL-1.1.txt, LICENSE, ...). */
+export function checkFonts(root: string): Problem[] {
+  const files = listPublicFiles(root);
+  const folders = new Set(files.filter((f) => FONT_EXT.test(f)).map((f) => path.posix.dirname(f)));
+  return [...folders]
+    .filter((d) => !files.some((f) => path.posix.dirname(f) === d && FONT_LICENSE.test(path.posix.basename(f))))
+    .map((d) => ({ check: 'fonts-licensed', message: `${d}/ holds a font and no license file (OFL-1.1.txt, LICENSE or COPYING beside it; K-12)` }));
+}
+
+/** A REUSE.toml path pattern as a regular expression: ** crosses folders, * does not (REUSE specification 3.2). */
+function reuseGlob(pattern: string): RegExp {
+  let re = '';
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i]!;
+    if (pattern.startsWith('**/', i)) { re += '(?:.*/)?'; i += 2; }
+    else if (pattern.startsWith('**', i)) { re += '.*'; i += 1; }
+    else if (c === '*') re += '[^/]*';
+    else re += c.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+  }
+  return new RegExp(`^${re}$`);
+}
+
+/** The path patterns of the REUSE.toml annotations that carry AGPL-3.0-or-later. */
+export function reuseCovers(root: string): RegExp[] {
+  const file = path.join(root, 'REUSE.toml');
+  if (!existsSync(file)) return [];
+  const out: RegExp[] = [];
+  for (const block of readFileSync(file, 'utf8').split(/^\[\[annotations\]\]/m).slice(1)) {
+    if (!/^SPDX-License-Identifier\s*=\s*"AGPL-3\.0-or-later"/m.test(block)) continue;
+    const list = /^path\s*=\s*\[([^\]]*)\]/m.exec(block)?.[1] ?? '';
+    for (const m of list.matchAll(/"([^"]+)"/g)) out.push(reuseGlob(m[1]!));
+  }
+  return out;
+}
+
+/** css-covered (K-13, F-2025): a stylesheet carries the SPDX line in its first 3 lines, or a REUSE.toml annotation with AGPL-3.0-or-later covers its path. */
+export function checkCss(root: string): Problem[] {
+  const covers = reuseCovers(root);
+  const problems: Problem[] = [];
+  for (const rel of listPublicFiles(root).filter((f) => f.endsWith('.css'))) {
+    const head = readFileSync(path.join(root, rel), 'utf8').split('\n', 4).slice(0, 3);
+    if (head.some((l) => /SPDX-License-Identifier:\s*AGPL-3\.0-or-later/.test(l)) || covers.some((c) => c.test(rel))) continue;
+    problems.push({ check: 'css-covered', message: `${rel}: no SPDX-License-Identifier line in the first 3 lines and no REUSE.toml annotation covers it (K-13)` });
+  }
+  return problems;
+}
+
+/**
+ * persist-credentials (K-15): the workflows are a private path, so they are read from the checked tree and from this checkout (as
+ * owner-ids does: publish checks an export, which has none). A checkout step without persist-credentials: false in its own block fails.
+ */
+export function checkWorkflows(root: string): Problem[] {
+  const problems: Problem[] = [];
+  const self = path.resolve(import.meta.dirname, '..');
+  for (const base of new Set([root, self])) {
+    const dir = path.join(base, '.github', 'workflows');
+    if (!existsSync(dir)) continue;
+    for (const name of readdirSync(dir).filter((f) => /\.ya?ml$/.test(f)).sort()) {
+      const lines = readFileSync(path.join(dir, name), 'utf8').split('\n');
+      lines.forEach((line, i) => {
+        if (!/^\s*(?:- )?uses:\s*actions\/checkout@/.test(line)) return;
+        const indent = line.indexOf('uses:');
+        let ok = false;
+        for (let j = i + 1; j < lines.length; j++) {
+          const l = lines[j]!;
+          if (l.trim() === '') continue;
+          const at = l.length - l.trimStart().length;
+          if (at < indent || (at <= indent && l.trimStart().startsWith('- '))) break;
+          if (/^\s*persist-credentials:\s*['"]?false['"]?\s*(#.*)?$/.test(l)) ok = true;
+        }
+        if (!ok) problems.push({ check: 'persist-credentials', message: `${path.relative(base, path.join(dir, name))}:${i + 1}: a checkout step without persist-credentials: false (K-15)` });
+      });
+    }
+  }
+  return problems;
+}
+
+/** changelog (K-21): the export holds CHANGELOG.md. */
+export function checkChangelog(root: string): Problem[] {
+  return listPublicFiles(root).includes('CHANGELOG.md') ? [] : [{ check: 'changelog', message: 'CHANGELOG.md is missing from the public tree (K-21)' }];
+}
+
+/** engines (J-31): package.json engines.node is the pinned major of .node-version, as >=MAJOR. */
+export function checkEngines(root: string): Problem[] {
+  const bad = (message: string): Problem[] => [{ check: 'engines', message }];
+  let pinned: string;
+  let engines: unknown;
+  try {
+    pinned = readFileSync(path.join(root, '.node-version'), 'utf8').trim();
+    engines = (JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')) as { engines?: { node?: unknown } }).engines?.node;
+  } catch (e) {
+    return bad(`.node-version or package.json cannot be read: ${(e as Error).message}`);
+  }
+  const major = /^v?(\d+)\./.exec(pinned)?.[1];
+  if (!major) return bad(`.node-version is not a version (${pinned})`);
+  return engines === `>=${major}` ? [] : bad(`package.json engines.node is ${JSON.stringify(engines)}, not ">=${major}" (the major of .node-version ${pinned}; J-31)`);
+}
+
+/** domain (J-32): no shipped text file names the owner's company domain. */
+export const COMPANY_DOMAIN = 'brightwaterair.com';
+export function checkDomain(root: string): Problem[] {
+  const problems: Problem[] = [];
+  for (const rel of listPublicFiles(root)) {
+    if (!lstatSync(path.join(root, rel)).isFile()) continue;
+    if (rel === 'ci/public-files.ts' || rel === 'ci/public-files.test.ts') continue; // the rule and the check that plants it
+    const buf = readFileSync(path.join(root, rel));
+    if (!buf.subarray(0, 8192).includes(0) && buf.includes(COMPANY_DOMAIN)) problems.push({ check: 'domain', message: `${rel}: names ${COMPANY_DOMAIN} (a sample address uses example.com; J-32)` });
+  }
+  return problems;
+}
+
+/** spike (J-35): infra/spike/ is a private path, and an export (--export) holds none of it. */
+export function checkSpike(root: string, exported = false): Problem[] {
+  const problems: Problem[] = [];
+  if (!isPrivate('infra/spike/s1/x', readPrivateRules(root))) problems.push({ check: 'spike', message: 'infra/spike/ is not in scripts/private-paths.txt (J-35)' });
+  if (exported) for (const f of listTreeFiles(root).filter((x) => x.startsWith('infra/spike/'))) problems.push({ check: 'spike', message: `${f}: the export holds infra/spike/ (J-35)` });
+  return problems;
+}
+
 interface Options {
+  exported: boolean;
   floor: number;
   /** owner-ids: the owner files to read; null for defaultOwnerFiles. */
   ownerEnv: string[] | null;
 }
 const CHECKS: Record<string, (root: string, o: Options) => Problem[]> = {
+  fonts: checkFonts, css: checkCss, workflows: checkWorkflows, changelog: checkChangelog, engines: checkEngines, domain: checkDomain, spike: (r, o) => checkSpike(r, o.exported),
   spdx: (r, o) => checkSpdx(r, o.floor), readme: checkReadme, copying: checkCopying, files: checkFiles, 'private-refs': checkPrivateRefs, ipv4: checkIpv4,
   'owner-ids': (r, o) => checkOwnerIds(r, o.ownerEnv ?? defaultOwnerFiles(r)),
 };
 
 export function run(which: string, root: string, floor: number = MIN_SOURCE_FILES, ownerEnv: string[] | null = null, exported = false): Problem[] {
   const names = which === 'all' ? Object.keys(CHECKS) : [which];
-  return [...(exported ? checkExportPrivate(root) : []), ...names.flatMap((n) => CHECKS[n]!(root, { floor, ownerEnv }))];
+  return [...(exported ? checkExportPrivate(root) : []), ...names.flatMap((n) => CHECKS[n]!(root, { floor, ownerEnv, exported }))];
 }
 
 if (isMain(import.meta.url)) {
@@ -439,7 +570,7 @@ if (isMain(import.meta.url)) {
     else if (a === '--owner-env' && args[i + 1]) (ownerEnv ??= []).push(path.resolve(args[++i]!));
     else if (a === 'all' || a in CHECKS) which = a;
     else {
-      console.error('usage: node ci/public-files.ts [spdx|readme|copying|files|private-refs|ipv4|owner-ids|all] [--root <dir>] [--floor <n>] [--owner-env <file>]... [--export]');
+      console.error('usage: node ci/public-files.ts [spdx|readme|copying|files|private-refs|ipv4|owner-ids|fonts|css|workflows|changelog|engines|domain|spike|all] [--root <dir>] [--floor <n>] [--owner-env <file>]... [--export]');
       process.exit(2);
     }
   }

@@ -5,6 +5,10 @@
 // `/book/done/<bookingToken>` (SCR-CUS-03). A window that filled answers `window_full` with the nearest open windows: the page then shows
 // them beside the input it kept. The draft survives a reload and the language switch (UIS.FR-STATE-4) in session storage; nothing typed goes
 // into a URL (NFR-05).
+// K-01 (F-2011): 1 booking per draft. The draft carries its booking key (model.ts), sent with every send of the draft, and the in-flight
+// guard (shell/in-flight.ts) holds Confirm booking and Book this window busy from the press until SCR-CUS-03 opens; only a refusal or a
+// failed send lets it go. K-08.14: Book another visit's `?new=1` is dropped after its 1 wipe. K-08.15: the street field's search is
+// street-search.ts.
 import '../../styles/page-booking.css';
 import '../../styles/page-booking-taken.css';
 import '../../styles/page-booking-phone.css';
@@ -15,10 +19,12 @@ import type { OnlineAvailabilityAnswer } from '@bw/api';
 import type { Shown } from '../job/model.ts';
 import { BookingFrame } from '../shell/BookingFrame.tsx';
 import { BRANCHES, branchById } from '../shell/branches.ts';
-import { dayShort, emptyDraft, firstOpenStep, houseNumber, mobileDigits, monthOf, readKept, stepComplete, textsOn, writeKept, type Draft, type Lang, type Nearest, type StepNumber, type Street } from './model.ts';
+import { dayShort, emptyDraft, firstOpenStep, houseNumber, mobileDigits, monthOf, namesBookingKey, newBookingKey, openKept, stepComplete, textsOn, writeKept, type Draft, type Lang, type Nearest, type StepNumber, type Street } from './model.ts';
 import { useT } from '../shell/intl.tsx';
 import { bookingApi, browserZone, type BookingApi } from './api.ts';
 import { useLayout } from './layout.ts';
+import { createStreetSearch } from './street-search.ts';
+import { useInFlight } from '../shell/in-flight.ts';
 import { BookingView, type AvailState, type StreetState, type ViewProps } from './BookingView.tsx';
 
 const DEBOUNCE_MS = 200;
@@ -39,23 +45,24 @@ export function BookingScreen({ api: given, fresh = false }: { api?: BookingApi;
   const [street, setStreet] = useState<StreetState>({ kind: 'idle' });
   const [avail, setAvail] = useState<AvailState>({ kind: 'idle' });
   const [month, setMonth] = useState('');
-  const [booking, setBooking] = useState(false);
+  const guard = useInFlight();
+  const booking = guard.busy;
   const [shown, setShown] = useState<Shown | null>(null);
   const [invalid, setInvalid] = useState<ViewProps['invalid']>({});
   const [taken, setTaken] = useState<Taken | null>(null);
   const [restored, setRestored] = useState(false);
-  const seq = useRef({ street: 0, avail: 0 });
+  const seq = useRef({ avail: 0 });
 
-  // Restore the kept draft once (a reload, or the language switch remounting the page); `fresh` is Book another visit: it starts empty.
+  // Restore the kept draft once (a reload, or the language switch remounting the page); `fresh` is Book another visit: it starts empty,
+  // and `?new=1` leaves the address so a reload of the new draft keeps it (K-08.14).
   useEffect(() => {
-    if (fresh) writeKept(null);
-    const k = fresh ? null : readKept();
+    const k = openKept(fresh, () => router.replace('/book', { scroll: false }));
     if (k) {
       setDraft(k.draft);
       setStep(k.step);
     }
     setRestored(true);
-  }, [fresh]);
+  }, [fresh, router]);
   useEffect(() => {
     if (restored) writeKept({ draft, step, taken: null });
   }, [draft, step, restored]);
@@ -72,26 +79,18 @@ export function BookingScreen({ api: given, fresh = false }: { api?: BookingApi;
   }, [api]);
   useEffect(loadServices, [loadServices]);
 
-  // API-111 after 2 characters, debounced; the text goes in the body, never the URL.
+  // API-111 after 2 characters, debounced; the text goes in the body, never the URL. The newest text's answer only (K-08.15).
   const text = draft.streetText;
   const picked = draft.street;
+  const search = useMemo(() => createStreetSearch((q) => api.streets(q), setStreet, DEBOUNCE_MS), [api]);
   useEffect(() => {
-    if (picked !== null) return;
-    const q = text.trim();
-    if (q.length < 2) {
-      setStreet({ kind: 'idle' });
+    if (picked !== null) {
+      search.stop();
       return;
     }
-    const mine = ++seq.current.street;
-    const id = setTimeout(() => {
-      setStreet({ kind: 'loading' });
-      void api.streets(q).then((r) => {
-        if (mine !== seq.current.street) return;
-        setStreet(!r.ok ? { kind: 'error' } : r.data.streets.length === 0 ? { kind: 'none' } : { kind: 'results', streets: r.data.streets });
-      });
-    }, DEBOUNCE_MS);
-    return () => clearTimeout(id);
-  }, [text, picked, api]);
+    return search.typed(text);
+  }, [text, picked, search]);
+  useEffect(() => () => search.stop(), [search]);
   const retryStreets = () => setDraft((d) => ({ ...d, streetText: `${d.streetText} `.trimEnd() + (d.streetText.endsWith(' ') ? '' : ' ') }));
 
   // API-112 when the day step opens, and again when the page regains focus (CTL-CUS-01-06): a window that just filled shows Full.
@@ -161,18 +160,28 @@ export function BookingScreen({ api: given, fresh = false }: { api?: BookingApi;
   const input = (date: string, windowId: string) => ({
     serviceId: draft.serviceId as string, streetId: (draft.street as Street).streetId, houseNumber: houseNumber(draft.house) as number, date, windowId, name: draft.name.trim(),
     mobile: draft.mobile.trim() === '' ? null : draft.mobile.trim(), textsOn: textsOn(draft), textLanguage: draft.textLanguage as Lang, timeZone: browserZone(),
+    bookingKey: draft.bookingKey,
   });
 
   const book = async (date: string, windowId: string) => {
-    setBooking(true);
+    // K-01: a press while a send of this draft is in flight, or after it booked while the page moves, sends nothing.
+    if (!guard.begin()) return;
     setShown(null);
-    const r = await api.book(input(date, windowId));
-    setBooking(false);
+    let r: Awaited<ReturnType<BookingApi['book']>>;
+    try {
+      r = await api.book(input(date, windowId));
+    } catch {
+      guard.end();
+      setShown({ key: 'booking.err.failed' });
+      return;
+    }
     if (r.ok) {
+      // The guard stays held: Confirm stays busy until SCR-CUS-03 opens, so a press meanwhile books nothing more.
       writeKept(null);
       router.push(`/book/done/${encodeURIComponent(r.data.bookingToken)}`);
       return;
     }
+    guard.end();
     if (r.code === 'window_full') {
       const open = ((r.detail as { open?: Nearest[] }).open ?? []).slice(0, 3);
       const filledDay = avail.kind === 'ready' ? avail.data.days.find((d) => d.date === date) : undefined;
@@ -193,7 +202,11 @@ export function BookingScreen({ api: given, fresh = false }: { api?: BookingApi;
       return;
     }
     if (r.code === 'rule_refused') setShown({ key: 'booking.err.refused', values: { phone: branch.officePhone } });
-    else if (r.code === 'validation_failed') setShown({ key: 'booking.err.invalid' });
+    else if (r.code === 'validation_failed' && namesBookingKey(r.detail)) {
+      // CTL-CUS-01-13: a key refused as missing or malformed is the only one replaced; the input stays.
+      setDraft((d) => ({ ...d, bookingKey: newBookingKey() }));
+      setShown({ key: 'booking.err.failed' });
+    } else if (r.code === 'validation_failed') setShown({ key: 'booking.err.invalid' });
     else setShown({ key: 'booking.err.failed' });
   };
 

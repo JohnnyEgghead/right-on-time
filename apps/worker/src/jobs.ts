@@ -15,7 +15,7 @@
 //     time per key, and never across an open transaction (F-357, F-382).
 import type { Settings } from '@bw/config';
 import type { createPool } from '@bw/db';
-import type { Logger } from '@bw/log';
+import { causeCodeOf, type Logger } from '@bw/log';
 import { catalogs } from '@bw/i18n/src/catalog.ts';
 import { TEXT_REMINDER, TEXT_TRY, textGatewayFrom } from '@bw/outbox';
 import type { Clock } from '@bw/time';
@@ -26,7 +26,7 @@ import { startImportJob } from './import/index.ts';
 import { startDispatcher, type Dispatcher, type EventHandler, type EventHandlers, type GiveUp, type GiveUps, type ParallelLane } from './dispatcher.ts';
 import { AUTOPILOT_STEP, autopilotStepHandler } from './outbox/autopilot.ts';
 import { ETA_SWEEP, etaSweepHandler, giveUpEtaSweep } from './outbox/eta-sweep.ts';
-import { reminderHandler } from './outbox/reminder.ts';
+import { giveUpReminderEvent, reminderHandler } from './outbox/reminder.ts';
 import { giveUpTextHandler, tryTextHandler } from './outbox/tryText.ts';
 
 export interface WorkerDeps {
@@ -69,14 +69,15 @@ const giveUpSkipped: GiveUp = async () => ({ state: 'skipped', result: 'handler_
  * Per kind, what the dispatcher does after MAX_HANDLER_FAILURES failed runs of one event (F-368): the kind's end record,
  * logged as 'event gave up' (F-1844). Every serial-lane kind has one (eventHandlers; jobs.test.ts holds the 2 lists
  * equal): text.try gives the text up (call list entry and text_gave_up alert, as after its 5th failed try); alert.check
- * and eta.sweep end the event and still write their next event, so the chain goes on; text.reminder and autopilot.step
- * end the event. The billing lane's kinds are not here: they run in the parallel lane, where the healer owns their end.
+ * and eta.sweep end the event and still write their next event, so the chain goes on; text.reminder puts a visit still
+ * owed its reminder on the call list (F-2006 K-03); autopilot.step ends the event. The billing lane's kinds are not here:
+ * their give-up is the lane's own (billingGiveUp: the item to waiting_person, F-2006 K-02, K-11).
  */
 export function giveUpsFor(deps: WorkerDeps): GiveUps {
   return {
     [TEXT_TRY]: giveUpTextHandler({ clock: deps.clock }),
     [ALERT_CHECK]: giveUpAlertCheck,
-    [TEXT_REMINDER]: giveUpSkipped,
+    [TEXT_REMINDER]: giveUpReminderEvent,
     [ETA_SWEEP]: giveUpEtaSweep,
     [AUTOPILOT_STEP]: giveUpSkipped,
   };
@@ -121,6 +122,21 @@ export async function startJobs(deps: WorkerDeps, list: readonly JobStarter[] = 
   return running;
 }
 
-export async function stopJobs(running: readonly RunningJob[]): Promise<void> {
-  await Promise.allSettled(running.map((j) => j.stop()));
+/** Stop every job, each whatever the others do; returns the reason of each stop that rejected (F-2006 J-24). */
+export async function stopJobs(running: readonly RunningJob[]): Promise<unknown[]> {
+  const ends = await Promise.allSettled(running.map((j) => j.stop()));
+  return ends.flatMap((e) => (e.status === 'rejected' ? [e.reason] : []));
+}
+
+/**
+ * The worker's stop (SIGTERM, SIGINT; F-2006 J-24): every job, then the pool. Each stop that rejects is logged with its
+ * cause code, and the process then exits 1, so a stop that failed never reads as a clean one (it exited 0).
+ */
+export async function stopWorker(d: {
+  running: readonly RunningJob[]; pool: { end(): Promise<void> }; log: Pick<Logger, 'error'>; exit(code: number): void;
+}): Promise<void> {
+  const failed = await stopJobs(d.running);
+  await d.pool.end().catch((e: unknown) => failed.push(e));
+  for (const e of failed) d.log.error({ status: 'stop failed', errorCode: causeCodeOf(e) });
+  d.exit(failed.length > 0 ? 1 : 0);
 }

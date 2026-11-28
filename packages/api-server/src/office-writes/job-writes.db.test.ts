@@ -89,6 +89,23 @@ describe('cancel a job (API-25) on a day with a block in the plan (F-504)', () =
   });
 });
 
+describe('reschedule onto a day with an overlap already on it (API-24; SD-45)', () => {
+  // why: F-2012 K-09.2 the trial settle must count only an overlap the move causes, so an unrelated overlap on the new day keeps the technician
+  it('keeps the technician when the new day has an unrelated block overlap and the moved job lands clear of every block', async () => {
+    const date = '2026-10-06';
+    const there = await created({ date, window: 'two_hour 08:00', technician: 'Kevin Doyle' });
+    const p = (await rows<{ at: Date }>('SELECT planned_arrival AS at FROM world.job WHERE job_number = $1', [there.jobNumber]))[0]!.at;
+    // The overlap a merge leaves by design (F-378): a block over that job's planned time, put in by the database.
+    await rows(`INSERT INTO world.time_block (technician_id, date, zone, start, "end", label, place, version, seeded)
+                VALUES ($1, $2, 'America/New_York', $3, $4, 'Over the job', NULL, 1, false)`, [tech('Kevin Doyle'), date, p, new Date(p.getTime() + 30 * 60_000)]);
+    const job = await created({ date: '2026-10-07', window: 'two_hour 14:00', technician: 'Kevin Doyle' });
+    const r = await api.post(`/jobs/${job.jobNumber}/schedule`, { date, windowId: win('two_hour 14:00'), baseVersion: job.version }, keisha);
+    expect([r.status, r.status === 200 ? null : await problem(r)]).toEqual([200, null]);
+    expect(await body(r)).toMatchObject({ job: { date, technicianId: tech('Kevin Doyle') }, outcome: { technicianKept: true } });
+    expect(await count(`SELECT count(*) AS n FROM world.time_block WHERE label = 'Over the job' AND date = $1`, [date])).toBe(1);
+  });
+});
+
 describe('cancel a job (API-25)', () => {
   // why: FR-TECH-6
   it('cancels a scheduled job with 1 canceled history row, a version bump and 1 notice, and its technician day loses it', async () => {
@@ -225,6 +242,45 @@ describe('edit job details (API-27)', () => {
     expect([foreign.status, (await problem(foreign)).code]).toEqual([422, 'validation_failed']);
     expect(await rows('SELECT version FROM world.job WHERE job_number = $1', [job.jobNumber])).toEqual([{ version: 1 }]);
     expect((await changes(job.jobNumber)).map((c) => c.kind)).toEqual(['created']);
+  });
+});
+
+describe('edit job details (API-27) on a day with a block in the plan (OA-93; F-2044)', () => {
+  const arrival = async (n: number) => (await rows<{ planned_arrival: Date }>('SELECT planned_arrival FROM world.job WHERE job_number = $1', [n]))[0]!.planned_arrival;
+  const minutes = async (n: number) => (await rows<{ expected_minutes: number }>('SELECT expected_minutes FROM world.job WHERE job_number = $1', [n]))[0]!.expected_minutes;
+  const block = (date: string, name: string, start: Date, end: Date) => rows(
+    `INSERT INTO world.time_block (technician_id, date, zone, start, "end", label, place, version, seeded)
+     VALUES ($1, $2, 'America/New_York', $3, $4, 'Gap', NULL, 1, false)`, [tech(name), date, start, end]);
+
+  // why: OA-93 F-2044 an edit to a shorter service pulls the next job earlier onto a block; that overlap is shown on the board, not refused
+  it('passes an edit to a shorter service whose recompute pulls a later job onto a block, and keeps the block', async () => {
+    const date = '2026-10-13';
+    const a = await created({ date, window: 'two_hour 08:00', technician: 'Jamal Carter', service: 'heating_or_ac_fix' });
+    const b = await created({ date, window: 'two_hour 08:00', technician: 'Jamal Carter' });
+    const before = await arrival(b.jobNumber);
+    // 20 to 10 minutes before B's planned arrival: clear of B now, over B once A is 30 minutes shorter.
+    await block(date, 'Jamal Carter', new Date(before.getTime() - 20 * 60_000), new Date(before.getTime() - 10 * 60_000));
+    const r = await edit(a.jobNumber, { serviceId: 'furnace_tune_up', baseVersion: a.version });
+    expect([r.status, r.status === 200 ? null : await problem(r)]).toEqual([200, null]);
+    expect((await arrival(b.jobNumber)).getTime()).toBeLessThan(before.getTime());
+    expect(await count(`SELECT count(*) AS n FROM world.time_block WHERE label = 'Gap' AND date = $1`, [date])).toBe(1);
+    expect(await count(`SELECT count(*) AS n FROM world.job_change WHERE job_number = $1 AND kind = 'details'`, [a.jobNumber])).toBe(1);
+  });
+
+  // why: OA-93 F-2044 scope is shortening edits only, so an edit to a longer service that pushes a later job onto a block is still refused
+  it('still refuses an edit to a longer service whose recompute pushes a later job onto a block, and writes nothing', async () => {
+    const date = '2026-10-14';
+    const a = await created({ date, window: 'two_hour 08:00', technician: 'Jamal Carter' });
+    const b = await created({ date, window: 'two_hour 08:00', technician: 'Jamal Carter' });
+    const before = await arrival(b.jobNumber);
+    const end = before.getTime() + (await minutes(b.jobNumber)) * 60_000;
+    // Just past B's end now, inside B once A is 30 minutes longer.
+    await block(date, 'Jamal Carter', new Date(end + 5 * 60_000), new Date(end + 15 * 60_000));
+    const r = await edit(a.jobNumber, { serviceId: 'heating_or_ac_fix', baseVersion: a.version });
+    expect(r.status).toBeGreaterThanOrEqual(400);
+    expect((await problem(r)).code).toBe('time_overlap');
+    expect((await arrival(b.jobNumber)).getTime()).toBe(before.getTime());
+    expect(await count(`SELECT count(*) AS n FROM world.job_change WHERE job_number = $1 AND kind = 'details'`, [a.jobNumber])).toBe(0);
   });
 });
 

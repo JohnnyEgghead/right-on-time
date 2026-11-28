@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { OnlineDay } from '@bw/api';
 import type { ClientT } from '../shell/intl.tsx';
 import {
-  dayKind, dayName, dayShort, emptyDraft, firstOpenStep, firstPickable, hasMobile, houseNumber, mobileDigits, monthGrid, optionWords, phoneText, pickable, roomWords, serviceLine,
+  dayKind, dayName, dayShort, emptyDraft, firstOpenStep, firstPickable, hasMobile, houseNumber, mobileDigits, monthGrid, namesBookingKey, optionWords, phoneText, pickable, roomWords, serviceLine,
   stepComplete, textsOn, windowLabel, type Draft, type Nearest, type ServiceItem,
 } from './model.ts';
 import { HAROLD, PICKED_DAY, previewDays, SERVICES, STREET, TODAY } from './preview-data.ts';
@@ -160,5 +160,14 @@ describe('prices (FR-BOOK-14)', () => {
     expect(serviceLine(en, item('heating_or_ac_fix'))).toBe('$79 visit fee');
     expect(serviceLine(en, item('water_heater'))).toBe('Repair or replace');
     expect(serviceLine(es, item('plumbing_repair'))).toBe('$79 por la visita');
+  });
+});
+
+describe('the refusal that gives the draft a new key (CTL-CUS-01-13)', () => {
+  // why: F-2061 only a validation_failed that names bookingKey among its fields replaces the draft key; any other refusal keeps it (the person's input stays)
+  it('names the booking key only when a field of the answer is bookingKey', () => {
+    expect(namesBookingKey({ fields: [{ field: 'name', reason: 'required' }, { field: 'bookingKey', reason: 'malformed' }] })).toBe(true);
+    expect(namesBookingKey({ fields: [{ field: 'name', reason: 'required' }] })).toBe(false);
+    expect([namesBookingKey({}), namesBookingKey(null), namesBookingKey({ fields: 'bookingKey' })]).toEqual([false, false, false]);
   });
 });

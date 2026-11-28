@@ -218,9 +218,24 @@ export function mount(table: readonly PolicyEntry[], handlers: Readonly<Record<s
   };
 }
 
-/** nginx sets X-Forwarded-For to the peer address (infra/nginx/routes-open.conf); the web port is reachable only through it. */
+/**
+ * J-28: whether the connection's peer is the proxy in front of the web port. nginx runs on the host or the Compose network, so its
+ * peer address is loopback or private; a caller on any other address reached the port directly and its own header is not trusted.
+ * No peer address (an in-process call with no socket) has no caller to distrust.
+ */
+function isProxyPeer(address: string | undefined): boolean {
+  if (address === undefined) return true;
+  const a = address.startsWith('::ffff:') ? address.slice(7) : address;
+  if (a === '::1' || /^f[cd][0-9a-f]{2}:/i.test(a) || /^fe80:/i.test(a)) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/.exec(a);
+  if (!m) return false;
+  const [o1, o2] = [Number(m[1]), Number(m[2])];
+  return o1 === 127 || o1 === 10 || (o1 === 172 && o2 >= 16 && o2 <= 31) || (o1 === 192 && o2 === 168) || (o1 === 169 && o2 === 254);
+}
+
+/** nginx sets X-Forwarded-For to the peer address it sees (infra/nginx/routes-open.conf, routes-locked.conf); the header is read only from nginx's own peer. */
 function clientAddress(h: Headers, info: CallInfo): string {
-  const fwd = h.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const fwd = isProxyPeer(info.address) ? h.get('x-forwarded-for')?.split(',')[0]?.trim() : undefined;
   return fwd || info.address || 'unknown';
 }
 
@@ -292,7 +307,9 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
         // F-543: a write is stamped from the clock row itself, not this process's copy (cached up to 250 ms): a replay or jump made by
         // another process (the worker ends a replay) is then already in the time the write runs at.
         if (WRITES.has(request.method)) deps.clock.invalidate?.();
-        const demoNow = await readClock().catch(() => {
+        const demoNow = await readClock().catch((e: unknown) => {
+          // K-10.3: a failed clock-row read is logged once, at error level, with its cause code (never its message).
+          deps.log.error({ contract: entry.contract, route: entry.path, errorCode: causeCodeOf(e) });
           clockRead = false;
           const epoch = Temporal.Instant.fromEpochMilliseconds(0);
           meta = { contract: entry.contract, worldEpoch: 0, demoNow: toWire(epoch, DEFAULT_ZONE) };
@@ -389,7 +406,7 @@ function wrap(entry: ApiPolicyEntry, handler: Handler<unknown>, deps: KernelDeps
     } catch (e) {
       // Any throw (the session store, the clock, the database, the handler): server_error to the caller, and the log line
       // names its cause code, never its message (F-1845).
-      cause = causeCodeOf(e);
+      cause = causeCodeOf(e)
       if (meta.demoNow === '') await readClock().catch(() => undefined);
       res = refuse('server_error');
     }

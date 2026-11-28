@@ -12,6 +12,7 @@ import { useAnnounce } from '../shell/Announcer.tsx';
 import { branchById } from '../shell/branches.ts';
 import { useT } from '../shell/intl.tsx';
 import { confirmLeave, useLeaveGuard } from '../shell/leave-guard.ts';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { useBranch } from '../shell/useBranch.ts';
 import { dayText, draftOf, draftState, farDay, pickedOf, spanLabel, switchBar, switchRefusal } from './model.ts';
 import { WindowsView, IDLE_UI, type WindowsState, type WindowsUi } from './WindowsView.tsx';
@@ -43,22 +44,32 @@ export function WindowsScreen() {
   const wantSwitch = params.get('switch') === '1';
   const opened = useRef(false);
 
+  const newest = useNewestAnswer();
   const load = useCallback(async (opts: { resetDraft?: boolean } = {}) => {
     if (branch === null) return;
-    try {
-      const a = await client.call(bookingSettings, { branchId: branch });
-      // F-748: a failed read of the far day fails the load, as a failed read of the calendar does: the error state says so, never a silent today.
-      const far = farDay(a.data.days, askedDay.current, a.data.today);
-      const extra = far === null ? [] : (await client.call(bookingSettings, { branchId: branch, from: far, to: far })).data.days;
+    // K-05: a re-read for another branch (or day) that lands after a newer one began is dropped, never shown over it.
+    await newest.run(async () => {
+      try {
+        const a = await client.call(bookingSettings, { branchId: branch });
+        // F-748: a failed read of the far day fails the load, as a failed read of the calendar does: the error state says so, never a silent today.
+        const far = farDay(a.data.days, askedDay.current, a.data.today);
+        const extra = far === null ? [] : (await client.call(bookingSettings, { branchId: branch, from: far, to: far })).data.days;
+        return { data: a.data, extra };
+      } catch {
+        return null;
+      }
+    }, (got) => {
+      if (got === null) {
+        setState((s) => (s.kind === 'ready' ? s : { kind: 'error' }));
+        return;
+      }
       const prev = live.current.state;
-      setState({ kind: 'ready', data: { ...a.data, days: [...a.data.days, ...extra] } });
+      setState({ kind: 'ready', data: { ...got.data, days: [...got.data.days, ...got.extra] } });
       // A re-read replaces the typed numbers only when none is being edited: a manager's typing survives another person's change.
       const dirty = opts.resetDraft !== true && prev.kind === 'ready' && draftState(prev.data.windows, live.current.ui.draft).changed;
-      setUi((u) => ({ ...u, draft: dirty ? u.draft : draftOf(a.data.windows) }));
-    } catch {
-      setState((s) => (s.kind === 'ready' ? s : { kind: 'error' }));
-    }
-  }, [client, branch]);
+      setUi((u) => ({ ...u, draft: dirty ? u.draft : draftOf(got.data.windows) }));
+    });
+  }, [client, branch, newest]);
 
   // A new branch is a new page: its own numbers, its own picked day.
   useEffect(() => {

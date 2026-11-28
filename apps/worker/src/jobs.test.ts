@@ -29,8 +29,9 @@ describe('the worker registry wires billing as the dispatcher billing lane (F-35
     expect(billing.concurrency).toBe(BILLING_CONCURRENCY);
     expect(BILLING_CONCURRENCY).toBeLessThan(WORKER_POOL_MAX);
     expect(BILLING_CONCURRENCY).toBeGreaterThanOrEqual(1);
-    const main = readFileSync(new URL('./main.ts', import.meta.url), 'utf8');
-    expect(main).toMatch(/createPool\(\{[^}]*max: WORKER_POOL_MAX[,\s]/);
+    // main.ts builds its pool with workerPool (./pool.ts, F-2006 K-10.8), which sets that size.
+    expect(readFileSync(new URL('./main.ts', import.meta.url), 'utf8')).toMatch(/workerPool\(/);
+    expect(readFileSync(new URL('./pool.ts', import.meta.url), 'utf8')).toMatch(/createPool\(\{[^}]*max: WORKER_POOL_MAX[,\s]/);
   });
 
   // why: F-1844, F-368: a serial kind with no give-up retried a failing event every pass for ever with no end record.

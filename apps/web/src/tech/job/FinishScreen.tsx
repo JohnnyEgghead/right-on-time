@@ -34,20 +34,43 @@ import { IDLE, useJob, useParts, type JobView } from './useJob.ts';
 
 const XICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>;
 
+/**
+ * K-08.23: the phone's own unsent photo as an object URL, handed to `onUrl`. The returned cleanup revokes it; a blob that lands after the cleanup
+ * (the screen closed first) is revoked at once, so no URL outlives the screen that asked for it.
+ */
+export function holdPhotoUrl(
+  read: () => Promise<Blob | ArrayBuffer | Uint8Array | null | undefined>,
+  onUrl: (url: string) => void, onFail: () => void,
+): () => void {
+  let url: string | null = null;
+  let live = true;
+  void read().then((b) => {
+    if (!b) return live ? onFail() : undefined;
+    url = URL.createObjectURL(new Blob([b as BlobPart], { type: 'image/jpeg' }));
+    if (!live) {
+      URL.revokeObjectURL(url);
+      return undefined;
+    }
+    return onUrl(url);
+  }, () => (live ? onFail() : undefined));
+  return () => {
+    live = false;
+    if (url) URL.revokeObjectURL(url);
+  };
+}
+
+/** K-08.9: the signature's time is the demo time at the moment of signing, read then (never the time the screen opened); the device's clock when the phone has no demo offset. */
+export async function signingTime(readDemoNow: () => Promise<number | null>, zone: string): Promise<string> {
+  const ms = await readDemoNow().catch(() => null);
+  return demoWire(ms ?? realNow('device_stamp').epochMilliseconds, zone);
+}
+
 function Thumb({ p }: { p: ShownPhoto }) {
   const [src, setSrc] = useState<string | null>(previewFile(p.key) ?? (p.waiting ? null : thumbSrc(p.key)));
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     if (!p.waiting || previewFile(p.key)) return;
-    let url: string | null = null;
-    void techOutbox().blob(p.key).then((b) => {
-      if (!b) return setFailed(true);
-      url = URL.createObjectURL(new Blob([b as BlobPart], { type: 'image/jpeg' }));
-      setSrc(url);
-    }, () => setFailed(true));
-    return () => {
-      if (url) URL.revokeObjectURL(url);
-    };
+    return holdPhotoUrl(() => techOutbox().blob(p.key), setSrc, () => setFailed(true));
   }, [p.key, p.waiting]);
   if (failed || !src) return <span className="bw-th bw-ph-none"><Icon name="camera" /></span>;
   return <img className="bw-th" src={src} alt="" onError={() => setFailed(true)} />;
@@ -57,16 +80,15 @@ export interface FinishScreenProps {
   jobNumber: number;
   fixed?: {
     view: JobView; outbox?: OutboxState; draft?: FinishDraft; parts?: Part[] | null; find?: string; msg?: 'parts' | 'labor' | 'server' | 'sig' | null;
-    confirming?: boolean; restored?: boolean; demoNowMs?: number; me?: string; clock?: ClockAnswer; mini?: boolean; focusLine?: number;
+    confirming?: boolean; restored?: boolean; demoNowMs?: number; clock?: ClockAnswer; mini?: boolean; focusLine?: number;
   };
 }
 
 export function FinishScreen({ jobNumber, fixed }: FinishScreenProps) {
   const t = useT();
-  const { view, me: liveMe } = useJob(jobNumber, fixed?.view);
+  const { view, me } = useJob(jobNumber, fixed?.view);
   const outbox = useOwnOutbox(fixed ? (fixed.outbox ?? IDLE) : undefined);
   const parts = useParts(fixed ? (fixed.parts ?? null) : undefined);
-  const me = fixed?.me ?? liveMe;
   const [d, setD] = useState<FinishDraft>(fixed?.draft ?? emptyFinish(jobNumber));
   const [loaded, setLoaded] = useState(Boolean(fixed));
   const [restored, setRestored] = useState(fixed?.restored ?? false);
@@ -314,7 +336,7 @@ export function FinishScreen({ jobNumber, fixed }: FinishScreenProps) {
         <SignaturePad
           png={d.signature?.png ?? null}
           signedLine={d.signature ? t('tech.finish.signed', { name: job.customer.name, time: clockWords(d.signature.at) }) : null}
-          onSigned={(png) => keep({ ...d, signature: { png, at: demoWire(demoNow ?? realNow('device_stamp').epochMilliseconds, job.job.zone) } })}
+          onSigned={(png) => void signingTime(fixed ? () => Promise.resolve(demoNow) : () => techOutbox().demoNowMs(), job.job.zone).then((at) => keep({ ...d, signature: { png, at } }))}
           onClear={() => keep({ ...d, signature: null })}
         />
         {msg === 'sig' ? <div className="fmsg" role="alert" data-ctl="CTL-TEC-07-14"><Icon name="alert" />{t('tech.finish.sigFailed')}</div> : null}

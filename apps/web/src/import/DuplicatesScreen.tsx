@@ -14,6 +14,7 @@ import { useAnnounce } from '../shell/Announcer.tsx';
 import { branchById } from '../shell/branches.ts';
 import { Icon } from '../shell/Icon.tsx';
 import { useT, type ClientT } from '../shell/intl.tsx';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { ErrorPanel } from '../shell/Panels.tsx';
 import { dateLong, equipmentWord, formatPhone } from '../customers/model.ts';
 import { canDecide, decisionForKey, differs, fmtNumber, indexAfter, monthYear, pct, whyParts, whenText, type Decision, type Pair, type PairRecord, type PairsAnswer, type RunsAnswer } from './model.ts';
@@ -397,22 +398,28 @@ export function DuplicatesScreen() {
   const [ui, setUi] = useState<DupsUi>(IDLE_DUPS_UI);
   const runs = useRef<RunsAnswer | null>(null);
 
+  const newest = useNewestAnswer();
+  // K-05: the queue of another filter that lands after a newer filter's is dropped; the runs answer is kept either way (it does not change).
   const load = useCallback(async (filter: Filter, index: number, focus = false) => {
-    const [r, rr] = await Promise.all([call(likelyDuplicates, { status: filter, limit: 50 }), runs.current ? Promise.resolve(null) : call(importRuns)]);
-    if (rr?.ok) runs.current = rr.data;
-    if (!r.ok) return setState({ kind: 'error' });
-    const real = runs.current?.runs.find((x) => x.kind === 'real' && x.status === 'done') ?? null;
-    const done = real ?? runs.current?.runs.find((x) => x.status === 'done') ?? null;
-    const rep = done?.counts?.duplicates;
-    setState({
-      kind: 'ready',
-      data: {
-        progress: r.data.progress, pairs: r.data.pairs, next: r.data.next, filter, index: Math.max(0, Math.min(index, r.data.pairs.length - 1)),
-        found: rep ? { total: rep.total, exact: rep.exact } : null, importedAt: real?.finishedAt ?? null,
-      },
+    await newest.run(async () => {
+      const [r, rr] = await Promise.all([call(likelyDuplicates, { status: filter, limit: 50 }), runs.current ? Promise.resolve(null) : call(importRuns)]);
+      if (rr?.ok) runs.current = rr.data;
+      return r;
+    }, (r) => {
+      if (!r.ok) return setState({ kind: 'error' });
+      const real = runs.current?.runs.find((x) => x.kind === 'real' && x.status === 'done') ?? null;
+      const done = real ?? runs.current?.runs.find((x) => x.status === 'done') ?? null;
+      const rep = done?.counts?.duplicates;
+      setState({
+        kind: 'ready',
+        data: {
+          progress: r.data.progress, pairs: r.data.pairs, next: r.data.next, filter, index: Math.max(0, Math.min(index, r.data.pairs.length - 1)),
+          found: rep ? { total: rep.total, exact: rep.exact } : null, importedAt: real?.finishedAt ?? null,
+        },
+      });
+      if (focus) setUi((u) => ({ ...u, focusTick: u.focusTick + 1 }));
     });
-    if (focus) setUi((u) => ({ ...u, focusTick: u.focusTick + 1 }));
-  }, []);
+  }, [newest]);
 
   useEffect(() => {
     void load('to_check', 0);

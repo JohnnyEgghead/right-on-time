@@ -123,7 +123,7 @@ export const ROUTE_SIGNAL_INTERVAL_MS = 60_000;
  * and the failures since the last line. Never the demo clock; no point, address, phone or job number (the @bw/log allowlist admits none).
  * The user sees nothing new (SD-49 step 3).
  */
-function routeSignal(log: Logger, now: () => number): (cause: RouteFailure) => void {
+export function routeSignal(log: Logger, now: () => number): (cause: RouteFailure) => void {
   let last = Number.NEGATIVE_INFINITY;
   let failures = 0;
   return (cause) => {
@@ -138,14 +138,14 @@ function routeSignal(log: Logger, now: () => number): (cause: RouteFailure) => v
 
 /**
  * The live client: osrm-routed at `base`. Each request is cut at `timeoutMs`; a request already in flight for the same 2 points is
- * shared. Any failure (refused, unresolved, timed out, not JSON, no route, a step the mapping refuses) answers null, and with `log` set
- * is signalled to the operator at most once a minute ({@link routeSignal}); `now` is the real-time clock in ms (default performance.now).
+ * shared. Any failure (refused, unresolved, timed out, not JSON, no route, a step the mapping refuses) answers null, and with `signal` set
+ * is signalled to the operator (configureRouting passes the once-a-minute {@link routeSignal} of its `log`).
  */
-export function osrmRoutingService(base: string, opts: { timeoutMs?: number; fetch?: typeof fetch; log?: Logger; now?: () => number; signal?: (cause: RouteFailure) => void } = {}): RoutingService {
+export function osrmRoutingService(base: string, opts: { timeoutMs?: number; fetch?: typeof fetch; signal?: (cause: RouteFailure) => void } = {}): RoutingService {
   const doFetch = opts.fetch ?? fetch;
   const timeoutMs = opts.timeoutMs ?? LIVE_ROUTE_BUDGET_MS;
   const inflight = new Map<string, Promise<RouteTrack | null>>();
-  const signal = opts.signal ?? (opts.log ? routeSignal(opts.log, opts.now ?? (() => performance.now())) : () => undefined);
+  const signal = opts.signal ?? (() => undefined);
   const ask = async (url: string): Promise<RouteTrack | null> => {
     let r: Response;
     try {

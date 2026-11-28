@@ -6,6 +6,7 @@
 //   API-113  bookOnline: resolve the street, reuse or create the customer, then 1 call of the race-safe office write createJob
 //            (office-writes/service.ts; its locks and its room check are the only ones) with the online channel columns, then the
 //            confirmation and the reminder in the same transaction as API-28 and API-24 send them. `window_full` answers the 3 nearest open windows.
+//            A booking key a job already holds answers that job's booking again and books nothing (K-01, SPECIFICATIONS 6.1 Booking write).
 //   API-114  the booking's summary by its token, with the confirmation text as the outbox holds it.
 import type { bookingSummary as summaryRow, bookOnline as bookRow, onlineAvailability as availabilityRow } from '@bw/api';
 import { fewWindowsLeft, ONLINE_HORIZON_DAYS, PLACES_LEFT_THRESHOLD } from '@bw/api';
@@ -18,7 +19,7 @@ import { addDays, atLocal, localDateOf, Temporal, toWire } from '@bw/time';
 import { randomBytes } from 'node:crypto';
 import type { z } from 'zod';
 import { branchTechnicians, branchWindows, officeDay, readDayKind, roomInWindow, serviceIsInstall, windowOffered, type Window } from '../office-writes/day.ts';
-import { createJob, RULE, WriteRefused, type OnlineContext } from '../office-writes/service.ts';
+import { BookingKeyHeld, createJob, RULE, WriteRefused, type OnlineContext } from '../office-writes/service.ts';
 import type { ApiResult, Handler, HandlerContext, Tx } from '../types.ts';
 import { pointOf, streetOf } from './customers.ts';
 
@@ -118,8 +119,54 @@ async function customerFor(tx: Tx, input: {
   return (ins.rows[0] as { id: string }).id;
 }
 
-/** API-113. */
-export const bookOnlineHandler: Handler<Out<typeof bookRow>> = async (req, tx: Tx, hctx): Promise<ApiResult<Out<typeof bookRow>>> => {
+type Booked = ApiResult<Out<typeof bookRow>>;
+
+/** The job that holds a booking key (K-01), as the booking's answer tells it: its window in the job's zone, the branch's (F-1084). */
+async function heldBy(tx: Tx, bookingKey: string): Promise<Booked | null> {
+  const j = (await tx.query<{ job_number: number; booking_token: string; service_id: string; date: string; window_start: Date; window_end: Date; zone: string }>(
+    'SELECT job_number, booking_token, service_id, date::text AS date, window_start, window_end, zone FROM world.job WHERE booking_key = $1', [bookingKey])).rows[0];
+  if (!j) return null;
+  return {
+    ok: true, status: 201,
+    data: { bookingToken: j.booking_token, visit: { jobNumber: j.job_number, serviceId: j.service_id, date: j.date, window: { start: wireIn(j.window_start, j.zone), end: wireIn(j.window_end, j.zone) }, zone: j.zone } },
+  };
+}
+
+/** The insert lost on the booking key's unique constraint (0025): a send of the same draft committed its job first. */
+const lostOnKey = (e: unknown): boolean => {
+  const err = e as { code?: unknown; constraint?: unknown } | null;
+  return err?.code === '23505' && err.constraint === 'job_booking_key_key';
+};
+
+/**
+ * API-113 (SPECIFICATIONS 6.1 Booking write; K-01, F-2011): a key a job already holds answers that job's booking again and writes nothing
+ * else (no customer update, no job_change, no job.changed, no texts). The first lookup comes right after the contract's validation, before
+ * any lock. The new booking then runs in a savepoint: when a send of the same key wins the race (createJob finds the key under the
+ * booking-day lock, or the insert loses on the unique constraint), the savepoint is rolled back, so this send's customer write goes with
+ * it, and the winner's booking is answered. The winner's job is read again after the rollback; a key that names no job there is an error,
+ * never a fresh answer.
+ */
+export const bookOnlineHandler: Handler<Out<typeof bookRow>> = async (req, tx: Tx, hctx): Promise<Booked> => {
+  const p = req.params as In<typeof bookRow>;
+  const held = await heldBy(tx, p.bookingKey);
+  if (held) return held;
+  await tx.query('SAVEPOINT booking_key');
+  try {
+    const out = await bookNew(req, tx, hctx);
+    await tx.query('RELEASE SAVEPOINT booking_key');
+    return out;
+  } catch (e) {
+    if (!(e instanceof BookingKeyHeld) && !lostOnKey(e)) throw e;
+    await tx.query('ROLLBACK TO SAVEPOINT booking_key');
+    await tx.query('RELEASE SAVEPOINT booking_key');
+    const won = await heldBy(tx, p.bookingKey);
+    if (!won) throw new Error('booking key race: the winning send\'s job is not found after the rollback', { cause: e });
+    return won;
+  }
+};
+
+/** API-113's new booking: no job held the key when the send began. */
+const bookNew: Handler<Out<typeof bookRow>> = async (req, tx: Tx, hctx): Promise<Booked> => {
   const p = req.params as In<typeof bookRow>;
   const street = await streetOf(tx, p.streetId);
   if (!street) return invalid;
@@ -144,7 +191,7 @@ export const bookOnlineHandler: Handler<Out<typeof bookRow>> = async (req, tx: T
   const bookingToken = newBookingToken();
   try {
     // The same race-safe write as the office's API-28 (invariant 3): its locks, its room check, its job_change. Nothing here locks or counts.
-    const job = await createJob(tx, ctx, { customerId, serviceId: p.serviceId, equipmentId: null, problem: null, date: p.date, windowId: p.windowId, technicianId: null, online: { bookingToken } });
+    const job = await createJob(tx, ctx, { customerId, serviceId: p.serviceId, equipmentId: null, problem: null, date: p.date, windowId: p.windowId, technicianId: null, online: { bookingToken, bookingKey: p.bookingKey } });
     // FR-TEXT-1, SD-45: the confirmation in the booking's own transaction, as API-28 and API-24 send it; quiet hours may hold it. Then the reminder (section 6.4).
     await sendConfirmation(tx, textContext(hctx), { jobNumber: job.jobNumber, now });
     await planReminder(tx, { jobNumber: job.jobNumber, now });

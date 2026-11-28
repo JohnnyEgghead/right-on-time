@@ -40,7 +40,7 @@
 /* A live dialog covers the window; the frames draw it inside a tile (.r1-scrim.in). */
 .r1-scrim.bw-scrim { position: fixed; z-index: 60; }
 
-/* A long address (keisha.t@brightwaterair.com) is 1 unbreakable word: at 200% text it was wider than the window and the card's edge cut it off
+/* A long address (keisha.t@brightwater.example) is 1 unbreakable word: at 200% text it was wider than the window and the card's edge cut it off
    (F-1614, 14.1 item 12). These lines may break inside it, and shrink below their own word, only when the line runs out of room. */
 .bw-screen :is(.okbox, .infobox2, .warnbox, .whose) > span, .bw-screen .mh dd { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 719px) {

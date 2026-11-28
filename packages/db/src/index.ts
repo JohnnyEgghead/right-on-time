@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // @bw/db (SPECIFICATIONS SD-2): migrations and 1 repository module per entity of section 3.
-export { createClient, createPool, inTransaction, pgTypes, type Queryable, type QueryResultLike, type Row } from './client.ts';
+export { createClient, createPool, inTransaction, pgTypes, SERVICE_LOCK_TIMEOUT_MS, SERVICE_STATEMENT_TIMEOUT_MS, SERVICE_TIMEOUTS, type Queryable, type QueryResultLike, type Row } from './client.ts';
 export {
   loadMigrations, migrate, migrateUrl, MIGRATIONS_DIR, MigrationDriftError, MigrationOrderError,
   type MigrateResult, type Migration,

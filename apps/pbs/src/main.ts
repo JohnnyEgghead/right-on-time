@@ -2,24 +2,28 @@
 // The pbs process (SPECIFICATIONS SD-3: web, worker and pbs are 1 image with 3 entry points; section 6.6 FR-BILL-4):
 // the pretend billing service on pbs:8090 inside the Compose network, signed in to the database as bw_pbs (role pbs,
 // schemas pbs and pbs_snapshot only). It creates its 1 mode row when absent, then serves until SIGTERM.
-import { ConfigError, configOrExit, databasePassword, exitWithMessage } from '@bw/config';
-import { createPool } from '@bw/db';
-import { createLogger, exitOnUncaughtException, exitOnUnhandledRejection } from '@bw/log';
+import { configOrExit, databasePasswordOrExit, exitWithMessage } from '@bw/config';
+import { createPool, SERVICE_TIMEOUTS } from '@bw/db';
+import { createLogger, exitOnUncaughtException, exitOnUnhandledRejection, logErrorEvents, type Logger } from '@bw/log';
 import { startPbs } from './server.ts';
 import { ensureModeRow } from './store.ts';
 
 /** The port of section 4.5 (`http://pbs:8090`). */
 export const PBS_PORT = 8090;
 
+/**
+ * pbs's pool. F-2006 J-21: an idle connection's error event (the server ended it) is logged with its cause code; with no
+ * listener it threw, and the process ended on it. F-2006 K-10.8: the service timeouts of @bw/db on every connection.
+ */
+export function pbsPool(connectionString: string, log: Pick<Logger, 'error'>): ReturnType<typeof createPool> {
+  const pool = createPool({ connectionString, max: 10, ...SERVICE_TIMEOUTS });
+  logErrorEvents(pool, log);
+  return pool;
+}
+
 if (import.meta.main) {
   const settings = configOrExit();
-  let password: string | undefined;
-  try {
-    password = databasePassword(settings);
-  } catch (e) {
-    if (!(e instanceof ConfigError)) throw e;
-    exitWithMessage(`${e.name}: ${e.message}`, 78);
-  }
+  const password = databasePasswordOrExit(settings);
   if (!settings.DATABASE_URL) exitWithMessage('ConfigError: invalid setting DATABASE_URL: the pbs process needs a database', 78);
   // Lines go through @bw/log (log-allowlist, F-234), so each carries the real-time stamp (NFR-05, F-190).
   const log = createLogger({ process: 'pbs', level: settings.LOG_LEVEL });
@@ -30,7 +34,7 @@ if (import.meta.main) {
   // The password goes into the in-memory URL: pg lets the URL's (absent) password override a separate field.
   const url = new URL(settings.DATABASE_URL);
   if (password !== undefined) url.password = encodeURIComponent(password);
-  const pool = createPool({ connectionString: url.toString(), max: 10 });
+  const pool = pbsPool(url.toString(), log);
   log.info({ status: 'started' });
   try {
     await ensureModeRow(pool);

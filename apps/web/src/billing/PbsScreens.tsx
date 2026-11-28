@@ -11,6 +11,7 @@ import { notFound } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PbsFrame } from '../shell/Frames.tsx';
 import { useT } from '../shell/intl.tsx';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { PbsInvoiceBody, type PbsInvoiceView } from './PbsInvoiceBody.tsx';
 import { PbsListBody, type Mode, type PbsInvoices, type PbsModeView } from './PbsListBody.tsx';
 
@@ -27,25 +28,25 @@ export function PbsListScreen() {
   const [moreBusy, setMoreBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const newestInvoices = useNewestAnswer();
+  const newestMode = useNewestAnswer();
+  // K-05: Apply's re-read can begin while an earlier read is still out (Try again shows only after a failed read, so it does not overlap one); the newest read's answer is the one shown.
   const loadInvoices = useCallback(async () => {
     setInvoices('loading');
-    try {
-      setInvoices((await client.call(pbsInvoices, {})).data);
-    } catch {
-      setInvoices('error');
-    }
-  }, [client]);
+    await newestInvoices.run(() => client.call(pbsInvoices, {}).then((r) => r.data, () => null), (d) => setInvoices(d ?? 'error'));
+  }, [client, newestInvoices]);
 
   const loadMode = useCallback(async () => {
-    try {
-      const m = (await client.call(pbsMode, {})).data;
+    await newestMode.run(() => client.call(pbsMode, {}).then((r) => r.data, () => null), (m) => {
+      if (m === null) {
+        setMode(null);
+        return;
+      }
       setMode(m);
       setPick(m.mode);
       if (m.nLeft) setN(String(m.nLeft));
-    } catch {
-      setMode(null);
-    }
-  }, [client]);
+    });
+  }, [client, newestMode]);
 
   useEffect(() => {
     void loadInvoices();
@@ -104,15 +105,15 @@ export function PbsInvoiceScreen({ jobNumber }: { jobNumber: number }) {
   const [invoice, setInvoice] = useState<'loading' | 'error' | PbsInvoiceView>('loading');
   const [missing, setMissing] = useState(false);
 
+  const newest = useNewestAnswer();
   const load = useCallback(async () => {
     setInvoice('loading');
-    try {
-      setInvoice((await client.call(pbsInvoice, { jobNumber })).data);
-    } catch (e) {
-      if (e instanceof ApiError && e.problem.code === 'not_found') setMissing(true);
+    await newest.run(() => client.call(pbsInvoice, { jobNumber }).then((r) => ({ data: r.data }), (e: unknown) => ({ e })), (a) => {
+      if ('data' in a) setInvoice(a.data);
+      else if (a.e instanceof ApiError && a.e.problem.code === 'not_found') setMissing(true);
       else setInvoice('error');
-    }
-  }, [client, jobNumber]);
+    });
+  }, [client, jobNumber, newest]);
 
   useEffect(() => {
     void load();

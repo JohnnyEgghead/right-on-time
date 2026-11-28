@@ -4,7 +4,7 @@
 // shown branch and week, re-reads it in place on the events the screen lists (EVT-01, EVT-02, EVT-05, EVT-06, EVT-09, EVT-10) and,
 // after each such re-read, posts API-172 once with the event's seq (OI-48, SD-43). The one write is the day's mode menu (CTL-OFC-34-15):
 // it opens SCR-OFC-24 on this screen and switches the day with API-91; the grid re-reads on EVT-09 (F-781).
-import { ApiError, boardDelaySample, boardWeek, bookingSettings, createClient, createResourceCache, setDayMode, subscribeEvents, type ResourceCache, type z } from '@bw/api';
+import { ApiError, boardDelaySample, boardWeek, bookingSettings, createClient, setDayMode, subscribeEvents, type z } from '@bw/api';
 import { formatTime, fromWire, type Language } from '@bw/time';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -40,8 +40,6 @@ export function WeekScreen() {
   const [liveTime, setLiveTime] = useState<string | null>(null);
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
   const client = useMemo(() => (typeof window === 'undefined' ? null : createClient({ baseUrl: window.location.origin })), []);
-  const cache = useRef<ResourceCache | null>(null);
-  if (client && !cache.current) cache.current = createResourceCache(client);
   const dataRef = useRef<WeekData | null>(null);
   const [switchDlg, setSwitchDlg] = useState<{ settings: Settings; dlg: DialogUi } | null>(null);
 
@@ -56,11 +54,10 @@ export function WeekScreen() {
   }, [readDay]);
 
   const read = useCallback(async (): Promise<boolean> => {
-    if (!client || !cache.current || !branch || !week) return false;
+    if (!client || !branch || !week) return false;
     try {
       const answer = await client.call(boardWeek, { branch, week });
       if (shown.current.branch !== branch || shown.current.week !== week) return false; // an answer for a week or branch no longer shown is dropped
-      cache.current.seed(boardWeek, { branch, week }, answer.data, answer.envelope?.meta.worldEpoch ?? 0);
       setChanged(changedCells(dataRef.current, answer.data));
       dataRef.current = answer.data;
       setData(answer.data);
@@ -115,8 +112,7 @@ export function WeekScreen() {
     const handle = subscribeEvents({
       onEvent: (e) => {
         if (!WEEK_EVENTS.includes(e.name)) return;
-        if (e.name === 'world.reset') cache.current?.observeEpoch(Number(e.ids.worldEpoch));
-        else if (!eventIsForBranch(e, branch)) return;
+        if (e.name !== 'world.reset' && !eventIsForBranch(e, branch)) return;
         if (e.name === 'clock.changed' || e.name === 'world.reset') clockEvent = true;
         pending.push(e.seq);
         void drain();

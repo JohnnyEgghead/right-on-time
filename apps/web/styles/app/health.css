@@ -23,6 +23,8 @@
 .shw .bw-shw-select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font: inherit; }
 .tbt { background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
 .sw { cursor: pointer; }
+/* F-2086: a switch held while its write is out looks held, as the held Dismiss row does (.btn.dis). */
+.sw[aria-busy="true"] { opacity: 0.5; cursor: default; }
 .sw:focus-visible, .rads2 span:focus-visible, .tbt:focus-visible, .shw:focus-within { outline: 3px solid var(--teal-500); outline-offset: 2px; }
 .rads2 span { cursor: pointer; }
 

@@ -8,7 +8,7 @@
 #   1. the stack, verified: every service running, PostgreSQL 18, every setting at its default but the named ones (ci/wave/stack-settings.ts);
 #   2. the fresh setup (`docker compose --profile setup run --rm setup`);
 #   3. ci/clock-ui-stack/clock.ui.stack.ts on each engine of ci/pw-engines.ts, each on its own fresh world (steps 1 and 2 again between engines;
-#      owner ruling Nov 10, 2026 item 4b: no wait for the 5-minute reset cool-down): the visitor enters the code, signs in as the sample
+#      owner ruling Nov 10, 2026 item 4b; setup's 5-minute reset cool-down is backdated with psql, not waited out): the visitor enters the code, signs in as the sample
 #      manager, jumps to the 6:00 PM reminder, the due reminders arrive in order, and every open page's banner names who moved the clock; the
 #      Reset the demo world flow (confirm, cool-down) puts the world back to its start.
 # Isolation as ci/import-ui-stack.sh (F-132): project bw-clkui-*, its own image tag, a reaper outside the process group. The access code, the
@@ -54,6 +54,8 @@ cookie_key="$(secret)"
 sample_seed="$(secret)"
 # The suite recreates nothing, but it runs docker compose with this same environment (psql, the worker's log).
 export BW_IMAGE="$image" DB_ENV_FILE="$tmp/no-db-env-file" HTTP_BIND="127.0.0.1:$port" HTTPS_BIND="127.0.0.1:$https_port"
+# RESET_COOLDOWN_SECONDS stays at its default, 300 s (packages/config, config.test.ts): the suite does not wait for setup's cool-down, it backdates
+# system.demo_clock.last_reset_real with the stack's psql before the Reset step, so the note after the reset keeps its full 5-minute margin.
 export ACCESS_CODE_ON=on DEMO_MODE=on ACCESS_CODE="$access_code" ACCESS_COOKIE_KEY="$cookie_key" SAMPLE_PASSWORD_SEED="$sample_seed"
 export BW_DATA_DIR="$root/.build/data"
 compose() { docker compose -p "$project" -f infra/compose.yaml "$@"; }
@@ -120,7 +122,7 @@ first=1
 for engine in $engine_list; do
   world_t0=$(date +%s)
   fresh_world "$first"
-  # The Reset flow and its 5-minute cool-down (setup starts one too) are tested on the first engine's world only (item 4b).
+  # The Reset flow and its 5-minute cool-down (setup starts one too; the suite backdates that one with psql) run on the first engine's world only (item 4b).
   reset_flow=$first
   echo "clock-ui-stack: fresh world for $engine ready in $(( $(date +%s) - world_t0 )) s"
   first=0

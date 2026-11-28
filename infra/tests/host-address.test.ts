@@ -16,6 +16,10 @@ const SCRIPTS: Array<[string, string[]]> = [
   ['infra/deploy/deploy.sh', []],
   ['infra/deploy/reset-world.sh', []], // F-1815: hosted mode (no --local) reads BW_HOST; the --local runs are in reset-world.test.ts
   ['infra/backup/hosted-check.sh', ['--log', path.join(dir, 'log.txt')]],
+];
+// J-35: infra/spike/ is a private path (scripts/private-paths.txt), so a public copy has none of these 3; each skips, only when
+// infra/spike/ is absent, with a note naming it. The private checkout has it, so there they run (public-copy-tests step 0).
+const SPIKE_SCRIPTS: Array<[string, string[]]> = [
   ['infra/spike/s2/deploy.sh', [dir]],
   ['infra/spike/s3/deploy.sh', [dir, path.join(dir, 'x.pmtiles')]],
   ['infra/spike/s3/fetch-logs.sh', [dir]],
@@ -24,6 +28,14 @@ const SCRIPTS: Array<[string, string[]]> = [
 describe('the hosted server address (F-1609)', () => {
   // why: F-1609 with no BW_HOST the script stops with a message that says how to set it
   it.each(SCRIPTS)('%s stops with a clear message when BW_HOST is missing', (script, args) => {
+    const r = spawnSync('bash', [path.join(root, script), ...args], { encoding: 'utf8', env: bare, cwd: root });
+    expect(r.status, `${r.stdout}${r.stderr}`).not.toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toContain('BW_HOST is not set');
+  });
+
+  // why: F-1609 J-35 the spike scripts stop the same way, when the private checkout has them (a public copy has no infra/spike/)
+  it.for(SPIKE_SCRIPTS)('%s stops with a clear message when BW_HOST is missing', ([script, args], ctx) => {
+    if (!existsSync(path.join(root, 'infra', 'spike'))) ctx.skip('infra/spike/ is not in this copy (a private path the public export leaves out)');
     const r = spawnSync('bash', [path.join(root, script), ...args], { encoding: 'utf8', env: bare, cwd: root });
     expect(r.status, `${r.stdout}${r.stderr}`).not.toBe(0);
     expect(`${r.stdout}${r.stderr}`).toContain('BW_HOST is not set');

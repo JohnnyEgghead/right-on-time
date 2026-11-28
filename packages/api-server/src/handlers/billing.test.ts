@@ -14,7 +14,7 @@ describe('the pbs client of a kernel (F-509)', () => {
     const urls: string[] = [];
     vi.stubGlobal('fetch', vi.fn(async (u: string) => {
       urls.push(u);
-      return new Response(JSON.stringify({ mode: 'normal', n: null, setBy: null, setAt: null }), { status: 200, headers: { 'content-type': 'application/json' } });
+      return new Response(JSON.stringify({ mode: 'up', nLeft: null, setBy: null, setAt: null, epoch: 0 }), { status: 200, headers: { 'content-type': 'application/json' } });
     }));
     const pbs = pbsClientFor();
     await pbs(ctxOf('http://pbs-a:8090')).getMode();

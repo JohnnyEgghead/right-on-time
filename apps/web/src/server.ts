@@ -22,8 +22,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type OutgoingHttpHeaders, type Server, type ServerResponse } from 'node:http';
 import path from 'node:path';
 import { CONTENT_SECURITY_POLICY, createWebKernel, SECURITY_HEADERS, serveNode, type PageVerdict, type Router, type WebKernel } from '@bw/api-server';
-import { ConfigError, configOrExit, databasePassword, exitWithMessage } from '@bw/config';
-import { createLogger, type Logger } from '@bw/log';
+import { configOrExit, databasePasswordOrExit, exitWithMessage } from '@bw/config';
+import { causeCodeOf, createLogger, type Logger } from '@bw/log';
 import { configureRouting, ROUTING_SERVICE_URL } from '../../../packages/maps/src/route-source.ts';
 import { MAP_ASSET_PREFIX, mapAsset, readMapAsset } from './map/map-assets.ts';
 import { logProcessErrorsAndKeepServing } from './process-errors.ts';
@@ -123,8 +123,9 @@ export function canonicalPath(raw: string): string | null {
 const isRsc = (req: IncomingMessage) => req.headers.rsc === '1' || req.headers['next-router-prefetch'] !== undefined;
 
 export function createHandler(p: WebParts): (req: IncomingMessage, res: ServerResponse) => void {
-  const fail = (req: IncomingMessage, res: ServerResponse) => {
-    p.log.error({ status: 'unhandled error', errorCode: 'server_error' });
+  // K-10.7, F-2071: every failure logs its cause code (never the message), the shell asset's throw included.
+  const fail = (req: IncomingMessage, res: ServerResponse, cause: unknown) => {
+    p.log.error({ status: 'unhandled error', errorCode: causeCodeOf(cause) });
     if (!res.headersSent) plain(req, res, 500, 'server error\n');
     else res.destroy();
   };
@@ -135,7 +136,7 @@ export function createHandler(p: WebParts): (req: IncomingMessage, res: ServerRe
     delete req.headers[PAGE_VERDICT_HEADER];
     if (p.router.owns(rawPath, req.method)) {
       guard(res, CONTENT_SECURITY_POLICY);
-      serveNode(p.router, req, res, 'http://web').catch(() => fail(req, res));
+      serveNode(p.router, req, res, 'http://web').catch((e: unknown) => fail(req, res, e));
       return;
     }
     const nonce = randomBytes(16).toString('base64');
@@ -152,7 +153,7 @@ export function createHandler(p: WebParts): (req: IncomingMessage, res: ServerRe
     // A static asset is no page: it carries the 11.5 policy unchanged, with no nonce (F-774).
     if (pathname.startsWith(NEXT_STATIC)) {
       guard(res, CONTENT_SECURITY_POLICY);
-      p.next(req, res).catch(() => fail(req, res));
+      p.next(req, res).catch((e: unknown) => fail(req, res, e));
       return;
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -161,16 +162,18 @@ export function createHandler(p: WebParts): (req: IncomingMessage, res: ServerRe
       return;
     }
     // The web technician app's manifest and service worker (SD-47; src/tech/shell-assets.ts): no data, answered before the page gate.
+    let shellError: unknown;
     const shellAsset = (() => {
       try {
         return techShellAsset(pathname);
-      } catch {
+      } catch (e) {
+        shellError = e;
         return undefined;
       }
     })();
     if (shellAsset === undefined) {
       guard(res, CONTENT_SECURITY_POLICY);
-      return fail(req, res);
+      return fail(req, res, shellError);
     }
     if (shellAsset) {
       guard(res, CONTENT_SECURITY_POLICY);
@@ -186,9 +189,9 @@ export function createHandler(p: WebParts): (req: IncomingMessage, res: ServerRe
       let body: Buffer;
       try {
         body = readMapAsset(asset.file);
-      } catch {
+      } catch (e) {
         // F-529: a read error (a permission, a file that vanished after the stat) is this request's 500, not the process's end.
-        return fail(req, res);
+        return fail(req, res, e);
       }
       res.writeHead(200, { 'content-type': asset.type, 'content-length': String(body.length), 'cache-control': 'public, max-age=86400' });
       res.end(req.method === 'HEAD' ? undefined : body);
@@ -203,7 +206,7 @@ export function createHandler(p: WebParts): (req: IncomingMessage, res: ServerRe
       return p.next(req, res);
     };
     if (p.harness && pathname.startsWith(PREVIEW_PREFIX)) {
-      render().catch(() => fail(req, res));
+      render().catch((e: unknown) => fail(req, res, e));
       return;
     }
     void (async () => {
@@ -218,7 +221,7 @@ export function createHandler(p: WebParts): (req: IncomingMessage, res: ServerRe
         return plain(req, res, verdict.status, `${verdict.kind}\n`);
       }
       return render(verdict);
-    })().catch(() => fail(req, res));
+    })().catch((e: unknown) => fail(req, res, e));
   };
 }
 
@@ -254,13 +257,7 @@ export async function loadNext(preview: boolean, dir = WEB_DIR): Promise<{ handl
 
 if (import.meta.main) {
   const settings = configOrExit();
-  let password: string | undefined;
-  try {
-    password = databasePassword(settings);
-  } catch (e) {
-    if (!(e instanceof ConfigError)) throw e;
-    exitWithMessage(`${e.name}: ${e.message}`, 78);
-  }
+  const password = databasePasswordOrExit(settings);
   const log = createLogger({ process: 'web', level: settings.LOG_LEVEL });
   // F-1845, F-1871, F-1870: a rejection or exception no code handled is 1 error line with its cause code and the process keeps serving,
   // as Next.js is built to (the message and stack Next's own listeners print are dropped once Next has started; afterNext below).

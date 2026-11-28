@@ -3,8 +3,9 @@
 # Nightly gate page-walkers-nightly (P3-CI-CADENCE; BUILD_PLAN section 3 D-15, section 7 gate map). Owner ruling Nov 2, 2026,
 # "Daily + phase close": "WebKit and the all-screens Spanish and overflow passes move to nightly." The push half is page-walkers
 # (ci/gates/page-walkers.sh: Chromium only, the English passes on every built screen, the walkers' proofs, the stack suites).
-#   1. WebKit: the walkers' proofs and the page walk on every built screen with every pass (axe-scan, tap-target-44,
-#      outside-origin-guard, spanish-fallback-pass, overflow-pass): ci/page-walkers on vitest.browser.config.ts, BW_PW_ENGINES=webkit.
+#   1. WebKit: the walkers' proofs and the page walk on every built screen with tap-target-44, outside-origin-guard and overflow-pass
+#      (P10-NIGHTLY-SPEED, owner answer 400ec3ba: axe-scan and spanish-fallback-pass run on Chromium only): ci/page-walkers on
+#      vitest.browser.config.ts, BW_PW_ENGINES=webkit.
 #   2. Chromium: the all-screens Spanish and overflow passes the push half leaves out (BW_APP_WALK_PASSES=spanish).
 #   3. WebKit: the stack suites that drive a browser, one after the other and never side by side (F-290): ci/shell-stack.sh (with
 #      the clock banner suite), ci/auth-stack.sh and ci/billing-stack.sh (P4-BILLING-UI, F-595: its Acceptance names Chromium and

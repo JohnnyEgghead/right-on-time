@@ -880,7 +880,7 @@
   "booking.done.title": "Su cita está reservada",
   "booking.done.visit": "Su visita",
   "booking.err.closed": "Las reservas para el {day} acaban de cerrar. Elija otro día.",
-  "booking.err.failed": "No se pudo reservar la visita. Revise la conexión e intente de nuevo.",
+  "booking.err.failed": "No pudimos confirmar la cita. Revise la conexión y pulse Confirmar la cita otra vez.",
   "booking.err.invalid": "No se aceptaron algunos datos. Revíselos e intente de nuevo.",
   "booking.err.refused": "Esa visita no se puede reservar en línea. Elija otro día o llame al {phone}.",
   "booking.err.window": "No se pudieron cargar las ventanas de llegada.",

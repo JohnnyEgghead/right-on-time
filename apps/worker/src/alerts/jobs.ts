@@ -13,7 +13,7 @@
 // snapshot that carries 2) become 1 after both run, and a replayed run writes nothing a converged chain lacks.
 import type { createPool, Queryable } from '@bw/db';
 import { ALERT_CHECK_EVERY_MINUTES } from '@bw/domain';
-import type { Logger } from '@bw/log';
+import { causeCodeOf, type Logger } from '@bw/log';
 import type { Clock, Instant } from '@bw/time';
 import { chainSuccessorDue } from '../clock/chain.ts';
 import type { EventHandler, GiveUp } from '../dispatcher.ts';
@@ -77,7 +77,8 @@ export async function startAlertJobs(d: { pool: ReturnType<typeof createPool>; c
   let beating: Promise<unknown> = Promise.resolve();
   const beat = (): void => {
     if (stopped) return;
-    beating = writeHeartbeat(d.pool, d.clock).catch(() => d.log.error({ status: 'unhandled error', errorCode: 'heartbeat_failed' }));
+    // K-10.2 (F-2006): the cause code, so a failing heartbeat says why.
+    beating = writeHeartbeat(d.pool, d.clock).catch((e: unknown) => d.log.error({ status: 'heartbeat failed', errorCode: causeCodeOf(e) }));
   };
   // The first beat is written before the job reports started.
   beat();

@@ -373,4 +373,21 @@ describe('UC-19, FR-AUTH-9 and FR-AUTH-8: Forgot password and the one-time email
     expect(await sessions()).toBe(0);
     expect((await call(k, 'POST', `/api/v1/password-tokens/${'B'.repeat(43)}`, { password: 'tess-third-example-3' })).status).toBe(410);
   });
+
+  // why: K-07 F-2013 a link past its expiry answers gone on the page and on the password write, and one with time left opens (the demo clock is paused at 14:28:00Z)
+  it('answers gone for a link that has run out, on read and on write, and opens one that has not', async () => {
+    const k = await kernel();
+    const email = 'tess.expiry@brightwater.example';
+    await insertUser(db.admin(), { email, name: 'Tess Expiry', role: 'office', password: 'tess-example-pass-9', sample: false });
+    const userId = ids[email]!;
+    const [ranOut, open] = ['E'.repeat(43), 'F'.repeat(43)];
+    for (const [t, expires] of [[ranOut, '2026-09-15T14:28:00Z'], [open, '2026-09-15T14:28:01Z']] as const) {
+      await db.admin().query(`INSERT INTO world.password_token (token_hash, user_id, kind, expires_at) VALUES ($1, $2, 'reset', $3)`, [sha(t), userId, expires]);
+    }
+    const gone = await call(k, 'GET', `/api/v1/password-tokens/${ranOut}`);
+    expect([gone.status, await code(gone)]).toEqual([410, 'gone']);
+    const goneWrite = await call(k, 'POST', `/api/v1/password-tokens/${ranOut}`, { password: 'tess-late-example-1' });
+    expect([goneWrite.status, await code(goneWrite)]).toEqual([410, 'gone']);
+    expect((await call(k, 'GET', `/api/v1/password-tokens/${open}`)).status).toBe(200);
+  });
 });

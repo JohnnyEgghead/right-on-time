@@ -10,7 +10,7 @@
 import '../shell/css/office.ts';
 import '../../styles/page-office-job.css';
 import '../../styles/app/job.css';
-import { subscribeEvents, type OnTheWayAnswer } from '@bw/api';
+import { subscribeEvents, type EventSubscription, type OnTheWayAnswer } from '@bw/api';
 import { shortName, type MessageKey } from '@bw/i18n';
 import { notFound } from 'next/navigation';
 import { HistoryVisit } from './HistoryVisit';
@@ -85,7 +85,7 @@ export interface JobScreenProps {
   /** Previews and tests: a stand-in for the calls, a fixed signed-in person, a modal open, no live stream. */
   api?: JobApi;
   me?: Me;
-  fixed?: { job: Job | 'loading' | 'error' | 'not_found'; onTheWay?: OnTheWayAnswer | null | 'failed'; modal?: JobModal | null; live?: LiveState; extra?: React.ReactNode; frame?: Omit<FrameData, 'screen' | 'children'>; screen?: string };
+  fixed?: { job: Job | 'loading' | 'error' | 'not_found'; onTheWay?: OnTheWayAnswer | null | 'failed'; extra?: React.ReactNode; frame?: Omit<FrameData, 'screen' | 'children'> };
 }
 
 /** The customer's time zone as the customer page words it (Eastern, Central), the zone id when it is not one of the 7 offered. */
@@ -111,6 +111,27 @@ function PhotoThumb({ photo, label, failedWords, onOpen }: { photo: { key: strin
   );
 }
 
+/**
+ * The page's reads on the event stream (SCR-OFC-03 Live). K-08.11: a reconnect and a world reset also ask the On the way panel again (`wayAgain`),
+ * since the job's status can stay On the way across them and the panel's own tick would not run.
+ */
+export function liveReads(a: { jobNumber: number; own: { pending: number; last: number }; read: (changed?: boolean) => unknown; wayAgain: () => void; now: () => number }): Pick<EventSubscription, 'onEvent' | 'onReconnect'> {
+  return {
+    onEvent: (e) => {
+      // This page's own write comes back as EVT-01 too: it re-reads quietly, so the write's own toast stays (CMP-11).
+      if (e.name === 'job.changed' && Number(e.ids['jobNumber']) === a.jobNumber) void a.read(a.own.pending === 0 && a.now() - a.own.last > OWN_WRITE_MS);
+      // A text's status and the billing state are this page's too (SCR-OFC-03 Live: EVT-03, EVT-07); they re-read quietly, as CMP-11 is for the job's own changes.
+      if ((e.name === 'text.changed' || e.name === 'billing.changed') && Number(e.ids['jobNumber']) === a.jobNumber) void a.read();
+      if (e.name === 'world.reset' || e.name === 'clock.changed') void a.read();
+      if (e.name === 'world.reset') a.wayAgain();
+    },
+    onReconnect: () => {
+      void a.read();
+      a.wayAgain();
+    },
+  };
+}
+
 export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScreenProps) {
   const t = useT();
   const announce = useAnnounce();
@@ -122,10 +143,10 @@ export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScre
   const [way, setWay] = useState<OnTheWayAnswer | null | 'failed'>(fixed?.onTheWay ?? null);
   // CTL-OFC-03-15, -16: the photo the viewer shows, by its place in the job's photos (F-707).
   const [viewer, setViewer] = useState<number | null>(null);
-  const [modal, setModal] = useState<JobModal | null>(fixed?.modal ?? null);
+  const [modal, setModal] = useState<JobModal | null>(null);
   // The job as the open dialog opened on it (F-697).
   const [opened, setOpened] = useState<Job | null>(null);
-  const [live, setLive] = useState<LiveState>(fixed?.live ?? 'live');
+  const [live, setLive] = useState<LiveState>('live');
   const [inboxError, setInboxError] = useState(false);
   // The job that Schedule on the New job page (SCR-OFC-04) opened this page on (CTL-OFC-03-01): the handoff is read once, so any other way here keeps the Board trail.
   const [scheduled, setScheduled] = useState<number | null>(null);
@@ -155,6 +176,8 @@ export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScre
   useEffect(() => { if (!fixed) void read(); }, [read]);
 
   const status = typeof job === 'object' ? job.job.status : null;
+  // K-08.11: a reconnect or a world reset asks the On the way panel for its answer again, as it re-reads the job (a count the tick effect watches).
+  const [wayAgain, setWayAgain] = useState(0);
   // CTL-OFC-03-25: the panel re-reads API-135 on its interval while On the way; at arrival the panel goes away (NFR-04).
   useEffect(() => {
     if (fixed || status !== 'on_the_way') { if (!fixed) setWay(null); return; }
@@ -167,7 +190,7 @@ export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScre
     void tick();
     const id = window.setInterval(() => void tick(), PANEL_MS);
     return () => { on = false; window.clearInterval(id); };
-  }, [status, api, jobNumber]);
+  }, [status, api, jobNumber, wayAgain]);
 
   const branch = typeof job === 'object' ? job.job.branch : null;
   const onLive = useRef(read);
@@ -176,14 +199,7 @@ export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScre
     if (fixed || !branch) return;
     const h = subscribeEvents({
       branch,
-      onEvent: (e) => {
-        // This page's own write comes back as EVT-01 too: it re-reads quietly, so the write's own toast stays (CMP-11).
-        if (e.name === 'job.changed' && Number(e.ids['jobNumber']) === jobNumber) void onLive.current(own.current.pending === 0 && performance.now() - own.current.last > OWN_WRITE_MS);
-        // A text's status and the billing state are this page's too (SCR-OFC-03 Live: EVT-03, EVT-07); they re-read quietly, as CMP-11 is for the job's own changes.
-        if ((e.name === 'text.changed' || e.name === 'billing.changed') && Number(e.ids['jobNumber']) === jobNumber) void onLive.current();
-        if (e.name === 'world.reset' || e.name === 'clock.changed') void onLive.current();
-      },
-      onReconnect: () => void onLive.current(),
+      ...liveReads({ jobNumber, own: own.current, read: (changed) => onLive.current(changed), wayAgain: () => setWayAgain((n) => n + 1), now: () => performance.now() }),
       onState: (s) => setLive(s === 'live' ? 'live' : s === 'closed' ? 'paused' : 'reconnecting'),
     });
     return () => h.close();
@@ -201,7 +217,7 @@ export function JobScreen({ jobNumber, api: given, me: givenMe, fixed }: JobScre
   };
 
   const perms = me?.permissions ?? null;
-  const frame = (body: React.ReactNode) => <OfficeFrame screen={fixed?.screen ?? 'SCR-OFC-03'} {...(me ? { me } : {})} {...(fixed?.frame ?? {})} bar={{ currentPath: '/office/board' }}>{body}</OfficeFrame>;
+  const frame = (body: React.ReactNode) => <OfficeFrame screen="SCR-OFC-03" {...(me ? { me } : {})} {...(fixed?.frame ?? {})} bar={{ currentPath: '/office/board' }}>{body}</OfficeFrame>;
   if (job === 'loading') return frame(<div className="jh"><div className="bw-job-state"><span className="r1-skel bw-w-40" /><span className="r1-skel" /><span className="r1-skel" /><span className="r1-skel" /><span className="r1-skel" /><span className="r1-skel" /></div></div>);
   if (job === 'error') return frame(<ErrorPanel title={t('job.loadError')} hint={t('job.loadErrorHint')} onRetry={() => read()} />);
   // An unknown job number opens the Page not found page (SCR-SHR-02; DK-87 Not found).

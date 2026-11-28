@@ -15,9 +15,9 @@ export default defineConfig({
         test: {
           name: 'unit',
           ...timeouts,
-          include: ['ci/**/*.test.ts', 'infra/**/*.test.ts', 'apps/*/src/**/*.test.ts', 'apps/*/app/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
+          include: ['ci/**/*.test.ts', 'infra/**/*.test.ts', 'apps/*/src/**/*.test.ts', 'apps/*/src/**/*.test.tsx', 'apps/*/app/**/*.test.ts', 'packages/*/src/**/*.test.ts'],
           // Browser tests run in the page-walkers wave gate (vitest.browser.config.ts), not here.
-          // Database tests (*.db.test.ts, a real PostgreSQL 18) run in the schema-gates wave gate (packages/db/vitest.db.config.ts).
+          // Database tests (*.db.test.ts, a real PostgreSQL 18) run in each gate's own vitest.db.config.ts: packages/db/vitest.db.config.ts for schema-gates, ci/gates/<gate>/vitest.db.config.ts for the others (G-CI7 runs the K-07 suites of packages/api-server).
           // ci/gates/contract-gates/** are live contract tests against a running stack (that gate's own config runs them; F-136).
           // P3-BACKUP's local proofs (*.stack.test.ts) run against their own Compose stack (infra/backup/tests/vitest.stack.config.ts).
           // The real map files and track set (*.maps.test.ts, FR-MAP-1/4/5) run in the map-manifest wave gate, which fetches them (packages/maps/vitest.maps.config.ts).

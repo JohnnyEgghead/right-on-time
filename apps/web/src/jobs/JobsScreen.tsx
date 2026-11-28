@@ -43,10 +43,15 @@ export function JobsScreen() {
   const branch = pickedBranch ?? topBranch;
 
   // A move in the top bar is a new list: the page's own Branch pick and the technician it narrowed to are dropped.
-  useEffect(() => {
+  // F-2072: reset in render (as MessagesScreen does for its day), not in an effect: an effect's setPage(1) lands after the read effect of the same
+  // flush has sent the old page number for the new branch.
+  const [listBranch, setListBranch] = useState(topBranch);
+  if (listBranch !== topBranch) {
+    setListBranch(topBranch);
     setPickedBranch(null);
     setTechnicianId('');
-  }, [topBranch]);
+    setPage(1);
+  }
 
   // The search is sent after a pause in typing, and at once on Enter (the box is not a form: Enter is read below).
   useEffect(() => {
@@ -77,6 +82,11 @@ export function JobsScreen() {
       await latest.current.run(
         () => client.call(jobsList, asked),
         (answer) => {
+          // K-08.1: a page past the last (the list shrank, or the page number came from another branch) goes to the last page; its rows are not drawn.
+          if (answer.data.pages > 0 && asked.page > answer.data.pages) {
+            setPage(answer.data.pages);
+            return;
+          }
           setData(answer.data);
           setState('ready');
         },
@@ -162,7 +172,12 @@ export function JobsScreen() {
             setTab(next);
             reset();
             try {
-              window.history.replaceState(null, '', next === 'all' ? '/office/jobs' : `/office/jobs?tab=${next}`);
+              // K-08.2: the rest of the address (?branch=) stays; only the tab changes.
+              const q = new URLSearchParams(window.location.search);
+              if (next === 'all') q.delete('tab');
+              else q.set('tab', next);
+              const rest = q.toString();
+              window.history.replaceState(null, '', rest === '' ? '/office/jobs' : `/office/jobs?${rest}`);
             } catch {
               // the address bar is only a convenience
             }

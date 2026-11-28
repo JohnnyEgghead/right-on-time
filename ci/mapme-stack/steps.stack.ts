@@ -12,6 +12,7 @@
 //   4. with the network off after a read, Offline, steps saved shows the kept steps (from the time of that read, with no step marked Now).
 // Run by ci/mapme-stack.sh after mapme.stack.ts; this file stops and starts the routing service itself (the stack's Compose settings are exported).
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import type { BrowserContext, Page } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { techRoute } from '../../packages/api/src/contracts/tech-route.ts';
@@ -118,7 +119,7 @@ async function bookOnline(name: string): Promise<{ job: number; date: string }> 
       const win = ((a.body.data.days as Json[]).find((d) => d.date === date)?.windows as Json[] | undefined)?.find((x) => x.state === 'open');
       if (!win) continue;
       const b = await publicApi('POST', '/public/bookings', {
-        serviceId, streetId: street, houseNumber: 1, date, windowId: win.windowId, name, mobile: null, textsOn: false, textLanguage: 'en', timeZone: ZONE,
+        serviceId, streetId: street, houseNumber: 1, date, windowId: win.windowId, name, mobile: null, textsOn: false, textLanguage: 'en', timeZone: ZONE, bookingKey: randomUUID(),
       });
       expect(b.status, JSON.stringify(b.body)).toBe(201);
       streetOffset += 1;

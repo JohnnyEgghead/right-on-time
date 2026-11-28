@@ -131,6 +131,20 @@ describe('2 managers who act on each other at once (F-1934)', () => {
     expect(await activeManagers()).toBe(1);
   });
 
+  // why: K-07 F-2013 a session cookie issued while its owner was a manager loses the manager rights the moment the role is changed, since the role is read live (a read route that checks no role of its own)
+  it('refuses a demoted manager\'s old cookie on a manager route, with no new sign-in', async () => {
+    const [a, b] = await twoManagers();
+    const search = async (by: Person) => (await world.kernel.router.handle(new Request('http://web:3000/api/v1/user-searches', {
+      method: 'POST', body: JSON.stringify({}), headers: { 'content-type': 'application/json', origin: ORIGIN, cookie: by.cookie },
+    }), { address: '203.0.113.9' })).status;
+    expect(await search(b)).toBe(200);
+    expect(await acts.demote(a, b)).toBe('200');
+    expect(await search(b)).toBe(403);
+    expect(await search(a)).toBe(200);
+    expect(await acts['turn off'](b, a)).toBe('403 forbidden');
+    expect(await activeManagers()).toBe(1);
+  });
+
   // why: F-1934 2 managers who change the same third person at once, and 1 manager who changes 2 people at once, never deadlock
   it('deadlocks no pair that shares a target or a caller', async () => {
     const [a, b] = await twoManagers();

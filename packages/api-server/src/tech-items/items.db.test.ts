@@ -155,6 +155,19 @@ describe('1 item that fails the same way every time fails only itself (section 5
   });
 });
 
+describe('a baseVersion over the integer range (K-09.7; F-2009)', () => {
+  // why: F-2009 a baseVersion of 2^31 is refused alone as validation_failed; it does not fail the whole send, and the good note in it commits (K-09.7)
+  it('refuses an item with baseVersion 2147483648 alone and commits the good note in the same send', async () => {
+    const n = await w.newJob({ status: 'on_site' });
+    const big = item({ kind: 'note', jobNumber: n, baseVersion: 2 ** 31, entered: demoAt('10:30'), payload: noteOf('Too big') });
+    const good = item({ kind: 'note', jobNumber: n, baseVersion: 1, entered: demoAt('10:31'), payload: noteOf('Kept') });
+    const res = await w.send([big, good], maria);
+    expect(res.status).toBe(200);
+    expect((await answers(res)).map((a) => [a.key, a.result, a.code])).toEqual([[big.key, 'refused', 'validation_failed'], [good.key, 'applied', null]]);
+    expect((await w.rows<{ body: string }>('SELECT body FROM world.note WHERE job_number = $1', [n])).map((x) => x.body)).toEqual(['Kept']);
+  });
+});
+
 describe('On my way after an arrival (FR-TEXT-19, OA-50, OI-3; section 5.1 step 9)', () => {
   // why: FR-TEXT-19, F-470
   it('applied on its own: the job goes On the way, a live map token starts and the on-the-way text is queued (the control)', async () => {

@@ -5,8 +5,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { ConfigError, databasePassword, loadConfig, settingsSchema } from './index.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { ConfigError, databasePassword, databasePasswordOrExit, loadConfig, settingsSchema } from './index.ts';
 
 const repo = path.resolve(import.meta.dirname, '..', '..', '..');
 // F-1852: docs/SPECIFICATIONS.md is a private path (scripts/private-paths.txt), so in a public copy the test that reads its 11.1
@@ -141,6 +141,20 @@ describe('@bw/config', () => {
       expect(() => databasePassword({ DATABASE_PASSWORD_FILE: path.join(dir, 'none') })).toThrow(/invalid setting DATABASE_PASSWORD_FILE: cannot be read \(ENOENT\)/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // why: F-2053 web, worker and pbs start through 1 password entry: a bad password file names the setting on stderr and exits 78
+  it('databasePasswordOrExit exits 78 with the named error when the password file is unreadable', () => {
+    const exit = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => { throw new Error(`exit ${code}`); }) as never);
+    const err = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      expect(() => databasePasswordOrExit({ DATABASE_PASSWORD_FILE: '/nonexistent/bw-password' })).toThrow('exit 78');
+      expect(String(err.mock.calls[0]?.[0])).toMatch(/^ConfigError: invalid setting DATABASE_PASSWORD_FILE: cannot be read \(ENOENT\)/);
+      expect(databasePasswordOrExit({ DATABASE_PASSWORD_FILE: undefined })).toBeUndefined();
+    } finally {
+      exit.mockRestore();
+      err.mockRestore();
     }
   });
 

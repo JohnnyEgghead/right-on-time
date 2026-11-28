@@ -124,6 +124,33 @@ export async function officeDay(tx: Queryable, input: { branch: string; date: st
   return { room: dayRoom({ kind: input.kind, working: techs, serviceIsInstall: input.install, liveJobs: live }), live };
 }
 
+/** K-09.6: the kinds of the given dates from 1 day_mode query, the same kind readDayKind answers for each date. */
+export async function readDayKinds(tx: Queryable, branch: string, dates: readonly string[]): Promise<Map<string, DayKind>> {
+  const out = new Map<string, DayKind>();
+  if (dates.length === 0) return out;
+  const r = await tx.query<{ date: string; mode: DayMode }>(
+    'SELECT date::text AS date, mode FROM world.day_mode WHERE branch_id = $1 AND date = ANY($2::date[])', [branch, dates]);
+  const modes = new Map(r.rows.map((m) => [m.date, m.mode]));
+  for (const d of dates) out.set(d, dayKind(d, modes.get(d) ?? 'two_hour'));
+  return out;
+}
+
+/** K-09.6: officeDay for every date given, from 1 job query (the branch's technicians are read once, here), each as officeDay answers it. */
+export async function officeDays(tx: Queryable, input: { branch: string; kinds: ReadonlyMap<string, DayKind>; install: boolean; excludeJob?: number }): Promise<Map<string, OfficeDay>> {
+  const out = new Map<string, OfficeDay>();
+  const dates = [...input.kinds.keys()];
+  if (dates.length === 0) return out;
+  const techs = await branchTechnicians(tx, input.branch);
+  const jobs = await tx.query<{ date: string; install: boolean; window_id: string; status: string }>(
+    `SELECT j.date::text AS date, s.skill = 'install' AS install, j.window_id, j.status FROM world.job j JOIN world.service_type s ON s.id = j.service_id
+      WHERE j.branch_id = $1 AND j.date = ANY($2::date[]) AND j.job_number <> $3`, [input.branch, dates, input.excludeJob ?? -1]);
+  for (const [date, kind] of input.kinds) {
+    const live = jobs.rows.filter((j) => j.date === date && isLive(j.status));
+    out.set(date, { room: dayRoom({ kind, working: techs.filter((t) => worksOn(t, date)), serviceIsInstall: input.install, liveJobs: live }), live });
+  }
+  return out;
+}
+
 export const roomInWindow = (day: OfficeDay, window: Window): number =>
   windowRoom({ windowCapacity: window.capacity, windowLiveJobs: day.live.filter((j) => j.window_id === window.id).length, dayRoom: day.room });
 

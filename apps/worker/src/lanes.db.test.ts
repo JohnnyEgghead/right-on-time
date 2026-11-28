@@ -22,6 +22,7 @@ import {
 import { HttpBillingClient } from './billing/client.ts';
 import { BILLING_CONCURRENCY, WORKER_POOL_MAX } from './billing/link.ts';
 import { billFinishedJob } from './billing/queue.ts';
+import { MAX_HANDLER_FAILURES } from './dispatcher.ts';
 import { startTestWorker, type TestWorker } from './testing/worker.ts';
 
 /** pbs's Not answering hold, real ms: shorter than the link's 30 s timeout, so each held send ends stored_late. */
@@ -154,5 +155,38 @@ describe('the billing lane beside the serial lane, under Not answering (F-357, F
     expect(await count('SELECT count(*) AS n FROM pbs.invoice WHERE job_number = ANY($1)', [jobs])).toBe(4);
     expect(sends.most).toBe(BILLING_CONCURRENCY);
     await client.setMode({ mode: 'up' });
+  });
+});
+
+describe('a billing send that fails every run in the parallel lane (F-2006 K-02)', () => {
+  // why: F-2006 K-02 the parallel lane had no give-up, so a billing event whose handler always failed was retried every pass for ever, unseen
+  it('is given up at the 5th failed run: its item waits for a person, its alert is open and its event has ended', async () => {
+    await setDemoClock(db.admin(), NOW);
+    await client.setMode({ mode: 'up' });
+    const job = await finishedJob();
+    // Every record of this job's send fails in the database (a full disk, a broken table), so each run's handler fails.
+    await db.admin().query(`CREATE FUNCTION world.test_refuse_attempt() RETURNS trigger LANGUAGE plpgsql AS $f$
+      BEGIN
+        IF NEW.job_number = ${job} THEN RAISE EXCEPTION 'no room' USING ERRCODE = '53100'; END IF;
+        RETURN NEW;
+      END $f$`);
+    await db.admin().query(`CREATE TRIGGER test_refuse_attempt BEFORE INSERT ON world.billing_attempt FOR EACH ROW EXECUTE FUNCTION world.test_refuse_attempt()`);
+    const item = async () => (await db.admin().query<{ state: string }>('SELECT state FROM world.billing_item WHERE job_number = $1', [job])).rows[0]!.state;
+    for (let pass = 0; pass < 40 && (await item()) !== 'waiting_person'; pass += 1) await worker.drain();
+
+    expect(await item()).toBe('waiting_person');
+    const alerts = await db.admin().query<{ state: string }>(`SELECT state FROM world.alert WHERE type = 'billing_waiting_person' AND subject = $1`, [String(job)]);
+    expect(alerts.rows).toEqual([{ state: 'open' }]);
+    const events = await db.admin().query<{ id: string; state: string; result: string | null }>(
+      `SELECT id, state, result FROM world.scheduled_event WHERE subject = $1 AND kind LIKE 'billing.%' AND state = 'due'`, [String(job)]);
+    expect(events.rows).toEqual([]);
+    const gaveUp = await db.admin().query<{ id: string; n: number }>(
+      `SELECT id, (payload->>'failures')::int AS n FROM world.scheduled_event WHERE subject = $1 AND result = 'handler_failed'`, [String(job)]);
+    expect(gaveUp.rows.map((r) => r.n)).toEqual([MAX_HANDLER_FAILURES]);
+    const mine = worker.logs.map((l) => JSON.parse(l) as Record<string, unknown>).filter((l) => l.eventId === gaveUp.rows[0]!.id);
+    expect(mine.map((l) => [l.status, l.errorCode])).toEqual([
+      ...[1, 2, 3, 4, 5].map(() => ['event failed', '53100']), ['event gave up', '53100'],
+    ]);
+    await db.admin().query('DROP TRIGGER test_refuse_attempt ON world.billing_attempt');
   });
 });

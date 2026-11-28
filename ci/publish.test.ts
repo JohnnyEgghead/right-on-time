@@ -53,6 +53,14 @@ const publish = (args: string[], extra: Record<string, string> = {}) =>
   spawnSync('bash', [path.join(priv, 'scripts', 'publish.sh'), ...args], { cwd: priv, env: env(extra), encoding: 'utf8', timeout: 120_000 });
 const clone = () => path.join(tmp, 'clone');
 const common = () => ['--clone', clone(), '--remote', bare, '--slug', 'Test/pub'];
+// F-2055: prepare needs a verdict; this one is a green mode-gates verdict of the private repo's head, listing the 3 required gates.
+const REQUIRED_GATES = ['schema-gates', 'unit-tests', 'G-CI7'];
+const prepareArgs = (tag: string): string[] => {
+  const f = path.join(tmp, 'verdict-prepare.json');
+  const sha = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: priv, encoding: 'utf8' }).stdout.trim();
+  writeFileSync(f, JSON.stringify({ result: 'pass', mode: 'gates', scope: 'gates', sha, totalDurationS: 1, gates: REQUIRED_GATES.map((id) => ({ id, status: 'pass' })) }));
+  return ['prepare', tag, ...common(), '--verdict', f];
+};
 const calls = (): string[] => (existsSync(path.join(stand, 'calls.log')) ? readFileSync(path.join(stand, 'calls.log'), 'utf8').split('\n').filter(Boolean) : []);
 const clearCalls = () => rmSync(path.join(stand, 'calls.log'), { force: true });
 const bareRef = (ref: string): string => spawnSync('git', ['rev-parse', '--verify', '--quiet', ref], { cwd: bare, encoding: 'utf8' }).stdout.trim();
@@ -119,7 +127,7 @@ esac
   priv = path.join(tmp, 'private');
   mkdirSync(priv);
   git(priv, 'init', '-q', '-b', 'main');
-  for (const f of ['scripts/publish.sh', 'scripts/publish-assets.ts', 'scripts/private-paths.txt', 'ci/is-main.ts']) put(priv, f, readFileSync(path.join(repo, f)));
+  for (const f of ['scripts/publish.sh', 'scripts/publish-assets.ts', 'scripts/private-paths.txt', 'ci/is-main.ts', 'ci/wave-run.sh']) put(priv, f, readFileSync(path.join(repo, f)));
   put(priv, 'README.md', 'public\n');
   put(priv, 'bin/run.sh', '#!/bin/sh\necho run\n', 0o755);
   put(priv, 'packages/maps/MANIFEST.json', MAPS);
@@ -153,7 +161,7 @@ esac
 describe('publish.sh prepare (P8-PUBLISH)', () => {
   // why: SD-40 FR-DIST-1 the public commit is the export (private paths out, manifests on the public release) on top of the public main, local only
   it('makes 1 local commit and tag whose tree is the export, and pushes nothing', () => {
-    const r = publish(['prepare', 'v1.0.0', ...common()]);
+    const r = publish(prepareArgs('v1.0.0'));
     expect(r.status, r.stderr).toBe(0);
     const c = clone();
     const commit = git(c, 'rev-parse', 'refs/tags/v1.0.0^{commit}');
@@ -188,7 +196,7 @@ describe('publish.sh prepare (P8-PUBLISH)', () => {
   // why: SD-40 a re-run of prepare with the same inputs makes the same commit, replacing only the unpushed local tag
   it('is repeatable: a second prepare gives the same commit', () => {
     const before = git(clone(), 'rev-parse', 'refs/tags/v1.0.0^{commit}');
-    const r = publish(['prepare', 'v1.0.0', ...common()]);
+    const r = publish(prepareArgs('v1.0.0'));
     expect(r.status, r.stderr).toBe(0);
     expect(r.stdout).toContain('replacing the unpushed local tag v1.0.0');
     expect(git(clone(), 'rev-parse', 'refs/tags/v1.0.0^{commit}')).toBe(before);
@@ -196,18 +204,18 @@ describe('publish.sh prepare (P8-PUBLISH)', () => {
 
   // why: NFR-14 a hit in the secret scan of the export stops prepare before any commit or tag
   it('stops on a failed secret scan, and refuses a tag that is not vX.Y.Z', () => {
-    const r = publish(['prepare', 'v1.0.9', ...common()], { FAIL_SCAN: '1' });
+    const r = publish(prepareArgs('v1.0.9'), { FAIL_SCAN: '1' });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('the secret scan of the export');
     expect(spawnSync('git', ['rev-parse', '--verify', '--quiet', 'refs/tags/v1.0.9'], { cwd: clone() }).status).not.toBe(0);
-    expect(publish(['prepare', '1.0', ...common()]).status).toBe(2);
-    expect(publish(['prepare', 'v1.0.0-rc1', ...common()]).status).toBe(2);
+    expect(publish(prepareArgs('1.0')).status).toBe(2);
+    expect(publish(prepareArgs('v1.0.0-rc1')).status).toBe(2);
   });
 
   // why: F-1620 a failed public files check leaves nothing prepared: no new tag or state, and image, push and release refuse the tag
   it('leaves nothing prepared when the public files check fails', () => {
     const before = localTag('v1.0.0');
-    const r = publish(['prepare', 'v1.0.0', ...common()], { FAIL_FILES: '1' });
+    const r = publish(prepareArgs('v1.0.0'), { FAIL_FILES: '1' });
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('the public files check of the candidate commit');
     expect(stateOf('v1.0.0')).toContain('PREPARED=0\n');
@@ -220,13 +228,13 @@ describe('publish.sh prepare (P8-PUBLISH)', () => {
     expect(git(clone(), 'for-each-ref', 'refs/bw-publish/')).toBe('');
     expect(localTag('v1.0.0')).toBe(before);
     // A tag never prepared gets no tag and no state at all.
-    const fresh = publish(['prepare', 'v1.0.7', ...common()], { FAIL_FILES: '1' });
+    const fresh = publish(prepareArgs('v1.0.7'), { FAIL_FILES: '1' });
     expect(fresh.status).toBe(1);
     expect(localTag('v1.0.7')).toBe('');
     expect(existsSync(stateFile('v1.0.7'))).toBe(false);
     expect(readdirSync(path.join(tmp, 'tmpdir'))).toEqual([]);
     // A passing prepare makes it prepared again, with the same commit.
-    expect(publish(['prepare', 'v1.0.0', ...common()]).status).toBe(0);
+    expect(publish(prepareArgs('v1.0.0')).status).toBe(0);
     expect(stateOf('v1.0.0')).toContain('PREPARED=1\n');
     expect(localTag('v1.0.0')).toBe(before);
   });
@@ -249,6 +257,78 @@ describe('publish.sh prepare (P8-PUBLISH)', () => {
       writeFileSync(p, body);
     }
     expect(git(priv, 'status', '--porcelain')).toBe('');
+  });
+});
+
+describe('publish.sh prepare --verdict (K-07, P10-CHECKS)', () => {
+  const head = () => git(priv, 'rev-parse', 'HEAD');
+  const verdictFile = (name: string, over: Record<string, unknown> = {}, gates = REQUIRED_GATES.map((id) => ({ id, status: 'pass' }))): string => {
+    const f = path.join(tmp, `verdict-${name}.json`);
+    writeFileSync(f, JSON.stringify({ result: 'pass', mode: 'gates', scope: 'gates', sha: head(), totalDurationS: 1, gates, ...over }));
+    return f;
+  };
+  const verdictClone = () => path.join(tmp, 'clone-verdict');
+  const prep = (file: string) => publish(['prepare', 'v1.0.7', '--clone', verdictClone(), '--remote', bare, '--slug', 'Test/pub', '--verdict', file]);
+  const refused = (r: ReturnType<typeof publish>) => {
+    expect(r.status, r.stderr).toBe(1);
+    expect(r.stderr).toContain('does not clear');
+    // a refused prepare makes no export, no scan and no files check
+    expect(calls().some((l) => l.startsWith('scan ') || l.startsWith('files '))).toBe(false);
+    expect(existsSync(path.join(verdictClone(), '.git', 'bw-publish', 'v1.0.7.env')) ? readFileSync(path.join(verdictClone(), '.git', 'bw-publish', 'v1.0.7.env'), 'utf8') : '').not.toContain('PREPARED=1');
+  };
+
+  // why: K-07 F-2013 a verdict of another commit says nothing about this one, so prepare refuses it before it exports
+  it('refuses a verdict for another sha', () => {
+    clearCalls();
+    const r = prep(verdictFile('other', { sha: 'f'.repeat(40) }));
+    refused(r);
+    expect(r.stderr).toContain('is not the requested sha');
+  });
+
+  // why: K-07 F-2013 a verdict whose schema-gates is red (or that does not list it) is no clearance for a release
+  it('refuses a verdict whose schema-gates is red, or that lacks unit-tests', () => {
+    clearCalls();
+    const red = prep(verdictFile('red', {}, [{ id: 'schema-gates', status: 'fail' }, { id: 'unit-tests', status: 'pass' }, { id: 'G-CI7', status: 'pass' }]));
+    refused(red);
+    expect(red.stderr).toContain('does not list schema-gates as pass');
+    const missing = prep(verdictFile('missing', {}, [{ id: 'schema-gates', status: 'pass' }, { id: 'G-CI7', status: 'pass' }]));
+    refused(missing);
+    expect(missing.stderr).toContain('does not list unit-tests as pass');
+    const failed = prep(verdictFile('failed', { result: 'fail' }));
+    refused(failed);
+    expect(failed.stderr).toContain('verdict result is fail');
+    const absent = prep(path.join(tmp, 'no-such-verdict.json'));
+    refused(absent);
+    expect(absent.stderr).toContain('is missing');
+  });
+
+  // why: F-2055 G-CI7 runs 4 of the 5 K-07 db suites, so a verdict with G-CI7 red (or absent) is no clearance for a release
+  it('refuses a verdict whose G-CI7 is red or absent', () => {
+    clearCalls();
+    const red = prep(verdictFile('gci7-red', {}, [{ id: 'schema-gates', status: 'pass' }, { id: 'unit-tests', status: 'pass' }, { id: 'G-CI7', status: 'fail' }]));
+    refused(red);
+    expect(red.stderr).toContain('does not list G-CI7 as pass');
+    const absent = prep(verdictFile('gci7-absent', {}, [{ id: 'schema-gates', status: 'pass' }, { id: 'unit-tests', status: 'pass' }]));
+    refused(absent);
+    expect(absent.stderr).toContain('does not list G-CI7 as pass');
+  });
+
+  // why: F-2055 a prepare with no --verdict is no clearance either; it refuses before it exports
+  it('refuses a prepare with no --verdict', () => {
+    clearCalls();
+    const r = publish(['prepare', 'v1.0.7', '--clone', verdictClone(), '--remote', bare, '--slug', 'Test/pub']);
+    expect(r.status, r.stderr).toBe(1);
+    expect(r.stderr).toContain('prepare needs --verdict');
+    expect(calls().some((l) => l.startsWith('scan ') || l.startsWith('files '))).toBe(false);
+  });
+
+  // why: K-07 F-2013 the head's own verdict, with schema-gates, unit-tests and G-CI7 green, lets prepare run as before
+  it('prepares with the head\'s verdict', () => {
+    clearCalls();
+    const r = prep(verdictFile('head'));
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toContain('verdict: result pass, sha');
+    expect(readFileSync(path.join(verdictClone(), '.git', 'bw-publish', 'v1.0.7.env'), 'utf8')).toContain('PREPARED=1\n');
   });
 });
 
@@ -338,14 +418,14 @@ describe('publish.sh push and release (P8-PUBLISH, owner grant)', () => {
 
   // why: F-1618 a prepare that makes another commit for the tag drops the image checked for the old one; the same commit keeps it
   it('drops the checked image when a prepare makes another commit for the tag', () => {
-    expect(publish(['prepare', 'v1.0.5', ...common()]).status).toBe(0);
+    expect(publish(prepareArgs('v1.0.5')).status).toBe(0);
     expect(publish(['image', 'v1.0.5', '--clone', clone()]).status).toBe(0);
-    expect(publish(['prepare', 'v1.0.5', ...common()]).status).toBe(0);
+    expect(publish(prepareArgs('v1.0.5')).status).toBe(0);
     expect(publish(['push', 'v1.0.5', '--clone', clone()]).status).toBe(3);
     put(priv, 'README.md', 'public, for v1.0.5\n');
     git(priv, 'commit', '-q', '-am', 'private for v1.0.5');
     try {
-      expect(publish(['prepare', 'v1.0.5', ...common()]).status).toBe(0);
+      expect(publish(prepareArgs('v1.0.5')).status).toBe(0);
       expect(stateOf('v1.0.5')).not.toContain('IMAGE_ID=');
       const r = publish(['push', 'v1.0.5', '--granted', '--clone', clone()]);
       expect(r.status).toBe(1);
@@ -372,19 +452,19 @@ describe('publish.sh push and release (P8-PUBLISH, owner grant)', () => {
 
   // why: SD-40 a public tag is never moved: prepare of a public tag with the same tree is a no-op, with another tree a refusal
   it('never moves a public tag', () => {
-    const same = publish(['prepare', 'v1.0.0', ...common()]);
+    const same = publish(prepareArgs('v1.0.0'));
     expect(same.status, same.stderr).toBe(0);
     expect(same.stdout).toContain('already public with this same tree');
     put(priv, 'README.md', 'public, changed\n');
     git(priv, 'commit', '-q', '-am', 'private 2');
-    const moved = publish(['prepare', 'v1.0.0', ...common()]);
+    const moved = publish(prepareArgs('v1.0.0'));
     expect(moved.status).toBe(1);
     expect(moved.stderr).toContain('a public tag is never moved');
   });
 
   // why: SD-40 push refuses when the public main moved after prepare (the commit's parent is no longer the public main)
   it('refuses to push when the public main moved', () => {
-    const prep = publish(['prepare', 'v1.1.0', ...common()]);
+    const prep = publish(prepareArgs('v1.1.0'));
     expect(prep.status, prep.stderr).toBe(0);
     const other = path.join(tmp, 'other');
     git(tmp, 'clone', '-q', bare, other);

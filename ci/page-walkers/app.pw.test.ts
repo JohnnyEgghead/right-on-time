@@ -4,7 +4,8 @@
 // selects (phase at or before the current one, task merged; BW_MERGED_TASKS for tests) and app-wiring.ts wires, on
 // Chromium and WebKit: axe-scan, tap-target-44 and outside-origin-guard in English; spanish-fallback-pass and
 // overflow-pass in Spanish. Run by ci/gates/page-walkers.sh (Chromium, the English passes: the push half) and by
-// ci/gates/page-walkers-nightly.sh (WebKit, every pass; Chromium, the Spanish and overflow passes); the unit-tests gate
+// ci/gates/page-walkers-nightly.sh (WebKit: tap-target-44 and the Spanish overflow-pass; Chromium, the Spanish and overflow passes). P10-NIGHTLY-SPEED
+// (owner answer 400ec3ba, Nov 27, 2026): WebKit runs no axe-scan and no spanish-fallback-pass (engine-free; Chromium keeps both); the unit-tests gate
 // excludes *.pw.test.ts. BW_APP_WALK_PASSES picks the passes (P3-CI-CADENCE): english, spanish, or all (the default).
 import { readFileSync } from 'node:fs';
 import type { Browser, BrowserContextOptions, Page } from 'playwright';
@@ -62,7 +63,7 @@ describe('app walk selection', () => {
   });
 });
 
-describe.runIf(wired.length > 0).each(engines)('page walkers on the app, %s', (_name, type) => {
+describe.runIf(wired.length > 0).each(engines)('page walkers on the app, %s', (name, type) => {
   // Ruling Nov 10, 2026 item 4a: the checks run walkConcurrency() at a time, each on its own browser from a pool of that size (1 browser per running check).
   const slots = walkConcurrency();
   const browsers: Browser[] = [];
@@ -118,25 +119,31 @@ describe.runIf(wired.length > 0).each(engines)('page walkers on the app, %s', (_
   const itEnglish = walkEnglish ? it.concurrent : it.skip;
   const itSpanish = walkSpanish ? it.concurrent : it.skip;
   const none = (f: Finding[]) => expect(f.map((x) => `${x.walker}: ${x.message}`)).toEqual([]);
+  // The overflow-pass of a Spanish page, in the machine's font and again with every glyph run widened (F-310: a tight fit fails on a machine whose own font is narrow).
+  const overflowChecks = async (p: Page): Promise<Finding[]> => [...(await overflowPass(p)), ...(await overflowPass(p, undefined, 'wide'))];
 
   for (const row of wired) {
-    // why: NFR-06 0 serious or critical axe violations on every built page (color-contrast off, OA-84)
-    itEnglish(`${row.screen} ${row.name}: axe-scan and the outside-origin guard, in English`, async () => {
-      none(await onPage(row.path, row.status, row.screen, { viewport: { width: 1440, height: 900 } }, 'en', axeScan, row.maps));
-    });
+    // P10-NIGHTLY-SPEED, owner answer 400ec3ba (Nov 27, 2026): the WebKit copy of the axe-scan case is dropped (the same axe rules run on the same DOM on Chromium); every WebKit page still opens through the outside-origin guard in the tap-target-44 and overflow-pass cases below.
+    if (name === 'chromium') {
+      // why: NFR-06 0 serious or critical axe violations on every built page (color-contrast off, OA-84)
+      itEnglish(`${row.screen} ${row.name}: axe-scan and the outside-origin guard, in English`, async () => {
+        none(await onPage(row.path, row.status, row.screen, { viewport: { width: 1440, height: 900 } }, 'en', axeScan, row.maps));
+      });
+    }
     // why: NFR-06 every tap target on a phone layout is at least 44 x 44 px
     itEnglish(`${row.screen} ${row.name}: tap-target-44 on a phone, in English`, async () => {
       none(await onPage(row.path, row.status, row.screen, { viewport: PHONE_VIEWPORT, isMobile: true, hasTouch: true }, 'en', tapTargets, row.maps));
     });
-    // why: FR-LANG-3, UC-04 a page shown in Spanish holds no English catalog value, and no text is clipped at 520 and 390 px, in the machine's font and with the wide-font probe
-    itSpanish(`${row.screen} ${row.name}: spanish-fallback-pass and overflow-pass, in Spanish`, async () => {
-      const found = await onPage(row.path, row.status, row.screen, { viewport: { width: 520, height: 980 } }, 'es', async (p) => [
-        ...(await spanishFallback(p, catalog)),
-        ...(await overflowPass(p)),
-        // F-310: and again with every glyph run widened, so a tight fit fails on a machine whose own font is narrow.
-        ...(await overflowPass(p, undefined, 'wide')),
-      ], row.maps);
-      none(found);
-    });
+    if (name === 'chromium') {
+      // why: FR-LANG-3, UC-04 a page shown in Spanish holds no English catalog value, and no text is clipped at 520 and 390 px, in the machine's font and with the wide-font probe
+      itSpanish(`${row.screen} ${row.name}: spanish-fallback-pass and overflow-pass, in Spanish`, async () => {
+        none(await onPage(row.path, row.status, row.screen, { viewport: { width: 520, height: 980 } }, 'es', async (p) => [...(await spanishFallback(p, catalog)), ...(await overflowChecks(p))], row.maps));
+      });
+    } else {
+      // why: FR-LANG-3, UC-04 on WebKit no text is clipped at 520 and 390 px in WebKit's own fonts, in the machine's font and with the wide-font probe; the catalog check (spanish-fallback-pass) is engine-free and runs on Chromium only (P10-NIGHTLY-SPEED, owner answer 400ec3ba)
+      itSpanish(`${row.screen} ${row.name}: overflow-pass, in Spanish`, async () => {
+        none(await onPage(row.path, row.status, row.screen, { viewport: { width: 520, height: 980 } }, 'es', overflowChecks, row.maps));
+      });
+    }
   }
 });

@@ -2,13 +2,15 @@
 'use client';
 // SCR-OFC-16 Admin: system health at `/office/admin/health` (FR-HLTH-1 to FR-HLTH-4, FR-TEXT-16; UC-06): reads API-70, keeps it live (EVT-03,
 // EVT-04, EVT-07, EVT-09: the page re-reads), and calls API-160 Check now, API-161 the alert switches and API-71 the text simulator. The customer
-// field of "Fail sends to this customer" searches with API-130 (the customer search, API-34, is not built yet).
+// field of "Fail sends to this customer" searches with API-130 (the top bar's search; the customers page's own search, API-34, is a different read).
 import { ApiError, checkNow, createClient, dismissAlert, search, setAlertSwitch, setTextSimulator, subscribeEvents, systemHealth } from '@bw/api';
 import type { MessageKey } from '@bw/i18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { openAlertEmail } from '../shell/alert-email.ts';
 import { useAnnounce } from '../shell/Announcer.tsx';
 import { useT } from '../shell/intl.tsx';
+import { useKeyedInFlight } from '../shell/in-flight.ts';
+import { useNewestAnswer } from '../shell/newest-answer.ts';
 import { useBranch } from '../shell/useBranch.ts';
 import { HealthView, IDLE_UI, type HealthState, type HealthUi } from './HealthView.tsx';
 import { applyInput, type Health, type Picked, type SimMode } from './model.ts';
@@ -30,19 +32,22 @@ export function HealthScreen() {
   say.current = { t, announce };
   const picked = useRef(false);
 
+  const newest = useNewestAnswer();
+  // K-05: events, a change made here and the first read all read; the newest read's answer is the one shown, however late an earlier one lands.
   const load = useCallback(async () => {
-    try {
-      const answer = await client.call(systemHealth, {});
+    await newest.run(() => client.call(systemHealth, {}).then((answer) => answer, () => null), (answer) => {
+      if (answer === null) {
+        setState((s) => (s.kind === 'ready' ? s : { kind: 'error' }));
+        return;
+      }
       setState({ kind: 'ready', data: answer.data });
       // The first landing sets the pick to what is in force; a later re-read keeps a pick the manager is making.
       if (!picked.current) {
         picked.current = true;
         setUi((u) => ({ ...u, pick: pickOf(answer.data.textSimulator), customerText: answer.data.textSimulator.customerName ?? '' }));
       }
-    } catch {
-      setState((s) => (s.kind === 'ready' ? s : { kind: 'error' }));
-    }
-  }, [client]);
+    });
+  }, [client, newest]);
 
   useEffect(() => {
     void load();
@@ -102,27 +107,43 @@ export function HealthScreen() {
     }
   };
 
+  // K-01: 1 write per press-run, per control (F-2079). A press on a switch or a Dismiss row whose own write is in flight does nothing; a press on
+  // another row goes on. A control lets go when its answer and the re-read have landed, so it shows the saved position (a switch) or no button (a
+  // Dismiss) before the next press (F-2077, F-2084). A held control shows its busy look (`ui.busy`).
+  const guard = useKeyedInFlight();
   const onSwitch = async (type: string, which: 'bell' | 'managersEmail', value: boolean) => {
-    patch({ message: null });
+    const key = `switch:${type}:${which}`;
+    if (!guard.begin(key)) return;
     try {
-      await client.call(setAlertSwitch, { alertType: type, [which]: value });
-    } catch {
-      patch({ message: { where: 'switch', text: say.current.t('health.alerts.notSaved') } });
+      patch({ message: null });
+      try {
+        await client.call(setAlertSwitch, { alertType: type, [which]: value });
+      } catch {
+        patch({ message: { where: 'switch', text: say.current.t('health.alerts.notSaved') } });
+      }
+      // The switch shows the saved position: after a failure the read returns it to where it was.
+      await load();
+    } finally {
+      guard.end(key);
     }
-    // The switch shows the saved position: after a failure the read returns it to where it was.
-    await load();
   };
 
   /** API-176 (CTL-OFC-16-28): Dismiss; the list re-reads either way, and a refusal says the alert can no longer be dismissed (CMP-11). */
   const onDismiss = async (alertId: string) => {
-    let ok = true;
+    const key = `dismiss:${alertId}`;
+    if (!guard.begin(key)) return;
     try {
-      await client.call(dismissAlert, { alertId });
-    } catch {
-      ok = false;
+      let ok = true;
+      try {
+        await client.call(dismissAlert, { alertId });
+      } catch {
+        ok = false;
+      }
+      await load();
+      say.current.announce(say.current.t(ok ? 'health.alerts.dismissed' : 'health.alerts.dismissRefused'), ok ? 'check' : 'alert');
+    } finally {
+      guard.end(key);
     }
-    await load();
-    say.current.announce(say.current.t(ok ? 'health.alerts.dismissed' : 'health.alerts.dismissRefused'), ok ? 'check' : 'alert');
   };
 
   const onCustomerText = (text: string) => {
@@ -143,7 +164,7 @@ export function HealthScreen() {
   return (
     <HealthView
       state={state}
-      ui={ui}
+      ui={{ ...ui, busy: guard.busy }}
       on={{
         onCheck: () => void onCheck(),
         onRetry: () => load(),

@@ -386,7 +386,7 @@ export const boardDay = defineContract({
   }),
   errors: [],
   // FR-REP-4: the on-time rate comes from the simulated pilot data and never travels without its label.
-  labels: ['simulated_pilot_data'],
+  labels: ['simulated_pilot_data', 'entered_offline'],
   examples: [{ name: 'signed out', input: { branch: 'columbus', date: 'today' }, expectStatus: 401 }],
 });
 

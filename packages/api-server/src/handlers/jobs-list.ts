@@ -179,7 +179,9 @@ export const jobsListHandler: Handler<ListAnswer> = async (req, tx) => {
   const p = req.params as ListIn;
   const r = await readJobs(tx, p, req.demoNow);
   if (r === null) return { ok: false, status: 404, code: 'not_found' };
-  const start = ((p.page ?? 1) - 1) * PAGE_SIZE;
+  // K-08.1: a page past the last answers the last page, never an empty one.
+  const page = Math.min(p.page ?? 1, Math.max(1, r.answer.pages));
+  const start = (page - 1) * PAGE_SIZE;
   return { ok: true, status: 200, data: { ...r.answer, rows: r.all.slice(start, start + PAGE_SIZE) } };
 };
 

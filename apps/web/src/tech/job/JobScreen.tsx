@@ -22,6 +22,7 @@ import type { OutboxState } from '../engine.ts';
 import { NoSignalCard } from '../SyncStrip.tsx';
 import { TechAppFrame } from '../TechAppFrame.tsx';
 import { HeadClock } from './HeadClock.tsx';
+import { holdPhotoUrl } from './FinishScreen.tsx';
 import { useOwedSignatures } from './owed.ts';
 import type { ClockAnswer } from '../../shell/clock.ts';
 import { techOutbox, useOwnOutbox } from '../useOutbox.ts';
@@ -47,32 +48,34 @@ const phoneClock: DemoSource<DemoTime> = async () => {
   return ms === null ? null : { at: Temporal.Instant.fromEpochMilliseconds(ms), answer: { paused: true, rate: 1 } };
 };
 
+/**
+ * K-08.10: Directions is offered for a job that is shown as today's (the same test that keeps Call, F-1034), never for a kept copy of a past demo
+ * day, and only while the job is Scheduled or On the way. A preview (`fixed`) takes the copy's own `today`.
+ */
+export function directionsOffered(job: JobCopy, status: JobStatus, demoNow: number | null, fromPhone: boolean, fixed = false): boolean {
+  const today = fixed ? job.job.today : shownAsToday(job, demoNow, fromPhone);
+  return today && (status === 'scheduled' || status === 'on_the_way');
+}
+
 export interface JobScreenProps {
   jobNumber: number;
   /** /tech/jobs/{n}/photo opens the Add photo sheet over the job. */
   photo?: boolean;
   /** Previews: the job, the engine state, who is signed in and what is open; pages leave it unset. */
-  fixed?: { view: JobView; outbox?: OutboxState; me?: string; sheet?: 'none' | 'preview'; viewer?: string; menu?: boolean; draft?: string; finished?: boolean; minutes?: number | null; clock?: ClockAnswer; mini?: boolean; photoSaved?: boolean };
+  fixed?: { view: JobView; outbox?: OutboxState; me?: string; sheet?: 'none' | 'preview'; viewer?: string; menu?: boolean; finished?: boolean; minutes?: number | null; clock?: ClockAnswer; mini?: boolean; photoSaved?: boolean };
 }
 
 /**
  * A thumbnail: the server's small copy (API-175 size thumb, UD-55), or with `full` the whole file (the viewer only), or the phone's
  * own unsent bytes; a file that fails shows the placeholder.
  */
-function Thumb({ p, className, alt, full = false }: { p: ShownPhoto; className: string; alt: string; full?: boolean }) {
+export function Thumb({ p, className, alt, full = false }: { p: ShownPhoto; className: string; alt: string; full?: boolean }) {
   const [src, setSrc] = useState<string | null>(previewFile(p.key) ?? (p.waiting ? null : full ? fileSrc(p.key) : thumbSrc(p.key)));
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     if (!p.waiting || previewFile(p.key)) return;
-    let url: string | null = null;
-    void techOutbox().blob(p.key).then((b) => {
-      if (!b) return setFailed(true);
-      url = URL.createObjectURL(new Blob([b as BlobPart], { type: 'image/jpeg' }));
-      setSrc(url);
-    }, () => setFailed(true));
-    return () => {
-      if (url) URL.revokeObjectURL(url);
-    };
+    // F-2066: the same hold as FinishScreen's (K-08.23), so a blob that lands after the screen closed is revoked at once.
+    return holdPhotoUrl(() => techOutbox().blob(p.key), setSrc, () => setFailed(true));
   }, [p.key, p.waiting]);
   if (failed || !src) return <span className={`${className} bw-ph-none`}><Icon name="camera" /></span>;
   return <img className={className} src={src} alt={alt} onError={() => setFailed(true)} />;
@@ -102,11 +105,11 @@ export function JobScreen({ jobNumber, photo = false, fixed }: JobScreenProps) {
   }, [demoDay, reload]);
   // CTL-TEC-04-04 (F-1369, owner answer fa9c9833): Directions is the drive from the van to THIS job; hidden once the job is On site or ended.
   const driveStatus = view.kind === 'job' ? shownStatus(view.job, outbox.waiting).status : null;
-  const driveTo = view.kind === 'job' && view.job.job.today && (driveStatus === 'scheduled' || driveStatus === 'on_the_way') ? jobNumber : null;
+  const driveTo = view.kind === 'job' && driveStatus !== null && directionsOffered(view.job, driveStatus, demoNow, view.fromPhone, Boolean(fixed)) ? jobNumber : null;
   const minutes = useDriveMinutes(driveTo, fixed ? (fixed.minutes ?? null) : undefined);
   const [menu, setMenu] = useState(fixed?.menu ?? false);
   const [viewer, setViewer] = useState<string | null>(fixed?.viewer ?? null);
-  const [draft, setDraft] = useState<string | null>(fixed?.draft ?? null);
+  const [draft, setDraft] = useState<string | null>(null);
   // SCR-TEC-07 Saved: the finish screen closes to the job with ?finished=1 (the job shows Done with Waiting to send or Sent).
   const [finished, setFinished] = useState(fixed?.finished ?? false);
   // SCR-TEC-06 Saved: Save photo closes the sheet to the job with ?photo=saved (the new thumbnail shows Waiting to send).

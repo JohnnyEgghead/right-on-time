@@ -54,9 +54,9 @@ function Hosted({ state }: { state: TechPreviewState }): ReactNode {
       })} />;
     case 'add-editing': return <AddTechnicianDialog {...common} start={{ focus: true }} />;
     case 'add-hours': return <AddTechnicianDialog {...common} start={{ hoursOpen: true }} />;
-    case 'add-saving': return <AddTechnicianDialog {...common} start={{ name: 'Derek Lindgren', email: 'dlindgren@brightwaterair.com', vanId: TECH_SUCCESS.vans[0]?.id ?? null, skills: ['plumbing', 'drains'] as TechSkill[], saving: true }} />;
-    case 'add-added': return <AddTechnicianDialog {...common} start={{ added: { name: 'Derek Lindgren', email: 'dlindgren@brightwaterair.com', link: '/email/preview' } }} />;
-    case 'add-used': return <AddTechnicianDialog {...common} start={{ added: { name: 'Derek Lindgren', email: 'dlindgren@brightwaterair.com', link: '/email/preview' }, used: true }} />;
+    case 'add-saving': return <AddTechnicianDialog {...common} start={{ name: 'Derek Lindgren', email: 'dlindgren@brightwater.example', vanId: TECH_SUCCESS.vans[0]?.id ?? null, skills: ['plumbing', 'drains'] as TechSkill[], saving: true }} />;
+    case 'add-added': return <AddTechnicianDialog {...common} start={{ added: { name: 'Derek Lindgren', email: 'dlindgren@brightwater.example', link: '/email/preview' } }} />;
+    case 'add-used': return <AddTechnicianDialog {...common} start={{ added: { name: 'Derek Lindgren', email: 'dlindgren@brightwater.example', link: '/email/preview' }, used: true }} />;
     case 'timeoff-editing': return <AddTimeOffDialog {...tf} />;
     case 'timeoff-saving': return <AddTimeOffDialog {...tf} start={{ from: '2026-09-21', to: '2026-09-21', note: 'Dentist', saving: true }} />;
     default: return null;

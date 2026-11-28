@@ -94,6 +94,8 @@ function plantedRepo(name: string, extra: Record<string, string> = {}): string {
     // F-1920: the build-continuity git hook of the jl-dev harness, and any later plugin file in that folder.
     '.githooks/pre-push',
     '.githooks/planted-by-list',
+    // F-2057: infra/spike/ (J-35), the spike's files stay out of the export.
+    'infra/spike/planted-by-list.md',
   ]) put(p, 'private\n');
   for (const [p, t] of Object.entries(extra)) put(p, t);
   git(dir, 'add', '-A');

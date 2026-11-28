@@ -160,7 +160,7 @@ async function bookOnline(name: string): Promise<number> {
     const win = (day?.windows as Json[] | undefined)?.find((x) => x.state === 'open');
     if (!win) continue;
     const b = await call(null, 'POST', '/public/bookings', {
-      serviceId, streetId: street, houseNumber: 1, date: BOOK_DAY, windowId: win.windowId, name, mobile: null, textsOn: false, textLanguage: 'en', timeZone: ZONE,
+      serviceId, streetId: street, houseNumber: 1, date: BOOK_DAY, windowId: win.windowId, name, mobile: null, textsOn: false, textLanguage: 'en', timeZone: ZONE, bookingKey: randomUUID(),
     });
     expect(b.status, JSON.stringify(b.body)).toBe(201);
     streetOffset += 1;

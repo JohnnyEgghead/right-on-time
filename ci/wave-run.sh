@@ -480,9 +480,10 @@ remove_run_containers() {
 }
 
 # F-460: bounded <secs> <step name> <command...>. Runs the command in the background and polls (macOS has no GNU timeout by
-# default; this is the same background-watchdog shape as the whole-run cap below). On expiry it kills the command's whole
-# process tree (children first, so no docker client or ssh child outlives the wrapper), says which step timed out, and
-# returns 124. Callers treat 124 as RED. Otherwise it returns the command's own status.
+# default; this is the same background-watchdog shape as the whole-run cap below). On expiry it sends TERM to the command's whole
+# process tree, each process before its children (F-2101), waits out the grace, then KILLs what is left (children first, so no
+# docker client or ssh child outlives the wrapper), says which step timed out, and returns 124. Callers treat 124 as RED.
+# Otherwise it returns the command's own status.
 kill_tree() {
   local c
   for c in $(pgrep -P "$1" 2>/dev/null); do kill_tree "$c" "${2:-TERM}"; done
@@ -517,12 +518,17 @@ bounded() {
   pid=$!
   t0=$(date +%s)
   while kill -0 "$pid" 2>/dev/null; do
-    if [ $(( $(date +%s) - t0 )) -ge "$secs" ]; then
+    # F-2101: more than secs, not secs or more. The clock reads whole seconds, so a difference of secs can be read up to 1 s early,
+    # even at the first check, when a second turns just after t0; a 1 s cap could then kill the command before it had set its traps.
+    if [ $(( $(date +%s) - t0 )) -gt "$secs" ]; then
       # F-1203: the grace between TERM and KILL is BOUNDED_GRACE_S (default 2 s). The mac half sets it long enough for run.sh's EXIT
       # trap (compose down -v) to finish; it ends as soon as the command has exited, so a command that stops at TERM waits no longer.
       # The tree is listed first: a child that dies at TERM (bash -c) would otherwise hide its own child, run.sh, which is still cleaning up.
       all="$(tree_pids "$pid")"
-      kill_tree "$pid" TERM
+      # F-2101: TERM goes to the listed processes in list order, a parent before its children. Children first let a script see its
+      # child die before its own TERM came and run on into its EXIT trap; the late TERM's trap ('exit 143') then ended that trap
+      # mid-teardown. A process the EXIT trap starts after the listing (compose down) is not in the list and gets no TERM.
+      for p in $all; do kill -TERM "$p" 2>/dev/null; done
       g=0
       while [ "$g" -lt $(( ${BOUNDED_GRACE_S:-2} * 5 )) ] && any_alive $all; do sleep 0.2; g=$((g + 1)); done
       for p in $all; do kill_tree "$p" KILL; done

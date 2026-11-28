@@ -28,6 +28,8 @@ import {
   type Answer, type ItemContext, type ItemFacts, type LockedJob, type Placement,
 } from './shared.ts';
 
+const UUID_TEXT = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
 export interface FinishInput {
   parts: { partId: string; quantity: number }[];
   noPartsUsed: boolean;
@@ -162,7 +164,9 @@ async function decideAndWrite(tx: Queryable, ctx: ItemContext, deps: TextContext
   // FR-BILL-3: the finish lines are decided before anything else, so a refused finish stays on the phone whole.
   let lines: ReturnType<typeof finishLines> | null = null;
   if (it.kind === 'finished') {
-    const seeded = new Set((await tx.query<{ id: string }>('SELECT id::text FROM world.part')).rows.map((p) => p.id));
+    // K-09.10: read only the finish's own part ids (a non-uuid id is no seeded part and would fail the uuid cast, so it is left out).
+    const wanted = it.finish.parts.map((p) => p.partId).filter((id) => UUID_TEXT.test(id));
+    const seeded = new Set((await tx.query<{ id: string }>('SELECT id::text FROM world.part WHERE id = ANY($1::uuid[])', [wanted])).rows.map((p) => p.id));
     lines = finishLines({ parts: it.finish.parts, noPartsUsed: it.finish.noPartsUsed, laborMinutes: it.finish.laborMinutes }, (id) => seeded.has(id));
     if (!lines.ok) {
       if (lines.code === 'validation_failed') return flagRefused(tx, ctx, it, 'validation_failed', job);

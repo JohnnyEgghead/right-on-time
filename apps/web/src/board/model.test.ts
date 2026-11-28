@@ -4,7 +4,7 @@ import { catalogs } from '@bw/i18n';
 import { createIntl } from 'react-intl';
 import { describe, expect, it } from 'vitest';
 import type { ClientT } from '../shell/intl.tsx';
-import { blockDrop, boardSkills, conflictWords, entryLines, filtered, flagValues, hourOf, jobClass, jobDrop, jobMarkerState, noRoomText, place, shortName, shortWindow, spanText, statusKey, stepDate, tabCounts, tabJobs, timeText, vanState, windowText, type BoardBlock, type BoardJob, type Van } from './model.ts';
+import { blockDrop, boardSkills, conflictWords, entryLines, filtered, flagValues, hourOf, jobClass, jobDrop, jobMarkerState, noRoomText, place, shortName, shortWindow, spanText, statusKey, stepDate, tabCounts, tabJobs, ticksEachSecond, timeText, vanState, windowText, type BoardBlock, type BoardJob, type Van } from './model.ts';
 import { sampleBoard } from './preview-fixtures.ts';
 
 const Z = '-04:00[America/New_York]';
@@ -182,5 +182,14 @@ describe('the no-room refusal names its limit (F-1701)', () => {
   // why: F-1813 the kernel always sends the limit, so an answer without one is a server fault and names no limit
   it('gives no text when the answer names no limit', () => {
     expect(noRoomText(((k: string) => k) as never, {}, 'Chris Yoder', '12-2 PM')).toBeNull();
+  });
+});
+
+describe('the board redraw each second (K-08.12)', () => {
+  // why: F-2078 the 1 s redraw ran on a past date and with a paused clock, where no time moves, and drew the whole board each second for nothing
+  it('runs only for today with a clock that is not paused', () => {
+    const running = { answer: { paused: false } };
+    expect([ticksEachSecond(true, running), ticksEachSecond(false, running), ticksEachSecond(undefined, running)]).toEqual([true, false, false]);
+    expect([ticksEachSecond(true, { answer: { paused: true } }), ticksEachSecond(true, null)]).toEqual([false, false]);
   });
 });

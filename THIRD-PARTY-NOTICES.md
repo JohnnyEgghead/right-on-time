@@ -8,6 +8,10 @@ These are the credits the license of a shipped part asks for, word for word as t
 
 - caniuse-lite: browser support data from caniuse.com (Fyrd/caniuse), packaged by the browserslist project (https://github.com/browserslist/caniuse-lite), licensed CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/).
 
+## Fonts
+
+- Inter, copyright 2016 The Inter Project Authors (https://github.com/rsms/inter), licensed under the SIL Open Font License 1.1. The font file is `apps/web/mockups/src/fonts/Inter-latin-wght.woff2`; the license text is beside it in `apps/web/mockups/src/fonts/OFL-1.1.txt`.
+
 ## Map and street data
 
 The map files, the baked tracks, the routing files and the street list are made from OpenStreetMap data, © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0. See `LICENSE-DATA.md`.

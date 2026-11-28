@@ -57,7 +57,7 @@ export const myJob = defineContract({
     photos: z.array(z.object({ key: z.string(), by: z.string().nullable(), at: wireTime })),
   }),
   errors: [],
-  labels: [],
+  labels: ['entered_offline'],
   examples: [{ name: 'signed out', input: { jobNumber: SAMPLE_JOB }, expectStatus: 401 }],
 });
 

@@ -8,7 +8,8 @@
 //   2. gate      the conditional UPDATE ... SET version = version + 1 WHERE ... AND version = baseVersion; 0 rows answers
 //                version_conflict naming the change that made the current version (who, what, the technician, when)
 //   3. check     under the locks: the day is open, the window has room (windowRoom), the technician works the day and
-//                has room (SD-27), and no scheduled job's planned time overlaps a block (time_overlap)
+//                has room (SD-27), and no overlap the write causes between a scheduled job's planned time and a block (time_overlap):
+//                one not on the row before the write, on a day the write adds work to; a day it only takes work off never refuses (OA-92)
 //   4. settle    planned arrivals recomputed for every technician-day the write touched, the old and the new (SD-15)
 //   5. record    exactly 1 job_change row per job written (its from and to versions are the gate's trail) ...
 //   6. notify    ... and exactly 1 notice per job or block written, ids only (events.ts publish)
@@ -20,7 +21,7 @@
 // as API-28 carries no key; the office re-reads the board after any answer). Derived planned arrivals never bump a
 // version, so a settle never causes a conflict (D15).
 import { deleteTracksNaming, publishEvent, type Queryable } from '@bw/db';
-import { keepTechnicianOnReschedule, worksOn } from '@bw/domain';
+import { keepTechnicianOnReschedule, worksOn, type JobChangeKind } from '@bw/domain';
 import { cancelUnsentConfirmations, REASON } from '@bw/outbox';
 import { addDays, localDateOf, Temporal } from '@bw/time';
 import { endOnTheWay } from '../tech-items/effects.ts';
@@ -104,6 +105,14 @@ export interface CustomerWriteContext {
   at: Date;
 }
 
+/**
+ * Thrown by createJob for an online booking whose key a job already holds when the booking-day lock is taken (SPECIFICATIONS 6.1 Booking
+ * write, K-01). Not a refusal: the handler rolls the send back to its savepoint and answers the held job's booking as a repeat.
+ */
+export class BookingKeyHeld extends Error {
+  constructor() { super('the booking key is already held by a job'); this.name = 'BookingKeyHeld'; }
+}
+
 /** The customer's own booking (API-113): no signed-in user, the job_change's actor is `customer` (SPECIFICATIONS section 5.1 step 5). */
 export interface OnlineContext {
   actor: { kind: 'customer'; userId: null };
@@ -181,7 +190,7 @@ export async function gatedJobUpdate(tx: Queryable, jobNumber: number, baseVersi
 
 /** Step 5: the 1 job_change row of a job write (section 3 job_change; data holds ids and values, never a phone or address). */
 export async function appendJobChange(tx: Queryable, ctx: WriteContext | CustomerWriteContext | OnlineContext | { actor: { kind: 'office'; userId: string | null }; at: Date }, row: {
-  jobNumber: number; kind: string; fromVersion: number; toVersion: number; data: Record<string, unknown>;
+  jobNumber: number; kind: JobChangeKind; fromVersion: number; toVersion: number; data: Record<string, unknown>;
 }): Promise<void> {
   await tx.query(
     `INSERT INTO world.job_change (job_number, at, actor_user_id, actor_kind, kind, from_version, to_version, data)
@@ -192,10 +201,56 @@ export async function appendJobChange(tx: Queryable, ctx: WriteContext | Custome
 const overlapRefusal = (o: Overlap): WriteRefused =>
   new WriteRefused('time_overlap', `job ${o.job.jobNumber}'s planned time overlaps block ${o.block.blockId}`, o);
 
-/** Settle every touched day; the first overlap refuses the write (step 3, step 4). */
-async function settleOrRefuse(tx: Queryable, days: readonly TechnicianDayKey[]): Promise<void> {
+const dayId = (d: TechnicianDayKey): string => `${d.technicianId}|${d.date}`;
+/** A (job, block) pair on its row: the pair, not its times, so a pair already there is not new when the plan moves it. */
+const pairId = (d: TechnicianDayKey, o: Overlap): string => `${dayId(d)}|${o.job.jobNumber}|${o.block.blockId}`;
+
+/**
+ * Every overlap on 1 technician-day as its stored plan has it: a scheduled job's planned time (planned arrival to planned arrival
+ * + expected minutes) against a block on the row, half-open as firstOverlap (touching ends do not overlap), in plan then block order.
+ */
+async function dayOverlaps(tx: Queryable, d: TechnicianDayKey): Promise<Overlap[]> {
+  const r = await tx.query<{
+    job_number: number; zone: string; planned_arrival: Date; planned_end: Date; id: string; label: string; place: string | null; start: Date; end: Date;
+  }>(
+    `SELECT j.job_number, j.zone, j.planned_arrival, j.planned_arrival + make_interval(mins => j.expected_minutes) AS planned_end,
+            b.id, b.label, b.place, b.start, b."end"
+       FROM world.job j JOIN world.time_block b ON b.technician_id = j.technician_id AND b.date = j.date
+      WHERE j.technician_id = $1 AND j.date = $2::date AND j.status = 'scheduled' AND j.planned_arrival IS NOT NULL
+        AND j.planned_arrival < b."end" AND b.start < j.planned_arrival + make_interval(mins => j.expected_minutes)
+      ORDER BY j.planned_arrival, j.job_number, b.start, b.id`, [d.technicianId, d.date]);
+  return r.rows.map((o) => ({
+    block: { blockId: o.id, label: o.label, place: o.place, start: wire(o.start, o.zone), end: wire(o.end, o.zone) },
+    job: { jobNumber: o.job_number, plannedArrival: wire(o.planned_arrival, o.zone), plannedEnd: wire(o.planned_end, o.zone) },
+  }));
+}
+
+/** The days a write adds work to and the overlaps already on them, read under their locks before the write changes them. */
+interface OverlapsBefore { adds: ReadonlySet<string>; pairs: ReadonlySet<string> }
+
+/**
+ * Section 5.3 step 2 (owner answer 2f636a8d, "Only overlaps it causes"; OA-92, "Allow it"; F-2012 K-09.1): `adds` are the
+ * technician-days the write puts work on (a job or a block ends the write there). Every other day the write touches only
+ * loses work, and is never refused for an overlap, neither one already there nor one its recompute makes. Called after the
+ * days are locked and before the write's first UPDATE, so the pairs read are the row as it was before the write.
+ */
+async function overlapsBefore(tx: Queryable, adds: readonly TechnicianDayKey[]): Promise<OverlapsBefore> {
+  const pairs = new Set<string>();
+  for (const d of adds) for (const o of await dayOverlaps(tx, d)) pairs.add(pairId(d, o));
+  return { adds: new Set(adds.map(dayId)), pairs };
+}
+
+/** Settle 1 day; answer the first overlap the write caused there: on a day it adds work to, one not on the row before; else none. */
+async function settleCaused(tx: Queryable, d: TechnicianDayKey, before: OverlapsBefore | null): Promise<Overlap | null> {
+  await settleDay(tx, d);
+  if (!before?.adds.has(dayId(d))) return null;
+  return (await dayOverlaps(tx, d)).find((o) => !before.pairs.has(pairId(d, o))) ?? null;
+}
+
+/** Settle every touched day; the first overlap the write caused refuses it (step 3, step 4). `null` settles and never refuses. */
+async function settleOrRefuse(tx: Queryable, days: readonly TechnicianDayKey[], before: OverlapsBefore | null): Promise<void> {
   for (const d of days) {
-    const o = await settleDay(tx, d);
+    const o = await settleCaused(tx, d, before);
     if (o) throw overlapRefusal(o);
   }
 }
@@ -237,6 +292,8 @@ export async function assignJob(tx: Queryable, ctx: WriteContext, input: { jobNu
   const days = dayKeys([[job.technician_id, job.date], [input.technicianId, job.date]]);
   if (input.technicianId !== null) await lockBookingDays(tx, [{ branch: job.branch_id, date: job.date }]);
   await lockTechnicianDays(tx, days);
+  // The new technician's day gains the job; the old one only loses it (an unassign adds to no day).
+  const before = await overlapsBefore(tx, dayKeys([[input.technicianId, job.date]]));
   // planned_arrival is null while Unassigned (section 3); settle writes it again for the new technician's day.
   // A begun job that changes hands goes back to Scheduled for the new technician (d0c0a033); the same technician keeps it as it is.
   const reassigned = begun(job.status) && input.technicianId !== job.technician_id;
@@ -251,7 +308,7 @@ export async function assignJob(tx: Queryable, ctx: WriteContext, input: { jobNu
     const refused = await technicianRoomRefusal(tx, t, job.date, window, kind, job.job_number);
     if (refused) throw new WriteRefused('technician_no_room', `technician ${t.id} has no room in window ${window.id} on ${job.date}`, refused);
   }
-  await settleOrRefuse(tx, days);
+  await settleOrRefuse(tx, days, before);
   if (reassigned) await endBegunVisit(tx, job, ctx.at);
   await appendJobChange(tx, ctx, {
     jobNumber: job.job_number, kind: 'assigned', fromVersion: input.baseVersion, toVersion: input.baseVersion + 1,
@@ -284,6 +341,7 @@ export async function rescheduleJob(tx: Queryable, ctx: WriteContext | CustomerW
   const oldDay = dayKeys([[job.technician_id, job.date]]);
   const newDay = dayKeys([[job.technician_id, input.date]]);
   await lockTechnicianDays(tx, [...oldDay, ...newDay]);
+  const before = await overlapsBefore(tx, newDay);
   const start = at(input.date, window.startLocal, branch.zone);
   const end = at(input.date, window.endLocal, branch.zone);
   const moved = begun(job.status);
@@ -302,8 +360,9 @@ export async function rescheduleJob(tx: Queryable, ctx: WriteContext | CustomerW
     const t = await readTechnician(tx, job.technician_id);
     const worksNewDate = t !== null && worksOn(t, input.date);
     const hasRoom = t !== null && worksNewDate && (await technicianRoom(tx, t, input.date, window, kind, job.job_number));
-    // The trial settle plans the new day with this job in it; a block overlap then unassigns (SD-45).
-    const blockOverlap = hasRoom && (await settleDay(tx, newDay[0] as TechnicianDayKey)) !== null;
+    // The trial settle plans the new day with this job in it; a block overlap the move causes then unassigns (SD-45). An overlap
+    // already on the new day that the move leaves as it was keeps the technician (F-2012 K-09.2).
+    const blockOverlap = hasRoom && (await settleCaused(tx, newDay[0] as TechnicianDayKey, before)) !== null;
     kept = keepTechnicianOnReschedule({ assigned: true, worksNewDate, hasRoom, blockOverlap });
     if (!kept) {
       await tx.query('UPDATE world.job SET technician_id = NULL, planned_arrival = NULL WHERE job_number = $1', [job.job_number]);
@@ -311,7 +370,8 @@ export async function rescheduleJob(tx: Queryable, ctx: WriteContext | CustomerW
       await settleDay(tx, newDay[0] as TechnicianDayKey);
     }
   }
-  await settleOrRefuse(tx, kept ? [...oldDay, ...newDay] : oldDay);
+  // Not kept, the job is on no technician's day: the old day only lost it, even when it is the same day as the new one.
+  await settleOrRefuse(tx, kept ? [...oldDay, ...newDay] : oldDay, kept ? before : null);
   if (moved) await endBegunVisit(tx, job, ctx.at);
   // F-799: a confirmation not yet sent names the old day; the handler's new confirmation is the 1 that stays (SD-45).
   // F-828: the same day and window is no new visit: a confirmation, sent or not, already names it and stays.
@@ -363,7 +423,7 @@ export async function cancelJob(tx: Queryable, ctx: WriteContext, input: { jobNu
 
 /**
  * editJob (API-27; FR-TECH-6): the service, the equipment (or none) and the problem text. A new service changes the job's
- * expected minutes, so the assigned technician's day is locked and settled again (a block overlap refuses). The
+ * expected minutes, so the assigned technician's day is locked and settled again (a longer service whose recompute causes a block overlap refuses; a shorter one never does, OA-93). The
  * equipment must be the job's customer's. A job not Done, No one home or Canceled (F-505: a Done job's service is what
  * billing sends). A service that crosses FR-BOOK-5's pools (install and not) is a capacity write (section 5.3 step 3,
  * F-507 item 3): it takes the booking-day lock and answers window_full when the new pool has no room. Kind `details`.
@@ -386,6 +446,9 @@ export async function editJob(tx: Queryable, ctx: WriteContext, input: {
   // Section 5.3 step 6's order: the booking-day row before the technician-day lock.
   if (crossesPools) await lockBookingDays(tx, [{ branch: job.branch_id, date: job.date }]);
   await lockTechnicianDays(tx, days);
+  // The job stays on its day with its new minutes: an edit to the same or a longer service changes the work on the day.
+  // OA-93 (F-2044): an edit to a shorter service only takes work off the day, so its recompute never refuses; the board shows the overlap.
+  const overlaps = await overlapsBefore(tx, service.expected_minutes < job.expected_minutes ? [] : days);
   // The old equipment and problem are read under the lock and before the gate; a stale base version then refuses.
   const before = await tx.query<{ equipment_id: string | null; problem: string | null }>(
     'SELECT equipment_id, problem FROM world.job WHERE job_number = $1', [job.job_number]);
@@ -399,7 +462,7 @@ export async function editJob(tx: Queryable, ctx: WriteContext, input: {
       throw new WriteRefused('window_full', `window ${window.id} on ${job.date} has no room for this service's pool`);
     }
   }
-  await settleOrRefuse(tx, days);
+  await settleOrRefuse(tx, days, overlaps);
   const was = before.rows[0] as { equipment_id: string | null; problem: string | null };
   await appendJobChange(tx, ctx, {
     jobNumber: job.job_number, kind: 'details', fromVersion: input.baseVersion, toVersion: input.baseVersion + 1,
@@ -419,8 +482,12 @@ export async function editJob(tx: Queryable, ctx: WriteContext, input: {
  */
 export async function createJob(tx: Queryable, ctx: WriteContext | OnlineContext, input: {
   customerId: string; serviceId: string; equipmentId: string | null; problem: string | null; date: string; windowId: string; technicianId: string | null;
-  /** API-113 (FR-BOOK-1): the customer's own booking. Same locks, same room check; only the channel columns differ (booked_via online, no booked_by, the token). */
-  online?: { bookingToken: string };
+  /**
+   * API-113 (FR-BOOK-1): the customer's own booking. Same locks, same room check; only the channel columns differ (booked_via online, no
+   * booked_by, the token, the page's booking key). A job that already holds the key when the booking-day lock is taken throws
+   * {@link BookingKeyHeld} (SPECIFICATIONS 6.1 Booking write, K-01): a send of the same draft won the lock first.
+   */
+  online?: { bookingToken: string; bookingKey: string };
 }): Promise<WrittenJob> {
   const c = await tx.query<{ branch_id: string; status: string }>('SELECT branch_id, status FROM world.customer WHERE id = $1', [input.customerId]);
   const customer = c.rows[0];
@@ -435,12 +502,19 @@ export async function createJob(tx: Queryable, ctx: WriteContext | OnlineContext
   }
   // F-745: the lock comes before the window and the day are read: the capacity and the mode this write decides on are the ones the lock serialized.
   await lockBookingDays(tx, [{ branch: customer.branch_id, date: input.date }]);
+  // SPECIFICATIONS 6.1 Booking write (K-01): the key is looked up again under the lock, before the room check. A send of the same draft
+  // that held this day's lock first has committed its job by now, and this send books nothing. A race onto another day takes another
+  // lock, so the unique constraint job_booking_key_key settles that one (the INSERT below fails, and the handler answers as a repeat).
+  if (input.online && (await tx.query('SELECT 1 FROM world.job WHERE booking_key = $1', [input.online.bookingKey])).rowCount) {
+    throw new BookingKeyHeld();
+  }
   const window = await readWindow(tx, input.windowId);
   if (!window || window.branch !== customer.branch_id) throw new WriteRefused('validation_failed', `window ${input.windowId} is not a window of ${customer.branch_id}`);
   const branch = await readBranch(tx, customer.branch_id);
   const kind = await officeDay(tx, branch.id, branch.zone, input.date, window, ctx.at);
   const days = dayKeys([[input.technicianId, input.date]]);
   await lockTechnicianDays(tx, days);
+  const before = await overlapsBefore(tx, days);
   if ((await officeWindowRoom(tx, { branch: branch.id, date: input.date, window, kind, install: service.skill === 'install' })) <= 0) {
     throw new WriteRefused('window_full', `window ${window.id} on ${input.date} has no room`);
   }
@@ -457,22 +531,22 @@ export async function createJob(tx: Queryable, ctx: WriteContext | OnlineContext
     const ins = await tx.query<{ job_number: number }>(
       `INSERT INTO world.job (job_number, customer_id, branch_id, service_id, equipment_id, problem, date, zone, window_id, window_start, window_end,
                               technician_id, status, version, expected_minutes, booked_via, booked_at, booked_by, billing_state,
-                              autopilot, touched_by_person, pilot, booking_token)
+                              autopilot, touched_by_person, pilot, booking_token, booking_key)
        VALUES (CASE WHEN $17::int <= pg_sequence_last_value(pg_get_serial_sequence('world.job', 'job_number')::regclass)
                      AND NOT EXISTS (SELECT 1 FROM world.job WHERE job_number = $17::int) THEN $17::int
                     ELSE nextval(pg_get_serial_sequence('world.job', 'job_number'))::int END,
-               $1, $2, $3, $4, $5, $6::date, $7, $8, $9, $10, $11, 'scheduled', 1, $12, $15, $13, $14, 'not_sent', false, true, false, $16)
+               $1, $2, $3, $4, $5, $6::date, $7, $8, $9, $10, $11, 'scheduled', 1, $12, $15, $13, $14, 'not_sent', false, true, false, $16, $18)
        RETURNING job_number`,
       [input.customerId, branch.id, input.serviceId, input.equipmentId, input.problem, input.date, branch.zone, window.id,
         at(input.date, window.startLocal, branch.zone), at(input.date, window.endLocal, branch.zone), input.technicianId,
-        service.expected_minutes, ctx.at, ctx.actor.userId, input.online ? 'online' : 'office', input.online?.bookingToken ?? null, prior ?? null]);
+        service.expected_minutes, ctx.at, ctx.actor.userId, input.online ? 'online' : 'office', input.online?.bookingToken ?? null, prior ?? null, input.online?.bookingKey ?? null]);
     return (ins.rows[0] as { job_number: number }).job_number;
   });
   // F-680: the status read above came before the locks. The INSERT's foreign key waits on a merge that holds this customer FOR UPDATE
   // and goes ahead once it commits; READ COMMITTED now sees the merge, and a job on a merged record is refused (the transaction rolls back).
   const after = await tx.query<{ status: string }>('SELECT status FROM world.customer WHERE id = $1', [input.customerId]);
   if (after.rows[0]?.status !== 'active') throw ruleRefused(RULE.customerNotActive, `customer ${input.customerId} is ${after.rows[0]?.status ?? 'gone'}`);
-  await settleOrRefuse(tx, days);
+  await settleOrRefuse(tx, days, before);
   await appendJobChange(tx, ctx, {
     jobNumber, kind: 'created', fromVersion: 0, toVersion: 1,
     data: { via: input.online ? 'online' : 'office', date: input.date, windowId: window.id, technicianId: input.technicianId, serviceId: input.serviceId },
@@ -519,12 +593,13 @@ export async function createBlock(tx: Queryable, _ctx: WriteContext, input: {
   const [start, end] = blockSpan(input.date, input.start, input.end, branch.zone);
   const day = { technicianId: t.id, date: input.date };
   await lockTechnicianDays(tx, [day]);
+  const before = await overlapsBefore(tx, [day]);
   const r = await tx.query<{ id: string }>(
     `INSERT INTO world.time_block (technician_id, date, zone, start, "end", label, place, version, seeded)
      VALUES ($1, $2::date, $3, $4, $5, $6, $7, 1, false) RETURNING id`,
     [t.id, input.date, branch.zone, start, end, input.label, input.place]);
   const id = (r.rows[0] as { id: string }).id;
-  await settleOrRefuse(tx, [day]);
+  await settleOrRefuse(tx, [day], before);
   await publishEvent(tx, 'block.changed', { blockId: id, branch: branch.id, date: input.date });
   return writtenBlock(await readBlock(tx, id) as BlockRow);
 }
@@ -569,11 +644,13 @@ export async function moveBlock(tx: Queryable, ctx: WriteContext, input: {
   const [start, end] = blockSpan(b.date, input.start, input.end, b.zone);
   const days = [{ technicianId: from.id, date: b.date }, { technicianId: to.id, date: b.date }];
   await lockTechnicianDays(tx, days);
+  // The block ends on the new technician's row; the old row, when it is another, only loses it.
+  const before = await overlapsBefore(tx, [{ technicianId: to.id, date: b.date }]);
   const u = await tx.query(
     `UPDATE world.time_block SET technician_id = $3, start = $4, "end" = $5, version = version + 1 WHERE id = $1 AND version = $2`,
     [b.id, input.baseVersion, to.id, start, end]);
   if ((u.rowCount ?? 0) === 0) throw await blockConflict(tx, b.id);
-  await settleOrRefuse(tx, days);
+  await settleOrRefuse(tx, days, before);
   await tx.query(
     `INSERT INTO world.time_block_change (block_id, at, actor_user_id, actor_kind, kind, from_version, to_version, data)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
@@ -603,7 +680,7 @@ export async function deleteBlock(tx: Queryable, _ctx: WriteContext, input: { bl
 // --- Customer merges: each job moved is logged as a merged change (owner ruling a7cafbb1, F-267) --------------------
 
 /** The job_change kind a merge and its undo write for each job they move (F-267; section 3's enum gets it at the phase 3 doc batch). */
-const MERGE_CHANGE_KIND = 'merged';
+const MERGE_CHANGE_KIND: JobChangeKind = 'merged';
 
 type JobPick = { job_number: number; technician_id: string | null; date: string };
 
@@ -717,16 +794,19 @@ export async function moveJobsToCustomer(tx: Queryable, move: {
     }
   }
   if (pick.length === 0) return [];
-  const moved = await tx.query<{ job_number: number; version: number; branch_id: string; technician_id: string | null; date: string }>(
+  // F-2012 K-09.3: only an open job from demo today on is planned again; a past day and an ended or canceled job keep the plan they
+  // ran on (as an address edit's days, lockAddressEdit). Every job still moves to the kept record.
+  const moved = await tx.query<{ job_number: number; version: number; branch_id: string; technician_id: string | null; date: string; replan: boolean }>(
     `UPDATE world.job SET customer_id = $2, touched_by_person = true, version = version + 1 WHERE job_number = ANY($1::int[])
-     RETURNING job_number, version, branch_id, technician_id, date::text AS date`,
-    [pick.map((r) => r.job_number), move.to]);
+     RETURNING job_number, version, branch_id, technician_id, date::text AS date,
+               (status IN ('scheduled', 'on_the_way', 'on_site') AND date >= ($3::timestamptz AT TIME ZONE zone)::date) AS replan`,
+    [pick.map((r) => r.job_number), move.to, move.at]);
   // F-510, SD-49: a van_track, baked or live, is drawn to the customer point it was made for; a job moved to a customer at another point
   // has none, so every row naming it goes (the route source routes the new point on its next read).
   const points = await tx.query<{ id: string; lon: number; lat: number }>('SELECT id, lon, lat FROM world.customer WHERE id = ANY($1::uuid[])', [[move.from, move.to]]);
   const [p0, p1] = [points.rows.find((r) => r.id === move.from), points.rows.find((r) => r.id === move.to)];
   if (!p0 || !p1 || p0.lon !== p1.lon || p0.lat !== p1.lat) await deleteTracksNaming(tx, moved.rows.map((r) => r.job_number));
-  const days = dayKeys(moved.rows.map((r) => [r.technician_id, r.date] as const));
+  const days = dayKeys(moved.rows.filter((r) => r.replan).map((r) => [r.technician_id, r.date] as const));
   const late = days.filter((d) => !locked.some((l) => l.technicianId === d.technicianId && l.date === d.date));
   if (late.length > 0) await lockTechnicianDays(tx, late);
   for (const d of days) await settleDay(tx, d);

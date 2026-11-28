@@ -10,6 +10,7 @@
 // billing_reset_waiting (SD-30) and keeps calling; the clock stays paused until pbs answers, the honest state while
 // the billing system is down. pbs applies a reset once per epoch, so a repeated call after a lost answer is harmless.
 import { alertEventIds, inTransaction, publishEvent, readClockAt, type createPool } from '@bw/db';
+import { causeCodeOf, type Logger } from '@bw/log';
 import { Temporal, type Clock } from '@bw/time';
 import { openAlert } from '../alerts/check.ts';
 import type { BillingClient } from '../billing/client.ts';
@@ -37,6 +38,11 @@ export interface ConfirmerDeps {
   /** Real now (use clock_anchor): the clock row's new real anchor and the clock_move row's at_real. */
   real: () => Date;
   state: ConfirmerState;
+  /**
+   * F-2006 K-10.1: a failed call is logged with its cause code: the first of an epoch, then every
+   * RESET_CONFIRM_ALERT_AFTER-th (about once a real minute), so a long outage is seen without 1 line per 5 s.
+   */
+  log: Pick<Logger, 'error'>;
 }
 
 /** 1 confirmer step: nothing to confirm, confirmed now, or a failed call (counted; the 12th opens the alert). */
@@ -53,8 +59,11 @@ export async function confirmStep(d: ConfirmerDeps): Promise<ConfirmStep> {
   }
   try {
     await d.client.reset(epoch);
-  } catch {
+  } catch (e) {
     d.state.failures += 1;
+    if (d.state.failures === 1 || d.state.failures % RESET_CONFIRM_ALERT_AFTER === 0) {
+      d.log.error({ status: 'billing reset failed', errorCode: causeCodeOf(e), failures: d.state.failures });
+    }
     if (d.state.failures >= RESET_CONFIRM_ALERT_AFTER) {
       const now = Temporal.Instant.fromEpochMilliseconds(clock.demoNow.getTime());
       await inTransaction(d.pool, (tx) =>

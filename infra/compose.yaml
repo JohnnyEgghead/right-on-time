@@ -250,7 +250,7 @@ services:
   # volume. Self-hosted: it runs on our own server inside this stack, and no outside service is called (NFR-12). It listens on the
   # Compose network only: no published port, and nginx has no route to it (infra/tests/nginx.test.ts), so no browser or phone reaches it.
   # Nothing depends on it: web, worker and setup start and answer with it stopped or its files absent, and a leg no baked track covers
-  # is then approximate (SD-49 step 3; P6-LIVE-ROUTING adds the client).
+  # is then approximate (SD-49 step 3; the web service's route source, packages/maps/src/route-source.ts, is the client).
   #   --mmap: the files are mapped, not copied into the process, so its memory is the kernel's page cache of the mapped files (shared by
   #     every container reading the same files, and reclaimable under the cap) and it answers within seconds of starting.
   #   With no routing files in the folder (a copy that ran `pnpm run setup:maps --no-routing`, or a test stack that has none), it waits,

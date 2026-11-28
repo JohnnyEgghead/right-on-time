@@ -47,7 +47,7 @@ export function techOutbox(): TechOutbox {
   void client.call(appInfo, {}).then((r) => e.setVersion(r.data.sourceCommit), () => undefined);
   const kick = () => void e.sync();
   window.addEventListener('online', kick);
-  window.addEventListener('offline', () => void e.refresh());
+  window.addEventListener('offline', () => void e.refresh().catch(() => undefined));
   window.addEventListener('focus', kick);
   window.addEventListener('pageshow', kick);
   document.addEventListener('visibilitychange', () => {
@@ -57,7 +57,7 @@ export function techOutbox(): TechOutbox {
   (window as Window & { __bwTechOutbox?: unknown }).__bwTechOutbox = {
     enter: e.enter.bind(e), sync: e.sync.bind(e), state: () => e.snapshot,
   };
-  void e.refresh().then(kick);
+  void e.refresh().then(kick, () => undefined);
   return e;
 }
 

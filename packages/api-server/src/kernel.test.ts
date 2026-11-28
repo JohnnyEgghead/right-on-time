@@ -2,7 +2,7 @@
 // The handler kernel (SPECIFICATIONS 4.1, SD-6, SD-7, SD-8, SD-47, 7.1, 7.2, 11.5) through its real entry point,
 // router.handle, with real sessions resolved by the real session layer (only the store is in memory; the SQL store
 // is proved on PostgreSQL 18 in sessions.db.test.ts).
-import { addressField, checkAnswer, defineContract, emailByLink, z, type ContractRow } from '@bw/api';
+import { addressField, boardDay, checkAnswer, defineContract, emailByLink, jobDetail, myJob, requiredLabels, rowJsonSchema, z, type ContractRow } from '@bw/api';
 import { describe, expect, it } from 'vitest';
 import { issueAccessCookie } from './kernel/access-code.ts';
 import { CONTENT_SECURITY_POLICY } from './kernel/headers.ts';
@@ -425,6 +425,51 @@ describe('a missing clock row (a fresh database before setup)', () => {
     expect((await json(patch)).data).toEqual({ language: 'es', slashShortcut: 'on' });
     expect((await k.call('POST', '/api/v1/searches', { body: {} })).status).toBe(401);
     expect((await k.call('GET', '/api/v1/clock')).status).toBe(500);
+  });
+});
+
+describe('a failed clock-row read (K-10.3, F-2008)', () => {
+  // why: F-2008 K-10.3 (the clock-row read failure was swallowed: the call answered with the epoch instant and no line named the failed read)
+  it('logs 1 error line with the cause code, never the message, and answers as before', async () => {
+    const k = kit(policyTable, { ...realHandlers });
+    const down = async (): Promise<never> => { throw Object.assign(new Error('connection to 12 Oak St refused'), { code: '57P01' }); };
+    k.clock.demoNow = down;
+    k.clock.worldEpoch = down;
+    expect((await k.call('GET', '/api/v1/me')).status).toBe(401);
+    const errors = k.lines.filter((l) => l.level === 'error');
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({ errorCode: '57P01', contract: 'API-07' });
+    expect(JSON.stringify(k.lines)).not.toContain('Oak St');
+  });
+});
+
+describe('the client address (J-28, F-2008)', () => {
+  const enterCode = () => kit([api(enter, PUBLIC)], { 'API-01': async () => ({ ok: true, status: 204, data: undefined }) });
+  const post = (k: ReturnType<typeof kit>, peer: string, forged: string) => k.router.handle(
+    new Request('http://web:3000/api/v1/access-code', { method: 'POST', headers: { 'x-forwarded-for': forged } }), { address: peer });
+
+  // why: J-28 the kernel took the first X-Forwarded-For entry from any peer, so a direct caller chose its own rate-limit address
+  it('limits a direct caller by its own address whatever X-Forwarded-For it sends', async () => {
+    const k = enterCode();
+    for (let i = 0; i < 10; i++) expect((await post(k, '203.0.113.7', `198.51.100.${i}`)).status, `try ${i}`).toBe(204);
+    expect((await post(k, '203.0.113.7', '198.51.100.99')).status).toBe(429);
+    expect((await post(k, '203.0.113.8', '198.51.100.99')).status).toBe(204);
+  });
+
+  // why: J-28 the header is still read from nginx's own peer (loopback or a private Compose address): its clients keep their own limits
+  it('reads the header from the proxy peer, so each client behind nginx has its own limit', async () => {
+    const k = enterCode();
+    for (let i = 0; i < 10; i++) expect((await post(k, '172.18.0.3', '198.51.100.1')).status).toBe(204);
+    expect((await post(k, '172.18.0.3', '198.51.100.1')).status).toBe(429);
+    expect((await post(k, '172.18.0.3', '198.51.100.2')).status).toBe(204);
+    expect((await post(k, '::ffff:127.0.0.1', '198.51.100.2')).status).toBe(204);
+  });
+});
+
+describe('the entered_offline label (K-09.4, F-2008)', () => {
+  // why: F-2008 K-09.4 (no handler set labels, so a response holding an offline-entered note never carried entered_offline (SPECIFICATIONS 7.2 names API-20, API-23, API-101))
+  it('is required on API-20, API-23 and API-101, whose answers hold notes and items with offline and sent times', () => {
+    for (const r of [boardDay, jobDetail, myJob]) expect(requiredLabels(r, rowJsonSchema(r.response, 'output')), r.id).toContain('entered_offline');
   });
 });
 

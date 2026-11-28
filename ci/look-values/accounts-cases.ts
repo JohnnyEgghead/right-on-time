@@ -59,6 +59,8 @@ const tile = (screen: AccountsCase['screen'], caption: string, box: string, inne
 
 const EML_CHROME = ['> .r1-demobar', '.r1-pubhead', '.r1-pubhead .prod', '.mid', '.r1-foot'];
 
+const SENT = dlg(`${V}Sent`, [...DIALOG, '.r1-dlg-b p b', '.r1-link']);
+
 export const ACCOUNTS_CASES: AccountsCase[] = [
   {
     name: 'SCR-OFC-43 Success (filters, users, role table, notes, recent changes)',
@@ -77,7 +79,11 @@ export const ACCOUNTS_CASES: AccountsCase[] = [
   },
   { name: 'SCR-OFC-44 Editing', captions: [`${V}Editing`], app: '/shell-preview/accounts-users/invite-editing', frame: USERS, ...dlg(`${V}Editing`, [...DIALOG, '.r1-field', '.r1-field label', '.r1-input', ...RADIOS]) },
   { name: 'SCR-OFC-44 Sending', captions: [`${V}Sending`], app: '/shell-preview/accounts-users/invite-sending', frame: USERS, ...dlg(`${V}Sending`, [...DIALOG, '.r1-input', '.rad.on', '.rad.on i', '.btn.busy .r1-spin']) },
-  { name: 'SCR-OFC-44 Sent', captions: [`${V}Sent`], app: '/shell-preview/accounts-users/invite-sent', frame: USERS, ...dlg(`${V}Sent`, [...DIALOG, '.r1-dlg-b p b', '.r1-link']) },
+  {
+    name: 'SCR-OFC-44 Sent', captions: [`${V}Sent`], app: '/shell-preview/accounts-users/invite-sent', frame: USERS, ...SENT,
+    // F-2063: the bold sentence carries the invited person's email, demo data (the frame shows the old domain, the product brightwater.example), so its width is ruled; every other property stays compared.
+    pairs: SENT.pairs.map((x) => (/ \.r1-dlg-b p b$/.test(x.app) ? { ...x, wordsRuled: 'RULING-SEED-MOCKUPS-20261114' } : x)),
+  },
   { name: 'SCR-OFC-45 Choosing', captions: [`${C}Choosing`], app: '/shell-preview/accounts-users/role-choosing', frame: USERS, ...dlg(`${C}Choosing`, [...DIALOG, ...RADIOS, '.rad.on', '.rad.on i', '.rad small']) },
   { name: 'SCR-OFC-45 Saving', captions: [`${C}Saving`], app: '/shell-preview/accounts-users/role-saving', frame: USERS, ...dlg(`${C}Saving`, [...DIALOG, '.btn.busy .r1-spin']) },
   { name: 'SCR-OFC-46 Asking', captions: [`${X}Asking`], app: '/shell-preview/accounts-users/off-asking', frame: USERS, ...dlg(`${X}Asking`, [...DIALOG, '.r1-dlg-b p', '.btn.danger']) },
@@ -119,6 +125,10 @@ export const ACCOUNTS_CASES: AccountsCase[] = [
 ];
 
 const SKEL = 'the tile\'s skeleton height is a tile-only rule (DK-47 .r1-st .b .r1-skel, 14 px) against CMP-12\'s 12 px; the skeleton itself is CMP-12, held by the shell cases. That reason covers the height only: the bar count and widths each page draws are page layout and no case compares them (F-615)';
+/** Parts of a compared state that its case leaves out, each with the reason (read with the cases; no gate reads this record). */
+export const LEFT_OUT: Record<string, string> = {
+};
+
 /**
  * Captioned frame states with no look case of their own, each with the reason. The coverage test checks every caption the 4
  * frames show is compared by a case or named here, and that each named one is a caption of its frame.
